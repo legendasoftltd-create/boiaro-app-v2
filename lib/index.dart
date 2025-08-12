@@ -1,0 +1,82 @@
+// Export pages
+export '/pages/home_pages/home_page/home_page_widget.dart' show HomePageWidget;
+export '/pages/login_pages/splash_page/splash_page_widget.dart'
+    show SplashPageWidget;
+export '/pages/login_pages/onboarding_page/onboarding_page_widget.dart'
+    show OnboardingPageWidget;
+export '/pages/login_pages/sign_in_page/sign_in_page_widget.dart'
+    show SignInPageWidget;
+export '/pages/login_pages/sign_up_page/sign_up_page_widget.dart'
+    show SignUpPageWidget;
+export '/pages/categories_pages/categories_screen/categories_screen_widget.dart'
+    show CategoriesScreenWidget;
+export '/pages/categories_pages/sub_categories_screen/sub_categories_screen_widget.dart'
+    show SubCategoriesScreenWidget;
+export '/pages/categories_pages/history_details_page/history_details_page_widget.dart'
+    show HistoryDetailsPageWidget;
+export '/pages/home_pages/trending_books_page/trending_books_page_widget.dart'
+    show TrendingBooksPageWidget;
+export '/pages/home_pages/filter_page/filter_page_widget.dart'
+    show FilterPageWidget;
+export '/pages/author_screens/best_author_page/best_author_page_widget.dart'
+    show BestAuthorPageWidget;
+export '/pages/home_pages/popular_books_page/popular_books_page_widget.dart'
+    show PopularBooksPageWidget;
+export '/pages/home_pages/recent_reviews_page/recent_reviews_page_widget.dart'
+    show RecentReviewsPageWidget;
+export '/pages/home_pages/about_author_page/about_author_page_widget.dart'
+    show AboutAuthorPageWidget;
+export '/pages/home_pages/read_book_page/read_book_page_widget.dart'
+    show ReadBookPageWidget;
+export '/pages/home_pages/search_page/search_page_widget.dart'
+    show SearchPageWidget;
+export '/pages/home_pages/notifications_page/notifications_page_widget.dart'
+    show NotificationsPageWidget;
+export '/pages/latest_screen/latest_page/latest_page_widget.dart'
+    show LatestPageWidget;
+export '/pages/profile_screens/favourite_page/favourite_page_widget.dart'
+    show FavouritePageWidget;
+export '/pages/profile_screens/profile_page/profile_page_widget.dart'
+    show ProfilePageWidget;
+export '/pages/profile_screens/my_profile_page/my_profile_page_widget.dart'
+    show MyProfilePageWidget;
+export '/pages/profile_screens/edit_profile_page/edit_profile_page_widget.dart'
+    show EditProfilePageWidget;
+export '/pages/profile_screens/download_page/download_page_widget.dart'
+    show DownloadPageWidget;
+export '/pages/profile_screens/settings_page/settings_page_widget.dart'
+    show SettingsPageWidget;
+export '/pages/profile_screens/change_password_page/change_password_page_widget.dart'
+    show ChangePasswordPageWidget;
+export '/pages/profile_screens/privacy_policy_page/privacy_policy_page_widget.dart'
+    show PrivacyPolicyPageWidget;
+export '/pages/profile_screens/terms_conditions_page/terms_conditions_page_widget.dart'
+    show TermsConditionsPageWidget;
+export '/pages/profile_screens/about_us_page/about_us_page_widget.dart'
+    show AboutUsPageWidget;
+export '/pages/home_pages/book_detailspage/book_detailspage_widget.dart'
+    show BookDetailspageWidget;
+export '/pages/login_pages/forgotpassword_page/forgotpassword_page_widget.dart'
+    show ForgotpasswordPageWidget;
+export '/pages/login_pages/verification_page/verification_page_widget.dart'
+    show VerificationPageWidget;
+export '/pages/login_pages/reset_password_page/reset_password_page_widget.dart'
+    show ResetPasswordPageWidget;
+export '/pages/login_pages/forgot_verification_page/forgot_verification_page_widget.dart'
+    show ForgotVerificationPageWidget;
+export '/pages/profile_screens/delete_account_instruction_page/delete_account_instruction_page_widget.dart'
+    show DeleteAccountInstructionPageWidget;
+export '/pages/categories_pages/get_book_by_category_page/get_book_by_category_page_widget.dart'
+    show GetBookByCategoryPageWidget;
+export '/pages/home_pages/subscription_page/subscription_page_widget.dart'
+    show SubscriptionPageWidget;
+export '/pages/home_pages/read_book_custom_page/read_book_custom_page_widget.dart'
+    show ReadBookCustomPageWidget;
+export '/pages/home_pages/filter_result_page/filter_result_page_widget.dart'
+    show FilterResultPageWidget;
+export '/pages/home_pages/reviewsummary_page/reviewsummary_page_widget.dart'
+    show ReviewsummaryPageWidget;
+export '/pages/home_pages/payment_method_page/payment_method_page_widget.dart'
+    show PaymentMethodPageWidget;
+export '/pages/home_pages/book_detailspage_copy/book_detailspage_copy_widget.dart'
+    show BookDetailspageCopyWidget;

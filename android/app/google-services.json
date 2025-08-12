@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "299024357634",
+    "firebase_url": "https://a-i-ebook-app-nth7ef-default-rtdb.firebaseio.com",
+    "project_id": "a-i-ebook-app-nth7ef",
+    "storage_bucket": "a-i-ebook-app-nth7ef.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:299024357634:android:383eedf0ba9d01b6aaca1b",
+        "android_client_info": {
+          "package_name": "com.mycompany.aiebookapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRYI6AkCcxS-yjv4458Z-Lta_fb0yt9Xg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/vishalmangukiya/flutter/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/vishalmangukiya/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/vishalmangukiya/flutter_projects/Archive (1)/Check App Update/Ai Ebook App/AiEbook App/android/app/.cxx/Debug/5d4m6f1h/x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/vishalmangukiya/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/vishalmangukiya/flutter_projects/Archive (1)/Check App Update/Ai Ebook App/AiEbook App/android/app/.cxx/Debug/5d4m6f1h/x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}
