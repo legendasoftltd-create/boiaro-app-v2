@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/pages/home_pages/home_page/image_slider.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -167,36 +169,42 @@ class _HomePageWidgetState extends State<HomePageWidget>
                             mainAxisSize: MainAxisSize.max,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Hello,',
-                                maxLines: 1,
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      fontFamily: 'SF Pro Display',
-                                      fontSize: 18.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w600,
-                                      lineHeight: 1.5,
-                                    ),
+                              Image.network(
+                                'https://ebook.boiaro.com/assets/media/logos/logo-final_1.jpg',
+                                width: 130.0,
+                                height: 40.0,
+                                fit: BoxFit.contain,
                               ),
-                              if (FFAppState().isLogin == true)
-                                Text(
-                                  '${functions.capitalizeFirst('${getJsonField(
-                                    FFAppState().userDetail,
-                                    r'''$.firstname''',
-                                  ).toString()}')} 👋',
-                                  maxLines: 1,
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        fontSize: 24.0,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FontWeight.bold,
-                                        lineHeight: 1.5,
-                                      ),
-                                ),
+                              // Text(
+                              //   'Hello,',
+                              //   maxLines: 1,
+                              //   style: FlutterFlowTheme.of(context)
+                              //       .bodyMedium
+                              //       .override(
+                              //         fontFamily: 'SF Pro Display',
+                              //         fontSize: 18.0,
+                              //         letterSpacing: 0.0,
+                              //         fontWeight: FontWeight.w600,
+                              //         lineHeight: 1.5,
+                              //       ),
+                              // ),
+                              // if (FFAppState().isLogin == true)
+                              //   Text(
+                              //     '${functions.capitalizeFirst('${getJsonField(
+                              //       FFAppState().userDetail,
+                              //       r'''$.firstname''',
+                              //     ).toString()}')} 👋',
+                              //     maxLines: 1,
+                              //     style: FlutterFlowTheme.of(context)
+                              //         .bodyMedium
+                              //         .override(
+                              //           fontFamily: 'SF Pro Display',
+                              //           fontSize: 24.0,
+                              //           letterSpacing: 0.0,
+                              //           fontWeight: FontWeight.bold,
+                              //           lineHeight: 1.5,
+                              //         ),
+                              //   ),
                             ],
                           ).animateOnPageLoad(
                               animationsMap['columnOnPageLoadAnimation']!),
@@ -575,6 +583,13 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                             scrollDirection:
                                                                 Axis.vertical,
                                                             children: [
+                                                               BannerSlider(
+                                                                imageUrls: [
+                                                                  'https://www.shutterstock.com/image-vector/promo-sale-banner-stack-books-260nw-1973545310.jpg',
+                                                                  'https://static.vecteezy.com/system/resources/previews/023/107/446/non_2x/promo-sale-banner-with-reading-stack-of-books-wooden-letter-tiles-school-books-pile-world-book-day-bookstore-bookshop-library-book-lover-bibliophile-education-a4-for-poster-cover-vector.jpg',
+                                                                  'https://static.vecteezy.com/system/resources/previews/023/107/441/non_2x/promo-banner-with-with-reading-stack-of-books-lantern-with-candle-plant-school-books-pile-world-book-day-bookstore-bookshop-library-book-lover-bibliophile-education-for-poster-cover-vector.jpg',
+                                                                ],
+                                                              ),
                                                               if (FFAppState()
                                                                           .homePageLiveReadBook !=
                                                                       '')
@@ -636,8 +651,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                           .infinity,
                                                                       decoration:
                                                                           BoxDecoration(
-                                                                        color: Color(
-                                                                            0xFFD8F1DC),
+                                                                        color: FlutterFlowTheme.of(context).primary.withValues(alpha: .2),
                                                                         borderRadius:
                                                                             BorderRadius.circular(12.0),
                                                                       ),
@@ -830,14 +844,22 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                               onTap: () async {
                                                                                 context.pushNamed(CategoriesScreenWidget.routeName);
                                                                               },
-                                                                              child: Text(
-                                                                                'View all',
-                                                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                                      fontFamily: 'SF Pro Display',
-                                                                                      fontSize: 17.0,
-                                                                                      letterSpacing: 0.0,
-                                                                                      lineHeight: 1.5,
-                                                                                    ),
+                                                                              child: Container(
+                                                                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                                                                decoration: BoxDecoration(
+                                                                                  color: FlutterFlowTheme.of(context).primary,
+                                                                                  borderRadius: BorderRadius.circular(12)
+                                                                                ),
+                                                                                child: Text(
+                                                                                  'View all',
+                                                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                        fontFamily: 'SF Pro Display',
+                                                                                        fontSize: 17.0,
+                                                                                        letterSpacing: 0.0,
+                                                                                        lineHeight: 1.5,
+                                                                                        color: Colors.white,
+                                                                                      ),
+                                                                                ),
                                                                               ),
                                                                             ),
                                                                           ].divide(SizedBox(width: 4.0)),
@@ -985,14 +1007,22 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                               onTap: () async {
                                                                                 context.pushNamed(TrendingBooksPageWidget.routeName);
                                                                               },
-                                                                              child: Text(
-                                                                                'View all',
-                                                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                                      fontFamily: 'SF Pro Display',
-                                                                                      fontSize: 17.0,
-                                                                                      letterSpacing: 0.0,
-                                                                                      lineHeight: 1.5,
-                                                                                    ),
+                                                                              child: Container(
+                                                                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                                                                decoration: BoxDecoration(
+                                                                                  color: FlutterFlowTheme.of(context).primary,
+                                                                                  borderRadius: BorderRadius.circular(12)
+                                                                                ),
+                                                                                child: Text(
+                                                                                  'View all',
+                                                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                        fontFamily: 'SF Pro Display',
+                                                                                        fontSize: 17.0,
+                                                                                        letterSpacing: 0.0,
+                                                                                        lineHeight: 1.5,
+                                                                                        color: Colors.white,
+                                                                                      ),
+                                                                                ),
                                                                               ),
                                                                             ),
                                                                           ],
@@ -1232,14 +1262,22 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                               onTap: () async {
                                                                                 context.pushNamed(BestAuthorPageWidget.routeName);
                                                                               },
-                                                                              child: Text(
-                                                                                'View all',
-                                                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                                      fontFamily: 'SF Pro Display',
-                                                                                      fontSize: 17.0,
-                                                                                      letterSpacing: 0.0,
-                                                                                      lineHeight: 1.5,
-                                                                                    ),
+                                                                              child: Container(
+                                                                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                                                                decoration: BoxDecoration(
+                                                                                  color: FlutterFlowTheme.of(context).primary,
+                                                                                  borderRadius: BorderRadius.circular(12)
+                                                                                ),
+                                                                                child: Text(
+                                                                                  'View all',
+                                                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                        fontFamily: 'SF Pro Display',
+                                                                                        fontSize: 17.0,
+                                                                                        letterSpacing: 0.0,
+                                                                                        lineHeight: 1.5,
+                                                                                        color: Colors.white,
+                                                                                      ),
+                                                                                ),
                                                                               ),
                                                                             ),
                                                                           ].divide(SizedBox(width: 4.0)),
@@ -1398,14 +1436,22 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                               onTap: () async {
                                                                                 context.pushNamed(PopularBooksPageWidget.routeName);
                                                                               },
-                                                                              child: Text(
-                                                                                'View all',
-                                                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                                      fontFamily: 'SF Pro Display',
-                                                                                      fontSize: 17.0,
-                                                                                      letterSpacing: 0.0,
-                                                                                      lineHeight: 1.5,
-                                                                                    ),
+                                                                              child: Container(
+                                                                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                                                                decoration: BoxDecoration(
+                                                                                  color: FlutterFlowTheme.of(context).primary,
+                                                                                  borderRadius: BorderRadius.circular(12)
+                                                                                ),
+                                                                                child: Text(
+                                                                                  'View all',
+                                                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                        fontFamily: 'SF Pro Display',
+                                                                                        fontSize: 17.0,
+                                                                                        letterSpacing: 0.0,
+                                                                                        lineHeight: 1.5,
+                                                                                        color: Colors.white,
+                                                                                      ),
+                                                                                ),
                                                                               ),
                                                                             ),
                                                                           ].divide(SizedBox(width: 4.0)),

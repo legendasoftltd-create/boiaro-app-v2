@@ -67,6 +67,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
         await widget.isMainTap?.call();
       },
       child: Container(
+        
         width: () {
           if (MediaQuery.sizeOf(context).width < 810.0) {
             return ((MediaQuery.sizeOf(context).width - 48) * 1 / 2);
@@ -93,6 +94,12 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
             )
           ],
           borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: FlutterFlowTheme.of(context).primary.withValues(
+              alpha: 0.1,
+            ),
+            width: 2.0,
+          ),
         ),
         child: Stack(
           children: [

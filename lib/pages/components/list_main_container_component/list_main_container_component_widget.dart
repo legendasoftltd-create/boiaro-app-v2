@@ -86,6 +86,12 @@ class _ListMainContainerComponentWidgetState
             )
           ],
           borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: FlutterFlowTheme.of(context).primary.withValues(
+              alpha: 0.1,
+            ),
+            width: 2.0,
+          ),
         ),
         child: Padding(
           padding: EdgeInsets.all(12.0),

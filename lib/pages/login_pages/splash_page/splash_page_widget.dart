@@ -101,16 +101,26 @@ class _SplashPageWidgetState extends State<SplashPageWidget>
                   Padding(
                     padding:
                         EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 12.0),
-                    child: Lottie.asset(
-                      'assets/jsons/Animation_-_1714827570006.json',
-                      width: 102.0,
-                      height: 102.0,
-                      fit: BoxFit.cover,
-                      animate: true,
+                    child: Image.network(
+                      'https://ebook.boiaro.com/assets/media/logos/logo-final_1.jpg',
+                      width: 160.0,
+                      height: 120.0,
+                      fit: BoxFit.contain,
                     ),
                   ),
+                  // Padding(
+                  //   padding:
+                  //       EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 12.0),
+                  //   child: Lottie.asset(
+                  //     'assets/jsons/Animation_-_1714827570006.json',
+                  //     width: 102.0,
+                  //     height: 102.0,
+                  //     fit: BoxFit.cover,
+                  //     animate: true,
+                  //   ),
+                  // ),
                   Text(
-                    'AI Ebook App',
+                    'Boi Aro',
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',

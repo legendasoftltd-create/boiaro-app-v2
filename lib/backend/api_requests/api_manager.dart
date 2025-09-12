@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:core';
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -497,6 +498,7 @@ class ApiManager {
     if (!apiUrl.startsWith('http')) {
       apiUrl = 'https://$apiUrl';
     }
+    log('Making API call: ${callOptions.callName} to $apiUrl Headers: ${json.encode(callOptions.headers)} Params: ${json.encode(callOptions.params)} Body: ${callOptions.body} Body:String ${body }',);
 
     // If we've already made this exact call before and caching is on,
     // return the cached result.
@@ -565,7 +567,7 @@ class ApiManager {
           );
           break;
       }
-
+      log('API call $apiUrl status code ${result.statusCode} Response body: ${result.bodyText}');
       // If caching is on, cache the result (if present).
       if (cache) {
         _apiCache[callOptions] = result;

@@ -66,7 +66,7 @@ packages:
     source: hosted
     version: "3.4.1"
   cached_network_image_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: cached_network_image_platform_interface
       sha256: "35814b016e37fbdc91f7ae18c8caf49ba5c88501813f73ce8a07027a395e2829"
@@ -74,13 +74,21 @@ packages:
     source: hosted
     version: "4.1.1"
   cached_network_image_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: cached_network_image_web
       sha256: "980842f4e8e2535b8dbd3d5ca0b1f0ba66bf61d14cc3a17a9b4788a3685ba062"
       url: "https://pub.dev"
     source: hosted
     version: "1.3.1"
+  carousel_slider:
+    dependency: "direct main"
+    description:
+      name: carousel_slider
+      sha256: bcc61735345c9ab5cb81073896579e735f81e35fd588907a393143ea986be8ff
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.1"
   characters:
     dependency: transitive
     description:
@@ -130,7 +138,7 @@ packages:
     source: hosted
     version: "5.6.8"
   cloud_firestore_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: cloud_firestore_platform_interface
       sha256: ee2b8f8c602ede36073afd3741e99cfea9dd982b4a44833daf665134d151c32a
@@ -138,7 +146,7 @@ packages:
     source: hosted
     version: "6.6.8"
   cloud_firestore_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: cloud_firestore_web
       sha256: b99bc4f1f70787f694b73bc6fce238d4d6cc822c9b31ba8ef1578b180b6f77bc
@@ -370,7 +378,7 @@ packages:
     source: hosted
     version: "3.13.1"
   firebase_core_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: firebase_core_platform_interface
       sha256: d7253d255ff10f85cfd2adaba9ac17bae878fa3ba577462451163bd9f1d1f0bf
@@ -378,7 +386,7 @@ packages:
     source: hosted
     version: "5.4.0"
   firebase_core_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: firebase_core_web
       sha256: ddd72baa6f727e5b23f32d9af23d7d453d67946f380bd9c21daf474ee0f7326e
@@ -418,7 +426,7 @@ packages:
     source: hosted
     version: "0.10.1+6"
   firebase_performance_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: firebase_performance_platform_interface
       sha256: c85abc1cf6f5592854e0151583a9e6e13c15b295cb5c1a0915784799e27a8b55
@@ -426,7 +434,7 @@ packages:
     source: hosted
     version: "0.1.5+6"
   firebase_performance_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: firebase_performance_web
       sha256: "963d454bb6af78e1aba10bdc1c3ec4c483e145d050e5dcf92160a4aeb224160d"
@@ -742,7 +750,7 @@ packages:
     source: hosted
     version: "1.1.2"
   image_picker_android:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: image_picker_android
       sha256: "317a5d961cec5b34e777b9252393f2afbd23084aa6e60fcf601dcf6341b9ebeb"
@@ -750,7 +758,7 @@ packages:
     source: hosted
     version: "0.8.12+23"
   image_picker_for_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: image_picker_for_web
       sha256: "717eb042ab08c40767684327be06a5d8dbb341fe791d514e4b92c7bbe1b7bb83"
@@ -758,7 +766,7 @@ packages:
     source: hosted
     version: "3.0.6"
   image_picker_ios:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: image_picker_ios
       sha256: "05da758e67bc7839e886b3959848aa6b44ff123ab4b28f67891008afe8ef9100"
@@ -766,7 +774,7 @@ packages:
     source: hosted
     version: "0.8.12+2"
   image_picker_linux:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: image_picker_linux
       sha256: "34a65f6740df08bbbeb0a1abd8e6d32107941fd4868f67a507b25601651022c9"
@@ -774,7 +782,7 @@ packages:
     source: hosted
     version: "0.2.1+2"
   image_picker_macos:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: image_picker_macos
       sha256: "1b90ebbd9dcf98fb6c1d01427e49a55bd96b5d67b8c67cf955d60a5de74207c1"
@@ -782,7 +790,7 @@ packages:
     source: hosted
     version: "0.2.1+2"
   image_picker_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: image_picker_platform_interface
       sha256: "886d57f0be73c4b140004e78b9f28a8914a09e50c2d816bdd0520051a71236a0"
@@ -790,7 +798,7 @@ packages:
     source: hosted
     version: "2.10.1"
   image_picker_windows:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: image_picker_windows
       sha256: "6ad07afc4eb1bc25f3a01084d28520496c4a3bb0cb13685435838167c9dcedeb"
@@ -1038,7 +1046,7 @@ packages:
     source: hosted
     version: "2.1.5"
   path_provider_android:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: path_provider_android
       sha256: d0d310befe2c8ab9e7f393288ccbb11b60c019c6b5afc21973eeee4dda2b35e9
@@ -1046,7 +1054,7 @@ packages:
     source: hosted
     version: "2.2.17"
   path_provider_foundation:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: path_provider_foundation
       sha256: "4843174df4d288f5e29185bd6e72a6fbdf5a4a4602717eed565497429f179942"
@@ -1054,7 +1062,7 @@ packages:
     source: hosted
     version: "2.4.1"
   path_provider_linux:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: path_provider_linux
       sha256: f7a1fe3a634fe7734c8d3f2766ad746ae2a2884abe22e241a8b301bf5cac3279
@@ -1062,7 +1070,7 @@ packages:
     source: hosted
     version: "2.2.1"
   path_provider_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: path_provider_platform_interface
       sha256: "88f5779f72ba699763fa3a3b06aa4bf6de76c8e5de842cf6f29e2e06476c2334"
@@ -1070,7 +1078,7 @@ packages:
     source: hosted
     version: "2.1.2"
   path_provider_windows:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: path_provider_windows
       sha256: bd6f00dbd873bfb70d0761682da2b3a2c2fccc2b9e84c495821639601d81afe7
@@ -1238,7 +1246,7 @@ packages:
     source: hosted
     version: "2.5.3"
   shared_preferences_android:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: shared_preferences_android
       sha256: "20cbd561f743a342c76c151d6ddb93a9ce6005751e7aa458baad3858bfbfb6ac"
@@ -1246,7 +1254,7 @@ packages:
     source: hosted
     version: "2.4.10"
   shared_preferences_foundation:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: shared_preferences_foundation
       sha256: "6a52cfcdaeac77cad8c97b539ff688ccfc458c007b4db12be584fbe5c0e49e03"
@@ -1254,7 +1262,7 @@ packages:
     source: hosted
     version: "2.5.4"
   shared_preferences_linux:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: shared_preferences_linux
       sha256: "580abfd40f415611503cae30adf626e6656dfb2f0cee8f465ece7b6defb40f2f"
@@ -1262,7 +1270,7 @@ packages:
     source: hosted
     version: "2.4.1"
   shared_preferences_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: shared_preferences_platform_interface
       sha256: "57cbf196c486bc2cf1f02b85784932c6094376284b3ad5779d1b1c6c6a816b80"
@@ -1270,7 +1278,7 @@ packages:
     source: hosted
     version: "2.4.1"
   shared_preferences_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: shared_preferences_web
       sha256: c49bd060261c9a3f0ff445892695d6212ff603ef3115edbb448509d407600019
@@ -1278,7 +1286,7 @@ packages:
     source: hosted
     version: "2.4.3"
   shared_preferences_windows:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: shared_preferences_windows
       sha256: "94ef0f72b2d71bc3e700e025db3710911bd51a71cefb65cc609dd0d9a982e3c1"
@@ -1555,7 +1563,7 @@ packages:
     source: hosted
     version: "6.3.1"
   url_launcher_android:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher_android
       sha256: "8582d7f6fe14d2652b4c45c9b6c14c0b678c2af2d083a11b604caeba51930d79"
@@ -1563,7 +1571,7 @@ packages:
     source: hosted
     version: "6.3.16"
   url_launcher_ios:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher_ios
       sha256: "7f2022359d4c099eea7df3fdf739f7d3d3b9faf3166fb1dd390775176e0b76cb"
@@ -1571,7 +1579,7 @@ packages:
     source: hosted
     version: "6.3.3"
   url_launcher_linux:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher_linux
       sha256: "4e9ba368772369e3e08f231d2301b4ef72b9ff87c31192ef471b380ef29a4935"
@@ -1579,7 +1587,7 @@ packages:
     source: hosted
     version: "3.2.1"
   url_launcher_macos:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher_macos
       sha256: "17ba2000b847f334f16626a574c702b196723af2a289e7a93ffcb79acff855c2"
@@ -1587,7 +1595,7 @@ packages:
     source: hosted
     version: "3.2.2"
   url_launcher_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher_platform_interface
       sha256: "552f8a1e663569be95a8190206a38187b531910283c3e982193e4f2733f01029"
@@ -1595,7 +1603,7 @@ packages:
     source: hosted
     version: "2.3.2"
   url_launcher_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher_web
       sha256: "4bd2b7b4dc4d4d0b94e5babfffbca8eac1a126c7f3d6ecbc1a11013faa3abba2"
@@ -1603,7 +1611,7 @@ packages:
     source: hosted
     version: "2.4.1"
   url_launcher_windows:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher_windows
       sha256: "3284b6d2ac454cf34f114e1d3319866fdd1e19cdc329999057e44ffe936cfa77"
@@ -1659,7 +1667,7 @@ packages:
     source: hosted
     version: "2.10.0"
   video_player_android:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: video_player_android
       sha256: "4a5135754a62dbc827a64a42ef1f8ed72c962e191c97e2d48744225c2b9ebb73"
@@ -1667,7 +1675,7 @@ packages:
     source: hosted
     version: "2.8.7"
   video_player_avfoundation:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: video_player_avfoundation
       sha256: "9ee764e5cd2fc1e10911ae8ad588e1a19db3b6aa9a6eb53c127c42d3a3c3f22f"
@@ -1675,7 +1683,7 @@ packages:
     source: hosted
     version: "2.7.1"
   video_player_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: video_player_platform_interface
       sha256: df534476c341ab2c6a835078066fc681b8265048addd853a1e3c78740316a844
@@ -1683,7 +1691,7 @@ packages:
     source: hosted
     version: "6.3.0"
   video_player_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: video_player_web
       sha256: e8bba2e5d1e159d5048c9a491bb2a7b29c535c612bb7d10c1e21107f5bd365ba
