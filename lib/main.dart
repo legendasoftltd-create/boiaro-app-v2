@@ -9,6 +9,7 @@ import 'backend/firebase/firebase_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
 import 'index.dart';
+import '/providers/cart_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,10 +28,15 @@ void main() async {
   final appState = FFAppState(); // Initialize FFAppState
   await appState.initializePersistedState();
 
-  runApp(ChangeNotifierProvider(
-    create: (context) => appState,
-    child: MyApp(),
-  ));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => appState),
+        ChangeNotifierProvider(create: (context) => CartProvider()),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -83,7 +89,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
+    return MaterialApp.router( 
       debugShowCheckedModeBanner: false,
       title: 'Boi Aro',
       scrollBehavior: MyAppScrollBehavior(),
@@ -222,3 +228,34 @@ class _NavBarPageState extends State<NavBarPage> {
     );
   }
 }
+
+// - `auto_size_text`
+
+
+// - `currency_symbols`
+
+// - `easy_debounce`
+
+// - `equatable`
+
+// - `fluttertoast`
+
+// - `from_css_color`
+
+// - `json_path`
+
+// - `mime_type`
+
+// - `page_transition`
+
+// - `percent_indicator`
+
+// - `readmore`
+
+// - `smooth_page_indicator`
+
+// - `timeago` (can be replaced by `intl` which is already there)
+
+// - `flutter_rating_bar` (can be custom built)
+
+// - `pin_code_fields` (can be custom built)

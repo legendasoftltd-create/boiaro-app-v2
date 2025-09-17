@@ -8,9 +8,9 @@ import '/custom_code/actions/index.dart' as actions;
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import 'dart:async';
-import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '/custom_code/actions/debounce_action.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'search_page_model.dart';
@@ -44,13 +44,32 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
         safeSetState(() {});
       },
     );
+    _searchDebouncer = DebounceAction(
+      delay: Duration(milliseconds: 500),
+      onDebounce: () async {
+        if (_model.textController.text == '') {
+          _model.focus = false;
+          safeSetState(() {});
+          safeSetState(() => _model.apiRequestCompleter2 = null);
+          await _model.waitForApiRequestCompleted2();
+        } else {
+          _model.focus = true;
+          safeSetState(() {});
+          safeSetState(() => _model.apiRequestCompleter2 = null);
+          await _model.waitForApiRequestCompleted2();
+        }
+      },
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
+  late DebounceAction _searchDebouncer;
+
+  @override
   void dispose() {
     _model.dispose();
-
+    _searchDebouncer.dispose();
     super.dispose();
   }
 
@@ -113,25 +132,7 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                         child: TextFormField(
                           controller: _model.textController,
                           focusNode: _model.textFieldFocusNode,
-                          onChanged: (_) => EasyDebounce.debounce(
-                            '_model.textController',
-                            Duration(milliseconds: 500),
-                            () async {
-                              if (_model.textController.text == '') {
-                                _model.focus = false;
-                                safeSetState(() {});
-                                safeSetState(
-                                    () => _model.apiRequestCompleter2 = null);
-                                await _model.waitForApiRequestCompleted2();
-                              } else {
-                                _model.focus = true;
-                                safeSetState(() {});
-                                safeSetState(
-                                    () => _model.apiRequestCompleter2 = null);
-                                await _model.waitForApiRequestCompleted2();
-                              }
-                            },
-                          ),
+                          onChanged: (_) => _searchDebouncer.run(),
                           onFieldSubmitted: (_) async {
                             FFAppState()
                                 .addToSearchList(_model.textController.text);
@@ -526,6 +527,11 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                                         seachFilterListItem,
                                                         r'''$.image''',
                                                       ).toString()}',
+                                                      price:
+                                                          '${getJsonField(
+                                                        seachFilterListItem,
+                                                         r'''$.price''',
+                                                      ).toString()}',
                                                       name: getJsonField(
                                                         seachFilterListItem,
                                                         r'''$.name''',
@@ -679,6 +685,14 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                                               getJsonField(
                                                                 seachFilterListItem,
                                                                 r'''$.name''',
+                                                              ).toString(),
+                                                              ParamType.String,
+                                                            ),
+                                                            'price':
+                                                                serializeParam(
+                                                              getJsonField(
+                                                                seachFilterListItem,
+                                                                r'''$.price''',
                                                               ).toString(),
                                                               ParamType.String,
                                                             ),

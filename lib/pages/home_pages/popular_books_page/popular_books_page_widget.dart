@@ -263,11 +263,20 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                                           popularBookListItem,
                                                           r'''$.name''',
                                                         ).toString(),
+                                                        price: getJsonField(
+                                                          popularBookListItem,
+                                                          r'''$.price''',
+                                                        ).toString(),
                                                         authorName:
                                                             getJsonField(
                                                           popularBookListItem,
                                                           r'''$.author.name''',
                                                         ).toString(),
+                                                        // price:
+                                                        //     getJsonField(
+                                                        //   popularBookListItem,
+                                                        //    r'''$.price''',
+                                                        // ).toString(),
                                                         averageRating:
                                                             getJsonField(
                                                           popularBookListItem,
@@ -410,6 +419,15 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                                                 getJsonField(
                                                                   popularBookListItem,
                                                                   r'''$.name''',
+                                                                ).toString(),
+                                                                ParamType
+                                                                    .String,
+                                                              ),
+                                                              'price':
+                                                                  serializeParam(
+                                                                getJsonField(
+                                                                  popularBookListItem,
+                                                                  r'''$.price''',
                                                                 ).toString(),
                                                                 ParamType
                                                                     .String,

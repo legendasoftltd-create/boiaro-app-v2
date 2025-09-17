@@ -309,6 +309,11 @@ class _HistoryDetailsPageWidgetState extends State<HistoryDetailsPageWidget> {
                                                                     bookDetailsListItem,
                                                                     r'''$.image''',
                                                                   ).toString()}',
+                                                                  price:
+                                                                      '${getJsonField(
+                                                                    bookDetailsListItem,
+                                                                    r'''$.price''',
+                                                                  ).toString()}',
                                                                   bookName:
                                                                       getJsonField(
                                                                     bookDetailsListItem,
@@ -457,6 +462,15 @@ class _HistoryDetailsPageWidgetState extends State<HistoryDetailsPageWidget> {
                                                                           getJsonField(
                                                                             bookDetailsListItem,
                                                                             r'''$.name''',
+                                                                          ).toString(),
+                                                                          ParamType
+                                                                              .String,
+                                                                        ),
+                                                                        'price':
+                                                                            serializeParam(
+                                                                          getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.price''',
                                                                           ).toString(),
                                                                           ParamType
                                                                               .String,

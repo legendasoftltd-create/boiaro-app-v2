@@ -772,6 +772,11 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                           bookDetailsListItem,
                                                                           r'''$.name''',
                                                                         ).toString(),
+                                                                        price:
+                                                                            getJsonField(
+                                                                          bookDetailsListItem,
+                                                                          r'''$.price''',
+                                                                        ).toString(),
                                                                         authorsName:
                                                                             'By ${getJsonField(
                                                                           bookDetailsListItem,
@@ -879,6 +884,13 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                                 getJsonField(
                                                                                   bookDetailsListItem,
                                                                                   r'''$.name''',
+                                                                                ).toString(),
+                                                                                ParamType.String,
+                                                                              ),
+                                                                              'price': serializeParam(
+                                                                                getJsonField(
+                                                                                  bookDetailsListItem,
+                                                                                  r'''$.price''',
                                                                                 ).toString(),
                                                                                 ParamType.String,
                                                                               ),

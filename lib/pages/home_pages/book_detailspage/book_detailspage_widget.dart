@@ -3,6 +3,7 @@ import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/pages/cart_pages/checkout_page_widget.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/dialogs/book_review_bottom_sheet/book_review_bottom_sheet_widget.dart';
 import '/pages/empty_components/blank_component/blank_component_widget.dart';
@@ -12,6 +13,7 @@ import '/custom_code/actions/index.dart' as actions;
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
+import '/providers/cart_provider.dart';
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -24,12 +26,14 @@ class BookDetailspageWidget extends StatefulWidget {
   const BookDetailspageWidget({
     super.key,
     required this.name,
+    required this.price,
     required this.image,
     required this.id,
   });
 
   final String? name;
   final String? image;
+  final String? price;
   final String? id;
 
   static String routeName = 'BookDetailspage';
@@ -234,7 +238,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       milliseconds: 200),
                                                   imageUrl: widget.image!,
                                                   width: 181.0,
-                                                  height: 258.0,
+                                                  height: 240.0,
                                                   fit: BoxFit.fitWidth,
                                                   alignment:
                                                       Alignment(0.0, 0.0),
@@ -295,6 +299,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         lineHeight: 1.5,
                                                       ),
                                             ),
+                                            Text("Price:৳${widget.price}",style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        fontSize: 20.0,
+                                                        letterSpacing: 0.0,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        lineHeight: 1.5,
+                                                        color: FlutterFlowTheme.of(context).primary
+                                                      ),),
                                           ],
                                         ),
                                       ),
@@ -1851,6 +1868,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             authorRelatedbookDetailslistItem,
                                                             r'''$.name''',
                                                           ).toString(),
+                                                          price:
+                                                              getJsonField(
+                                                            authorRelatedbookDetailslistItem,
+                                                            r'''$.price''',
+                                                          ).toString(),
                                                           authorsName:
                                                               getJsonField(
                                                             authorRelatedbookDetailslistItem,
@@ -2091,224 +2113,340 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     decoration: BoxDecoration(),
                                     child: Padding(
                                       padding: EdgeInsets.all(16.0),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.max,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: FFButtonWidget(
+                                      child: Builder(
+                                        builder: (context) {
+                                          // Check if book is free or paid
+                                          final accessType = EbookGroup.getbookdetailsApiCall.accesstype(
+                                            bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                          );
+
+                                          if (accessType == 'free') {
+                                            // Free book - show "Read Book" button
+                                            return FFButtonWidget(
                                               onPressed: () async {
-                                                if (EbookGroup
-                                                        .getbookdetailsApiCall
-                                                        .accesstype(
-                                                      bookDetailspageGetbookdetailsApiResponse
-                                                          .jsonBody,
-                                                    ) ==
-                                                    'free') {
-                                                  context.pushNamed(
-                                                    ReadBookCustomPageWidget
-                                                        .routeName,
-                                                    queryParameters: {
-                                                      'pdf': serializeParam(
-                                                        '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                          bookDetailspageGetbookdetailsApiResponse
-                                                              .jsonBody,
-                                                        )}',
-                                                        ParamType.String,
-                                                      ),
-                                                      'id': serializeParam(
-                                                        widget.id,
-                                                        ParamType.String,
-                                                      ),
-                                                      'name': serializeParam(
-                                                        widget.name,
-                                                        ParamType.String,
-                                                      ),
-                                                      'image': serializeParam(
-                                                        widget.image,
-                                                        ParamType.String,
-                                                      ),
-                                                    }.withoutNulls,
-                                                  );
+                                                context.pushNamed(
+                                                  ReadBookCustomPageWidget.routeName,
+                                                  queryParameters: {
+                                                    'pdf': serializeParam(
+                                                      '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                        bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                      )}',
+                                                      ParamType.String,
+                                                    ),
+                                                    'id': serializeParam(
+                                                      widget.id,
+                                                      ParamType.String,
+                                                    ),
+                                                    'name': serializeParam(
+                                                      widget.name,
+                                                      ParamType.String,
+                                                    ),
+                                                    'image': serializeParam(
+                                                      widget.image,
+                                                      ParamType.String,
+                                                    ),
+                                                  }.withoutNulls,
+                                                );
 
-                                                  if (widget.id ==
-                                                      FFAppState()
-                                                          .homePageBookId) {
-                                                    FFAppState().totalPages = 1;
-                                                    FFAppState().update(() {});
-                                                  } else {
-                                                    FFAppState().totalPages = 1;
-                                                    FFAppState()
-                                                        .homePageCurrentPdfIndex = 1;
-                                                    FFAppState().update(() {});
-                                                  }
+                                                if (widget.id == FFAppState().homePageBookId) {
+                                                  FFAppState().totalPages = 1;
+                                                  FFAppState().update(() {});
                                                 } else {
-                                                  if (FFAppState().isLogin ==
-                                                      true) {
-                                                    _model.uservalidity =
-                                                        await EbookGroup
-                                                            .usersubscriptionvalidityApiCall
-                                                            .call(
-                                                      userId:
-                                                          FFAppState().userId,
-                                                      token: FFAppState().token,
-                                                    );
-
-                                                    if (EbookGroup
-                                                            .usersubscriptionvalidityApiCall
-                                                            .daysLeft(
-                                                          (_model.uservalidity
-                                                                  ?.jsonBody ??
-                                                              ''),
-                                                        ) ==
-                                                        null) {
-                                                      context.pushNamed(
-                                                          SubscriptionPageWidget
-                                                              .routeName);
-                                                    } else {
-                                                      if (EbookGroup
-                                                              .usersubscriptionvalidityApiCall
-                                                              .daysLeft(
-                                                            (_model.uservalidity
-                                                                    ?.jsonBody ??
-                                                                ''),
-                                                          )! >
-                                                          0) {
-                                                        context.pushNamed(
-                                                          ReadBookCustomPageWidget
-                                                              .routeName,
-                                                          queryParameters: {
-                                                            'pdf':
-                                                                serializeParam(
-                                                              '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                                bookDetailspageGetbookdetailsApiResponse
-                                                                    .jsonBody,
-                                                              )}',
-                                                              ParamType.String,
-                                                            ),
-                                                            'id':
-                                                                serializeParam(
-                                                              widget.id,
-                                                              ParamType.String,
-                                                            ),
-                                                            'name':
-                                                                serializeParam(
-                                                              widget.name,
-                                                              ParamType.String,
-                                                            ),
-                                                            'image':
-                                                                serializeParam(
-                                                              widget.image,
-                                                              ParamType.String,
-                                                            ),
-                                                          }.withoutNulls,
-                                                        );
-
-                                                        if (widget.id ==
-                                                            FFAppState()
-                                                                .homePageBookId) {
-                                                          FFAppState()
-                                                              .totalPages = 1;
-                                                          FFAppState()
-                                                              .update(() {});
-                                                        } else {
-                                                          FFAppState()
-                                                              .totalPages = 1;
-                                                          FFAppState()
-                                                              .homePageCurrentPdfIndex = 1;
-                                                          FFAppState()
-                                                              .update(() {});
-                                                        }
-                                                      } else {
-                                                        context.pushNamed(
-                                                            SubscriptionPageWidget
-                                                                .routeName);
-                                                      }
-                                                    }
-                                                  } else {
-                                                    context.pushNamed(
-                                                        SignInPageWidget
-                                                            .routeName);
-                                                  }
+                                                  FFAppState().totalPages = 1;
+                                                  FFAppState().homePageCurrentPdfIndex = 1;
+                                                  FFAppState().update(() {});
                                                 }
-
-                                                safeSetState(() {});
                                               },
-                                              text: valueOrDefault<String>(
-                                                () {
-                                                  if (valueOrDefault<String>(
-                                                        EbookGroup
-                                                            .getbookdetailsApiCall
-                                                            .accesstype(
-                                                          bookDetailspageGetbookdetailsApiResponse
-                                                              .jsonBody,
-                                                        ),
-                                                        'free',
-                                                      ) ==
-                                                      'free') {
-                                                    return 'Read book';
-                                                  } else if (EbookGroup
-                                                          .usersubscriptionvalidityApiCall
-                                                          .daysLeft(
-                                                        containerUsersubscriptionvalidityApiResponse
-                                                            .jsonBody,
-                                                      ) ==
-                                                      null) {
-                                                    return 'Buy subscription';
-                                                  } else {
-                                                    return (EbookGroup
-                                                                .usersubscriptionvalidityApiCall
-                                                                .daysLeft(
-                                                              containerUsersubscriptionvalidityApiResponse
-                                                                  .jsonBody,
-                                                            )! >
-                                                            0
-                                                        ? 'Read book'
-                                                        : 'Buy subscription');
-                                                  }
-                                                }(),
-                                                'Buy subscription',
-                                              ),
+                                              text: 'Read Book',
                                               options: FFButtonOptions(
-                                                width: 206.0,
+                                                width: double.infinity,
                                                 height: 56.0,
-                                                padding: EdgeInsetsDirectional
-                                                    .fromSTEB(
-                                                        24.0, 0.0, 24.0, 0.0),
-                                                iconPadding:
-                                                    EdgeInsetsDirectional
-                                                        .fromSTEB(
-                                                            0.0, 0.0, 0.0, 0.0),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primary,
-                                                textStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleSmall
-                                                        .override(
-                                                          fontFamily:
-                                                              'SF Pro Display',
-                                                          color: FlutterFlowTheme
-                                                                  .of(context)
-                                                              .primaryBackground,
-                                                          fontSize: 16.0,
-                                                          letterSpacing: 0.0,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          lineHeight: 1.2,
-                                                        ),
+                                                padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
+                                                iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                                                color: FlutterFlowTheme.of(context).primary,
+                                                textStyle: FlutterFlowTheme.of(context).titleSmall.override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  color: FlutterFlowTheme.of(context).primaryBackground,
+                                                  fontSize: 16.0,
+                                                  letterSpacing: 0.0,
+                                                  fontWeight: FontWeight.bold,
+                                                  lineHeight: 1.2,
+                                                ),
                                                 elevation: 0.0,
                                                 borderSide: BorderSide(
                                                   color: Colors.transparent,
                                                   width: 1.0,
                                                 ),
-                                                borderRadius:
-                                                    BorderRadius.circular(12.0),
+                                                borderRadius: BorderRadius.circular(12.0),
                                               ),
-                                            ),
-                                          ),
-                                        ],
+                                            );
+                                          } else {
+                                            // Paid book - show Preview, Add to Cart, and Buy Now buttons
+                                            return Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // Preview button
+                                                FFButtonWidget(
+                                                  onPressed: () async {
+                                                    context.pushNamed(
+                                                      ReadBookCustomPageWidget.routeName,
+                                                      queryParameters: {
+                                                        'pdf': serializeParam(
+                                                          '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                            bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                          )}',
+                                                          ParamType.String,
+                                                        ),
+                                                        'id': serializeParam(
+                                                          widget.id,
+                                                          ParamType.String,
+                                                        ),
+                                                        'name': serializeParam(
+                                                          widget.name,
+                                                          ParamType.String,
+                                                        ),
+                                                        'image': serializeParam(
+                                                          widget.image,
+                                                          ParamType.String,
+                                                        ),
+                                                        'isPreview': serializeParam(
+                                                          true,
+                                                          ParamType.bool,
+                                                        ),
+                                                        'maxPages': serializeParam(
+                                                          5,
+                                                          ParamType.int,
+                                                        ),
+                                                      }.withoutNulls,
+                                                    );
+                                                  },
+                                                  text: 'Preview',
+                                                  options: FFButtonOptions(
+                                                    width: double.infinity,
+                                                    height: 48.0,
+                                                    padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
+                                                    iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                                                    color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                    textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                      fontFamily: 'SF Pro Display',
+                                                      color: FlutterFlowTheme.of(context).primaryText,
+                                                      fontSize: 14.0,
+                                                      letterSpacing: 0.0,
+                                                      fontWeight: FontWeight.w500,
+                                                      lineHeight: 1.2,
+                                                    ),
+                                                    elevation: 0.0,
+                                                    borderSide: BorderSide(
+                                                      color: FlutterFlowTheme.of(context).primary,
+                                                      width: 1.0,
+                                                    ),
+                                                    borderRadius: BorderRadius.circular(12.0),
+                                                  ),
+                                                ),
+                                                SizedBox(height: 12.0),
+                                                // Add to Cart and Buy Now buttons
+                                                Consumer<CartProvider>(
+                                                  builder: (context, cart, child) {
+                                                    final isInCart = cart.items.containsKey(widget.id ?? "");
+                                                    final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
+
+                                                    return Row(
+                                                      mainAxisSize: MainAxisSize.max,
+                                                      children: [
+                                                        if (quantity > 0) ...[
+                                                          // Quantity controls when item is in cart
+                                                          Expanded(
+                                                            child: Padding(
+                                                              padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 6.0, 0.0),
+                                                              child: Container(
+                                                                height: 48.0,
+                                                                decoration: BoxDecoration(
+                                                                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                  border: Border.all(
+                                                                    color: FlutterFlowTheme.of(context).primary,
+                                                                    width: 1.0,
+                                                                  ),
+                                                                  borderRadius: BorderRadius.circular(12.0),
+                                                                ),
+                                                                child: Row(
+                                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                                  children: [
+                                                                    // Decrement button
+                                                                    InkWell(
+                                                                      onTap: () async{
+                                                                        cart.removeSingleItem(widget.id ?? "");
+                                                                       await actions.showCustomToastBottom('Quantity decreased!');
+                                                                      },
+                                                                      child: Container(
+                                                                        width: 36.0,
+                                                                        height: 36.0,
+                                                                        decoration: BoxDecoration(
+                                                                          color: FlutterFlowTheme.of(context).primary,
+                                                                          shape: BoxShape.circle,
+                                                                        ),
+                                                                        child: Icon(
+                                                                          Icons.remove,
+                                                                          color: FlutterFlowTheme.of(context).primaryBackground,
+                                                                          size: 20.0,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                    // Quantity display
+                                                                    Container(
+                                                                      padding: EdgeInsets.symmetric(horizontal: 10),
+                                                                      child: Text(
+                                                                        quantity.toString(),
+                                                                        textAlign: TextAlign.center,
+                                                                        style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                          fontFamily: 'SF Pro Display',
+                                                                          fontSize: 16.0,
+                                                                          fontWeight: FontWeight.bold,
+                                                                          color: FlutterFlowTheme.of(context).primaryText,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                    // Increment button
+                                                                    InkWell(
+                                                                      onTap: ()async {
+                                                                        cart.addItem(
+                                                                          widget.id!,
+                                                                          widget.name!,
+                                                                          widget.image!,
+                                                                         double.tryParse(widget.price!)??0.0,
+                                                                          
+                                                                        );
+                                                                        await actions.showCustomToastBottom('Quantity increased!');
+                                                                      },
+                                                                      child: Container(
+                                                                        width: 36.0,
+                                                                        height: 36.0,
+                                                                        decoration: BoxDecoration(
+                                                                          color: FlutterFlowTheme.of(context).primary,
+                                                                          shape: BoxShape.circle,
+                                                                        ),
+                                                                        child: Icon(
+                                                                          Icons.add,
+                                                                          color: FlutterFlowTheme.of(context).primaryBackground,
+                                                                          size: 20.0,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ] else ...[
+                                                          // Add to Cart button when item is not in cart
+                                                          Expanded(
+                                                            child: Padding(
+                                                              padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 6.0, 0.0),
+                                                              child: FFButtonWidget(
+                                                                onPressed: () async {
+                                                                  cart.addItem(
+                                                                    widget.id!,
+                                                                    widget.name!,
+                                                                    widget.image!,
+                                                                    double.tryParse(widget.price!)??0.0,
+                                                                  );
+                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                    SnackBar(
+                                                                      content: Text(
+                                                                        'Book added to cart!',
+                                                                        style: TextStyle(
+                                                                          color: FlutterFlowTheme.of(context).primaryText,
+                                                                        ),
+                                                                      ),
+                                                                      duration: Duration(milliseconds: 2000),
+                                                                      backgroundColor: FlutterFlowTheme.of(context).secondary,
+                                                                    ),
+                                                                  );
+                                                                },
+                                                                text: 'Add to Cart',
+                                                                options: FFButtonOptions(
+                                                                  width: double.infinity,
+                                                                  height: 48.0,
+                                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                                                  iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                                                                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                  textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                    fontFamily: 'SF Pro Display',
+                                                                    color: FlutterFlowTheme.of(context).primaryText,
+                                                                    fontSize: 14.0,
+                                                                    letterSpacing: 0.0,
+                                                                    fontWeight: FontWeight.w600,
+                                                                    lineHeight: 1.2,
+                                                                  ),
+                                                                  elevation: 0.0,
+                                                                  borderSide: BorderSide(
+                                                                    color: FlutterFlowTheme.of(context).primary,
+                                                                    width: 1.0,
+                                                                  ),
+                                                                  borderRadius: BorderRadius.circular(12.0),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                    Expanded(
+                                                      child: Padding(
+                                                        padding: EdgeInsetsDirectional.fromSTEB(6.0, 0.0, 0.0, 0.0),
+                                                        child: FFButtonWidget(
+                                                          onPressed: () async {
+                                                            if(FFAppState()
+                                                                .isLogin ==
+                                                            true){
+                                                               final cart = Provider.of<CartProvider>(context, listen: false);
+                                                            cart.addItem(
+                                                              widget.id!,
+                                                              widget.name!,
+                                                              widget.image!,
+                                                             double.tryParse(widget.price!)??0.0,
+                                                            );
+                                                         Navigator.push<void>(
+                                                           context,
+                                                           MaterialPageRoute<void>(
+                                                             builder: (BuildContext context) =>  CheckoutPageWidget(),
+                                                           ),
+                                                         );
+                                                            }else{
+                                                                                                                        context.pushNamed(
+                                                              SignInPageWidget
+                                                                  .routeName);
+                                                            }
+                                                           
+                                                          },
+                                                          text: 'Buy Now',
+                                                          options: FFButtonOptions(
+                                                            width: double.infinity,
+                                                            height: 48.0,
+                                                            padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                                            iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                                                            color: FlutterFlowTheme.of(context).primary,
+                                                            textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                              fontFamily: 'SF Pro Display',
+                                                              color: FlutterFlowTheme.of(context).primaryBackground,
+                                                              fontSize: 14.0,
+                                                              letterSpacing: 0.0,
+                                                              fontWeight: FontWeight.w600,
+                                                              lineHeight: 1.2,
+                                                            ),
+                                                            elevation: 0.0,
+                                                            borderSide: BorderSide(
+                                                              color: Colors.transparent,
+                                                              width: 1.0,
+                                                            ),
+                                                            borderRadius: BorderRadius.circular(12.0),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                );})
+                                              ],
+                                            );
+                                          }
+                                        },
                                       ),
                                     ),
                                   );

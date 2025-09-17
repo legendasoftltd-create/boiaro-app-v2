@@ -254,6 +254,10 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               'name',
               ParamType.String,
             ),
+            price: params.getParam(
+              'price',
+              ParamType.String,
+            ),
             image: params.getParam(
               'image',
               ParamType.String,

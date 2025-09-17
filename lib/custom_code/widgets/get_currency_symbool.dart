@@ -10,8 +10,6 @@ import 'package:flutter/material.dart';
 // Begin custom widget code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
-import 'package:currency_symbols/currency_symbols.dart';
-
 class GetCurrencySymbool extends StatefulWidget {
   const GetCurrencySymbool({
     super.key,
@@ -39,7 +37,7 @@ class _GetCurrencySymboolState extends State<GetCurrencySymbool> {
         height: widget.height,
         width: widget.width,
         child: Center(
-          child: Text("${cSymbol(widget.isSimbool ?? "USD")}",
+          child: Text(getCurrencySymbol(widget.isSimbool ?? "USD"),
               style: TextStyle(
                 fontSize: widget.fontSize ?? 16,
                 fontWeight: FontWeight.w600,

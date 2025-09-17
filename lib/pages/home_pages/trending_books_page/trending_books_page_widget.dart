@@ -385,6 +385,11 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                                                     trendingBooksListItem,
                                                                     r'''$.name''',
                                                                   ).toString(),
+                                                                  price:
+                                                                      getJsonField(
+                                                                    trendingBooksListItem,
+                                                                    r'''$.price''',
+                                                                  ).toString(),
                                                                   authorsName:
                                                                       getJsonField(
                                                                     trendingBooksListItem,
@@ -532,6 +537,15 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                                                           ParamType
                                                                               .String,
                                                                         ),
+                                                                        'price':
+                                                                            serializeParam(
+                                                                          getJsonField(
+                                                                            trendingBooksListItem,
+                                                                            r'''$.price''',
+                                                                          ).toString(),
+                                                                          ParamType
+                                                                              .String,
+                                                                        ),
                                                                         'image':
                                                                             serializeParam(
                                                                           '${FFAppConstants.bookImagesUrl}${getJsonField(
@@ -606,4 +620,4 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
     );
   }
 }
-// https://ebook.boiaro.com/api/checkregistereduser
+// https://api.boiaro.com/api/checkregistereduser

@@ -301,6 +301,11 @@ class _GetBookByCategoryPageWidgetState
                                                                     bookDetailsListItem,
                                                                     r'''$.image''',
                                                                   ).toString()}',
+                                                                  price:
+                                                                      '${getJsonField(
+                                                                    bookDetailsListItem,
+                                                                    r'''$.price''',
+                                                                  ).toString()}',
                                                                   bookName:
                                                                       getJsonField(
                                                                     bookDetailsListItem,
@@ -449,6 +454,15 @@ class _GetBookByCategoryPageWidgetState
                                                                           getJsonField(
                                                                             bookDetailsListItem,
                                                                             r'''$.name''',
+                                                                          ).toString(),
+                                                                          ParamType
+                                                                              .String,
+                                                                        ),
+                                                                        'price':
+                                                                            serializeParam(
+                                                                          getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.price''',
                                                                           ).toString(),
                                                                           ParamType
                                                                               .String,

@@ -371,3 +371,34 @@ String getCountryCodeInit(String phoneNumber) {
   // Look up the country code
   return countryCodeMap[prefix] ?? 'Unknown';
 }
+
+String getCurrencySymbol(String currencyCode) {
+  final Map<String, String> currencySymbols = {
+    'USD': '\$',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'INR': '₹',
+    'AUD': 'A\$',
+    'CAD': 'C\$',
+    'CHF': 'CHF',
+    'CNY': '¥',
+    'SEK': 'kr',
+    'NZD': 'NZ\$',
+    'MXN': 'Mex\$',
+    'SGD': 'S\$',
+    'HKD': 'HK\$',
+    'NOK': 'kr',
+    'KRW': '₩',
+    'TRY': '₺',
+    'RUB': '₽',
+    'BRL': 'R\$',
+    'ZAR': 'R',
+    'AED': 'د.إ',
+    'SAR': '﷼',
+    'AUD': 'A\$',
+    'BDT': '৳',
+    // Add more currency symbols as needed
+  };
+  return currencySymbols[currencyCode.toUpperCase()] ?? currencyCode;
+}

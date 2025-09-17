@@ -15,7 +15,7 @@ class EbookGroup {
   static String getBaseUrl({
     String? token = '',
   }) =>
-      'https://ebook.boiaro.com/api/';
+      'https://api.boiaro.com/api/';
   static Map<String, String> headers = {
     'Authorization': 'Bearer [token]',
   };

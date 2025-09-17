@@ -102,7 +102,7 @@ class _SplashPageWidgetState extends State<SplashPageWidget>
                     padding:
                         EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 12.0),
                     child: Image.network(
-                      'https://ebook.boiaro.com/assets/media/logos/logo-final_1.jpg',
+                      'https://api.boiaro.com/assets/media/logos/logo-final_1.jpg',
                       width: 160.0,
                       height: 120.0,
                       fit: BoxFit.contain,

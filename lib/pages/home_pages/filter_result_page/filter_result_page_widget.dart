@@ -291,6 +291,11 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
                                                                     filterBookListItem,
                                                                     r'''$.name''',
                                                                   ).toString(),
+                                                                  price:
+                                                                      getJsonField(
+                                                                    filterBookListItem,
+                                                                    r'''$.price''',
+                                                                  ).toString(),
                                                                   authorsName:
                                                                       getJsonField(
                                                                     filterBookListItem,
@@ -426,6 +431,15 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
                                                                           getJsonField(
                                                                             filterBookListItem,
                                                                             r'''$.name''',
+                                                                          ).toString(),
+                                                                          ParamType
+                                                                              .String,
+                                                                        ),
+                                                                        'price':
+                                                                            serializeParam(
+                                                                          getJsonField(
+                                                                            filterBookListItem,
+                                                                            r'''$.price''',
                                                                           ).toString(),
                                                                           ParamType
                                                                               .String,

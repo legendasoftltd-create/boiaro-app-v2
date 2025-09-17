@@ -239,6 +239,11 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                               favListItem,
                                                               r'''$.bookDetails.name''',
                                                             ).toString(),
+                                                            price:
+                                                                getJsonField(
+                                                              favListItem,
+                                                              r'''$.bookDetails.price''',
+                                                            ).toString(),
                                                             authorsName:
                                                                 getJsonField(
                                                               favListItem,
@@ -307,6 +312,15 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                                     getJsonField(
                                                                       favListItem,
                                                                       r'''$.bookDetails.name''',
+                                                                    ).toString(),
+                                                                    ParamType
+                                                                        .String,
+                                                                  ),
+                                                                  'price':
+                                                                      serializeParam(
+                                                                    getJsonField(
+                                                                      favListItem,
+                                                                      r'''$.bookDetails.price''',
                                                                     ).toString(),
                                                                     ParamType
                                                                         .String,

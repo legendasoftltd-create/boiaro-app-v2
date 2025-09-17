@@ -22,6 +22,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'package:provider/provider.dart';
 import 'home_page_model.dart';
 export 'home_page_model.dart';
+import '/pages/cart_pages/cart_page_widget.dart';
 
 class HomePageWidget extends StatefulWidget {
   const HomePageWidget({super.key});
@@ -170,7 +171,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Image.network(
-                                'https://ebook.boiaro.com/assets/media/logos/logo-final_1.jpg',
+                                'https://api.boiaro.com/assets/media/logos/logo-final_1.jpg',
                                 width: 130.0,
                                 height: 40.0,
                                 fit: BoxFit.contain,
@@ -249,6 +250,46 @@ class _HomePageWidgetState extends State<HomePageWidget>
                             ),
                           ),
                         ),
+                        SizedBox(width: 8,),
+                         InkWell(
+                                    splashColor: Colors.transparent,
+                                    focusColor: Colors.transparent,
+                                    hoverColor: Colors.transparent,
+                                    highlightColor: Colors.transparent,
+                                    onTap: () async {
+                                       Navigator.push<void>(
+                                         context,
+                                         MaterialPageRoute<void>(
+                                           builder: (BuildContext context) =>  CartPageWidget(),
+                                         ),
+                                       );
+                                    },
+                                    child: Container(
+                                      width: 36.0,
+                                      height: 36.0,
+                                      decoration: BoxDecoration(
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryBackground,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            blurRadius: 16.0,
+                                            color: FlutterFlowTheme.of(context).shadowColor,
+                                            offset: Offset(
+                                              0.0,
+                                              4.0,
+                                            ),
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(8.0),
+                                      ),
+                                      alignment: AlignmentDirectional(0.0, 0.0),
+                                      child: Icon(
+                                        Icons.shopping_cart_rounded,
+                                        color: FlutterFlowTheme.of(context).primaryText,
+                                        size: 22.0,
+                                      ),
+                                    ),
+                                  ),
                       ],
                     ),
                   ),
@@ -585,8 +626,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                             children: [
                                                                BannerSlider(
                                                                 imageUrls: [
-                                                                  'https://www.shutterstock.com/image-vector/promo-sale-banner-stack-books-260nw-1973545310.jpg',
                                                                   'https://static.vecteezy.com/system/resources/previews/023/107/446/non_2x/promo-sale-banner-with-reading-stack-of-books-wooden-letter-tiles-school-books-pile-world-book-day-bookstore-bookshop-library-book-lover-bibliophile-education-a4-for-poster-cover-vector.jpg',
+                                                                  'https://static.vecteezy.com/system/resources/previews/023/107/441/non_2x/promo-banner-with-with-reading-stack-of-books-lantern-with-candle-plant-school-books-pile-world-book-day-bookstore-bookshop-library-book-lover-bibliophile-education-for-poster-cover-vector.jpg',
                                                                   'https://static.vecteezy.com/system/resources/previews/023/107/441/non_2x/promo-banner-with-with-reading-stack-of-books-lantern-with-candle-plant-school-books-pile-world-book-day-bookstore-bookshop-library-book-lover-bibliophile-education-for-poster-cover-vector.jpg',
                                                                 ],
                                                               ),
@@ -1082,6 +1123,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$.name''',
                                                                                     ).toString(),
+                                                                                    price: getJsonField(
+                                                                                      trendbookDetailsListItem,
+                                                                                      r'''$.price''',
+                                                                                    ).toString(),
                                                                                     authorsName: getJsonField(
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$.author.name''',
@@ -1175,6 +1220,13 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                             getJsonField(
                                                                                               trendbookDetailsListItem,
                                                                                               r'''$.name''',
+                                                                                            ).toString(),
+                                                                                            ParamType.String,
+                                                                                          ),
+                                                                                          'price': serializeParam(
+                                                                                            getJsonField(
+                                                                                              trendbookDetailsListItem,
+                                                                                              r'''$.price''',
                                                                                             ).toString(),
                                                                                             ParamType.String,
                                                                                           ),
@@ -1461,7 +1513,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                         width: double
                                                                             .infinity,
                                                                         height:
-                                                                            172.0,
+                                                                            222.0,
                                                                         decoration:
                                                                             BoxDecoration(),
                                                                         child:
@@ -1494,142 +1546,157 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                         popularbookDetailsListIndex,
                                                                                       ),
                                                                                       updateCallback: () => safeSetState(() {}),
-                                                                                      child: ListMainContainerComponentWidget(
-                                                                                        key: Key(
-                                                                                          'Key9t2_${getJsonField(
-                                                                                            popularbookDetailsListItem,
-                                                                                            r'''$.name''',
-                                                                                          ).toString()}',
-                                                                                        ),
-                                                                                        image: '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                                              child: ListMainContainerComponentWidget(
+                                                                                key: Key(
+                                                                                  'Key9t2_${getJsonField(
+                                                                                    popularbookDetailsListItem,
+                                                                                    r'''$.name''',
+                                                                                  ).toString()}',
+                                                                                ),
+                                                                                image: '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                                                  popularbookDetailsListItem,
+                                                                                  r'''$.image''',
+                                                                                ).toString()}',
+                                                                                name: getJsonField(
+                                                                                  popularbookDetailsListItem,
+                                                                                  r'''$.name''',
+                                                                                ).toString(),
+                                                                                price: getJsonField(
+                                                                                  popularbookDetailsListItem,
+                                                                                  r'''$.price''',
+                                                                                ).toString(),
+                                                                                authorName: getJsonField(
+                                                                                  popularbookDetailsListItem,
+                                                                                  r'''$.author.name''',
+                                                                                ).toString(),
+                                                                                averageRating: getJsonField(
+                                                                                  popularbookDetailsListItem,
+                                                                                  r'''$.averageRating''',
+                                                                                ).toDouble(),
+                                                                                isFav: functions.checkFavOrNot(
+                                                                                        EbookGroup.getFavouriteBookCall
+                                                                                            .favouriteBookDetailsList(
+                                                                                              containerGetFavouriteBookResponse.jsonBody,
+                                                                                            )
+                                                                                            ?.toList(),
+                                                                                        getJsonField(
                                                                                           popularbookDetailsListItem,
-                                                                                          r'''$.image''',
-                                                                                        ).toString()}',
-                                                                                        name: getJsonField(
+                                                                                          r'''$._id''',
+                                                                                        ).toString()) ==
+                                                                                    true,
+                                                                                indicator: (popularbookDetailsListIndex == _model.popularIndex) && (_model.isPopular == true),
+                                                                                width: 330.0,
+                                                                                // price: getJsonField(
+                                                                                //   popularbookDetailsListItem,
+                                                                                //   r'''$.price''',
+                                                                                // ).toString(),
+                                                                                isFavAction: () async {
+                                                                                  if (FFAppState().isLogin == true) {
+                                                                                    _model.isPopular = true;
+                                                                                    _model.popularIndex = popularbookDetailsListIndex;
+                                                                                    safeSetState(() {});
+                                                                                    if (functions.checkFavOrNot(
+                                                                                            EbookGroup.getFavouriteBookCall
+                                                                                                .favouriteBookDetailsList(
+                                                                                                  containerGetFavouriteBookResponse.jsonBody,
+                                                                                                )
+                                                                                                ?.toList(),
+                                                                                            getJsonField(
+                                                                                              popularbookDetailsListItem,
+                                                                                              r'''$._id''',
+                                                                                            ).toString()) ==
+                                                                                        true) {
+                                                                                      _model.getPopularDetete = await EbookGroup.removeFavouritebookCall.call(
+                                                                                        userId: FFAppState().userId,
+                                                                                        token: FFAppState().token,
+                                                                                        bookId: getJsonField(
+                                                                                          popularbookDetailsListItem,
+                                                                                          r'''$._id''',
+                                                                                        ).toString(),
+                                                                                      );
+
+                                                                                      safeSetState(() {
+                                                                                        FFAppState().clearGetFavouriteBookCacheCache();
+                                                                                        _model.apiRequestCompleted1 = false;
+                                                                                      });
+                                                                                      await _model.waitForApiRequestCompleted1();
+                                                                                      await actions.showCustomToastBottom(
+                                                                                        FFAppState().unFavText,
+                                                                                      );
+                                                                                    } else {
+                                                                                      _model.getPopularAdd = await EbookGroup.addFavouriteBookApiCall.call(
+                                                                                        userId: FFAppState().userId,
+                                                                                        token: FFAppState().token,
+                                                                                        bookId: getJsonField(
+                                                                                          popularbookDetailsListItem,
+                                                                                          r'''$._id''',
+                                                                                        ).toString(),
+                                                                                      );
+
+                                                                                      safeSetState(() {
+                                                                                        FFAppState().clearGetFavouriteBookCacheCache();
+                                                                                        _model.apiRequestCompleted1 = false;
+                                                                                      });
+                                                                                      await _model.waitForApiRequestCompleted1();
+                                                                                      await actions.showCustomToastBottom(
+                                                                                        FFAppState().favText,
+                                                                                      );
+                                                                                    }
+
+                                                                                    FFAppState().clearGetFavouriteBookCacheCache();
+                                                                                    _model.isPopular = false;
+                                                                                    safeSetState(() {});
+                                                                                  } else {
+                                                                                    FFAppState().favChange = true;
+                                                                                    FFAppState().bookId = getJsonField(
+                                                                                      popularbookDetailsListItem,
+                                                                                      r'''$._id''',
+                                                                                    ).toString();
+                                                                                    FFAppState().update(() {});
+
+                                                                                    context.pushNamed(SignInPageWidget.routeName);
+                                                                                  }
+
+                                                                                  safeSetState(() {});
+                                                                                },
+                                                                                onMainTap: () async {
+                                                                                  context.pushNamed(
+                                                                                    BookDetailspageWidget.routeName,
+                                                                                    queryParameters: {
+                                                                                      'name': serializeParam(
+                                                                                        getJsonField(
                                                                                           popularbookDetailsListItem,
                                                                                           r'''$.name''',
                                                                                         ).toString(),
-                                                                                        authorName: getJsonField(
-                                                                                          popularbookDetailsListItem,
-                                                                                          r'''$.author.name''',
-                                                                                        ).toString(),
-                                                                                        averageRating: getJsonField(
-                                                                                          popularbookDetailsListItem,
-                                                                                          r'''$.averageRating''',
-                                                                                        ).toDouble(),
-                                                                                        isFav: functions.checkFavOrNot(
-                                                                                                EbookGroup.getFavouriteBookCall
-                                                                                                    .favouriteBookDetailsList(
-                                                                                                      containerGetFavouriteBookResponse.jsonBody,
-                                                                                                    )
-                                                                                                    ?.toList(),
-                                                                                                getJsonField(
-                                                                                                  popularbookDetailsListItem,
-                                                                                                  r'''$._id''',
-                                                                                                ).toString()) ==
-                                                                                            true,
-                                                                                        indicator: (popularbookDetailsListIndex == _model.popularIndex) && (_model.isPopular == true),
-                                                                                        width: 330.0,
-                                                                                        isFavAction: () async {
-                                                                                          if (FFAppState().isLogin == true) {
-                                                                                            _model.isPopular = true;
-                                                                                            _model.popularIndex = popularbookDetailsListIndex;
-                                                                                            safeSetState(() {});
-                                                                                            if (functions.checkFavOrNot(
-                                                                                                    EbookGroup.getFavouriteBookCall
-                                                                                                        .favouriteBookDetailsList(
-                                                                                                          containerGetFavouriteBookResponse.jsonBody,
-                                                                                                        )
-                                                                                                        ?.toList(),
-                                                                                                    getJsonField(
-                                                                                                      popularbookDetailsListItem,
-                                                                                                      r'''$._id''',
-                                                                                                    ).toString()) ==
-                                                                                                true) {
-                                                                                              _model.getPopularDetete = await EbookGroup.removeFavouritebookCall.call(
-                                                                                                userId: FFAppState().userId,
-                                                                                                token: FFAppState().token,
-                                                                                                bookId: getJsonField(
-                                                                                                  popularbookDetailsListItem,
-                                                                                                  r'''$._id''',
-                                                                                                ).toString(),
-                                                                                              );
-
-                                                                                              safeSetState(() {
-                                                                                                FFAppState().clearGetFavouriteBookCacheCache();
-                                                                                                _model.apiRequestCompleted1 = false;
-                                                                                              });
-                                                                                              await _model.waitForApiRequestCompleted1();
-                                                                                              await actions.showCustomToastBottom(
-                                                                                                FFAppState().unFavText,
-                                                                                              );
-                                                                                            } else {
-                                                                                              _model.getPopularAdd = await EbookGroup.addFavouriteBookApiCall.call(
-                                                                                                userId: FFAppState().userId,
-                                                                                                token: FFAppState().token,
-                                                                                                bookId: getJsonField(
-                                                                                                  popularbookDetailsListItem,
-                                                                                                  r'''$._id''',
-                                                                                                ).toString(),
-                                                                                              );
-
-                                                                                              safeSetState(() {
-                                                                                                FFAppState().clearGetFavouriteBookCacheCache();
-                                                                                                _model.apiRequestCompleted1 = false;
-                                                                                              });
-                                                                                              await _model.waitForApiRequestCompleted1();
-                                                                                              await actions.showCustomToastBottom(
-                                                                                                FFAppState().favText,
-                                                                                              );
-                                                                                            }
-
-                                                                                            FFAppState().clearGetFavouriteBookCacheCache();
-                                                                                            _model.isPopular = false;
-                                                                                            safeSetState(() {});
-                                                                                          } else {
-                                                                                            FFAppState().favChange = true;
-                                                                                            FFAppState().bookId = getJsonField(
-                                                                                              popularbookDetailsListItem,
-                                                                                              r'''$._id''',
-                                                                                            ).toString();
-                                                                                            FFAppState().update(() {});
-
-                                                                                            context.pushNamed(SignInPageWidget.routeName);
-                                                                                          }
-
-                                                                                          safeSetState(() {});
-                                                                                        },
-                                                                                        onMainTap: () async {
-                                                                                          context.pushNamed(
-                                                                                            BookDetailspageWidget.routeName,
-                                                                                            queryParameters: {
-                                                                                              'name': serializeParam(
-                                                                                                getJsonField(
-                                                                                                  popularbookDetailsListItem,
-                                                                                                  r'''$.name''',
-                                                                                                ).toString(),
-                                                                                                ParamType.String,
-                                                                                              ),
-                                                                                              'image': serializeParam(
-                                                                                                '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                                                                  popularbookDetailsListItem,
-                                                                                                  r'''$.image''',
-                                                                                                ).toString()}',
-                                                                                                ParamType.String,
-                                                                                              ),
-                                                                                              'id': serializeParam(
-                                                                                                getJsonField(
-                                                                                                  popularbookDetailsListItem,
-                                                                                                  r'''$._id''',
-                                                                                                ).toString(),
-                                                                                                ParamType.String,
-                                                                                              ),
-                                                                                            }.withoutNulls,
-                                                                                          );
-                                                                                        },
+                                                                                        ParamType.String,
                                                                                       ),
-                                                                                    ),
+                                                                                      'price': serializeParam(
+                                                                                        getJsonField(
+                                                                                          popularbookDetailsListItem,
+                                                                                          r'''$.price''',
+                                                                                        ).toString(),
+                                                                                        ParamType.String,
+                                                                                      ),
+                                                                                      'image': serializeParam(
+                                                                                        '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                                                          popularbookDetailsListItem,
+                                                                                          r'''$.image''',
+                                                                                        ).toString()}',
+                                                                                        ParamType.String,
+                                                                                      ),
+                                                                                      'id': serializeParam(
+                                                                                        getJsonField(
+                                                                                          popularbookDetailsListItem,
+                                                                                          r'''$._id''',
+                                                                                        ).toString(),
+                                                                                        ParamType.String,
+                                                                                      ),
+                                                                                    }.withoutNulls,
                                                                                   );
+                                                                                },
+                                                                                
+                                                                              ),
+                                                                                ));
                                                                                 }).divide(SizedBox(width: 16.0)).addToStart(SizedBox(width: 16.0)).addToEnd(SizedBox(width: 16.0)),
                                                                               ),
                                                                             );
