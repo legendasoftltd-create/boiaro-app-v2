@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/pages/publisher_screens/best_publisher_page/best_publisher_page_widget.dart';
+
 import '/custom_code/actions/index.dart' as actions;
 import 'package:provider/provider.dart';
 import 'package:flutter/gestures.dart';
@@ -143,6 +145,7 @@ class _NavBarPageState extends State<NavBarPage> {
       'CategoriesScreen': CategoriesScreenWidget(),
       'LatestPage': LatestPageWidget(),
       'BestAuthorPage': BestAuthorPageWidget(),
+      'BestPublisherPage': BestPublisherPageWidget(),
       'ProfilePage': ProfilePageWidget(),
     };
     final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
@@ -209,6 +212,18 @@ class _NavBarPageState extends State<NavBarPage> {
               size: 24.0,
             ),
             label: 'Author',
+            tooltip: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.account_balance,
+              size: 24.0,
+            ),
+            activeIcon: Icon(
+              Icons.account_balance,
+              size: 24.0,
+            ),
+            label: 'Publisher',
             tooltip: '',
           ),
           BottomNavigationBarItem(

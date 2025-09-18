@@ -41,8 +41,13 @@ class EbookGroup {
   static GetsubcategoriesbycategoryApiCall getsubcategoriesbycategoryApiCall =
       GetsubcategoriesbycategoryApiCall();
   static GetauthorsApiCall getauthorsApiCall = GetauthorsApiCall();
+  static GetpublishersApiCall getpublishersApiCall = GetpublishersApiCall();
+  static GetpublisherdetailsApiCall getpublisherdetailsApiCall =
+      GetpublisherdetailsApiCall();
   static GetauthordetailsApiCall getauthordetailsApiCall =
       GetauthordetailsApiCall();
+  static GetbookbypublisherApiCall getbookbypublisherApiCall =
+      GetbookbypublisherApiCall();
   static GetLatestbooksApiCall getLatestbooksApiCall = GetLatestbooksApiCall();
   static GetbookdetailsApiCall getbookdetailsApiCall = GetbookdetailsApiCall();
   static GetbookbyauthorApiCall getbookbyauthorApiCall =
@@ -884,6 +889,187 @@ class GetauthorsApiCall {
   String? message(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.message''',
+      ));
+}
+
+class GetpublishersApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetpublishersApi',
+      apiUrl: '${baseUrl}getpublishers',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? publisherDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.publisherDetails''',
+        true,
+      ) as List?;
+  List<String>? name(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].name''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? image(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].image''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GetpublisherdetailsApiCall {
+  Future<ApiCallResponse> call({
+    String? publisherId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "publisherId": "${publisherId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetpublisherdetailsApi',
+      apiUrl: '${baseUrl}getpublisherdetails',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? publisherDetails(dynamic response) => getJsonField(
+        response,
+        r'''$.data.publisherDetails''',
+        true,
+      ) as List?;
+  String? name(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].name''',
+      ));
+  String? image(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].image''',
+      ));
+  String? facebookurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].facebook_url''',
+      ));
+  String? instagramurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].instagram_url''',
+      ));
+  String? youtubeurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].youtube_url''',
+      ));
+  String? websiteurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].website_url''',
+      ));
+  String? description(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.publisherDetails[:].description''',
+      ));
+  String? id(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.publisherDetails[:]._id''',
+      ));
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GetbookbypublisherApiCall {
+  Future<ApiCallResponse> call({
+    String? publisherId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "publisherId": "${publisherId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetbookbypublisherApi',
+      apiUrl: '${baseUrl}getbookbypublisher',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? bookDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.bookDetails''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
       ));
 }
 

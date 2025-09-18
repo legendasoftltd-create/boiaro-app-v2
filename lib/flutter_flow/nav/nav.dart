@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:a_i_ebook_app/pages/home_pages/about_publisher_page/about_publisher_page_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/backend/backend.dart';
@@ -155,6 +156,24 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             ),
             authorId: params.getParam(
               'authorId',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
+          name: AboutPublisherPageWidget.routeName,
+          path: AboutPublisherPageWidget.routePath,
+          builder: (context, params) => AboutPublisherPageWidget(
+            name: params.getParam(
+              'name',
+              ParamType.String,
+            ),
+            publisherImage: params.getParam(
+              'publisherImage',
+              ParamType.String,
+            ),
+            publisherId: params.getParam(
+              'publisherId',
               ParamType.String,
             ),
           ),

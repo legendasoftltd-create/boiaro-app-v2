@@ -475,6 +475,21 @@ class FFAppState extends ChangeNotifier {
   void clearGetauthorsCacheCacheKey(String? uniqueKey) =>
       _getauthorsCacheManager.clearRequest(uniqueKey);
 
+  final _getpublishersCacheManager = FutureRequestManager<ApiCallResponse>();
+  Future<ApiCallResponse> getpublishersCache({
+    String? uniqueQueryKey,
+    bool? overrideCache,
+    required Future<ApiCallResponse> Function() requestFn,
+  }) =>
+      _getpublishersCacheManager.performRequest(
+        uniqueQueryKey: uniqueQueryKey,
+        overrideCache: overrideCache,
+        requestFn: requestFn,
+      );
+  void clearGetpublishersCacheCache() => _getpublishersCacheManager.clear();
+  void clearGetpublishersCacheCacheKey(String? uniqueKey) =>
+      _getpublishersCacheManager.clearRequest(uniqueKey);
+
   final _getBookbyCategoryCacheManager =
       FutureRequestManager<ApiCallResponse>();
   Future<ApiCallResponse> getBookbyCategoryCache({
