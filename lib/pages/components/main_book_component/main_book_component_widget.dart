@@ -14,8 +14,9 @@ class MainBookComponentWidget extends StatefulWidget {
   const MainBookComponentWidget({
     super.key,
     required this.image,
-     this.price="105",
+     this.price="",
     required this.bookName,
+    required this.id,
     required this.authorsName,
     bool? isFav,
     required this.isFavAction,
@@ -26,6 +27,7 @@ class MainBookComponentWidget extends StatefulWidget {
 
   final String? image;
   final String? bookName;
+  final String? id;
   final String? price;
   final String? authorsName;
   final bool isFav;
@@ -209,8 +211,8 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                   ),
                                   Consumer<CartProvider>(
                                     builder: (context, cart, child) {
-                                      final isInCart = cart.items.containsKey(widget.bookName ?? "");
-                                      final quantity = isInCart ? cart.items[widget.bookName ?? ""]?.quantity ?? 0 : 0;
+                                      final isInCart = cart.items.containsKey(widget.id ?? "");
+                                      final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
 
                                       if (quantity > 0) {
                                         // Show increment/decrement buttons
@@ -224,7 +226,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                               hoverColor: Colors.transparent,
                                               highlightColor: Colors.transparent,
                                               onTap: () async {
-                                                cart.removeSingleItem(widget.bookName ?? "");
+                                                cart.removeSingleItem(widget.id ?? "");
                                                 await actions.showCustomToastBottom('Quantity decreased!');
                                               },
                                               child: Container(
@@ -263,7 +265,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                               highlightColor: Colors.transparent,
                                               onTap: () async {
                                                 cart.addItem(
-                                                  widget.bookName ?? "",
+                                                  widget.id ?? "",
                                                   widget.bookName ?? "",
                                                   widget.image ?? "",
                                                   double.parse(widget.price ?? "0"),
@@ -295,7 +297,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                           highlightColor: Colors.transparent,
                                           onTap: () async {
                                             cart.addItem(
-                                              widget.bookName ?? "",
+                                              widget.id ?? "",
                                               widget.bookName ?? "",
                                               widget.image ?? "",
                                               double.parse(widget.price ?? "0"),

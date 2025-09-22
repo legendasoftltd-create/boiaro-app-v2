@@ -385,6 +385,11 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                                                     trendingBooksListItem,
                                                                     r'''$.name''',
                                                                   ).toString(),
+                                                                  id:
+                                                                      getJsonField(
+                                                                    trendingBooksListItem,
+                                                                    r'''$._id''',
+                                                                  ).toString(),
                                                                   price:
                                                                       getJsonField(
                                                                     trendingBooksListItem,
@@ -620,4 +625,3 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
     );
   }
 }
-// https://api.boiaro.com/api/checkregistereduser

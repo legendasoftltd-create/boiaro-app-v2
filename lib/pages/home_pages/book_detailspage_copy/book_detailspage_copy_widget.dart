@@ -1643,6 +1643,10 @@ class _BookDetailspageCopyWidgetState extends State<BookDetailspageCopyWidget> {
                                                           authorRelatedbookDetailslistItem,
                                                           r'''$.price''',
                                                         ).toString(),
+                                                        id: getJsonField(
+                                                          authorRelatedbookDetailslistItem,
+                                                          r'''$._id''',
+                                                        ).toString(),
                                                         authorsName:
                                                             getJsonField(
                                                           authorRelatedbookDetailslistItem,

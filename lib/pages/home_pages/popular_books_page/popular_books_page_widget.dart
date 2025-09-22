@@ -263,6 +263,10 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                                           popularBookListItem,
                                                           r'''$.name''',
                                                         ).toString(),
+                                                        id: getJsonField(
+                                                          popularBookListItem,
+                                                          r'''$._id''',
+                                                        ).toString(),
                                                         price: getJsonField(
                                                           popularBookListItem,
                                                           r'''$.price''',

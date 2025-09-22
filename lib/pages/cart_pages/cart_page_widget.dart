@@ -42,11 +42,11 @@ class _CartPageWidgetState extends State<CartPageWidget> {
         child: Column(
           children: [
             CustomCenterAppbarWidget(
-              title: 'My Cart',
-              backIcon: true,
-              addIcon: false,
-              onTapAdd: () async {},
-            ),
+                  title: 'My Cart',
+                  backIcon: false,
+                  addIcon: false,
+                  onTapAdd: () async {},
+                ),
             Expanded(
               child: cart.itemCount == 0
                   ? Center(

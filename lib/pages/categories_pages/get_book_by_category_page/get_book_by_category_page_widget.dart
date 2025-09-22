@@ -306,6 +306,11 @@ class _GetBookByCategoryPageWidgetState
                                                                     bookDetailsListItem,
                                                                     r'''$.price''',
                                                                   ).toString()}',
+                                                                  id:
+                                                                      '${getJsonField(
+                                                                    bookDetailsListItem,
+                                                                    r'''$._id''',
+                                                                  ).toString()}',
                                                                   bookName:
                                                                       getJsonField(
                                                                     bookDetailsListItem,

@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 import 'home_page_model.dart';
 export 'home_page_model.dart';
 import '/pages/cart_pages/cart_page_widget.dart';
+import '/providers/cart_provider.dart';
 
 class HomePageWidget extends StatefulWidget {
   const HomePageWidget({super.key});
@@ -170,8 +171,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                             mainAxisSize: MainAxisSize.max,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Image.network(
-                                'https://api.boiaro.com/assets/media/logos/logo-final_1.jpg',
+                              Image.asset('assets/images/logo.png',
                                 width: 130.0,
                                 height: 40.0,
                                 fit: BoxFit.contain,
@@ -251,45 +251,89 @@ class _HomePageWidgetState extends State<HomePageWidget>
                           ),
                         ),
                         SizedBox(width: 8,),
-                         InkWell(
-                                    splashColor: Colors.transparent,
-                                    focusColor: Colors.transparent,
-                                    hoverColor: Colors.transparent,
-                                    highlightColor: Colors.transparent,
-                                    onTap: () async {
-                                       Navigator.push<void>(
-                                         context,
-                                         MaterialPageRoute<void>(
-                                           builder: (BuildContext context) =>  CartPageWidget(),
-                                         ),
-                                       );
-                                    },
-                                    child: Container(
-                                      width: 36.0,
-                                      height: 36.0,
-                                      decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondaryBackground,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            blurRadius: 16.0,
-                                            color: FlutterFlowTheme.of(context).shadowColor,
-                                            offset: Offset(
-                                              0.0,
-                                              4.0,
+                         Consumer<CartProvider>(
+                           builder: (_,cart,__) {
+                             return InkWell(
+                                        splashColor: Colors.transparent,
+                                        focusColor: Colors.transparent,
+                                        hoverColor: Colors.transparent,
+                                        highlightColor: Colors.transparent,
+                                        onTap: () async {
+                                           Navigator.push<void>(
+                                             context,
+                                             MaterialPageRoute<void>(
+                                               builder: (BuildContext context) =>  CartPageWidget(),
+                                             ),
+                                           );
+                                        },
+                                        child: Stack(
+                                          children: [
+                                            Container(
+                                              width: 36.0,
+                                              height: 36.0,
+                                              decoration: BoxDecoration(
+                                                color: FlutterFlowTheme.of(context)
+                                                    .secondaryBackground,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    blurRadius: 16.0,
+                                                    color: FlutterFlowTheme.of(context).shadowColor,
+                                                    offset: Offset(
+                                                      0.0,
+                                                      4.0,
+                                                    ),
+                                                  )
+                                                ],
+                                                borderRadius: BorderRadius.circular(8.0),
+                                              ),
+                                              alignment: AlignmentDirectional(0.0, 0.0),
+                                              child: Stack(
+                                                children: [
+                                                  Padding(
+                                                    padding: const EdgeInsets.all(8.0),
+                                                    child: Icon(
+                                                      Icons.shopping_cart_rounded,
+                                                      color:
+                                                          FlutterFlowTheme.of(context).primaryText,
+                                                      size: 22.0,
+                                                    ),
+                                                  ),
+                                                     if (cart.itemCount > 0)
+                                                    Positioned(
+                                                      top: 0,
+                                                      right: 0,
+                                                      child: Container(
+                                                        width: 17.0,
+                                                        height: 17.0,
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.red,
+                                                          shape: BoxShape.circle,
+                                                          
+                                                        ),
+                                                                                                
+                                                        child: Center(
+                                                          child: Text(
+                                                            cart.itemCount.toString(),
+                                                            style: TextStyle(
+                                                                  fontFamily:
+                                                                      'SF Pro Display',
+                                                                  color: Colors.white,
+                                                                  fontSize: 11.0,
+                                                                  fontWeight:
+                                                                      FontWeight.bold,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
                                             ),
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(8.0),
-                                      ),
-                                      alignment: AlignmentDirectional(0.0, 0.0),
-                                      child: Icon(
-                                        Icons.shopping_cart_rounded,
-                                        color: FlutterFlowTheme.of(context).primaryText,
-                                        size: 22.0,
-                                      ),
-                                    ),
-                                  ),
+                                          ],
+                                        ),
+                                      );
+                           }
+                         ),
                       ],
                     ),
                   ),
@@ -1127,6 +1171,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$.price''',
                                                                                     ).toString(),
+                                                                                    id: getJsonField(
+                                                                                      trendbookDetailsListItem,
+                                                                                      r'''$._id''',
+                                                                                    ).toString(),
                                                                                     authorsName: getJsonField(
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$.author.name''',
@@ -1564,6 +1612,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                 price: getJsonField(
                                                                                   popularbookDetailsListItem,
                                                                                   r'''$.price''',
+                                                                                ).toString(),
+                                                                                id: getJsonField(
+                                                                                  popularbookDetailsListItem,
+                                                                                  r'''$._id''',
                                                                                 ).toString(),
                                                                                 authorName: getJsonField(
                                                                                   popularbookDetailsListItem,

@@ -536,6 +536,10 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                                         seachFilterListItem,
                                                         r'''$.name''',
                                                       ).toString(),
+                                                      id: getJsonField(
+                                                        seachFilterListItem,
+                                                        r'''$._id''',
+                                                      ).toString(),
                                                       authorName: getJsonField(
                                                         seachFilterListItem,
                                                         r'''$.author.name''',

@@ -297,6 +297,11 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                                                     downloadDetailsListItem,
                                                                     r'''$.bookDetails.name''',
                                                                   ).toString(),
+                                                                  id:
+                                                                      getJsonField(
+                                                                    downloadDetailsListItem,
+                                                                    r'''$.bookDetails._id''',
+                                                                  ).toString(),
                                                                   price:
                                                                       getJsonField(
                                                                     downloadDetailsListItem,

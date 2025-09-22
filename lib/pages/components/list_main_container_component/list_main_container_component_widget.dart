@@ -15,6 +15,7 @@ class ListMainContainerComponentWidget extends StatefulWidget {
     super.key,
     required this.image,
     required this.name,
+    required this.id,
     required this.authorName,
     required this.averageRating,
     bool? isFav,
@@ -22,13 +23,14 @@ class ListMainContainerComponentWidget extends StatefulWidget {
     bool? indicator,
     required this.onMainTap,
     required this.width,
-     this.price="105",
+     this.price="",
     // this.addToCartAction,
   })  : this.isFav = isFav ?? false,
         this.indicator = indicator ?? false;
 
   final String? image;
   final String? name;
+  final String? id;
   final String? authorName;
   final double? averageRating;
   final bool isFav;
@@ -225,8 +227,8 @@ class _ListMainContainerComponentWidgetState
                           ),
                          Consumer<CartProvider>(
                                     builder: (context, cart, child) {
-                                      final isInCart = cart.items.containsKey(widget.name ?? "");
-                                      final quantity = isInCart ? cart.items[widget.name ?? ""]?.quantity ?? 0 : 0;
+                                      final isInCart = cart.items.containsKey(widget.id ?? "");
+                                      final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
 
                                       if (quantity > 0) {
                                         // Show increment/decrement buttons
@@ -240,7 +242,7 @@ class _ListMainContainerComponentWidgetState
                                               hoverColor: Colors.transparent,
                                               highlightColor: Colors.transparent,
                                               onTap: () async {
-                                                cart.removeSingleItem(widget.name ?? "");
+                                                cart.removeSingleItem(widget.id ?? "");
                                                 await actions.showCustomToastBottom('Quantity decreased!');
                                               },
                                               child: Container(
@@ -279,7 +281,7 @@ class _ListMainContainerComponentWidgetState
                                               highlightColor: Colors.transparent,
                                               onTap: () async {
                                                 cart.addItem(
-                                                  widget.name ?? "",
+                                                  widget.id ?? "",
                                                   widget.name ?? "",
                                                   widget.image ?? "",
                                                   double.parse(widget.price ?? "0"),
@@ -311,7 +313,7 @@ class _ListMainContainerComponentWidgetState
                                           highlightColor: Colors.transparent,
                                           onTap: () async {
                                             cart.addItem(
-                                              widget.name ?? "",
+                                              widget.id ?? "",
                                               widget.name ?? "",
                                               widget.image ?? "",
                                               double.parse(widget.price ?? "0"),
