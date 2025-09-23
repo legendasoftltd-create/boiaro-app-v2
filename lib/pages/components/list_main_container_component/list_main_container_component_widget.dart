@@ -207,11 +207,11 @@ class _ListMainContainerComponentWidgetState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            valueOrDefault<String>(
+                          Text(double.parse(widget.price??'0')>0?"${valueOrDefault<String>(
                               "৳ ${widget.price}",
                               '\$0.00',
-                            ),
+                            )}":"Free",
+                            
                             textAlign: TextAlign.start,
                             maxLines: 1,
                             style: FlutterFlowTheme.of(context)

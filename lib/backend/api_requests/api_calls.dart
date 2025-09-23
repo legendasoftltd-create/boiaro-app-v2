@@ -1300,6 +1300,10 @@ class GetbookdetailsApiCall {
         response,
         r'''$.data.bookDetails[:].pdf''',
       ));
+  String? previewPdf(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].preview_pdf''',
+      ));
   String? categoryId(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.bookDetails[:].category._id''',

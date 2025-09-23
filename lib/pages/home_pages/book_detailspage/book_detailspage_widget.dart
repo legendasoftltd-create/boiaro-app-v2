@@ -299,7 +299,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         lineHeight: 1.5,
                                                       ),
                                             ),
-                                            Text("Price:৳${widget.price}",style:
+                                            Text("${double.parse(widget.price??"0")>0?"Price:৳${widget.price}":'Free'}",style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
                                                       .override(
@@ -2133,7 +2133,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   ReadBookCustomPageWidget.routeName,
                                                   queryParameters: {
                                                     'pdf': serializeParam(
-                                                      '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                      '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
                                                         bookDetailspageGetbookdetailsApiResponse.jsonBody,
                                                       )}',
                                                       ParamType.String,
@@ -2193,6 +2193,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 // Preview button
                                                 FFButtonWidget(
                                                   onPressed: () async {
+                                                    
                                                     context.pushNamed(
                                                       ReadBookCustomPageWidget.routeName,
                                                       queryParameters: {
@@ -2214,14 +2215,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           widget.image,
                                                           ParamType.String,
                                                         ),
-                                                        'isPreview': serializeParam(
-                                                          true,
-                                                          ParamType.bool,
-                                                        ),
-                                                        'maxPages': serializeParam(
-                                                          5,
-                                                          ParamType.int,
-                                                        ),
+                                                       
                                                       }.withoutNulls,
                                                     );
                                                   },

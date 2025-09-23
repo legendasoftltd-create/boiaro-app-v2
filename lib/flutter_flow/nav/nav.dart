@@ -433,24 +433,24 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             ),
           ),
         ),
-        FFRoute(
-          name: BookDetailspageCopyWidget.routeName,
-          path: BookDetailspageCopyWidget.routePath,
-          builder: (context, params) => BookDetailspageCopyWidget(
-            name: params.getParam(
-              'name',
-              ParamType.String,
-            ),
-            image: params.getParam(
-              'image',
-              ParamType.String,
-            ),
-            id: params.getParam(
-              'id',
-              ParamType.String,
-            ),
-          ),
-        )
+        // FFRoute(
+        //   name: BookDetailspageCopyWidget.routeName,
+        //   path: BookDetailspageCopyWidget.routePath,
+        //   builder: (context, params) => BookDetailspageCopyWidget(
+        //     name: params.getParam(
+        //       'name',
+        //       ParamType.String,
+        //     ),
+        //     image: params.getParam(
+        //       'image',
+        //       ParamType.String,
+        //     ),
+        //     id: params.getParam(
+        //       'id',
+        //       ParamType.String,
+        //     ),
+        //   ),
+        // )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );
 

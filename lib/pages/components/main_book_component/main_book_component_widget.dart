@@ -190,11 +190,10 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                     MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    valueOrDefault<String>(
-                                      "\৳ ${widget.price}",
-                                      '\$0.00',
-                                    ),
+                                Text(double.parse(widget.price??'0')>0?"${valueOrDefault<String>(
+                              "৳ ${widget.price}",
+                              '\$0.00',
+                            )}":"Free",
                                     textAlign: TextAlign.start,
                                     maxLines: 1,
                                     style: FlutterFlowTheme.of(context)
