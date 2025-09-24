@@ -31,6 +31,8 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
   String? apiRequestLastUniqueKey5;
   bool apiRequestCompleted3 = false;
   String? apiRequestLastUniqueKey3;
+  bool apiRequestCompleted6 = false;
+  String? apiRequestLastUniqueKey6;
   // Models for CategoryComponent dynamic component.
   late FlutterFlowDynamicModels<CategoryComponentModel>
       categoryComponentModels1;
@@ -141,6 +143,21 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
       await Future.delayed(Duration(milliseconds: 50));
       final timeElapsed = stopwatch.elapsedMilliseconds;
       final requestComplete = apiRequestCompleted3;
+      if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
+        break;
+      }
+    }
+  }
+
+  Future waitForApiRequestCompleted6({
+    double minWait = 0,
+    double maxWait = double.infinity,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    while (true) {
+      await Future.delayed(Duration(milliseconds: 50));
+      final timeElapsed = stopwatch.elapsedMilliseconds;
+      final requestComplete = apiRequestCompleted6;
       if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
         break;
       }

@@ -88,6 +88,48 @@ class EbookGroup {
   static UserVerifyApiCall userVerifyApiCall = UserVerifyApiCall();
   static ResendOTPApiCall resendOTPApiCall = ResendOTPApiCall();
   static PaymentGatewayApiCall paymentGatewayApiCall = PaymentGatewayApiCall();
+  static GetSlidersApiCall getSlidersApiCall = GetSlidersApiCall();
+}
+
+class GetSlidersApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetSlidersApi',
+      apiUrl: '${baseUrl}getsliders',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? sliderDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.sliderDetails''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
 }
 
 class CheckregistereduserApiCall {

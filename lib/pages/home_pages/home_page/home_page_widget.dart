@@ -668,13 +668,59 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                             scrollDirection:
                                                                 Axis.vertical,
                                                             children: [
-                                                               BannerSlider(
-                                                                imageUrls: [
-                                                                  'https://static.vecteezy.com/system/resources/previews/023/107/446/non_2x/promo-sale-banner-with-reading-stack-of-books-wooden-letter-tiles-school-books-pile-world-book-day-bookstore-bookshop-library-book-lover-bibliophile-education-a4-for-poster-cover-vector.jpg',
-                                                                  'https://static.vecteezy.com/system/resources/previews/023/107/441/non_2x/promo-banner-with-with-reading-stack-of-books-lantern-with-candle-plant-school-books-pile-world-book-day-bookstore-bookshop-library-book-lover-bibliophile-education-for-poster-cover-vector.jpg',
-                                                                  'https://static.vecteezy.com/system/resources/previews/023/107/441/non_2x/promo-banner-with-with-reading-stack-of-books-lantern-with-candle-plant-school-books-pile-world-book-day-bookstore-bookshop-library-book-lover-bibliophile-education-for-poster-cover-vector.jpg',
-                                                                ],
-                                                              ),
+                                                               FutureBuilder<
+                                                                    ApiCallResponse>(
+                                                                  future: FFAppState()
+                                                                      .getSlidersCache(
+                                                                    requestFn:
+                                                                        () => EbookGroup
+                                                                            .getSlidersApiCall
+                                                                            .call(),
+                                                                  )
+                                                                      .then((result) {
+                                                                    _model.apiRequestCompleted6 =
+                                                                        true;
+                                                                    return result;
+                                                                  }),
+                                                                  builder: (context,
+                                                                      snapshot) {
+                                                                    // Customize what your widget looks like when it's loading.
+                                                                    if (!snapshot
+                                                                        .hasData) {
+                                                                      return HomeShimmerWidget();
+                                                                    }
+                                                                    final containerGetSlidersResponse =
+                                                                        snapshot.data!;
+                                                                    return BannerSlider(
+                                                                      imageUrls:
+                                                                          (EbookGroup
+                                                                                      .getSlidersApiCall
+                                                                                      .sliderDetailsList(
+                                                                                    containerGetSlidersResponse
+                                                                                        .jsonBody,
+                                                                                  )
+                                                                                      ?.map<
+                                                                                          String>(
+                                                                                          (e) =>
+                                                                                              '${FFAppConstants.sliderImagesUrl}${getJsonField(e, r'''$.image''').toString()}')
+                                                                                      .toList() ??
+                                                                                  []),
+                                                                      links:
+                                                                          (EbookGroup
+                                                                                      .getSlidersApiCall
+                                                                                      .sliderDetailsList(
+                                                                                    containerGetSlidersResponse
+                                                                                        .jsonBody,
+                                                                                  )
+                                                                                      ?.map<
+                                                                                          String>(
+                                                                                          (e) =>
+                                                                                              '${getJsonField(e, r'''$.button_url''').toString()}')
+                                                                                      .toList() ??
+                                                                                  []),
+                                                                    );
+                                                                  },
+                                                                ),
                                                               if (FFAppState()
                                                                           .homePageLiveReadBook !=
                                                                       '')
