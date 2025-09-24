@@ -150,72 +150,74 @@ class DigitalPaymentScreenState extends State<DigitalPaymentScreen> {
       canPop: false,
       onPopInvokedWithResult: (val, _) => _exitApp(context),
       child: Scaffold(
-        body: Column(
-          // mainAxisAlignment: MainAxisAlignment.center,
-          // crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-              CustomCenterAppbarWidget(
-                  title: 'Make payment',
-                  backIcon: false,
-                  addIcon: false,
-                  onTapAdd: () async {},
-                ),
-            _isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).primaryColor),
-                    ),
-                  )
-            :
-            Expanded(
-              child: InAppWebView(
-                initialUrlRequest: URLRequest(url: WebUri(widget.url)),
-                pullToRefreshController: pullToRefreshController,
-                initialSettings: InAppWebViewSettings(
-                  javaScriptEnabled: true,
-                  useShouldOverrideUrlLoading: true,
-                  mediaPlaybackRequiresUserGesture: false,
-                  allowsInlineMediaPlayback: true,
-                ),
-                onWebViewCreated: (controller) {
-                  webViewController = controller;
-                },
-                onLoadStart: (controller, url) {
-                   log("Redirect to: $url");
-                  _handleUrlChange(url.toString());
-                },
-                onLoadStop: (controller, url) {
-                  pullToRefreshController?.endRefreshing();
-                  // _handleUrlChange(url.toString());
-                },
-                onLoadError: (controller, url, code, message) {
-                  pullToRefreshController?.endRefreshing();
-                  _showErrorDialog('WebView error: $message');
-                },
-                onProgressChanged: (controller, progress) {
-                  if (progress == 100) {
+        body: SafeArea(
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.center,
+            // crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+                CustomCenterAppbarWidget(
+                    title: 'Make payment',
+                    backIcon: false,
+                    addIcon: false,
+                    onTapAdd: () async {},
+                  ),
+              _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).primaryColor),
+                      ),
+                    )
+              :
+              Expanded(
+                child: InAppWebView(
+                  initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+                  pullToRefreshController: pullToRefreshController,
+                  initialSettings: InAppWebViewSettings(
+                    javaScriptEnabled: true,
+                    useShouldOverrideUrlLoading: true,
+                    mediaPlaybackRequiresUserGesture: false,
+                    allowsInlineMediaPlayback: true,
+                  ),
+                  onWebViewCreated: (controller) {
+                    webViewController = controller;
+                  },
+                  onLoadStart: (controller, url) {
+                     log("Redirect to: $url");
+                    _handleUrlChange(url.toString());
+                  },
+                  onLoadStop: (controller, url) {
                     pullToRefreshController?.endRefreshing();
-                    setState(() {
-                      _isLoading = false;
-                    });
-                  }
-                },
-                shouldOverrideUrlLoading: (controller, navigationAction) async {
-                  final url = navigationAction.request.url.toString();
-                  if(url.contains('payment-success') || url.contains('payment-fail') || url.contains('payment-cancel')) {
-                     setState(() {
-                      _isLoading = true;
-                    });
-                  }
-                   log("Navigating to: $url");
-                  return NavigationActionPolicy.ALLOW;
-                },
-              
+                    // _handleUrlChange(url.toString());
+                  },
+                  onLoadError: (controller, url, code, message) {
+                    pullToRefreshController?.endRefreshing();
+                    _showErrorDialog('WebView error: $message');
+                  },
+                  onProgressChanged: (controller, progress) {
+                    if (progress == 100) {
+                      pullToRefreshController?.endRefreshing();
+                      setState(() {
+                        _isLoading = false;
+                      });
+                    }
+                  },
+                  shouldOverrideUrlLoading: (controller, navigationAction) async {
+                    final url = navigationAction.request.url.toString();
+                    if(url.contains('payment-success') || url.contains('payment-fail') || url.contains('payment-cancel')) {
+                       setState(() {
+                        _isLoading = true;
+                      });
+                    }
+                     log("Navigating to: $url");
+                    return NavigationActionPolicy.ALLOW;
+                  },
+                
+                ),
               ),
-            ),
-            
-          ],
+              
+            ],
+          ),
         ),
       ),
     );

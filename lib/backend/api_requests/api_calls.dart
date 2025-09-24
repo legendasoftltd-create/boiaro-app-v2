@@ -89,6 +89,59 @@ class EbookGroup {
   static ResendOTPApiCall resendOTPApiCall = ResendOTPApiCall();
   static PaymentGatewayApiCall paymentGatewayApiCall = PaymentGatewayApiCall();
   static GetSlidersApiCall getSlidersApiCall = GetSlidersApiCall();
+  static UserBookPurchaseRecordsApiCall userBookPurchaseRecordsApiCall =
+      UserBookPurchaseRecordsApiCall();
+}
+
+class UserBookPurchaseRecordsApiCall {
+  Future<ApiCallResponse> call({
+    String? userId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "userId": "${userId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'UserBookPurchaseRecordsApi',
+      apiUrl: '${baseUrl}userbookpurchaserecords',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? purchaseDetails(dynamic response) => getJsonField(
+        response,
+        r'''$.data.purchaseDetails''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+  int? error(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.error''',
+      ));
 }
 
 class GetSlidersApiCall {

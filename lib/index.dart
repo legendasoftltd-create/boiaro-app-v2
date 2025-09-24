@@ -78,5 +78,9 @@ export '/pages/home_pages/reviewsummary_page/reviewsummary_page_widget.dart'
     show ReviewsummaryPageWidget;
 export '/pages/home_pages/payment_method_page/payment_method_page_widget.dart'
     show PaymentMethodPageWidget;
+export '/pages/profile_screens/purchase_history_page/purchase_history_page_widget.dart'
+    show PurchaseHistoryPageWidget;
+export '/pages/profile_screens/purchase_history_page/purchase_history_page_model.dart'
+    show PurchaseHistoryPageModel;
 // export '/pages/home_pages/book_detailspage_copy/book_detailspage_copy_widget.dart'
 //     show BookDetailspageCopyWidget;
