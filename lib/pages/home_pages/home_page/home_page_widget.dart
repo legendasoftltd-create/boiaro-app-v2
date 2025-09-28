@@ -687,7 +687,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                     // Customize what your widget looks like when it's loading.
                                                                     if (!snapshot
                                                                         .hasData) {
-                                                                      return HomeShimmerWidget();
+                                                                      return SizedBox();
                                                                     }
                                                                     final containerGetSlidersResponse =
                                                                         snapshot.data!;
@@ -1083,6 +1083,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                   ),
                                                                 ),
                                                               ),
+                                                              //
                                                               Container(
                                                                 decoration:
                                                                     BoxDecoration(),
