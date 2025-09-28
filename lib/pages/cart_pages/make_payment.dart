@@ -1,17 +1,10 @@
 import 'dart:developer';
 
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_theme.dart';
-import 'package:a_i_ebook_app/main.dart';
 import 'package:a_i_ebook_app/pages/cart_pages/payment_screen.dart';
-import 'package:a_i_ebook_app/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
-import 'package:a_i_ebook_app/providers/cart_provider.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 class MakeCheckOutScreen extends StatefulWidget {
   final List<String> bookIds;
@@ -58,9 +51,8 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
         // Navigate to DigitalPaymentScreen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => DigitalPaymentScreen(
+            builder: (context) => PaymentWebView(
               url: gatewayUrl,
-              fromWallet: false, 
               tranId: tranId,
               bookIds: widget.bookIds,
               checkoutController: _checkoutController,
@@ -147,32 +139,23 @@ class CheckoutController {
   // Verify payment
   Future<Map<String, dynamic>> verifyPayment({
     required String tranId,
-    required String valId,
-    required List<String> bookIds,
-    String cardIssuer = 'STANDARD CHARTERED BANK',
   }) async {
     try {
+      log('Verifying payment for tran_id: $tranId');
+      log('Verifying payment for jwtToken: $jwtToken');
+      log('$baseUrl/transaction/status?tran_id=$tranId');
       final response = await http.post(
-        Uri.parse('$baseUrl/purchasebooks'),
+        Uri.parse('$baseUrl/transaction/status?tran_id=$tranId'),
         headers: {
           'Authorization': 'Bearer $jwtToken',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'userId': userId,
-          'books': bookIds,
-          'paymentmode': 'SSLCOMMERZ',
-          'tran_id': tranId,
-          'verificationData': {
-            'val_id': valId,
-            'card_issuer': cardIssuer,
-          }
-        }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['data'];
+        log('Veify payment response: $data');
+        return data;
       } else {
         throw Exception('Failed to verify payment: ${response.statusCode}');
       }
@@ -181,69 +164,6 @@ class CheckoutController {
     }
   }
 
-  // Handle payment failure
-  Future<Map<String, dynamic>> handlePaymentFailure({
-    required String tranId,
-    required List<String> bookIds,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/purchasebooks'),
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'userId': userId,
-          'books': bookIds,
-          'paymentmode': 'SSLCOMMERZ',
-          'tran_id': tranId,
-          'status': 'FAILED'
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['data'];
-      } else {
-        throw Exception('Failed to handle payment failure: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Payment failure handling error: $e');
-    }
-  }
-
-  // Handle payment cancellation
-  Future<Map<String, dynamic>> handlePaymentCancellation({
-    required String tranId,
-    required List<String> bookIds,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/purchasebooks'),
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'userId': userId,
-          'books': bookIds,
-          'paymentmode': 'SSLCOMMERZ',
-          'tran_id': tranId,
-          'status': 'CANCELLED'
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['data'];
-      } else {
-        throw Exception('Failed to handle payment cancellation: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Payment cancellation handling error: $e');
-    }
-  }
 }
 
 /// -----------------------

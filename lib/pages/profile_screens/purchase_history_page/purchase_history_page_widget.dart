@@ -1,4 +1,5 @@
 import 'package:a_i_ebook_app/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
+import 'package:a_i_ebook_app/pages/home_pages/book_detailspage/book_detailspage_widget.dart';
 
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -95,104 +96,118 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget> {
                       itemCount: purchaseDetails.length,
                       itemBuilder: (context, purchaseDetailsIndex) {
                         final purchaseDetailsItem = purchaseDetails[purchaseDetailsIndex];
-                        return Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
-                          child: Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context).secondaryBackground,
-                              boxShadow: [
-                                BoxShadow(
-                                  blurRadius: 4.0,
-                                  color: FlutterFlowTheme.of(context).shadowColor,
-                                  offset: Offset(0.0, 2.0),
-                                )
-                              ],
-                              borderRadius: BorderRadius.circular(12.0),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(12.0, 12.0, 12.0, 12.0),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.max,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    getJsonField(
-                                      purchaseDetailsItem,
-                                      r'''$.bookDetails.name''',
-                                    ).toString(),
-                                    style: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .override(
-                                          fontFamily: 'SF Pro Display',
-                                          letterSpacing: 0.0,
-                                        ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                    child: Text(
-                                      'Price: ${getJsonField(
-                                        purchaseDetailsItem,
-                                        r'''$.price''',
-                                      ).toString()}',
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            color: FlutterFlowTheme.of(context).primaryText,
-                                            letterSpacing: 0.0,
-                                          ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                    child: Text(
-                                      'Payment Mode: ${getJsonField(
-                                        purchaseDetailsItem,
-                                        r'''$.paymentmode''',
-                                      ).toString()}',
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            color: FlutterFlowTheme.of(context).secondaryText,
-                                            letterSpacing: 0.0,
-                                          ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                    child: Text(
-                                      'Transaction ID: ${getJsonField(
-                                        purchaseDetailsItem,
-                                        r'''$.transactionId''',
-                                      ).toString()}',
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            color: FlutterFlowTheme.of(context).secondaryText,
-                                            letterSpacing: 0.0,
-                                          ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                    child: Text(
-                                      'Payment Status: ${getJsonField(
-                                        purchaseDetailsItem,
-                                        r'''$.paymentstatus''',
-                                      ).toString()}',
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            color: FlutterFlowTheme.of(context).secondaryText,
-                                            letterSpacing: 0.0,
-                                          ),
-                                    ),
-                                  ),
+                        return GestureDetector(
+                          onTap: () {
+                          context.pushNamed(
+                               BookDetailspageWidget.routeName,
+                               queryParameters:
+                                   {
+                                 'name': purchaseDetailsItem['bookDetails']['name']?.toString(),
+                                 'price': purchaseDetailsItem['bookDetails']['price']?.toString(),
+                                 'image': 'image',
+                                 'id': purchaseDetailsItem['bookDetails']['id']?.toString(),
+                               }.withoutNulls,
+                             );
+                          },
+                          child: Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
+                            child: Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context).secondaryBackground,
+                                boxShadow: [
+                                  BoxShadow(
+                                    blurRadius: 4.0,
+                                    color: FlutterFlowTheme.of(context).shadowColor,
+                                    offset: Offset(0.0, 2.0),
+                                  )
                                 ],
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsetsDirectional.fromSTEB(12.0, 12.0, 12.0, 12.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.max,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      getJsonField(
+                                        purchaseDetailsItem,
+                                        r'''$.bookDetails.name''',
+                                      ).toString(),
+                                      style: FlutterFlowTheme.of(context)
+                                          .titleMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            letterSpacing: 0.0,
+                                          ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                      child: Text(
+                                        'Price: ${getJsonField(
+                                          purchaseDetailsItem,
+                                          r'''$.price''',
+                                        ).toString()}',
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              color: FlutterFlowTheme.of(context).primaryText,
+                                              letterSpacing: 0.0,
+                                            ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                      child: Text(
+                                        'Payment Mode: ${getJsonField(
+                                          purchaseDetailsItem,
+                                          r'''$.paymentmode''',
+                                        ).toString()}',
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodySmall
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              color: FlutterFlowTheme.of(context).secondaryText,
+                                              letterSpacing: 0.0,
+                                            ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                      child: Text(
+                                        'Transaction ID: ${getJsonField(
+                                          purchaseDetailsItem,
+                                          r'''$.transactionId''',
+                                        ).toString()}',
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodySmall
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              color: FlutterFlowTheme.of(context).secondaryText,
+                                              letterSpacing: 0.0,
+                                            ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                      child: Text(
+                                        'Payment Status: ${getJsonField(
+                                          purchaseDetailsItem,
+                                          r'''$.paymentstatus''',
+                                        ).toString()}',
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodySmall
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              color: FlutterFlowTheme.of(context).secondaryText,
+                                              letterSpacing: 0.0,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

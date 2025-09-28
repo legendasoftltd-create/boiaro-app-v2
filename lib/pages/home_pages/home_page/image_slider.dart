@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_theme.dart';
 import 'package:a_i_ebook_app/pages/home_pages/home_page/webview.dart';
 import 'package:flutter/material.dart';
@@ -35,9 +34,6 @@ class _BannerSliderState extends State<BannerSlider> {
             },
           ),
           items: widget.imageUrls.map((url) {
-            log("Banner URL: $url");
-            log("link URL: ${widget.links[widget.imageUrls.indexOf(url)]}");
-
             return GestureDetector(
               onTap: () {
                 Navigator.push(
