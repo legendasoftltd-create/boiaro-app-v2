@@ -1083,7 +1083,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                   ),
                                                                 ),
                                                               ),
-                                                              //
+                                                              // add newbooks section here
                                                               Container(
                                                                 decoration:
                                                                     BoxDecoration(),
