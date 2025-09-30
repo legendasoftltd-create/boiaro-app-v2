@@ -46,6 +46,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                   webViewController = controller;
                 },
                 onLoadStart: (controller, uri) {
+                  log('Page started loading: $uri');
                   if (uri != null) {
                     _handleUrlChange(uri.toString());
                   }
@@ -63,30 +64,40 @@ class _PaymentWebViewState extends State<PaymentWebView> {
     );
   }
 
-  void _handleUrlChange(String url) {
-    // Success
-    if (url.contains('payment-success')||url.contains('payment/sslcommerz/return')) {
-      widget.checkoutController.verifyPayment(tranId: widget.tranId);
-      _showSuccessDialog("Payment suceess");
-      log('Success URL: $url');
-      return;
-    }
+void _handleUrlChange(String url) {
+  final uri = Uri.parse(url);
+  final tranId = uri.queryParameters['tran_id']; 
 
-    // Failure
-    if (url.contains('payment-fail')) {
-      widget.checkoutController.verifyPayment(tranId: widget.tranId);
-       _showErrorDialog('Payment failed');
-      return;
+  // Success
+  if (url.contains('payment-success')) {
+    if (tranId != null) {
+      widget.checkoutController.verifyPayment(tranId: tranId);
     }
-
-    // Cancel
-    if (url.contains('payment-cancel')) {
-      widget.checkoutController.verifyPayment(tranId: widget.tranId);
-      log('Success URL: $url');
-      _showCancellationDialog('Payment cancelled');
-      return;
-    }
+    _showSuccessDialog("Payment success");
+    log('Success URL: $url');
+    return;
   }
+
+  // Failure
+  if (url.contains('payment-fail')) {
+    if (tranId != null) {
+      widget.checkoutController.handlePaymentFailure(tranId: tranId,bookIds: widget.bookIds);
+    }
+    _showErrorDialog('Payment failed');
+    return;
+  }
+
+  // Cancel
+  if (url.contains('payment-cancel')) {
+    if (tranId != null) {
+      widget.checkoutController.handlePaymentCancellation(tranId: tranId,bookIds: widget.bookIds);
+    }
+    log('Cancel URL: $url');
+    _showCancellationDialog('Payment cancelled');
+    return;
+  }
+}
+
 
   void _showSuccessDialog(String message) {
     showAnimatedDialog(
@@ -139,3 +150,4 @@ class _PaymentWebViewState extends State<PaymentWebView> {
     });
   }
 }
+// {success: 1, status: VALID, gateway_metadata: {sessionkey: D1B1CDE7D4CF70DAE3528AAB9E97570A, val_id: 250930834320NzcMZKAnaSd3jj}}

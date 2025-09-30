@@ -614,6 +614,21 @@ class FFAppState extends ChangeNotifier {
   void clearGetSlidersCacheCache() => _getSlidersCacheManager.clear();
   void clearGetSlidersCacheCacheKey(String? uniqueKey) =>
       _getSlidersCacheManager.clearRequest(uniqueKey);
+
+  final _getNewBooksCacheManager = FutureRequestManager<ApiCallResponse>();
+  Future<ApiCallResponse> getNewBooksCache({
+    String? uniqueQueryKey,
+    bool? overrideCache,
+    required Future<ApiCallResponse> Function() requestFn,
+  }) =>
+      _getNewBooksCacheManager.performRequest(
+        uniqueQueryKey: uniqueQueryKey,
+        overrideCache: overrideCache,
+        requestFn: requestFn,
+      );
+  void clearGetNewBooksCacheCache() => _getNewBooksCacheManager.clear();
+  void clearGetNewBooksCacheCacheKey(String? uniqueKey) =>
+      _getNewBooksCacheManager.clearRequest(uniqueKey);
 }
 
 void _safeInit(Function() initializeField) {

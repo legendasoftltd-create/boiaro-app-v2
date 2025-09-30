@@ -154,7 +154,7 @@ class CheckoutController {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        log('Veify payment response: $data');
+        debugPrint('Payment verify handled: $data');
         return data;
       } else {
         throw Exception('Failed to verify payment: ${response.statusCode}');
@@ -163,7 +163,71 @@ class CheckoutController {
       throw Exception('Payment verification error: $e');
     }
   }
+  // Handle payment failure
+  Future<Map<String, dynamic>> handlePaymentFailure({
+    required String tranId,
+    required List<String> bookIds,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/purchasebooks'),
+        headers: {
+          'Authorization': 'Bearer $jwtToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'userId': userId,
+          'books': bookIds,
+          'paymentmode': 'SSLCOMMERZ',
+          'tran_id': tranId,
+          'status': 'FAILED'
+        }),
+      );
 
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        debugPrint('Payment failure handled: $data');
+        return data['data'];
+      } else {
+        throw Exception('Failed to handle payment failure: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Payment failure handling error: $e');
+    }
+  }
+
+  // Handle payment cancellation
+  Future<Map<String, dynamic>> handlePaymentCancellation({
+    required String tranId,
+    required List<String> bookIds,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/purchasebooks'),
+        headers: {
+          'Authorization': 'Bearer $jwtToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'userId': userId,
+          'books': bookIds,
+          'paymentmode': 'SSLCOMMERZ',
+          'tran_id': tranId,
+          'status': 'CANCELLED'
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        debugPrint('Payment cancelled handled: $data');
+        return data['data'];
+      } else {
+        throw Exception('Failed to handle payment cancellation: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Payment cancellation handling error: $e');
+    }
+  }
 }
 
 /// -----------------------

@@ -19,6 +19,10 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
 
   int? popularIndex = 0;
 
+  bool? isNewBooks = false;
+
+  int? newBooksIndex = 0;
+
   ///  State fields for stateful widgets in this page.
 
   bool apiRequestCompleted1 = false;
@@ -33,6 +37,8 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
   String? apiRequestLastUniqueKey3;
   bool apiRequestCompleted6 = false;
   String? apiRequestLastUniqueKey6;
+  bool apiRequestCompleted7 = false;
+  String? apiRequestLastUniqueKey7;
   // Models for CategoryComponent dynamic component.
   late FlutterFlowDynamicModels<CategoryComponentModel>
       categoryComponentModels1;
@@ -42,6 +48,10 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
   ApiCallResponse? getPopularHomeDetete;
   // Stores action output result for [Backend Call - API (AddFavouriteBookApi)] action in MainBookComponent widget.
   ApiCallResponse? getPopularHomeAdd;
+  // Stores action output result for [Backend Call - API (RemoveFavouritebook)] action in MainBookComponent widget.
+  ApiCallResponse? getNewHomeDetete;
+  // Stores action output result for [Backend Call - API (AddFavouriteBookApi)] action in MainBookComponent widget.
+  ApiCallResponse? getNewHomeAdd;
   // Models for CategoryComponent dynamic component.
   late FlutterFlowDynamicModels<CategoryComponentModel>
       categoryComponentModels2;
@@ -158,6 +168,21 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
       await Future.delayed(Duration(milliseconds: 50));
       final timeElapsed = stopwatch.elapsedMilliseconds;
       final requestComplete = apiRequestCompleted6;
+      if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
+        break;
+      }
+    }
+  }
+
+  Future waitForApiRequestCompleted7({
+    double minWait = 0,
+    double maxWait = double.infinity,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    while (true) {
+      await Future.delayed(Duration(milliseconds: 50));
+      final timeElapsed = stopwatch.elapsedMilliseconds;
+      final requestComplete = apiRequestCompleted7;
       if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
         break;
       }

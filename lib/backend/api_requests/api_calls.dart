@@ -70,6 +70,7 @@ class EbookGroup {
   static GetreviewApiCall getreviewApiCall = GetreviewApiCall();
   static GetTrendingBooksApiCall getTrendingBooksApiCall =
       GetTrendingBooksApiCall();
+  static GetNewBooksApiCall getNewBooksApiCall = GetNewBooksApiCall();
   static GetPopularBooksApiCall getPopularBooksApiCall =
       GetPopularBooksApiCall();
   static AddFavouriteBookApiCall addFavouriteBookApiCall =
@@ -2136,6 +2137,56 @@ class GetTrendingBooksApiCall {
     return ApiManager.instance.makeApiCall(
       callName: 'GetTrendingBooksApi',
       apiUrl: '${baseUrl}gettrendingbooks',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  List<String>? averageRating(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.bookDetails[:].averageRating''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List? bookDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.bookDetails''',
+        true,
+      ) as List?;
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GetNewBooksApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetNewBooksApi',
+      apiUrl: '${baseUrl}getnewbooks',
       callType: ApiCallType.POST,
       headers: {
         'Authorization': 'Bearer ${token}',
