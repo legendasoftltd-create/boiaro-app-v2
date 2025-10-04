@@ -633,7 +633,8 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                     await actions.showCustomToastBottom(
                                       EbookGroup.socialLoginCall.message(
                                         (response?.jsonBody ?? ''),
-                                      )!,
+                                      ) ??
+                                          '',
                                     );
                                   }
                                 },

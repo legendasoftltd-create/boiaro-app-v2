@@ -1,5 +1,7 @@
 const axios = require("axios").default;
 const qs = require("qs");
+const crypto = require("crypto");
+const functions = require("firebase-functions");
 
 /// Helper functions to route to the appropriate API Call.
 
@@ -21,6 +23,19 @@ async function makeApiCall(context, data) {
   return response;
 }
 
+function generateAppSecretProof(accessToken) {
+  const appSecret = functions.config().facebook.app_secret;
+  if (!appSecret) {
+    console.error("Facebook App Secret not configured.");
+    return null;
+  }
+  const hash = crypto
+    .createHmac("sha256", appSecret)
+    .update(accessToken)
+    .digest("hex");
+  return hash;
+}
+
 async function makeApiRequest({
   method,
   url,
@@ -29,7 +44,16 @@ async function makeApiRequest({
   body,
   returnBody,
   isStreamingApi,
+  accessToken, // Added accessToken to parameters
 }) {
+  // Add appsecret_proof for Facebook Graph API calls
+  if (url.includes("graph.facebook.com") && accessToken) {
+    const appsecretProof = generateAppSecretProof(accessToken);
+    if (appsecretProof) {
+      params["appsecret_proof"] = appsecretProof;
+    }
+  }
+
   return axios
     .request({
       method: method,
@@ -77,4 +101,4 @@ function createBody({ headers, params, body, bodyType }) {
   }
 }
 
-module.exports = { makeApiCall };
+module.exports = { makeApiCall, makeApiRequest };
