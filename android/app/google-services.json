@@ -1,27 +1,44 @@
 {
   "project_info": {
-    "project_number": "299024357634",
-    "firebase_url": "https://a-i-ebook-app-nth7ef-default-rtdb.firebaseio.com",
-    "project_id": "a-i-ebook-app-nth7ef",
-    "storage_bucket": "a-i-ebook-app-nth7ef.appspot.com"
+    "project_number": "961638140230",
+    "project_id": "ebook-c5445",
+    "storage_bucket": "ebook-c5445.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:299024357634:android:383eedf0ba9d01b6aaca1b",
+        "mobilesdk_app_id": "1:961638140230:android:71729ef7f5b2bffb097d47",
         "android_client_info": {
-          "package_name": "com.mycompany.aiebookapp"
+          "package_name": "com.boiaro.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "961638140230-29t80kqlrcs0oc9hg2h9djujcnq78jci.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.boiaro.app",
+            "certificate_hash": "59247ea5df048b8024540b2e0e55514462a14ee0"
+          }
+        },
+        {
+          "client_id": "961638140230-6pp8ubuhsisl4jje5l18cub3c2sakomd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDRYI6AkCcxS-yjv4458Z-Lta_fb0yt9Xg"
+          "current_key": "AIzaSyB89OZnFM0sc4l3Teir4bDxmsdNl9Im8mI"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "961638140230-6pp8ubuhsisl4jje5l18cub3c2sakomd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

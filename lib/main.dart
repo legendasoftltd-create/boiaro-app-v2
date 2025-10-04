@@ -16,6 +16,8 @@ import '/providers/cart_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   GoRouter.optionURLReflectsImperativeAPIs = true;
+  final appState = FFAppState(); // Initialize FFAppState
+  await appState.initilizePrefs();
   usePathUrlStrategy();
 
   await initFirebase();
@@ -27,7 +29,6 @@ void main() async {
   await actions.notificationInit();
   // End initial custom actions code
 
-  final appState = FFAppState(); // Initialize FFAppState
   await appState.initializePersistedState();
 
   runApp(

@@ -91,7 +91,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   //   try {
   //     // Get the path to the PDF file
   //     final String pdfPath =
-  //         '/data/data/com.mycompany.aiebookapp/app_flutter/Ebook/${widget.pdfPath!}';
+  //         '/data/data/com.boiaro.app/app_flutter/Ebook/${widget.pdfPath!}';
   //
   //     // Read the PDF file as bytes
   //     final File file = File(pdfPath);

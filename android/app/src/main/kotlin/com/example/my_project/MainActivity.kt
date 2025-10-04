@@ -1,4 +1,4 @@
-package com.mycompany.aiebookapp
+package com.boiaro.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

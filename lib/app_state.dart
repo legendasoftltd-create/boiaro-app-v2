@@ -18,6 +18,10 @@ class FFAppState extends ChangeNotifier {
     _instance = FFAppState._internal();
   }
 
+  initilizePrefs() async {
+    prefs = await SharedPreferences.getInstance();
+  }
+  
   Future initializePersistedState() async {
     prefs = await SharedPreferences.getInstance();
     _safeInit(() {
