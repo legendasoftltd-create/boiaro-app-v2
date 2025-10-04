@@ -2198,7 +2198,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       ReadBookCustomPageWidget.routeName,
                                                       queryParameters: {
                                                         'pdf': serializeParam(
-                                                          '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                          '${FFAppConstants.previewPdfUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
                                                             bookDetailspageGetbookdetailsApiResponse.jsonBody,
                                                           )}',
                                                           ParamType.String,

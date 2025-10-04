@@ -103,10 +103,8 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget> {
                                       ReadBookCustomPageWidget.routeName,
                                                   queryParameters: {
                                                     'pdf': serializeParam(
-                                                      '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
-                                                        EbookGroup.userBookPurchaseRecordsApiCall
-                                                       .pdf(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
-                                                      )}',
+                                                    '${FFAppConstants.pdfUrl}${EbookGroup.userBookPurchaseRecordsApiCall
+                                                       .pdf(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex]}',
                                                       ParamType.String,
                                                     ),
                                                     'id': serializeParam(

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
 
-
 class PaymentWebView extends StatefulWidget {
   final String url;
   final String tranId;
@@ -27,77 +26,104 @@ class PaymentWebView extends StatefulWidget {
 class _PaymentWebViewState extends State<PaymentWebView> {
   InAppWebViewController? webViewController;
   double progress = 0;
-  bool isLoading = true;
+  bool isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Payment")),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            (progress < 1.0)
-                ? LinearProgressIndicator(value: progress)
-                : const SizedBox.shrink(),
-            Expanded(
-              child: InAppWebView(
-                initialUrlRequest: URLRequest(url: WebUri(widget.url)),
-                onWebViewCreated: (controller) {
-                  webViewController = controller;
-                },
-                onLoadStart: (controller, uri) {
-                  log('Page started loading: $uri');
-                  if (uri != null) {
-                    _handleUrlChange(uri.toString());
+            InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+
+              onWebViewCreated: (controller) {
+                webViewController = controller;
+              },
+
+              // 🚀 handle URL before loading
+              shouldOverrideUrlLoading: (controller, action) async {
+                final uri = action.request.url;
+                if (uri != null) {
+                  final url = uri.toString();
+                  log('Intercepted URL: $url');
+
+                  if (url.contains('payment-success') ||
+                      url.contains('payment-fail') ||
+                      url.contains('payment-cancel')) {
+                    setState(() => isLoading = true);
+
+                    // call your handler
+                    _handleUrlChange(url);
+
+                    // 🚫 stop webview from loading that page
+                    return NavigationActionPolicy.CANCEL;
                   }
-                },
-                onProgressChanged: (controller, progressValue) {
-                  setState(() {
-                    progress = progressValue / 100;
-                  });
-                },
-              ),
+                }
+                return NavigationActionPolicy.ALLOW;
+              },
+
+              onProgressChanged: (controller, progressValue) {
+                setState(() {
+                  progress = progressValue / 100;
+                });
+              },
             ),
+
+            // 🔄 Progress bar on top
+            if (progress < 1.0)
+              LinearProgressIndicator(value: progress),
+
+            // 🕑 Loading overlay
+            if (isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.4),
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-void _handleUrlChange(String url) {
-  final uri = Uri.parse(url);
-  final tranId = uri.queryParameters['tran_id']; 
+  void _handleUrlChange(String url) {
+    final uri = Uri.parse(url);
+    final tranId = uri.queryParameters['tran_id'];
 
-  // Success
-  if (url.contains('payment-success')) {
-    if (tranId != null) {
-      widget.checkoutController.verifyPayment(tranId: tranId);
+    // ✅ Success
+    if (url.contains('payment-success')) {
+      if (tranId != null) {
+        widget.checkoutController.verifyPayment(tranId: tranId);
+      }
+      _showSuccessDialog("Payment successful");
+      log('✅ Success URL: $url');
+      return;
     }
-    _showSuccessDialog("Payment success");
-    log('Success URL: $url');
-    return;
-  }
 
-  // Failure
-  if (url.contains('payment-fail')) {
-    if (tranId != null) {
-      widget.checkoutController.handlePaymentFailure(tranId: tranId,bookIds: widget.bookIds);
+    // ❌ Failure
+    if (url.contains('payment-fail')) {
+      if (tranId != null) {
+        widget.checkoutController
+            .handlePaymentFailure(tranId: tranId, bookIds: widget.bookIds);
+      }
+      _showErrorDialog('Payment failed');
+      return;
     }
-    _showErrorDialog('Payment failed');
-    return;
-  }
 
-  // Cancel
-  if (url.contains('payment-cancel')) {
-    if (tranId != null) {
-      widget.checkoutController.handlePaymentCancellation(tranId: tranId,bookIds: widget.bookIds);
+    // 🚫 Cancelled
+    if (url.contains('payment-cancel')) {
+      if (tranId != null) {
+        widget.checkoutController
+            .handlePaymentCancellation(tranId: tranId, bookIds: widget.bookIds);
+      }
+      log('❎ Cancel URL: $url');
+      _showCancellationDialog('Payment cancelled');
+      return;
     }
-    log('Cancel URL: $url');
-    _showCancellationDialog('Payment cancelled');
-    return;
   }
-}
-
 
   void _showSuccessDialog(String message) {
     showAnimatedDialog(
@@ -110,6 +136,7 @@ void _handleUrlChange(String url) {
           Navigator.of(context).pop(); // close dialog
           Navigator.of(context).pop(); // close payment
           Navigator.of(context).pop(); // close checkout
+          Navigator.of(context).pop(); // close cart
           context.read<CartProvider>().clear();
         },
       ),
@@ -150,4 +177,3 @@ void _handleUrlChange(String url) {
     });
   }
 }
-// {success: 1, status: VALID, gateway_metadata: {sessionkey: D1B1CDE7D4CF70DAE3528AAB9E97570A, val_id: 250930834320NzcMZKAnaSd3jj}}
