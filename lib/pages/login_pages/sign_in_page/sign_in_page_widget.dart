@@ -6,6 +6,7 @@ import '/flutter_flow/flutter_flow_widgets.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
+import 'package:a_i_ebook_app/pages/login_pages/sign_in_page/social_login_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -542,8 +543,41 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               GestureDetector(
-                                onTap: () {
-                                  // Handle Google login
+                                onTap: () async {
+                                  final socialLoginRepository =
+                                      SocialLoginRepository();
+                                  final response = await socialLoginRepository
+                                      .signInWithGoogle();
+                                  if (response != null &&
+                                      EbookGroup.socialLoginCall.success(
+                                            (response.jsonBody ?? ''),
+                                          ) ==
+                                          1) {
+                                    FFAppState().isLogin = true;
+                                    FFAppState().token =
+                                        EbookGroup.socialLoginCall.token(
+                                              (response.jsonBody ?? ''),
+                                            ) ??
+                                            '';
+                                    FFAppState().userId =
+                                        EbookGroup.socialLoginCall.userId(
+                                              (response.jsonBody ?? ''),
+                                            ) ??
+                                            '';
+                                    FFAppState().userDetail =
+                                        EbookGroup.socialLoginCall.userDetails(
+                                              (response.jsonBody ?? ''),
+                                            ) ??
+                                            '';
+                                    FFAppState().update(() {});
+                                    context.safePop();
+                                  } else {
+                                    await actions.showCustomToastBottom(
+                                      EbookGroup.socialLoginCall.message(
+                                        (response?.jsonBody ?? ''),
+                                      )!,
+                                    );
+                                  }
                                 },
                                 child: Container(
                                   padding: EdgeInsets.all(12),
@@ -567,8 +601,41 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                               ),
                               SizedBox(width: 10),
                               GestureDetector(
-                                onTap: () {
-                                  // Handle Facebook login
+                                onTap: () async {
+                                  final socialLoginRepository =
+                                      SocialLoginRepository();
+                                  final response = await socialLoginRepository
+                                      .signInWithFacebook();
+                                  if (response != null &&
+                                      EbookGroup.socialLoginCall.success(
+                                            (response.jsonBody ?? ''),
+                                          ) ==
+                                          1) {
+                                    FFAppState().isLogin = true;
+                                    FFAppState().token =
+                                        EbookGroup.socialLoginCall.token(
+                                              (response.jsonBody ?? ''),
+                                            ) ??
+                                            '';
+                                    FFAppState().userId =
+                                        EbookGroup.socialLoginCall.userId(
+                                              (response.jsonBody ?? ''),
+                                            ) ??
+                                            '';
+                                    FFAppState().userDetail =
+                                        EbookGroup.socialLoginCall.userDetails(
+                                              (response.jsonBody ?? ''),
+                                            ) ??
+                                            '';
+                                    FFAppState().update(() {});
+                                    context.safePop();
+                                  } else {
+                                    await actions.showCustomToastBottom(
+                                      EbookGroup.socialLoginCall.message(
+                                        (response?.jsonBody ?? ''),
+                                      )!,
+                                    );
+                                  }
                                 },
                                 child: Container(
                                   padding: EdgeInsets.all(12),

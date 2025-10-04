@@ -92,6 +92,69 @@ class EbookGroup {
   static GetSlidersApiCall getSlidersApiCall = GetSlidersApiCall();
   static UserBookPurchaseRecordsApiCall userBookPurchaseRecordsApiCall =
       UserBookPurchaseRecordsApiCall();
+  static SocialLoginCall socialLoginCall = SocialLoginCall();
+}
+
+class SocialLoginCall {
+  Future<ApiCallResponse> call({
+    String? email,
+    String? firstname,
+    String? lastname,
+    String? username,
+    String? provider,
+    String? providerId,
+    String? registrationToken,
+    String? deviceId,
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final ffApiRequestBody = '''
+{
+  "email": "$email",
+  "firstname": "$firstname",
+  "lastname": "$lastname",
+  "username": "$username",
+  "provider": "$provider",
+  "providerId": "$providerId",
+  "registrationToken": "$registrationToken",
+  "deviceId": "$deviceId"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'SocialLogin',
+      apiUrl: '${baseUrl}social_login',
+      callType: ApiCallType.POST,
+      headers: {},
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+  String? token(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.token''',
+      ));
+  dynamic userDetails(dynamic response) => getJsonField(
+        response,
+        r'''$.data.userDetails''',
+      );
+  String? userId(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.userDetails.id''',
+      ));
 }
 
 class UserBookPurchaseRecordsApiCall {
