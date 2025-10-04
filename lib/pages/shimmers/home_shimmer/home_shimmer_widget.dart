@@ -409,7 +409,8 @@ class _HomeShimmerWidgetState extends State<HomeShimmerWidget>
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
-    return Expanded(
+    return SizedBox(
+      height: 200.0,
       child: ListView(
         padding: EdgeInsets.zero,
         scrollDirection: Axis.vertical,
@@ -587,8 +588,8 @@ class _HomeShimmerWidgetState extends State<HomeShimmerWidget>
                         clipBehavior: Clip.none,
                         children: List.generate(categoryShimmerList.length,
                             (categoryShimmerListIndex) {
-                          final categoryShimmerListItem =
-                              categoryShimmerList[categoryShimmerListIndex];
+                          // final categoryShimmerListItem =
+                          //     categoryShimmerList[categoryShimmerListIndex];
                           return Container(
                             width: () {
                               if (MediaQuery.sizeOf(context).width < 810.0) {
@@ -712,8 +713,8 @@ class _HomeShimmerWidgetState extends State<HomeShimmerWidget>
                         clipBehavior: Clip.none,
                         children: List.generate(trendbookShimmerList.length,
                             (trendbookShimmerListIndex) {
-                          final trendbookShimmerListItem =
-                              trendbookShimmerList[trendbookShimmerListIndex];
+                          // final trendbookShimmerListItem =
+                          //     trendbookShimmerList[trendbookShimmerListIndex];
                           return Container(
                             width: () {
                               if (MediaQuery.sizeOf(context).width < 810.0) {
@@ -918,8 +919,8 @@ class _HomeShimmerWidgetState extends State<HomeShimmerWidget>
                         clipBehavior: Clip.none,
                         children: List.generate(authorShimmerList.length,
                             (authorShimmerListIndex) {
-                          final authorShimmerListItem =
-                              authorShimmerList[authorShimmerListIndex];
+                          // final authorShimmerListItem =
+                          //     authorShimmerList[authorShimmerListIndex];
                           return Container(
                             width: () {
                               if (MediaQuery.sizeOf(context).width < 810.0) {
@@ -1041,8 +1042,8 @@ class _HomeShimmerWidgetState extends State<HomeShimmerWidget>
                             mainAxisSize: MainAxisSize.max,
                             children: List.generate(popularShimmerList.length,
                                     (popularShimmerListIndex) {
-                              final popularShimmerListItem =
-                                  popularShimmerList[popularShimmerListIndex];
+                              // final popularShimmerListItem =
+                              //     popularShimmerList[popularShimmerListIndex];
                               return Container(
                                 width: 330.0,
                                 decoration: BoxDecoration(
