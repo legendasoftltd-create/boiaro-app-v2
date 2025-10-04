@@ -155,6 +155,10 @@ class SocialLoginCall {
         response,
         r'''$.data.userDetails.id''',
       ));
+  int? error(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.error''',
+      ));
 }
 
 class UserBookPurchaseRecordsApiCall {
@@ -194,6 +198,101 @@ class UserBookPurchaseRecordsApiCall {
         r'''$.data.purchaseDetails''',
         true,
       ) as List?;
+  List? bookDetails(dynamic response) => getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails''',
+        true,
+      ) as List?;
+  List<String>? bookId(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails._id''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? bookName(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.name''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? bookImage(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.image''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? authorName(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.author.name''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? authorImage(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.author.image''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? publisherName(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.publisher.name''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? publisherImage(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.publisher.image''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? pdf(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.pdf''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<int>? download(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.download''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<int>(x))
+          .withoutNulls
+          .toList();
+  List<double>? averageRating(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.purchaseDetails[:].bookDetails.averageRating''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<double>(x))
+          .withoutNulls
+          .toList();
   int? success(dynamic response) => castToType<int>(getJsonField(
         response,
         r'''$.data.success''',

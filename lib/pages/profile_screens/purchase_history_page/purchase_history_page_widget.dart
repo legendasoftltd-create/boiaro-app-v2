@@ -1,5 +1,6 @@
 import 'package:a_i_ebook_app/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import 'package:a_i_ebook_app/pages/home_pages/book_detailspage/book_detailspage_widget.dart';
+import 'package:a_i_ebook_app/pages/home_pages/read_book_custom_page/read_book_custom_page_widget.dart';
 
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -98,19 +99,50 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget> {
                         final purchaseDetailsItem = purchaseDetails[purchaseDetailsIndex];
                         return GestureDetector(
                           onTap: () {
-                          context.pushNamed(
-                               BookDetailspageWidget.routeName,
-                               queryParameters:
-                                   {
-                                 'name': purchaseDetailsItem['bookDetails']['name']?.toString(),
-                                 'price': purchaseDetailsItem['bookDetails']['price']?.toString(),
-                                 'image': 'image',
-                                 'id': purchaseDetailsItem['bookDetails']['id']?.toString(),
-                               }.withoutNulls,
-                             );
+                            context.pushNamed(
+                                      ReadBookCustomPageWidget.routeName,
+                                                  queryParameters: {
+                                                    'pdf': serializeParam(
+                                                      '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
+                                                        EbookGroup.userBookPurchaseRecordsApiCall
+                                                       .pdf(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                                                      )}',
+                                                      ParamType.String,
+                                                    ),
+                                                    'id': serializeParam(
+                                                      EbookGroup.userBookPurchaseRecordsApiCall
+                                                      .bookId(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                                                      ParamType.String,
+                                                    ),
+                                                    'name': serializeParam(
+                                                      EbookGroup.userBookPurchaseRecordsApiCall
+                                                      .bookName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                                                      ParamType.String,
+                                                    ),
+                                                    'image': serializeParam(
+                                                      EbookGroup.userBookPurchaseRecordsApiCall
+                                                      .bookImage(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                                                      ParamType.String,
+                                                    ),
+                                                  }.withoutNulls,
+                                                );
+                            // context.pushNamed(
+                            //   BookDetailspageWidget.routeName,
+                            //   queryParameters: {
+                            //     'name': EbookGroup.userBookPurchaseRecordsApiCall
+                            //         .bookName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                            //     'price': purchaseDetailsItem['price']?.toString(),
+                            //     'image': EbookGroup.userBookPurchaseRecordsApiCall
+                            //         .bookImage(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                            //     'id': EbookGroup.userBookPurchaseRecordsApiCall
+                            //         .bookId(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                            //     'authorName': EbookGroup.userBookPurchaseRecordsApiCall
+                            //         .authorName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                            //   }.withoutNulls,
+                            // );
                           },
                           child: Padding(
-                            padding: EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
+                            padding: const EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
                             child: Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
@@ -119,91 +151,114 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget> {
                                   BoxShadow(
                                     blurRadius: 4.0,
                                     color: FlutterFlowTheme.of(context).shadowColor,
-                                    offset: Offset(0.0, 2.0),
+                                    offset: const Offset(0.0, 2.0),
                                   )
                                 ],
                                 borderRadius: BorderRadius.circular(12.0),
                               ),
                               child: Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(12.0, 12.0, 12.0, 12.0),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.max,
+                                padding: const EdgeInsetsDirectional.fromSTEB(12.0, 12.0, 12.0, 12.0),
+                                child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      getJsonField(
-                                        purchaseDetailsItem,
-                                        r'''$.bookDetails.name''',
-                                      ).toString(),
-                                      style: FlutterFlowTheme.of(context)
-                                          .titleMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            letterSpacing: 0.0,
-                                          ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                      child: Text(
-                                        'Price: ${getJsonField(
-                                          purchaseDetailsItem,
-                                          r'''$.price''',
-                                        ).toString()}',
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              color: FlutterFlowTheme.of(context).primaryText,
-                                              letterSpacing: 0.0,
-                                            ),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8.0),
+                                      child: Image.network(
+                                        "${FFAppConstants.bookImagesUrl}${EbookGroup.userBookPurchaseRecordsApiCall
+                                                .bookImage(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[
+                                                    purchaseDetailsIndex]}", 
+                                        width: 80.0,
+                                        height: 120.0,
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
-                                    Padding(
-                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                      child: Text(
-                                        'Payment Mode: ${getJsonField(
-                                          purchaseDetailsItem,
-                                          r'''$.paymentmode''',
-                                        ).toString()}',
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              color: FlutterFlowTheme.of(context).secondaryText,
-                                              letterSpacing: 0.0,
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 0.0, 0.0),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.max,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              EbookGroup.userBookPurchaseRecordsApiCall
+                                                      .bookName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[
+                                                          purchaseDetailsIndex] ??
+                                                  'Unknown Book',
+                                              style: FlutterFlowTheme.of(context).titleMedium.override(
+                                                    fontFamily: 'SF Pro Display',
+                                                    letterSpacing: 0.0,
+                                                    color: Colors.black
+                                                  ),
                                             ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                      child: Text(
-                                        'Transaction ID: ${getJsonField(
-                                          purchaseDetailsItem,
-                                          r'''$.transactionId''',
-                                        ).toString()}',
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              color: FlutterFlowTheme.of(context).secondaryText,
-                                              letterSpacing: 0.0,
+                                            Padding(
+                                              padding: const EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                              child: Text(
+                                                'Author: ${EbookGroup.userBookPurchaseRecordsApiCall.authorName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex] ?? 'Unknown Author'}',
+                                                style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                      fontFamily: 'SF Pro Display',
+                                                      color: FlutterFlowTheme.of(context).secondaryText,
+                                                      letterSpacing: 0.0,
+                                                    ),
+                                              ),
                                             ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                      child: Text(
-                                        'Payment Status: ${getJsonField(
-                                          purchaseDetailsItem,
-                                          r'''$.paymentstatus''',
-                                        ).toString()}',
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              color: FlutterFlowTheme.of(context).secondaryText,
-                                              letterSpacing: 0.0,
+                                            // Padding(
+                                            //   padding: const EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                            //   child: Text(
+                                            //     'Price: \$${getJsonField(
+                                            //       purchaseDetailsItem,
+                                            //       r'''$.price''',
+                                            //     ).toString()}',
+                                            //     style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                            //           fontFamily: 'SF Pro Display',
+                                            //           color: FlutterFlowTheme.of(context).primaryText,
+                                            //           letterSpacing: 0.0,
+                                            //         ),
+                                            //   ),
+                                            // ),
+                                            // Padding(
+                                            //   padding: const EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                            //   child: Text(
+                                            //     'Payment Mode: ${getJsonField(
+                                            //       purchaseDetailsItem,
+                                            //       r'''$.paymentmode''',
+                                            //     ).toString()}',
+                                            //     style: FlutterFlowTheme.of(context).bodySmall.override(
+                                            //           fontFamily: 'SF Pro Display',
+                                            //           color: FlutterFlowTheme.of(context).secondaryText,
+                                            //           letterSpacing: 0.0,
+                                            //         ),
+                                            //   ),
+                                            // ),
+                                            Padding(
+                                              padding: const EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                              child: Text(
+                                                'Transaction ID: ${getJsonField(
+                                                  purchaseDetailsItem,
+                                                  r'''$.transactionId''',
+                                                ).toString()}',
+                                                style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                      fontFamily: 'SF Pro Display',
+                                                      color: FlutterFlowTheme.of(context).secondaryText,
+                                                      letterSpacing: 0.0,
+                                                    ),
+                                              ),
                                             ),
+                                            Padding(
+                                              padding: const EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
+                                              child: Text(
+                                                'Payment Status: ${getJsonField(
+                                                  purchaseDetailsItem,
+                                                  r'''$.paymentstatus''',
+                                                ).toString()}',
+                                                style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                      fontFamily: 'SF Pro Display',
+                                                      color: FlutterFlowTheme.of(context).secondaryText,
+                                                      letterSpacing: 0.0,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],
