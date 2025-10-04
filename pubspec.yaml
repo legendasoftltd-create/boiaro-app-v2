@@ -89,6 +89,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   carousel_slider: ^5.1.1
   flutter_inappwebview: ^6.1.5
+  google_sign_in: ^7.2.0
+  flutter_facebook_auth: ^7.1.2
 
 dependency_overrides:
   device_info_plus: ^11.4.0
