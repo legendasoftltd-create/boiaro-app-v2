@@ -862,10 +862,14 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                       ),
                                                                                     ),
                                                                                     LinearPercentIndicator(
-                                                                                      percent: valueOrDefault<double>(
-                                                                                        FFAppState().homePageCurrentPdfIndex / FFAppState().homePageTotalPdfPageIndex,
-                                                                                        1.0,
-                                                                                      ),
+                                                                                      percent: () {
+                                                                                        final currentIndex = FFAppState().homePageCurrentPdfIndex ?? 0;
+                                                                                        final totalIndex = FFAppState().homePageTotalPdfPageIndex ?? 1;
+                                                                                        if (totalIndex == 0) {
+                                                                                          return 0.0;
+                                                                                        }
+                                                                                        return currentIndex.toDouble() / totalIndex.toDouble();
+                                                                                      }(),
                                                                                       lineHeight: 6.0,
                                                                                       animation: true,
                                                                                       animateFromLastPercent: true,

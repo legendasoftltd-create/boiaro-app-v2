@@ -523,11 +523,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                           child: ClipRRect(
                                             borderRadius:
                                                 BorderRadius.circular(0.0),
-                                            child: SvgPicture.asset(
-                                              'assets/images/download.svg', // Placeholder icon
-                                              fit: BoxFit.contain,
-                                              alignment: Alignment(0.0, 0.0),
-                                            ),
+                                            child: Icon(Icons.my_library_books_outlined),
                                           ),
                                         ),
                                         Expanded(
@@ -536,7 +532,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'Purchase History',
+                                              'My Books',
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium

@@ -306,7 +306,7 @@ class _ListMainContainerComponentWidgetState
                                         );
                                       } else {
                                         // Show add to cart button
-                                        return InkWell(
+                                        return double.parse(widget.price??'0')>0?InkWell(
                                           splashColor: Colors.transparent,
                                           focusColor: Colors.transparent,
                                           hoverColor: Colors.transparent,
@@ -333,7 +333,7 @@ class _ListMainContainerComponentWidgetState
                                               size: 16.0,
                                             ),
                                           ),
-                                        );
+                                        ):SizedBox();
                                       }
                                     },
                                   ),
