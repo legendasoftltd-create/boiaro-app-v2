@@ -238,6 +238,7 @@ class OrderPlaceDialogWidget extends StatelessWidget {
   final String title;
   final String description;
   final bool isFailed;
+  final bool isSuccess;
   final VoidCallback? onOkPressed;
 
   const OrderPlaceDialogWidget({
@@ -246,6 +247,7 @@ class OrderPlaceDialogWidget extends StatelessWidget {
     required this.title,
     required this.description,
     this.isFailed = false,
+    this.isSuccess = false,
     this.onOkPressed,
   });
 
@@ -267,7 +269,7 @@ class OrderPlaceDialogWidget extends StatelessWidget {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: onOkPressed ?? () => Navigator.of(context).pop(),
-            child:  Text("Back to Home", style: FlutterFlowTheme.of(context).titleMedium.override(
+            child:  Text(isSuccess?"Start Reading": "Back to Home", style: FlutterFlowTheme.of(context).titleMedium.override(
                         fontFamily: 'SF Pro Display',
                         color: Colors.white,
                         fontWeight: FontWeight.w600,

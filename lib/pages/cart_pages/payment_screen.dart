@@ -4,6 +4,9 @@ import 'package:a_i_ebook_app/providers/cart_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:a_i_ebook_app/index.dart';
+import 'package:a_i_ebook_app/flutter_flow/nav/nav.dart';
 
 class PaymentWebView extends StatefulWidget {
   final String url;
@@ -132,12 +135,12 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         icon: Icons.check_circle_rounded,
         title: "Payment Successful",
         description: message,
+        isSuccess: true,
         onOkPressed: () {
           Navigator.of(context).pop(); // close dialog
-          Navigator.of(context).pop(); // close payment
-          Navigator.of(context).pop(); // close checkout
-          Navigator.of(context).pop(); // close cart
           context.read<CartProvider>().clear();
+          context.goNamed(ProfilePageWidget.routeName); // Go to Profile tab
+          context.pushNamed(PurchaseHistoryPageWidget.routeName); // Then push to Purchase History
         },
       ),
       dismissible: false,
