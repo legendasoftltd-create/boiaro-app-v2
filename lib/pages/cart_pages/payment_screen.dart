@@ -30,63 +30,69 @@ class _PaymentWebViewState extends State<PaymentWebView> {
   InAppWebViewController? webViewController;
   double progress = 0;
   bool isLoading = false;
+  bool isPaymentSuccess = false; // ✅ track payment success
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Payment")),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+    return WillPopScope(
+      // 🚫 Prevent back navigation when payment successful
+      onWillPop: () async {
+        if (isPaymentSuccess) return false;
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Payment"),
+          automaticallyImplyLeading: !isPaymentSuccess, // hide back button when success
+        ),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              InAppWebView(
+                initialUrlRequest: URLRequest(url: WebUri(widget.url)),
 
-              onWebViewCreated: (controller) {
-                webViewController = controller;
-              },
+                onWebViewCreated: (controller) {
+                  webViewController = controller;
+                },
 
-              // 🚀 handle URL before loading
-              shouldOverrideUrlLoading: (controller, action) async {
-                final uri = action.request.url;
-                if (uri != null) {
-                  final url = uri.toString();
-                  log('Intercepted URL: $url');
+                shouldOverrideUrlLoading: (controller, action) async {
+                  final uri = action.request.url;
+                  if (uri != null) {
+                    final url = uri.toString();
+                    log('Intercepted URL: $url');
 
-                  if (url.contains('payment-success') ||
-                      url.contains('payment-fail') ||
-                      url.contains('payment-cancel')) {
-                    setState(() => isLoading = true);
-
-                    // call your handler
-                    _handleUrlChange(url);
-
-                    // 🚫 stop webview from loading that page
-                    return NavigationActionPolicy.CANCEL;
+                    if (url.contains('payment-success') ||
+                        url.contains('payment-fail') ||
+                        url.contains('payment-cancel')) {
+                      setState(() => isLoading = true);
+                      _handleUrlChange(url);
+                      return NavigationActionPolicy.CANCEL;
+                    }
                   }
-                }
-                return NavigationActionPolicy.ALLOW;
-              },
+                  return NavigationActionPolicy.ALLOW;
+                },
 
-              onProgressChanged: (controller, progressValue) {
-                setState(() {
-                  progress = progressValue / 100;
-                });
-              },
-            ),
-
-            // 🔄 Progress bar on top
-            if (progress < 1.0)
-              LinearProgressIndicator(value: progress),
-
-            // 🕑 Loading overlay
-            if (isLoading)
-              Container(
-                color: Colors.black.withOpacity(0.4),
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                onProgressChanged: (controller, progressValue) {
+                  setState(() {
+                    progress = progressValue / 100;
+                  });
+                },
               ),
-          ],
+
+              // 🔄 Progress bar
+              if (progress < 1.0)
+                LinearProgressIndicator(value: progress),
+
+              // 🕑 Loading overlay
+              if (isLoading)
+                Container(
+                  color: Colors.black.withOpacity(0.4),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -101,6 +107,10 @@ class _PaymentWebViewState extends State<PaymentWebView> {
       if (tranId != null) {
         widget.checkoutController.verifyPayment(tranId: tranId);
       }
+      setState(() {
+        isPaymentSuccess = true; // 🚫 disable back
+        isLoading = false;
+      });
       _showSuccessDialog("Payment successful");
       log('✅ Success URL: $url');
       return;
@@ -112,6 +122,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         widget.checkoutController
             .handlePaymentFailure(tranId: tranId, bookIds: widget.bookIds);
       }
+      setState(() => isLoading = false);
       _showErrorDialog('Payment failed');
       return;
     }
@@ -122,31 +133,36 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         widget.checkoutController
             .handlePaymentCancellation(tranId: tranId, bookIds: widget.bookIds);
       }
-      log('❎ Cancel URL: $url');
+      setState(() => isLoading = false);
       _showCancellationDialog('Payment cancelled');
+      log('❎ Cancel URL: $url');
       return;
     }
   }
+void _showSuccessDialog(String message) {
+  showDialog(
+    context: context,
+    barrierDismissible: false, // 🚫 prevent tap outside
+    builder: (context) {
+      return PopScope(
+        canPop: false, // 🚫 prevent back press
+        child: OrderPlaceDialogWidget(
+          icon: Icons.check_circle_rounded,
+          title: "Payment Successful",
+          description: message,
+          isSuccess: true,
+          onOkPressed: () {
+            Navigator.of(context).pop(); // ✅ close manually
+            context.read<CartProvider>().clear();
+            context.goNamed(ProfilePageWidget.routeName);
+            context.pushNamed(PurchaseHistoryPageWidget.routeName);
+          },
+        ),
+      );
+    },
+  );
+}
 
-  void _showSuccessDialog(String message) {
-    showAnimatedDialog(
-      context,
-      OrderPlaceDialogWidget(
-        icon: Icons.check_circle_rounded,
-        title: "Payment Successful",
-        description: message,
-        isSuccess: true,
-        onOkPressed: () {
-          Navigator.of(context).pop(); // close dialog
-          context.read<CartProvider>().clear();
-          context.goNamed(ProfilePageWidget.routeName); // Go to Profile tab
-          context.pushNamed(PurchaseHistoryPageWidget.routeName); // Then push to Purchase History
-        },
-      ),
-      dismissible: false,
-      willFlip: true,
-    );
-  }
 
   void _showErrorDialog(String message) {
     showAnimatedDialog(
@@ -160,7 +176,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
       dismissible: false,
       willFlip: true,
     ).then((_) {
-      Navigator.of(context).pop(false);
+      if (mounted) Navigator.of(context).pop(false);
     });
   }
 
@@ -176,7 +192,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
       dismissible: false,
       willFlip: true,
     ).then((_) {
-      Navigator.of(context).pop(false);
+      if (mounted) Navigator.of(context).pop(false);
     });
   }
 }
