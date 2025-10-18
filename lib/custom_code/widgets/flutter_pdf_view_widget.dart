@@ -15,6 +15,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 
 class FlutterPdfViewWidget extends StatefulWidget {
   const FlutterPdfViewWidget({
@@ -46,12 +47,52 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   double speechRate = 0.9;
   double pitch = 1.0;
 
+  // Brightness variables
+  double currentBrightness = 0.5;
+  double originalBrightness = 0.5;
+
   @override
   void initState() {
     super.initState();
     SchedulerBinding.instance.addPostFrameCallback((_) {
       setState(() => currentPage = 1);
+      _getInitialBrightness();
     });
+  }
+
+  @override
+  void dispose() {
+    _restoreOriginalBrightness();
+    super.dispose();
+  }
+
+  Future<void> _getInitialBrightness() async {
+    try {
+      final brightness = await ScreenBrightness().current;
+      setState(() {
+        originalBrightness = brightness;
+        currentBrightness = brightness;
+      });
+    } catch (e) {
+      print('Error getting initial brightness: $e');
+    }
+  }
+
+  Future<void> _restoreOriginalBrightness() async {
+    try {
+      await ScreenBrightness().setScreenBrightness(originalBrightness);
+    } catch (e) {
+      print('Error restoring brightness: $e');
+    }
+  }
+
+  Future<void> _setBrightness(double brightness) async {
+    try {
+      await ScreenBrightness().setScreenBrightness(brightness);
+      setState(() => currentBrightness = brightness);
+    } catch (e) {
+      print('Error setting brightness: $e');
+    }
   }
 
   void setCurrentPage() {
@@ -202,250 +243,462 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     );
   }
 
+  void _openBrightnessSettings() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "☀️ Brightness Settings",
+                    style: FlutterFlowTheme.of(context).bodyLarge.override(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  /// Brightness Slider
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Icon(Icons.brightness_low,
+                          color: FlutterFlowTheme.of(context).secondaryText),
+                      Expanded(
+                        child: Slider(
+                          value: currentBrightness,
+                          min: 0.0,
+                          max: 1.0,
+                          divisions: 20,
+                          activeColor: FlutterFlowTheme.of(context).primary,
+                          label: "${(currentBrightness * 100).toInt()}%",
+                          onChanged: (val) {
+                            setModalState(() {
+                              _setBrightness(val);
+                            });
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      Icon(Icons.brightness_high,
+                          color: FlutterFlowTheme.of(context).secondaryText),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "${(currentBrightness * 100).toInt()}%",
+                    style: FlutterFlowTheme.of(context).bodyLarge.override(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  /// Quick Brightness Presets
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildBrightnessPreset(
+                        context,
+                        "25%",
+                        0.25,
+                        setModalState,
+                      ),
+                      _buildBrightnessPreset(
+                        context,
+                        "50%",
+                        0.50,
+                        setModalState,
+                      ),
+                      _buildBrightnessPreset(
+                        context,
+                        "75%",
+                        0.75,
+                        setModalState,
+                      ),
+                      _buildBrightnessPreset(
+                        context,
+                        "100%",
+                        1.0,
+                        setModalState,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  /// Done button
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: FlutterFlowTheme.of(context).primary,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Done",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildBrightnessPreset(
+    BuildContext context,
+    String label,
+    double value,
+    StateSetter setModalState,
+  ) {
+    final isSelected = (currentBrightness - value).abs() < 0.05;
+    return InkWell(
+      onTap: () {
+        setModalState(() {
+          _setBrightness(value);
+        });
+        setState(() {});
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? FlutterFlowTheme.of(context).primary
+              : FlutterFlowTheme.of(context).alternate.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? FlutterFlowTheme.of(context).primary
+                : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : FlutterFlowTheme.of(context).primaryText,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
-    return Column(
-      children: [
-        /// ---------- AppBar ----------
-        Container(
-          width: double.infinity,
-          height: 79.0,
-          decoration: BoxDecoration(
-            color: FlutterFlowTheme.of(context).primaryBackground,
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 16.0,
-                color: FlutterFlowTheme.of(context).shadowColor,
-                offset: const Offset(0.0, 4.0),
-              )
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16.0, 26.0, 16.0, 0.0),
+    return Scaffold(
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      body: Column(
+        children: [
+          /// ---------- AppBar ----------
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 8,
+              bottom: 12,
+              left: 16,
+              right: 16,
+            ),
+            decoration: BoxDecoration(
+              color: FlutterFlowTheme.of(context).secondaryBackground,
+              border: Border(
+                bottom: BorderSide(
+                  color: FlutterFlowTheme.of(context).alternate.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+            ),
             child: Row(
-              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 InkWell(
                   onTap: () async => context.safePop(),
-                  child: Container(
-                    width: 40.0,
-                    height: 40.0,
-                    decoration: BoxDecoration(
-                      color: FlutterFlowTheme.of(context).lightGrey,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: SvgPicture.asset(
-                      'assets/images/arrow_back_appbar_ic.svg',
-                      fit: BoxFit.contain,
-                    ),
+                  child: Icon(
+                    Icons.arrow_back_ios,
+                    size: 22,
+                    color: FlutterFlowTheme.of(context).primaryText,
                   ),
                 ),
                 Expanded(
-                  child: Center(
-                    child: Text(
-                      widget.namePage ?? 'PDF Reader',
-                      maxLines: 1,
-                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            fontFamily: 'SF Pro Display',
-                            fontSize: 22.0,
-                            letterSpacing: 0.0,
-                            fontWeight: FontWeight.bold,
-                            useGoogleFonts: false,
-                          ),
-                    ),
+                  child: Text(
+                    widget.namePage ?? '',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 18,
+                          letterSpacing: 0.0,
+                          fontWeight: FontWeight.w600,
+                          useGoogleFonts: false,
+                        ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.settings_voice_outlined),
-                  color: FlutterFlowTheme.of(context).primaryText,
-                  onPressed: _openTtsSettings,
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        // Search functionality
+                      },
+                      child: Icon(
+                        Icons.search,
+                        size: 24,
+                        color: FlutterFlowTheme.of(context).primaryText,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    InkWell(
+                      onTap: () {
+                        // Bookmark functionality
+                      },
+                      child: Icon(
+                        Icons.bookmark_border,
+                        size: 24,
+                        color: FlutterFlowTheme.of(context).primaryText,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    InkWell(
+                      onTap: _openTtsSettings,
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 24,
+                        color: FlutterFlowTheme.of(context).primaryText,
+                      ),
+                    ),
+                  ],
                 ),
-                // IconButton(
-                //   icon: const Icon(Icons.menu),
-                //   color: FlutterFlowTheme.of(context).primaryText,
-                //   onPressed: OpenPDFSettingsDrawer,
-                // ),
               ],
             ),
           ),
-        ),
 
-        /// ---------- PDF Viewer ----------
-        Expanded(
-          child: Stack(
-            children: [
-              SfPdfViewer.network(
-                widget.pdfPath!,
-                key: _pdfViewerKey,
-                controller: pdfViewerController,
-                scrollDirection: PdfScrollDirection.horizontal,
-                canShowTextSelectionMenu: false,
-                onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-                  int totalPages = details.document.pages.count;
-                  setState(() => FFAppState().totalPages = totalPages);
-                  FFAppState().update(() {
-                    FFAppState().homePageTotalPdfPageIndex =
-                        FFAppState().totalPages;
-                  });
-                  pdfViewerController.jumpToPage(currentPage);
-                },
-                onPageChanged: (details) {
-                  SchedulerBinding.instance.addPostFrameCallback((_) {
-                    setState(() {
-                      currentPage = details.newPageNumber;
-                      FFAppState().update(() {
-                        FFAppState().homePageCurrentPdfIndex = currentPage;
+          /// ---------- PDF Viewer ----------
+          Expanded(
+            child: Stack(
+              children: [
+                SfPdfViewer.network(
+                  widget.pdfPath!,
+                  key: _pdfViewerKey,
+                  controller: pdfViewerController,
+                  scrollDirection: PdfScrollDirection.horizontal,
+                  canShowTextSelectionMenu: false,
+                  onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                    int totalPages = details.document.pages.count;
+                    setState(() => FFAppState().totalPages = totalPages);
+                    FFAppState().update(() {
+                      FFAppState().homePageTotalPdfPageIndex =
+                          FFAppState().totalPages;
+                    });
+                    pdfViewerController.jumpToPage(currentPage);
+                  },
+                  onPageChanged: (details) {
+                    SchedulerBinding.instance.addPostFrameCallback((_) {
+                      setState(() {
+                        currentPage = details.newPageNumber;
+                        FFAppState().update(() {
+                          FFAppState().homePageCurrentPdfIndex = currentPage;
+                        });
                       });
                     });
-                  });
-                },
-                
-                onTextSelectionChanged:
-                    (PdfTextSelectionChangedDetails details) {
-                  if (details.selectedText != null &&
-                      details.selectedText!.isNotEmpty) {
-                    setState(() => selectedText = details.selectedText!);
-                  } else {
-                    setState(() => selectedText = "");
-                  }
-                },
-              ),
+                  },
+                  onTextSelectionChanged:
+                      (PdfTextSelectionChangedDetails details) {
+                    if (details.selectedText != null &&
+                        details.selectedText!.isNotEmpty) {
+                      setState(() => selectedText = details.selectedText!);
+                    } else {
+                      setState(() => selectedText = "");
+                    }
+                  },
+                ),
 
-              /// 🔊 Floating Read Button
-              if (selectedText.isNotEmpty)
-                Positioned(
-                  bottom: 110,
-                  right: 20,
-                  child: FloatingActionButton.extended(
-                    backgroundColor: isSpeaking
-                        ? Colors.redAccent
-                        : FlutterFlowTheme.of(context).primary,
-                    onPressed: isSpeaking ? _stopSpeaking : _speakSelected,
-                    icon: Icon(isSpeaking ? Icons.stop : Icons.volume_up),
-                    label: Text(
-                      isSpeaking ? "Stop" : "Listen",
-                      style: const TextStyle(color: Colors.white),
+                /// 🔊 Floating Read Button
+                if (selectedText.isNotEmpty)
+                  Positioned(
+                    bottom: 110,
+                    right: 20,
+                    child: FloatingActionButton.extended(
+                      backgroundColor: isSpeaking
+                          ? Colors.redAccent
+                          : FlutterFlowTheme.of(context).primary,
+                      onPressed: isSpeaking ? _stopSpeaking : _speakSelected,
+                      icon: Icon(isSpeaking ? Icons.stop : Icons.volume_up),
+                      label: Text(
+                        isSpeaking ? "Stop" : "Listen",
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
 
-        /// ---------- Bottom Navigation ----------
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Container(
+          /// ---------- Bottom Navigation ----------
+          Container(
             width: double.infinity,
             decoration: BoxDecoration(
               color: FlutterFlowTheme.of(context).secondaryBackground,
-              boxShadow: [
-                BoxShadow(
-                  blurRadius: 16.0,
-                  color: FlutterFlowTheme.of(context).shadowColor,
-                  offset: const Offset(0.0, 4.0),
+              border: Border(
+                top: BorderSide(
+                  color: FlutterFlowTheme.of(context).alternate.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                /// Page indicator and slider
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'পৃষ্ঠা $currentPage/${FFAppState().totalPages}',
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  fontFamily: 'SF Pro Display',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryText,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SliderTheme(
+                        data: SliderThemeData(
+                          activeTrackColor: const Color(0xFFFFD700),
+                          inactiveTrackColor:
+                              FlutterFlowTheme.of(context).alternate,
+                          thumbColor: const Color(0xFFFFD700),
+                          overlayColor: const Color(0xFFFFD700).withOpacity(0.2),
+                          thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 8),
+                          trackHeight: 4,
+                        ),
+                        child: Slider(
+                          value: currentPage.toDouble(),
+                          min: 1,
+                          max: FFAppState().totalPages.toDouble(),
+                          onChanged: (value) {
+                            setState(() => currentPage = value.toInt());
+                            pdfViewerController.jumpToPage(currentPage);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                /// Bottom action buttons
+                Container(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    bottom: MediaQuery.of(context).padding.bottom + 8,
+                    top: 8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildBottomIcon(
+                        Icons.list,
+                        'Table of Contents',
+                        () {
+                          // Table of contents
+                        },
+                      ),
+                      _buildBottomIcon(
+                        Icons.collections_bookmark_outlined,
+                        'Bookmark Collection',
+                        () {
+                          // Bookmark Collection functionality
+                        },
+                      ),
+                      _buildBottomIcon(
+                        Icons.fullscreen_outlined,
+                        'Full Screen Mode',
+                        () {
+                          // Full Screen Mode
+                        },
+                      ),
+                      _buildBottomIcon(
+                        Icons.screen_rotation,
+                        'Screen rotation',
+                        () {
+                          // screen rotation functionality
+                        },
+                      ),
+                      _buildBottomIcon(
+                        Icons.brightness_6,
+                        'Brightness',
+                        _openBrightnessSettings,
+                      ),
+                      _buildBottomIcon(
+                        Icons.text_fields,
+                        'Font',
+                        () {
+                          // Font settings
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            child: Padding(
-              padding:
-                  const EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              setCurrentMinusPage();
-                              pdfViewerController.jumpToPage(currentPage);
-                            },
-                            child: CircleAvatar(
-                              backgroundColor:
-                                  FlutterFlowTheme.of(context).primaryBackground,
-                              child: SvgPicture.asset(
-                                'assets/images/Previous.svg',
-                                width: 20,
-                                height: 20,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text('Previous',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontWeight: FontWeight.bold,
-                                  )),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Text('Next',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontWeight: FontWeight.bold,
-                                  )),
-                          const SizedBox(width: 12),
-                          InkWell(
-                            onTap: () {
-                              setCurrentPage();
-                              pdfViewerController.jumpToPage(currentPage);
-                            },
-                            child: CircleAvatar(
-                              backgroundColor:
-                                  FlutterFlowTheme.of(context).primaryBackground,
-                              child: SvgPicture.asset(
-                                'assets/images/Next.svg',
-                                width: 20,
-                                height: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Page $currentPage / ${FFAppState().totalPages}',
-                          style: FlutterFlowTheme.of(context)
-                              .bodyMedium
-                              .override(
-                                fontFamily: 'SF Pro Display',
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              )),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  LinearPercentIndicator(
-                    percent: FFAppState().totalPages > 0
-                        ? currentPage / FFAppState().totalPages
-                        : 0,
-                    lineHeight: 10.0,
-                    animation: true,
-                    progressColor: FlutterFlowTheme.of(context).primary,
-                    backgroundColor: FlutterFlowTheme.of(context).secondary,
-                    barRadius: const Radius.circular(20.0),
-                  ),
-                ],
-              ),
-            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomIcon(IconData icon, String tooltip, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Icon(
+          icon,
+          size: 24,
+          color: FlutterFlowTheme.of(context).secondaryText,
         ),
-      ],
+      ),
     );
   }
 }
