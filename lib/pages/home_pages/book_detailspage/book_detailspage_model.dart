@@ -14,6 +14,9 @@ class BookDetailspageModel extends FlutterFlowModel<BookDetailspageWidget> {
   int? relatedIndex = 0;
 
   bool? isProgress = false;
+  bool? isFavorite = false;
+  bool? isFavoriteLoading = false;
+  bool isFavoriteInitialized = false;
 
   ///  State fields for stateful widgets in this page.
 

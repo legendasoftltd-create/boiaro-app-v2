@@ -3,28 +3,18 @@ import '/backend/backend.dart';
 import '/backend/schema/structs/index.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import 'index.dart'; // Imports other custom widgets
-import '/custom_code/actions/index.dart'; // Imports custom actions
-import '/flutter_flow/custom_functions.dart'; // Imports custom functions
+import 'index.dart';
+import '/custom_code/actions/index.dart';
+import '/flutter_flow/custom_functions.dart';
 import 'package:flutter/material.dart';
-// Begin custom widget code
-// DO NOT REMOVE OR MODIFY THE CODE ABOVE!
-
-import 'index.dart'; // Imports other custom widgets
-import '/custom_code/actions/index.dart' as actions;
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-// import '/backend/api_requests/api_calls.dart';
-
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
-
 import 'package:flutter/scheduler.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
-
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class FlutterPdfViewWidget extends StatefulWidget {
   const FlutterPdfViewWidget({
@@ -33,14 +23,12 @@ class FlutterPdfViewWidget extends StatefulWidget {
     this.height,
     this.pdfPath,
     this.namePage,
-    // required this.id,
   });
 
   final double? width;
   final double? height;
   final String? pdfPath;
   final String? namePage;
-  // final String? id;
 
   @override
   State<FlutterPdfViewWidget> createState() => _FlutterPdfViewWidgetState();
@@ -50,7 +38,21 @@ PdfViewerController pdfViewerController = PdfViewerController();
 
 class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   int currentPage = 1;
-  // Uint8List? _pdfBytes;
+  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
+  final FlutterTts flutterTts = FlutterTts();
+
+  String selectedText = "";
+  bool isSpeaking = false;
+  double speechRate = 0.9;
+  double pitch = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      setState(() => currentPage = 1);
+    });
+  }
 
   void setCurrentPage() {
     setState(() {
@@ -68,43 +70,137 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     });
   }
 
-  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
+  Future<void> _speakSelected() async {
+    if (selectedText.isEmpty) return;
+    await flutterTts.setLanguage("bn-BD");
+    await flutterTts.setSpeechRate(speechRate);
+    await flutterTts.setPitch(pitch);
 
-  @override
-  void initState() {
-    super.initState();
-    // _loadPdfBytes();
-    // print("asas: ${_pdfBytes}");
-    SchedulerBinding.instance!.addPostFrameCallback((_) {
-      setState(() {
-        currentPage = 1;
-      });
-    });
+    setState(() => isSpeaking = true);
+    await flutterTts.speak(selectedText);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  Future<void> _stopSpeaking() async {
+    await flutterTts.stop();
+    setState(() => isSpeaking = false);
   }
 
-  // Future<void> _loadPdfBytes() async {
-  //   try {
-  //     // Get the path to the PDF file
-  //     final String pdfPath =
-  //         '/data/data/com.boiaro.app/app_flutter/Ebook/${widget.pdfPath!}';
-  //
-  //     // Read the PDF file as bytes
-  //     final File file = File(pdfPath);
-  //     final Uint8List bytes = await file.readAsBytes();
-  //
-  //     setState(() {
-  //       _pdfBytes = bytes;
-  //     });
-  //
-  //   } catch (e) {
-  //     print('Error loading PDF: $e');
-  //   }
-  // }
+  void _openTtsSettings() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "🔊 Voice Settings",
+                style: FlutterFlowTheme.of(context).bodyLarge.override(
+                      fontFamily: 'SF Pro Display',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 24),
+
+              /// Speech Speed
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Speed",
+                      style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                          )),
+                  Text("${speechRate.toStringAsFixed(2)}x",
+                      style: FlutterFlowTheme.of(context).bodyMedium),
+                ],
+              ),
+              Slider(
+                value: speechRate,
+                min: 0.3,
+                max: 1.5,
+                divisions: 12,
+                activeColor: FlutterFlowTheme.of(context).primary,
+                label: speechRate.toStringAsFixed(2),
+                onChanged: (val) {
+                  setState(() => speechRate = val);
+                },
+              ),
+              const SizedBox(height: 10),
+
+              /// Pitch
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Pitch",
+                      style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                          )),
+                  Text("${pitch.toStringAsFixed(2)}",
+                      style: FlutterFlowTheme.of(context).bodyMedium),
+                ],
+              ),
+              Slider(
+                value: pitch,
+                min: 0.5,
+                max: 2.0,
+                divisions: 15,
+                activeColor: FlutterFlowTheme.of(context).primary,
+                label: pitch.toStringAsFixed(2),
+                onChanged: (val) {
+                  setState(() => pitch = val);
+                },
+              ),
+              const SizedBox(height: 16),
+
+              /// Test Voice Button
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: FlutterFlowTheme.of(context).primary,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  await flutterTts.setLanguage("bn-BD");
+                  await flutterTts.setSpeechRate(speechRate);
+                  await flutterTts.setPitch(pitch);
+                  await flutterTts.speak("এই সেটিংস প্রিভিউ করার জন্য ধন্যবাদ।");
+                },
+                icon: const Icon(Icons.play_arrow, color: Colors.white),
+                label: const Text("Preview Voice",
+                    style: TextStyle(color: Colors.white)),
+              ),
+              const SizedBox(height: 10),
+
+              /// Done button
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Done",
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +208,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
 
     return Column(
       children: [
+        /// ---------- AppBar ----------
         Container(
           width: double.infinity,
           height: 79.0,
@@ -121,150 +218,124 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
               BoxShadow(
                 blurRadius: 16.0,
                 color: FlutterFlowTheme.of(context).shadowColor,
-                offset: const Offset(
-                  0.0,
-                  4.0,
-                ),
+                offset: const Offset(0.0, 4.0),
               )
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsetsDirectional.fromSTEB(16.0, 26.0, 16.0, 0.0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Align(
-                      alignment: const AlignmentDirectional(0.0, 0.0),
-                      child: Builder(
-                        builder: (context) {
-                          return InkWell(
-                            splashColor: Colors.transparent,
-                            focusColor: Colors.transparent,
-                            hoverColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                            onTap: () async {
-                              context.safePop();
-                            },
-                            child: Container(
-                              width: 40.0,
-                              height: 40.0,
-                              decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context).lightGrey,
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: const AlignmentDirectional(0.0, 0.0),
-                              child: Align(
-                                alignment: const AlignmentDirectional(0.0, 0.0),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                  child: SvgPicture.asset(
-                                    'assets/images/arrow_back_appbar_ic.svg',
-                                    fit: BoxFit.contain,
-                                    alignment: const Alignment(0.0, 0.0),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16.0, 26.0, 16.0, 0.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                InkWell(
+                  onTap: () async => context.safePop(),
+                  child: Container(
+                    width: 40.0,
+                    height: 40.0,
+                    decoration: BoxDecoration(
+                      color: FlutterFlowTheme.of(context).lightGrey,
+                      shape: BoxShape.circle,
                     ),
-                    Expanded(
-                      child: Align(
-                        alignment: const AlignmentDirectional(0.0, 0.0),
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                              16.0, 0.0, 16.0, 0.0),
-                          child: Text(
-                            widget.namePage!,
-                            maxLines: 1,
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  fontFamily: 'SF Pro Display',
-                                  fontSize: 24.0,
-                                  letterSpacing: 0.0,
-                                  fontWeight: FontWeight.bold,
-                                  useGoogleFonts: false,
-                                  lineHeight: 1.5,
-                                ),
-                          ),
-                        ),
-                      ),
+                    alignment: Alignment.center,
+                    child: SvgPicture.asset(
+                      'assets/images/arrow_back_appbar_ic.svg',
+                      fit: BoxFit.contain,
                     ),
-                    Align(
-                      alignment: const AlignmentDirectional(0.0, 0.0),
-                      child: Container(
-                        width: 40.0,
-                        height: 40.0,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      widget.namePage ?? 'PDF Reader',
+                      maxLines: 1,
+                      style: FlutterFlowTheme.of(context).bodyMedium.override(
+                            fontFamily: 'SF Pro Display',
+                            fontSize: 22.0,
+                            letterSpacing: 0.0,
+                            fontWeight: FontWeight.bold,
+                            useGoogleFonts: false,
+                          ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.settings_voice_outlined),
+                  color: FlutterFlowTheme.of(context).primaryText,
+                  onPressed: _openTtsSettings,
+                ),
+                // IconButton(
+                //   icon: const Icon(Icons.menu),
+                //   color: FlutterFlowTheme.of(context).primaryText,
+                //   onPressed: OpenPDFSettingsDrawer,
+                // ),
+              ],
+            ),
+          ),
+        ),
+
+        /// ---------- PDF Viewer ----------
+        Expanded(
+          child: Stack(
+            children: [
+              SfPdfViewer.network(
+                widget.pdfPath!,
+                key: _pdfViewerKey,
+                controller: pdfViewerController,
+                scrollDirection: PdfScrollDirection.horizontal,
+                canShowTextSelectionMenu: false,
+                onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                  int totalPages = details.document.pages.count;
+                  setState(() => FFAppState().totalPages = totalPages);
+                  FFAppState().update(() {
+                    FFAppState().homePageTotalPdfPageIndex =
+                        FFAppState().totalPages;
+                  });
+                  pdfViewerController.jumpToPage(currentPage);
+                },
+                onPageChanged: (details) {
+                  SchedulerBinding.instance.addPostFrameCallback((_) {
+                    setState(() {
+                      currentPage = details.newPageNumber;
+                      FFAppState().update(() {
+                        FFAppState().homePageCurrentPdfIndex = currentPage;
+                      });
+                    });
+                  });
+                },
+                
+                onTextSelectionChanged:
+                    (PdfTextSelectionChangedDetails details) {
+                  if (details.selectedText != null &&
+                      details.selectedText!.isNotEmpty) {
+                    setState(() => selectedText = details.selectedText!);
+                  } else {
+                    setState(() => selectedText = "");
+                  }
+                },
               ),
+
+              /// 🔊 Floating Read Button
+              if (selectedText.isNotEmpty)
+                Positioned(
+                  bottom: 110,
+                  right: 20,
+                  child: FloatingActionButton.extended(
+                    backgroundColor: isSpeaking
+                        ? Colors.redAccent
+                        : FlutterFlowTheme.of(context).primary,
+                    onPressed: isSpeaking ? _stopSpeaking : _speakSelected,
+                    icon: Icon(isSpeaking ? Icons.stop : Icons.volume_up),
+                    label: Text(
+                      isSpeaking ? "Stop" : "Listen",
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
-        Expanded(
-            child:
-                // _pdfBytes != null
-                //     ?
-                SfPdfViewer.network(
-          widget.pdfPath!,
-          scrollDirection: PdfScrollDirection.horizontal,
-          controller: pdfViewerController,
-          enableDocumentLinkAnnotation: false,
-          initialScrollOffset: Offset.zero,
-          onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-            int totalPages = details.document.pages.count;
-            setState(() {
-              FFAppState().totalPages = totalPages;
-            });
-            FFAppState().update(() {
-              FFAppState().homePageTotalPdfPageIndex = FFAppState().totalPages;
-            });
 
-            print('Total Pages: $totalPages');
-            FFAppState().update(() {
-              currentPage = FFAppState().homePageCurrentPdfIndex;
-            });
-            pdfViewerController.jumpToPage(currentPage);
-            print('currentPage: $currentPage');
-          },
-          onPageChanged: (details) {
-            SchedulerBinding.instance!.addPostFrameCallback((_) {
-              setState(() {
-                currentPage = details.newPageNumber;
-                print('currentPage1: $currentPage');
-                FFAppState().update(() {
-                  FFAppState().homePageCurrentPdfIndex = currentPage;
-                });
-                print(
-                    "homePageCurrentPdfIndex: ${FFAppState().homePageCurrentPdfIndex}");
-              });
-            });
-          },
-        )
-            // : Center(
-            //     child: SizedBox(
-            //       width: 50,
-            //       height: 50,
-            //       child: CircularProgressIndicator(
-            //         valueColor: AlwaysStoppedAnimation<Color>(
-            //           FlutterFlowTheme.of(context).primary,
-            //         ),
-            //       ),
-            //     ),
-            //   )
-            ),
+        /// ---------- Bottom Navigation ----------
         Align(
           alignment: Alignment.bottomCenter,
           child: Container(
@@ -275,233 +346,99 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                 BoxShadow(
                   blurRadius: 16.0,
                   color: FlutterFlowTheme.of(context).shadowColor,
-                  offset: Offset(
-                    0.0,
-                    4.0,
-                  ),
-                )
+                  offset: const Offset(0.0, 4.0),
+                ),
               ],
             ),
             child: Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 24.0),
+              padding:
+                  const EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 24.0),
               child: Column(
-                mainAxisSize: MainAxisSize.max,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Padding(
-                    padding:
-                        EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 28.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                setCurrentMinusPage();
-                                pdfViewerController.jumpToPage(currentPage);
-                              },
-                              child: Container(
-                                width: 36.0,
-                                height: 36.0,
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context)
-                                      .primaryBackground,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      blurRadius: 16.0,
-                                      color: FlutterFlowTheme.of(context)
-                                          .shadowColor,
-                                      offset: Offset(
-                                        0.0,
-                                        4.0,
-                                      ),
-                                    )
-                                  ],
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: AlignmentDirectional(0.0, 0.0),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(0.0),
-                                  child: SvgPicture.asset(
-                                    'assets/images/Previous.svg',
-                                    width: 20.0,
-                                    height: 20.0,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              setCurrentMinusPage();
+                              pdfViewerController.jumpToPage(currentPage);
+                            },
+                            child: CircleAvatar(
+                              backgroundColor:
+                                  FlutterFlowTheme.of(context).primaryBackground,
+                              child: SvgPicture.asset(
+                                'assets/images/Previous.svg',
+                                width: 20,
+                                height: 20,
                               ),
                             ),
-                            Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                  12.0, 0.0, 0.0, 0.0),
-                              child: Text(
-                                'Previous',
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      fontFamily: 'SF Pro Display',
-                                      fontSize: 15.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.bold,
-                                      useGoogleFonts: false,
-                                      lineHeight: 1.5,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                  0.0, 0.0, 12.0, 0.0),
-                              child: Text(
-                                'Next',
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      fontFamily: 'SF Pro Display',
-                                      fontSize: 15.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.bold,
-                                      useGoogleFonts: false,
-                                      lineHeight: 1.5,
-                                    ),
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                setCurrentPage();
-                                pdfViewerController.jumpToPage(currentPage);
-                              },
-                              child: Container(
-                                width: 36.0,
-                                height: 36.0,
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context)
-                                      .primaryBackground,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      blurRadius: 16.0,
-                                      color: FlutterFlowTheme.of(context)
-                                          .shadowColor,
-                                      offset: Offset(
-                                        0.0,
-                                        4.0,
-                                      ),
-                                    )
-                                  ],
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: AlignmentDirectional(0.0, 0.0),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(0.0),
-                                  child: SvgPicture.asset(
-                                    'assets/images/Next.svg',
-                                    width: 20.0,
-                                    height: 20.0,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Chapter 1',
-                            maxLines: 1,
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  fontFamily: 'SF Pro Display',
-                                  fontSize: 15.0,
-                                  letterSpacing: 0.0,
-                                  fontWeight: FontWeight.bold,
-                                  useGoogleFonts: false,
-                                  lineHeight: 1.5,
-                                ),
                           ),
-                        ),
-                        RichText(
-                          textScaler: MediaQuery.of(context).textScaler,
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Page ',
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      fontFamily: 'SF Pro Display',
-                                      color: FlutterFlowTheme.of(context)
-                                          .primaryText,
-                                      fontSize: 15.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.bold,
-                                      useGoogleFonts: false,
-                                    ),
+                          const SizedBox(width: 12),
+                          Text('Previous',
+                              style: FlutterFlowTheme.of(context)
+                                  .bodyMedium
+                                  .override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontWeight: FontWeight.bold,
+                                  )),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Text('Next',
+                              style: FlutterFlowTheme.of(context)
+                                  .bodyMedium
+                                  .override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontWeight: FontWeight.bold,
+                                  )),
+                          const SizedBox(width: 12),
+                          InkWell(
+                            onTap: () {
+                              setCurrentPage();
+                              pdfViewerController.jumpToPage(currentPage);
+                            },
+                            child: CircleAvatar(
+                              backgroundColor:
+                                  FlutterFlowTheme.of(context).primaryBackground,
+                              child: SvgPicture.asset(
+                                'assets/images/Next.svg',
+                                width: 20,
+                                height: 20,
                               ),
-                              TextSpan(
-                                text: ' ${currentPage}',
-                                style: TextStyle(
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
-                                  fontSize: 15.0,
-                                ),
-                              ),
-                              TextSpan(
-                                text: '/',
-                                style: TextStyle(
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              TextSpan(
-                                text: valueOrDefault<String>(
-                                  FFAppState().totalPages.toString(),
-                                  '1',
-                                ),
-                                style: TextStyle(
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
-                                  fontSize: 15,
-                                ),
-                              )
-                            ],
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  fontFamily: 'SF Pro Display',
-                                  letterSpacing: 0.0,
-                                  useGoogleFonts: false,
-                                ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Page $currentPage / ${FFAppState().totalPages}',
+                          style: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .override(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              )),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
                   LinearPercentIndicator(
-                    percent: currentPage / FFAppState().totalPages,
-                    lineHeight: 12.0,
+                    percent: FFAppState().totalPages > 0
+                        ? currentPage / FFAppState().totalPages
+                        : 0,
+                    lineHeight: 10.0,
                     animation: true,
-                    animateFromLastPercent: true,
                     progressColor: FlutterFlowTheme.of(context).primary,
                     backgroundColor: FlutterFlowTheme.of(context).secondary,
-                    barRadius: Radius.circular(20.0),
-                    padding: EdgeInsets.zero,
+                    barRadius: const Radius.circular(20.0),
                   ),
                 ],
               ),

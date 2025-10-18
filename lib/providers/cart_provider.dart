@@ -59,6 +59,7 @@ class CartProvider with ChangeNotifier {
     String name,
     String imageUrl,
     double price,
+    {bool increment=true}
   ) {
     if (_items.containsKey(productId)) {
       // change quantity
@@ -69,7 +70,7 @@ class CartProvider with ChangeNotifier {
           name: existingCartItem.name,
           imageUrl: existingCartItem.imageUrl,
           price: existingCartItem.price,
-          quantity: existingCartItem.quantity + 1,
+          quantity:increment? existingCartItem.quantity + 1:1,
         ),
       );
     } else {

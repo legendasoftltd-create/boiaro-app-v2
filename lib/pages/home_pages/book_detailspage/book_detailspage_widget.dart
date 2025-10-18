@@ -136,6 +136,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                     }
                     final columnGetFavouriteBookResponse = snapshot.data!;
 
+                    if (!_model.isFavoriteInitialized) {
+                      _model.isFavorite = functions.checkFavOrNot(
+                        EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(
+                          columnGetFavouriteBookResponse.jsonBody,
+                        )?.toList(),
+                        widget.id!,
+                      );
+                      _model.isFavoriteInitialized = true;
+                    }
+
                     return Column(
                       mainAxisSize: MainAxisSize.max,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,770 +171,716 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                               ),
                               scrollDirection: Axis.vertical,
                               children: [
-                                Stack(
-                                  children: [
-                                    Container(
-                                      width: double.infinity,
-                                      height: 480.0,
-                                      decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondary,
-                                        borderRadius: BorderRadius.only(
-                                          bottomLeft: Radius.circular(30.0),
-                                          bottomRight: Radius.circular(30.0),
-                                          topLeft: Radius.circular(0.0),
-                                          topRight: Radius.circular(0.0),
-                                        ),
-                                      ),
-                                      child: Padding(
-                                        padding: EdgeInsetsDirectional.fromSTEB(
-                                            16.0, 119.0, 16.0, 24.0),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.max,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            InkWell(
-                                              splashColor: Colors.transparent,
-                                              focusColor: Colors.transparent,
-                                              hoverColor: Colors.transparent,
-                                              highlightColor:
-                                                  Colors.transparent,
-                                              onTap: () async {
-                                                await Navigator.push(
-                                                  context,
-                                                  PageTransition(
-                                                    type:
-                                                        PageTransitionType.fade,
-                                                    child:
-                                                        FlutterFlowExpandedImageView(
-                                                      image: CachedNetworkImage(
-                                                        fadeInDuration:
-                                                            Duration(
-                                                                milliseconds:
-                                                                    200),
-                                                        fadeOutDuration:
-                                                            Duration(
-                                                                milliseconds:
-                                                                    200),
-                                                        imageUrl:
-                                                            widget.image!,
-                                                        fit: BoxFit.contain,
-                                                        alignment:
-                                                            Alignment(0.0, 0.0),
-                                                        errorWidget: (context,
-                                                                error,
-                                                                stackTrace) =>
-                                                            Image.asset(
-                                                          'assets/images/error_image.png',
-                                                          fit: BoxFit.contain,
-                                                          alignment: Alignment(
-                                                              0.0, 0.0),
-                                                        ),
-                                                      ),
-                                                      allowRotation: false,
-                                                      useHeroAnimation: false,
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(0.0),
-                                                child: CachedNetworkImage(
-                                                  fadeInDuration: Duration(
-                                                      milliseconds: 200),
-                                                  fadeOutDuration: Duration(
-                                                      milliseconds: 200),
-                                                  imageUrl: widget.image!,
-                                                  width: 181.0,
-                                                  height: 240.0,
-                                                  fit: BoxFit.fitWidth,
-                                                  alignment:
-                                                      Alignment(0.0, 0.0),
-                                                  errorWidget: (context, error,
-                                                          stackTrace) =>
-                                                      Image.asset(
-                                                    'assets/images/error_image.png',
-                                                    width: 181.0,
-                                                    height: 258.0,
-                                                    fit: BoxFit.fitWidth,
-                                                    alignment:
-                                                        Alignment(0.0, 0.0),
-                                                  ),
-                                                ),
+                                // Teal App Bar
+                                Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context).primary, // Teal color
+                                  ),
+                                  child: SafeArea(
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.max,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          InkWell(
+                                            splashColor: Colors.transparent,
+                                            focusColor: Colors.transparent,
+                                            hoverColor: Colors.transparent,
+                                            highlightColor: Colors.transparent,
+                                            onTap: () async {
+                                              context.safePop();
+                                            },
+                                            child: Container(
+                                              width: 40.0,
+                                              height: 40.0,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.2),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              alignment: AlignmentDirectional(0.0, 0.0),
+                                              child: Icon(
+                                                Icons.arrow_back,
+                                                color: Colors.white,
+                                                size: 20.0,
                                               ),
                                             ),
-                                            Text(
+                                          ),
+                                          Expanded(
+                                            child: Text(
                                               valueOrDefault<String>(
                                                 widget.name,
                                                 'Book',
                                               ),
                                               textAlign: TextAlign.center,
                                               maxLines: 1,
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        fontFamily:
-                                                            'SF Pro Display',
-                                                        fontSize: 24.0,
-                                                        letterSpacing: 0.0,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        lineHeight: 1.5,
-                                                      ),
+                                              style: FlutterFlowTheme.of(context)
+                                                  .bodyMedium
+                                                  .override(
+                                                    fontFamily: 'SF Pro Display',
+                                                    color: Colors.white,
+                                                    fontSize: 18.0,
+                                                    letterSpacing: 0.0,
+                                                    fontWeight: FontWeight.bold,
+                                                    lineHeight: 1.2,
+                                                  ),
                                             ),
-                                            Text(
-                                              'By ${EbookGroup.getbookdetailsApiCall.authorName(
-                                                bookDetailspageGetbookdetailsApiResponse
-                                                    .jsonBody,
-                                              )}',
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        fontFamily:
-                                                            'SF Pro Display',
-                                                        color:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .secondaryText,
-                                                        fontSize: 15.0,
-                                                        letterSpacing: 0.0,
-                                                        fontWeight:
-                                                            FontWeight.normal,
-                                                        lineHeight: 1.5,
-                                                      ),
-                                            ),
-                                            Text("${double.parse(widget.price??"0")>0?"Price:৳${widget.price}":'Free'}",style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        fontFamily:
-                                                            'SF Pro Display',
-                                                        fontSize: 20.0,
-                                                        letterSpacing: 0.0,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        lineHeight: 1.5,
-                                                        color: FlutterFlowTheme.of(context).primary
-                                                      ),),
-                                          ],
-                                        ),
+                                          ),
+                                          // Row(
+                                          //   mainAxisSize: MainAxisSize.min,
+                                          //   children: [
+                                          //     InkWell(
+                                          //       splashColor: Colors.transparent,
+                                          //       focusColor: Colors.transparent,
+                                          //       hoverColor: Colors.transparent,
+                                          //       highlightColor: Colors.transparent,
+                                          //       onTap: () async {
+                                          //         // Shopping cart action
+                                          //       },
+                                          //       child: Container(
+                                          //         width: 40.0,
+                                          //         height: 40.0,
+                                          //         decoration: BoxDecoration(
+                                          //           color: Colors.white.withOpacity(0.2),
+                                          //           shape: BoxShape.circle,
+                                          //         ),
+                                          //         alignment: AlignmentDirectional(0.0, 0.0),
+                                          //         child: Icon(
+                                          //           Icons.shopping_cart,
+                                          //           color: Colors.white,
+                                          //           size: 20.0,
+                                          //         ),
+                                          //       ),
+                                          //     ),
+                                          //     SizedBox(width: 8.0),
+                                          //     InkWell(
+                                          //       splashColor: Colors.transparent,
+                                          //       focusColor: Colors.transparent,
+                                          //       hoverColor: Colors.transparent,
+                                          //       highlightColor: Colors.transparent,
+                                          //       onTap: () async {
+                                          //         // Share action
+                                          //       },
+                                          //       child: Container(
+                                          //         width: 40.0,
+                                          //         height: 40.0,
+                                          //         decoration: BoxDecoration(
+                                          //           color: Colors.white.withOpacity(0.2),
+                                          //           shape: BoxShape.circle,
+                                          //         ),
+                                          //         alignment: AlignmentDirectional(0.0, 0.0),
+                                          //         child: Icon(
+                                          //           Icons.share,
+                                          //           color: Colors.white,
+                                          //           size: 20.0,
+                                          //         ),
+                                          //       ),
+                                          //     ),
+                                          //   ],
+                                          // ),
+                                        ],
                                       ),
                                     ),
-                                    SafeArea(
-                                      child: Container(
-                                        decoration: BoxDecoration(),
-                                        child: Padding(
-                                          padding:
-                                              EdgeInsetsDirectional.fromSTEB(
-                                                  16.0, 16.0, 16.0, 0.0),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.max,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              InkWell(
-                                                splashColor: Colors.transparent,
-                                                focusColor: Colors.transparent,
-                                                hoverColor: Colors.transparent,
-                                                highlightColor:
-                                                    Colors.transparent,
-                                                onTap: () async {
-                                                  context.safePop();
-                                                },
-                                                child: Container(
-                                                  width: 44.0,
-                                                  height: 44.0,
-                                                  decoration: BoxDecoration(
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .primaryBackground,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  alignment:
-                                                      AlignmentDirectional(
-                                                          0.0, 0.0),
-                                                  child: ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            0.0),
-                                                    child: SvgPicture.asset(
-                                                      'assets/images/arrow_left.svg',
-                                                      width: 24.0,
-                                                      height: 24.0,
-                                                      fit: BoxFit.cover,
+                                  ),
+                                ),
+                                // Book Information Section
+                                Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context).primaryBackground,
+                                  ),
+                                  child: Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(16.0, 20.0, 16.0, 20.0),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Book Cover
+                                        InkWell(
+                                          splashColor: Colors.transparent,
+                                          focusColor: Colors.transparent,
+                                          hoverColor: Colors.transparent,
+                                          highlightColor: Colors.transparent,
+                                          onTap: () async {
+                                            await Navigator.push(
+                                              context,
+                                              PageTransition(
+                                                type: PageTransitionType.fade,
+                                                child: FlutterFlowExpandedImageView(
+                                                  image: CachedNetworkImage(
+                                                    fadeInDuration: Duration(milliseconds: 200),
+                                                    fadeOutDuration: Duration(milliseconds: 200),
+                                                    imageUrl: widget.image!,
+                                                    fit: BoxFit.contain,
+                                                    alignment: Alignment(0.0, 0.0),
+                                                    errorWidget: (context, error, stackTrace) => Image.asset(
+                                                      'assets/images/error_image.png',
+                                                      fit: BoxFit.contain,
+                                                      alignment: Alignment(0.0, 0.0),
                                                     ),
                                                   ),
+                                                  allowRotation: false,
+                                                  useHeroAnimation: false,
                                                 ),
                                               ),
-                                              Row(
-                                                mainAxisSize: MainAxisSize.max,
-                                                children: [
-                                                  Padding(
-                                                    padding:
-                                                        EdgeInsetsDirectional
-                                                            .fromSTEB(0.0, 0.0,
-                                                                12.0, 0.0),
-                                                    child: InkWell(
-                                                      splashColor:
-                                                          Colors.transparent,
-                                                      focusColor:
-                                                          Colors.transparent,
-                                                      hoverColor:
-                                                          Colors.transparent,
-                                                      highlightColor:
-                                                          Colors.transparent,
-                                                      onTap: () async {
-                                                        if (FFAppState()
-                                                                .isLogin ==
-                                                            true) {
-                                                          if (EbookGroup
-                                                                  .getbookdetailsApiCall
-                                                                  .accesstype(
-                                                                bookDetailspageGetbookdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              'free') {
-                                                            _model.downloadApiFunction =
-                                                                await EbookGroup
-                                                                    .downloadpdfApiCall
-                                                                    .call(
-                                                              userId:
-                                                                  FFAppState()
-                                                                      .userId,
-                                                              bookId:
-                                                                  widget.id,
-                                                              token:
-                                                                  FFAppState()
-                                                                      .token,
-                                                            );
-
-                                                            if (EbookGroup
-                                                                    .downloadpdfApiCall
-                                                                    .success(
-                                                                  (_model.downloadApiFunction
-                                                                          ?.jsonBody ??
-                                                                      ''),
-                                                                ) ==
-                                                                1) {
-                                                              ScaffoldMessenger
-                                                                      .of(context)
-                                                                  .showSnackBar(
-                                                                SnackBar(
-                                                                  content: Text(
-                                                                    EbookGroup
-                                                                        .downloadpdfApiCall
-                                                                        .message(
-                                                                      (_model.downloadApiFunction
-                                                                              ?.jsonBody ??
-                                                                          ''),
-                                                                    )!,
-                                                                    style:
-                                                                        TextStyle(
-                                                                      color: FlutterFlowTheme.of(
-                                                                              context)
-                                                                          .primaryText,
-                                                                    ),
-                                                                  ),
-                                                                  duration: Duration(
-                                                                      milliseconds:
-                                                                          2000),
-                                                                  backgroundColor:
-                                                                      FlutterFlowTheme.of(
-                                                                              context)
-                                                                          .secondary,
-                                                                ),
-                                                              );
-                                                              FFAppState()
-                                                                      .pdfPathSave =
-                                                                  EbookGroup
-                                                                      .getbookdetailsApiCall
-                                                                      .pdf(
-                                                                bookDetailspageGetbookdetailsApiResponse
-                                                                    .jsonBody,
-                                                              )!;
-                                                              FFAppState()
-                                                                  .update(
-                                                                      () {});
-                                                              await actions
-                                                                  .downloadFile(
-                                                                '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                                  bookDetailspageGetbookdetailsApiResponse
-                                                                      .jsonBody,
-                                                                )}',
-                                                                EbookGroup
-                                                                    .getbookdetailsApiCall
-                                                                    .pdf(
-                                                                  bookDetailspageGetbookdetailsApiResponse
-                                                                      .jsonBody,
-                                                                )!,
-                                                              );
-                                                              safeSetState(() =>
-                                                                  _model.apiRequestCompleter3 =
-                                                                      null);
-                                                              await _model
-                                                                  .waitForApiRequestCompleted3();
-                                                            } else {
-                                                              ScaffoldMessenger
-                                                                      .of(context)
-                                                                  .showSnackBar(
-                                                                SnackBar(
-                                                                  content: Text(
-                                                                    EbookGroup
-                                                                        .downloadpdfApiCall
-                                                                        .message(
-                                                                      (_model.downloadApiFunction
-                                                                              ?.jsonBody ??
-                                                                          ''),
-                                                                    )!,
-                                                                    style:
-                                                                        TextStyle(
-                                                                      color: FlutterFlowTheme.of(
-                                                                              context)
-                                                                          .primaryText,
-                                                                    ),
-                                                                  ),
-                                                                  duration: Duration(
-                                                                      milliseconds:
-                                                                          2000),
-                                                                  backgroundColor:
-                                                                      FlutterFlowTheme.of(
-                                                                              context)
-                                                                          .secondary,
-                                                                ),
-                                                              );
-                                                            }
-                                                          } else {
-                                                            FFAppState()
-                                                                    .pdfPathSave =
-                                                                EbookGroup
-                                                                    .getbookdetailsApiCall
-                                                                    .pdf(
-                                                              bookDetailspageGetbookdetailsApiResponse
-                                                                  .jsonBody,
-                                                            )!;
-                                                            FFAppState()
-                                                                .update(() {});
-                                                            _model.userdownloadvalidity =
-                                                                await EbookGroup
-                                                                    .usersubscriptionvalidityApiCall
-                                                                    .call(
-                                                              userId:
-                                                                  FFAppState()
-                                                                      .userId,
-                                                              token:
-                                                                  FFAppState()
-                                                                      .token,
-                                                            );
-
-                                                            if (EbookGroup
-                                                                    .usersubscriptionvalidityApiCall
-                                                                    .daysLeft(
-                                                                  (_model.userdownloadvalidity
-                                                                          ?.jsonBody ??
-                                                                      ''),
-                                                                ) ==
-                                                                null) {
-                                                              context.pushNamed(
-                                                                  SubscriptionPageWidget
-                                                                      .routeName);
-
-                                                              safeSetState(() =>
-                                                                  _model.apiRequestCompleter3 =
-                                                                      null);
-                                                              await _model
-                                                                  .waitForApiRequestCompleted3();
-                                                            } else {
-                                                              if (EbookGroup
-                                                                      .usersubscriptionvalidityApiCall
-                                                                      .daysLeft(
-                                                                    (_model.userdownloadvalidity
-                                                                            ?.jsonBody ??
-                                                                        ''),
-                                                                  )! >
-                                                                  0) {
-                                                                _model.downloadApiFunctionPaid =
-                                                                    await EbookGroup
-                                                                        .downloadpdfApiCall
-                                                                        .call(
-                                                                  userId:
-                                                                      FFAppState()
-                                                                          .userId,
-                                                                  bookId:
-                                                                      widget
-                                                                          .id,
-                                                                  token:
-                                                                      FFAppState()
-                                                                          .token,
-                                                                );
-
-                                                                if (EbookGroup
-                                                                        .downloadpdfApiCall
-                                                                        .success(
-                                                                      (_model.downloadApiFunctionPaid
-                                                                              ?.jsonBody ??
-                                                                          ''),
-                                                                    ) ==
-                                                                    1) {
-                                                                  ScaffoldMessenger.of(
-                                                                          context)
-                                                                      .showSnackBar(
-                                                                    SnackBar(
-                                                                      content:
-                                                                          Text(
-                                                                        EbookGroup
-                                                                            .downloadpdfApiCall
-                                                                            .message(
-                                                                          (_model.downloadApiFunctionPaid?.jsonBody ??
-                                                                              ''),
-                                                                        )!,
-                                                                        style:
-                                                                            TextStyle(
-                                                                          color:
-                                                                              FlutterFlowTheme.of(context).primaryText,
-                                                                        ),
-                                                                      ),
-                                                                      duration: Duration(
-                                                                          milliseconds:
-                                                                              2000),
-                                                                      backgroundColor:
-                                                                          FlutterFlowTheme.of(context)
-                                                                              .secondary,
-                                                                    ),
-                                                                  );
-                                                                  FFAppState()
-                                                                          .pdfPathSave =
-                                                                      EbookGroup
-                                                                          .getbookdetailsApiCall
-                                                                          .pdf(
-                                                                    bookDetailspageGetbookdetailsApiResponse
-                                                                        .jsonBody,
-                                                                  )!;
-                                                                  FFAppState()
-                                                                      .update(
-                                                                          () {});
-                                                                  await actions
-                                                                      .downloadFile(
-                                                                    '${FFAppConstants.bookImagesUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                                      bookDetailspageGetbookdetailsApiResponse
-                                                                          .jsonBody,
-                                                                    )}',
-                                                                    EbookGroup
-                                                                        .getbookdetailsApiCall
-                                                                        .pdf(
-                                                                      bookDetailspageGetbookdetailsApiResponse
-                                                                          .jsonBody,
-                                                                    )!,
-                                                                  );
-                                                                  safeSetState(() =>
-                                                                      _model.apiRequestCompleter3 =
-                                                                          null);
-                                                                  await _model
-                                                                      .waitForApiRequestCompleted3();
-                                                                } else {
-                                                                  ScaffoldMessenger.of(
-                                                                          context)
-                                                                      .showSnackBar(
-                                                                    SnackBar(
-                                                                      content:
-                                                                          Text(
-                                                                        EbookGroup
-                                                                            .downloadpdfApiCall
-                                                                            .message(
-                                                                          (_model.downloadApiFunctionPaid?.jsonBody ??
-                                                                              ''),
-                                                                        )!,
-                                                                        style:
-                                                                            TextStyle(
-                                                                          color:
-                                                                              FlutterFlowTheme.of(context).primaryText,
-                                                                        ),
-                                                                      ),
-                                                                      duration: Duration(
-                                                                          milliseconds:
-                                                                              2000),
-                                                                      backgroundColor:
-                                                                          FlutterFlowTheme.of(context)
-                                                                              .secondary,
-                                                                    ),
-                                                                  );
-                                                                }
-                                                              } else {
-                                                                context.pushNamed(
-                                                                    SubscriptionPageWidget
-                                                                        .routeName);
-
-                                                                safeSetState(() =>
-                                                                    _model.apiRequestCompleter3 =
-                                                                        null);
-                                                                await _model
-                                                                    .waitForApiRequestCompleted3();
-                                                              }
-                                                            }
-                                                          }
-                                                        } else {
-                                                          context.pushNamed(
-                                                              SignInPageWidget
-                                                                  .routeName);
-                                                        }
-
-                                                        safeSetState(() {});
-                                                      },
-                                                      child: Container(
-                                                        width: 44.0,
-                                                        height: 44.0,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: FlutterFlowTheme
-                                                                  .of(context)
-                                                              .primaryBackground,
-                                                          shape:
-                                                              BoxShape.circle,
-                                                        ),
-                                                        alignment:
-                                                            AlignmentDirectional(
-                                                                0.0, 0.0),
-                                                        child: ClipRRect(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      0.0),
-                                                          child:
-                                                              SvgPicture.asset(
-                                                            'assets/images/download.svg',
-                                                            width: 24.0,
-                                                            height: 24.0,
-                                                            fit: BoxFit.cover,
-                                                          ),
-                                                        ),
-                                                      ),
+                                            );
+                                          },
+                                          child: Container(
+                                            width: 120.0,
+                                            height: 160.0,
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(8.0),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  blurRadius: 8.0,
+                                                  color: FlutterFlowTheme.of(context).shadowColor,
+                                                  offset: Offset(0.0, 2.0),
+                                                )
+                                              ],
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(8.0),
+                                              child: CachedNetworkImage(
+                                                fadeInDuration: Duration(milliseconds: 200),
+                                                fadeOutDuration: Duration(milliseconds: 200),
+                                                imageUrl: widget.image!,
+                                                width: 120.0,
+                                                height: 160.0,
+                                                fit: BoxFit.cover,
+                                                alignment: Alignment(0.0, 0.0),
+                                                errorWidget: (context, error, stackTrace) => Image.asset(
+                                                  'assets/images/error_image.png',
+                                                  width: 120.0,
+                                                  height: 160.0,
+                                                  fit: BoxFit.cover,
+                                                  alignment: Alignment(0.0, 0.0),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 16.0),
+                                        // Book Details
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                valueOrDefault<String>(
+                                                  widget.name,
+                                                  'Book',
+                                                ),
+                                                style: FlutterFlowTheme.of(context)
+                                                    .bodyMedium
+                                                    .override(
+                                                      fontFamily: 'SF Pro Display',
+                                                      fontSize: 20.0,
+                                                      letterSpacing: 0.0,
+                                                      fontWeight: FontWeight.bold,
+                                                      lineHeight: 1.3,
                                                     ),
+                                              ),
+                                              SizedBox(height: 8.0),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.thumb_up,
+                                                    color: FlutterFlowTheme.of(context).primary,
+                                                    size: 16.0,
                                                   ),
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (FFAppState()
-                                                              .isLogin ==
-                                                          true) {
-                                                        _model.isProgress =
-                                                            true;
-                                                        safeSetState(() {});
-                                                        if (functions
-                                                                .checkFavOrNot(
-                                                                    EbookGroup
-                                                                        .getFavouriteBookCall
-                                                                        .favouriteBookDetailsList(
-                                                                          columnGetFavouriteBookResponse
-                                                                              .jsonBody,
-                                                                        )
-                                                                        ?.toList(),
-                                                                    EbookGroup
-                                                                        .getbookdetailsApiCall
-                                                                        .id(
-                                                                      bookDetailspageGetbookdetailsApiResponse
-                                                                          .jsonBody,
-                                                                    )) ==
-                                                            true) {
-                                                          _model.getDetailBookDetete =
-                                                              await EbookGroup
-                                                                  .removeFavouritebookCall
-                                                                  .call(
-                                                            userId: FFAppState()
-                                                                .userId,
-                                                            token: FFAppState()
-                                                                .token,
-                                                            bookId: EbookGroup
-                                                                .getbookdetailsApiCall
-                                                                .id(
-                                                              bookDetailspageGetbookdetailsApiResponse
-                                                                  .jsonBody,
+                                                  SizedBox(width: 4.0),
+                                                  Text(
+                                                    'By ${EbookGroup.getbookdetailsApiCall.authorName(
+                                                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                    )}',
+                                                    style: FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily: 'SF Pro Display',
+                                                          color: FlutterFlowTheme.of(context).secondaryText,
+                                                          fontSize: 14.0,
+                                                          letterSpacing: 0.0,
+                                                          fontWeight: FontWeight.normal,
+                                                          lineHeight: 1.3,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(height: 16.0),
+                                            
+                                              
+                                              SizedBox(height: 16.0),
+                                              // Stats Row
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                                children: [
+                                                  Column(
+                                                    children: [
+                                                      Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.star,
+                                                            color: Colors.amber,
+                                                            size: 16.0,
+                                                          ),
+                                                          SizedBox(width: 4.0),
+                                                          Text(
+                                                            valueOrDefault<String>(
+                                                              EbookGroup.getbookdetailsApiCall.averageRating(
+                                                                bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                              )?.toString(),
+                                                              '4.8',
                                                             ),
-                                                          );
-
-                                                          safeSetState(() =>
-                                                              _model.apiRequestCompleter1 =
-                                                                  null);
-                                                          await _model
-                                                              .waitForApiRequestCompleted1();
-                                                          await actions
-                                                              .showCustomToastBottom(
-                                                            FFAppState()
-                                                                .unFavText,
-                                                          );
-                                                        } else {
-                                                          _model.getDetailBookAdd =
-                                                              await EbookGroup
-                                                                  .addFavouriteBookApiCall
-                                                                  .call(
-                                                            userId: FFAppState()
-                                                                .userId,
-                                                            token: FFAppState()
-                                                                .token,
-                                                            bookId: EbookGroup
-                                                                .getbookdetailsApiCall
-                                                                .id(
-                                                              bookDetailspageGetbookdetailsApiResponse
-                                                                  .jsonBody,
-                                                            ),
-                                                          );
-
-                                                          safeSetState(() =>
-                                                              _model.apiRequestCompleter1 =
-                                                                  null);
-                                                          await _model
-                                                              .waitForApiRequestCompleted1();
-                                                          await actions
-                                                              .showCustomToastBottom(
-                                                            FFAppState()
-                                                                .favText,
-                                                          );
-                                                        }
-
-                                                        FFAppState()
-                                                            .clearGetFavouriteBookCacheCache();
-                                                        _model.isProgress =
-                                                            false;
-                                                        safeSetState(() {});
-                                                      } else {
-                                                        FFAppState().favChange =
-                                                            true;
-                                                        FFAppState().bookId =
-                                                            EbookGroup
-                                                                .getbookdetailsApiCall
-                                                                .id(
-                                                          bookDetailspageGetbookdetailsApiResponse
-                                                              .jsonBody,
-                                                        )!;
-                                                        FFAppState()
-                                                            .update(() {});
-
-                                                        context.pushNamed(
-                                                            SignInPageWidget
-                                                                .routeName);
-                                                      }
-
-                                                      safeSetState(() {});
-                                                    },
-                                                    child: Container(
-                                                      width: 44.0,
-                                                      height: 44.0,
-                                                      decoration: BoxDecoration(
-                                                        color: FlutterFlowTheme
-                                                                .of(context)
-                                                            .primaryBackground,
-                                                        shape: BoxShape.circle,
+                                                            style: FlutterFlowTheme.of(context)
+                                                                .bodyMedium
+                                                                .override(
+                                                                  fontFamily: 'SF Pro Display',
+                                                                  fontSize: 14.0,
+                                                                  letterSpacing: 0.0,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                      alignment:
-                                                          AlignmentDirectional(
-                                                              0.0, 0.0),
-                                                      child: Builder(
-                                                        builder: (context) {
-                                                          if (!_model
-                                                              .isProgress!) {
-                                                            return Builder(
-                                                              builder:
-                                                                  (context) {
-                                                                if (functions.checkFavOrNot(
-                                                                        EbookGroup.getFavouriteBookCall
-                                                                            .favouriteBookDetailsList(
-                                                                              columnGetFavouriteBookResponse.jsonBody,
-                                                                            )
-                                                                            ?.toList(),
-                                                                        EbookGroup.getbookdetailsApiCall.id(
-                                                                          bookDetailspageGetbookdetailsApiResponse
-                                                                              .jsonBody,
-                                                                        )) ==
-                                                                    true) {
-                                                                  return Icon(
-                                                                    Icons
-                                                                        .favorite_sharp,
-                                                                    color: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .primaryText,
-                                                                    size: 24.0,
-                                                                  );
-                                                                } else {
-                                                                  return Icon(
-                                                                    Icons
-                                                                        .favorite_border_rounded,
-                                                                    color: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .primaryText,
-                                                                    size: 24.0,
-                                                                  );
-                                                                }
-                                                              },
-                                                            );
+                                                      Text(
+                                                        'Rating',
+                                                        style: FlutterFlowTheme.of(context)
+                                                            .bodyMedium
+                                                            .override(
+                                                              fontFamily: 'SF Pro Display',
+                                                              color: FlutterFlowTheme.of(context).secondaryText,
+                                                              fontSize: 10.0,
+                                                              letterSpacing: 0.0,
+                                                              fontWeight: FontWeight.normal,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Container(
+                                                    width: 1.0,
+                                                    height: 30.0,
+                                                    color: FlutterFlowTheme.of(context).secondaryText.withOpacity(0.3),
+                                                  ),
+                                                  Column(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.menu_book,
+                                                        color: FlutterFlowTheme.of(context).primaryText,
+                                                        size: 16.0,
+                                                      ),
+                                                      Text(
+                                                        'eBook',
+                                                        style: FlutterFlowTheme.of(context)
+                                                            .bodyMedium
+                                                            .override(
+                                                              fontFamily: 'SF Pro Display',
+                                                              color: FlutterFlowTheme.of(context).secondaryText,
+                                                              fontSize: 10.0,
+                                                              letterSpacing: 0.0,
+                                                              fontWeight: FontWeight.normal,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Container(
+                                                    width: 1.0,
+                                                    height: 30.0,
+                                                    color: FlutterFlowTheme.of(context).secondaryText.withOpacity(0.3),
+                                                  ),
+                                                  Column(
+                                                    children: [
+                                                      InkWell(
+                                                        splashColor: Colors.transparent,
+                                                        focusColor: Colors.transparent,
+                                                        hoverColor: Colors.transparent,
+                                                        highlightColor: Colors.transparent,
+                                                        onTap: () async {
+                                                          if (FFAppState().isLogin == true) {
+                                                            _model.isFavoriteLoading = true;
+                                                            safeSetState(() {});
+                                                            if (_model.isFavorite == true) {
+                                                              _model.getDetailBookDetete = await EbookGroup.removeFavouritebookCall.call(
+                                                                userId: FFAppState().userId,
+                                                                token: FFAppState().token,
+                                                                bookId: widget.id,
+                                                              );
+                                                              await actions.showCustomToastBottom(FFAppState().unFavText);
+                                                            } else {
+                                                              _model.getDetailBookAdd = await EbookGroup.addFavouriteBookApiCall.call(
+                                                                userId: FFAppState().userId,
+                                                                token: FFAppState().token,
+                                                                bookId: widget.id,
+                                                              );
+                                                              await actions.showCustomToastBottom(FFAppState().favText);
+                                                            }
+                                                            FFAppState().clearGetFavouriteBookCacheCache();
+                                                            _model.isFavorite = !_model.isFavorite!;
+                                                            _model.isFavoriteLoading = false;
+                                                            safeSetState(() {});
                                                           } else {
-                                                            return Container(
-                                                              width: 24.0,
-                                                              height: 24.0,
-                                                              child: custom_widgets
-                                                                  .CirculatIndicator(
-                                                                width: 24.0,
-                                                                height: 24.0,
-                                                              ),
-                                                            );
+                                                            FFAppState().favChange = true;
+                                                            FFAppState().bookId = widget.id!;
+                                                            FFAppState().update(() {});
+                                                            context.pushNamed(SignInPageWidget.routeName);
                                                           }
                                                         },
+                                                        child: Column(
+                                                          children: [
+                                                            if (_model.isFavoriteLoading == true)
+                                                              SizedBox(
+                                                                width: 16.0,
+                                                                height: 16.0,
+                                                                child: CircularProgressIndicator(
+                                                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                                                    FlutterFlowTheme.of(context).primaryText,
+                                                                  ),
+                                                                ),
+                                                              )
+                                                            else
+                                                              Icon(
+                                                                _model.isFavorite! ? Icons.favorite : Icons.favorite_border,
+                                                                color: FlutterFlowTheme.of(context).primaryText,
+                                                                size: 16.0,
+                                                              ),
+                                                            Text(
+                                                              'Wishlist',
+                                                              style: FlutterFlowTheme.of(context)
+                                                                  .bodyMedium
+                                                                  .override(
+                                                                    fontFamily: 'SF Pro Display',
+                                                                    color: FlutterFlowTheme.of(context).secondaryText,
+                                                                    fontSize: 10.0,
+                                                                    letterSpacing: 0.0,
+                                                                    fontWeight: FontWeight.normal,
+                                                                  ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
+                                                    ],
                                                   ),
+                                                  // Container(
+                                                  //   width: 1.0,
+                                                  //   height: 30.0,
+                                                  //   color: FlutterFlowTheme.of(context).secondaryText.withOpacity(0.3),
+                                                  // ),
+                                                  // Column(
+                                                  //   children: [
+                                                  //     Text(
+                                                  //       '26',
+                                                  //       style: FlutterFlowTheme.of(context)
+                                                  //           .bodyMedium
+                                                  //           .override(
+                                                  //             fontFamily: 'SF Pro Display',
+                                                  //             fontSize: 14.0,
+                                                  //             letterSpacing: 0.0,
+                                                  //             fontWeight: FontWeight.bold,
+                                                  //           ),
+                                                  //     ),
+                                                  //     Text(
+                                                  //       'Page',
+                                                  //       style: FlutterFlowTheme.of(context)
+                                                  //           .bodyMedium
+                                                  //           .override(
+                                                  //             fontFamily: 'SF Pro Display',
+                                                  //             color: FlutterFlowTheme.of(context).secondaryText,
+                                                  //             fontSize: 10.0,
+                                                  //             letterSpacing: 0.0,
+                                                  //             fontWeight: FontWeight.normal,
+                                                  //           ),
+                                                  //     ),
+                                                  //   ],
+                                                  // ),
                                                 ],
                                               ),
                                             ],
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                Padding(
-                                  padding: EdgeInsetsDirectional.fromSTEB(
-                                      16.0, 16.0, 16.0, 8.0),
-                                  child: Text(
-                                    'About the book',
-                                    textAlign: TextAlign.start,
-                                    style: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .override(
-                                          fontFamily: 'SF Pro Display',
-                                          fontSize: 18.0,
-                                          letterSpacing: 0.0,
-                                          fontWeight: FontWeight.w600,
-                                          lineHeight: 1.5,
-                                        ),
                                   ),
                                 ),
-                                Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        16.0, 0.0, 16.0, 0.0),
-                                    child: custom_widgets.ReadMoreHtml(
-                                      width: double.infinity,
-                                      height: 80.0,
-                                      htmlContent: EbookGroup
-                                          .getbookdetailsApiCall
-                                          .description(
-                                        bookDetailspageGetbookdetailsApiResponse
-                                            .jsonBody,
+                                // Action Buttons
+                                Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 20.0),
+                                  child: Builder(
+                                    builder: (context) {
+                                      final accessType = EbookGroup.getbookdetailsApiCall.accesstype(
+                                        bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                      );
+                                      final isFree = accessType == 'free' || accessType == 'Free';
+                                      
+                                      if (isFree) {
+                                        // Show Read Now button for free books
+                                        return Row(
+                                          children: [
+                                            Expanded(
+                                              child: Container(
+                                                height: 48.0,
+                                                decoration: BoxDecoration(
+                                                  color: FlutterFlowTheme.of(context).primary,
+                                                  borderRadius: BorderRadius.circular(12.0),
+                                                ),
+                                                child: InkWell(
+                                                  onTap: () async {
+                                                    // Read Now action for free books
+                                                    context.pushNamed(
+                                                      ReadBookCustomPageWidget.routeName,
+                                                      queryParameters: {
+                                                        'pdf': serializeParam(
+                                                          '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                            bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                          )}',
+                                                          ParamType.String,
+                                                        ),
+                                                        'id': serializeParam(
+                                                          widget.id,
+                                                          ParamType.String,
+                                                        ),
+                                                        'name': serializeParam(
+                                                          widget.name,
+                                                          ParamType.String,
+                                                        ),
+                                                        'image': serializeParam(
+                                                          widget.image,
+                                                          ParamType.String,
+                                                        ),
+                                                      }.withoutNulls,
+                                                    );
+                                                  },
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Text(
+                                                        'Read Now',
+                                                        style: FlutterFlowTheme.of(context)
+                                                            .bodyMedium
+                                                            .override(
+                                                              fontFamily: 'SF Pro Display',
+                                                              color: Colors.white,
+                                                              fontSize: 14.0,
+                                                              letterSpacing: 0.0,
+                                                              fontWeight: FontWeight.w600,
+                                                              lineHeight: 1.2,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      } else {
+                                        // Show Preview and Buy buttons for paid books
+                                        return Row(
+                                          children: [
+                                            Expanded(
+                                              child: Container(
+                                                height: 48.0,
+                                                decoration: BoxDecoration(
+                                                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                  border: Border.all(
+                                                    color: FlutterFlowTheme.of(context).primary,
+                                                    width: 1.0,
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(12.0),
+                                                ),
+                                                child: InkWell(
+                                                  onTap: () async {
+                                                    // Preview action
+                                                    context.pushNamed(
+                                                      ReadBookCustomPageWidget.routeName,
+                                                      queryParameters: {
+                                                        'pdf': serializeParam(
+                                                          '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
+                                                            bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                          )}',
+                                                          ParamType.String,
+                                                        ),
+                                                        'id': serializeParam(
+                                                          widget.id,
+                                                          ParamType.String,
+                                                        ),
+                                                        'name': serializeParam(
+                                                          widget.name,
+                                                          ParamType.String,
+                                                        ),
+                                                        'image': serializeParam(
+                                                          widget.image,
+                                                          ParamType.String,
+                                                        ),
+                                                      }.withoutNulls,
+                                                    );
+                                                  },
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.menu_book,
+                                                        color: FlutterFlowTheme.of(context).primary,
+                                                        size: 16.0,
+                                                      ),
+                                                      SizedBox(width: 8.0),
+                                                      Text(
+                                                        'একটু পড়ে দেখুন',
+                                                        style: FlutterFlowTheme.of(context)
+                                                            .bodyMedium
+                                                            .override(
+                                                              fontFamily: 'SF Pro Display',
+                                                              color: FlutterFlowTheme.of(context).primary,
+                                                              fontSize: 14.0,
+                                                              letterSpacing: 0.0,
+                                                              fontWeight: FontWeight.w600,
+                                                              lineHeight: 1.2,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 12.0),
+                                            Expanded(
+                                              child: Container(
+                                                height: 48.0,
+                                                decoration: BoxDecoration(
+                                                  color: FlutterFlowTheme.of(context).primary,
+                                                  borderRadius: BorderRadius.circular(12.0),
+                                                ),
+                                                child: InkWell(
+                                                  onTap: () async {
+                                                    // Buy action
+                                                    if (FFAppState().isLogin == true) {
+                                                      final cart = Provider.of<CartProvider>(context, listen: false);
+                                                      cart.addItem(
+                                                        widget.id!,
+                                                        widget.name!,
+                                                        widget.image!,
+                                                        double.tryParse(widget.price!) ?? 0.0,
+                                                        increment: false
+                                                      );
+                                                      Navigator.push<void>(
+                                                        context,
+                                                        MaterialPageRoute<void>(
+                                                          builder: (BuildContext context) => CheckoutPageWidget(),
+                                                        ),
+                                                      );
+                                                    } else {
+                                                      context.pushNamed(SignInPageWidget.routeName);
+                                                    }
+                                                  },
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.shopping_bag,
+                                                        color: Colors.white,
+                                                        size: 16.0,
+                                                      ),
+                                                      SizedBox(width: 8.0),
+                                                      Text(
+                                                        'এখনই কিনুন',
+                                                        style: FlutterFlowTheme.of(context)
+                                                            .bodyMedium
+                                                            .override(
+                                                              fontFamily: 'SF Pro Display',
+                                                              color: Colors.white,
+                                                              fontSize: 14.0,
+                                                              letterSpacing: 0.0,
+                                                              fontWeight: FontWeight.w600,
+                                                              lineHeight: 1.2,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                                // Book Description Section
+                                Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 20.0, 16.0, 16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'About the book',
+                                        textAlign: TextAlign.start,
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              fontSize: 18.0,
+                                              letterSpacing: 0.0,
+                                              fontWeight: FontWeight.w600,
+                                              lineHeight: 1.5,
+                                            ),
                                       ),
-                                      maxLength: 150,
-                                    ),
+                                      SizedBox(height: 12.0),
+                                      Container(
+                                        width: double.infinity,
+                                        child: custom_widgets.ReadMoreHtml(
+                                          width: double.infinity,
+                                          height: 80.0,
+                                          htmlContent: EbookGroup
+                                              .getbookdetailsApiCall
+                                              .description(
+                                            bookDetailspageGetbookdetailsApiResponse
+                                                .jsonBody,
+                                          ),
+                                          maxLength: 150,
+                                        ),
+                                      ),
+                                      SizedBox(height: 16.0),
+                                      // Genre Tags
+                                      // Row(
+                                      //   children: [
+                                      //     Container(
+                                      //       padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                                      //       decoration: BoxDecoration(
+                                      //         color: FlutterFlowTheme.of(context).secondaryBackground,
+                                      //         borderRadius: BorderRadius.circular(20.0),
+                                      //       ),
+                                      //       child: Text(
+                                      //         'Contemporary',
+                                      //         style: FlutterFlowTheme.of(context)
+                                      //             .bodyMedium
+                                      //             .override(
+                                      //               fontFamily: 'SF Pro Display',
+                                      //               fontSize: 12.0,
+                                      //               letterSpacing: 0.0,
+                                      //               fontWeight: FontWeight.normal,
+                                      //             ),
+                                      //       ),
+                                      //     ),
+                                      //     SizedBox(width: 8.0),
+                                      //     Container(
+                                      //       padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                                      //       decoration: BoxDecoration(
+                                      //         color: FlutterFlowTheme.of(context).secondaryBackground,
+                                      //         borderRadius: BorderRadius.circular(20.0),
+                                      //       ),
+                                      //       child: Text(
+                                      //         'Romance',
+                                      //         style: FlutterFlowTheme.of(context)
+                                      //             .bodyMedium
+                                      //             .override(
+                                      //               fontFamily: 'SF Pro Display',
+                                      //               fontSize: 12.0,
+                                      //               letterSpacing: 0.0,
+                                      //               fontWeight: FontWeight.normal,
+                                      //             ),
+                                      //       ),
+                                      //     ),
+                                      //   ],
+                                      // ),
+                                    ],
                                   ),
                                 ),
                                 Padding(
@@ -1268,6 +1224,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     ),
                                   ),
                                 ),
+                               
                                 FutureBuilder<ApiCallResponse>(
                                   future: FFAppState()
                                       .getReviewCache(
@@ -1778,7 +1735,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   .fromSTEB(
                                                       16.0, 0.0, 0.0, 16.0),
                                               child: Text(
-                                                'Related books',
+                                                'More books by this author',
                                                 textAlign: TextAlign.start,
                                                 style:
                                                     FlutterFlowTheme.of(context)
@@ -2057,403 +2014,401 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                             ),
                           ),
                         ),
-                        FutureBuilder<ApiCallResponse>(
-                          future:
-                              EbookGroup.usersubscriptionvalidityApiCall.call(
-                            userId: FFAppState().userId,
-                            token: FFAppState().token,
-                          ),
-                          builder: (context, snapshot) {
-                            // Customize what your widget looks like when it's loading.
-                            if (!snapshot.hasData) {
-                              return Container(
-                                width: double.infinity,
-                                height: 88.0,
-                                child: ButtonDetailPageShimmerWidget(),
-                              );
-                            }
-                            final containerUsersubscriptionvalidityApiResponse =
-                                snapshot.data!;
+                        // FutureBuilder<ApiCallResponse>(
+                        //   future:
+                        //       EbookGroup.usersubscriptionvalidityApiCall.call(
+                        //     userId: FFAppState().userId,
+                        //     token: FFAppState().token,
+                        //   ),
+                        //   builder: (context, snapshot) {
+                        //     // Customize what your widget looks like when it's loading.
+                        //     if (!snapshot.hasData) {
+                        //       return Container(
+                        //         width: double.infinity,
+                        //         height: 88.0,
+                        //         child: ButtonDetailPageShimmerWidget(),
+                        //       );
+                        //     }
+                        //     final _ = snapshot.data!;
 
-                            return Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
-                                boxShadow: [
-                                  BoxShadow(
-                                    blurRadius: 16.0,
-                                    color: FlutterFlowTheme.of(context)
-                                        .shadowColor,
-                                    offset: Offset(
-                                      0.0,
-                                      4.0,
-                                    ),
-                                  )
-                                ],
-                              ),
-                              child: FutureBuilder<ApiCallResponse>(
-                                future: (_model.apiRequestCompleter3 ??=
-                                        Completer<ApiCallResponse>()
-                                          ..complete(EbookGroup
-                                              .downloadhistoryApiCall
-                                              .call(
-                                            userId: FFAppState().userId,
-                                            token: FFAppState().token,
-                                          )))
-                                    .future,
-                                builder: (context, snapshot) {
-                                  // Customize what your widget looks like when it's loading.
-                                  if (!snapshot.hasData) {
-                                    return Container(
-                                      width: double.infinity,
-                                      height: 88.0,
-                                      child: ButtonDetailPageShimmerWidget(),
-                                    );
-                                  }
-                                  final containerDownloadhistoryApiResponse =
-                                      snapshot.data!;
+                        //     return Container(
+                        //       width: double.infinity,
+                        //       decoration: BoxDecoration(
+                        //         color: FlutterFlowTheme.of(context)
+                        //             .secondaryBackground,
+                        //         boxShadow: [
+                        //           BoxShadow(
+                        //             blurRadius: 16.0,
+                        //             color: FlutterFlowTheme.of(context)
+                        //                 .shadowColor,
+                        //             offset: Offset(
+                        //               0.0,
+                        //               4.0,
+                        //             ),
+                        //           )
+                        //         ],
+                        //       ),
+                        //       child: FutureBuilder<ApiCallResponse>(
+                        //         future: (_model.apiRequestCompleter3 ??=
+                        //                 Completer<ApiCallResponse>()
+                        //                   ..complete(EbookGroup
+                        //                       .downloadhistoryApiCall
+                        //                       .call(
+                        //                     userId: FFAppState().userId,
+                        //                     token: FFAppState().token,
+                        //                   )))
+                        //             .future,
+                        //         builder: (context, snapshot) {
+                        //           // Customize what your widget looks like when it's loading.
+                        //           if (!snapshot.hasData) {
+                        //             return Container(
+                        //               width: double.infinity,
+                        //               height: 88.0,
+                        //               child: ButtonDetailPageShimmerWidget(),
+                        //             );
+                        //           }
+                        //           final _ = snapshot.data!;
 
-                                  return Container(
-                                    decoration: BoxDecoration(),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(16.0),
-                                      child: Builder(
-                                        builder: (context) {
-                                          // Check if book is free or paid
-                                          final accessType = EbookGroup.getbookdetailsApiCall.accesstype(
-                                            bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                          );
+                        //           return Container(
+                        //             decoration: BoxDecoration(),
+                        //             child: Padding(
+                        //               padding: EdgeInsets.all(16.0),
+                        //               child: Builder(
+                        //                 builder: (context) {
+                        //                   // Check if book is free or paid
+                        //                   final accessType = EbookGroup.getbookdetailsApiCall.accesstype(
+                        //                     bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                        //                   );
 
-                                          if (accessType == 'free') {
-                                            // Free book - show "Read Book" button
-                                            return FFButtonWidget(
-                                              onPressed: () async {
-                                                context.pushNamed(
-                                                  ReadBookCustomPageWidget.routeName,
-                                                  queryParameters: {
-                                                    'pdf': serializeParam(
-                                                      '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                        bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                                      )}',
-                                                      ParamType.String,
-                                                    ),
-                                                    'id': serializeParam(
-                                                      widget.id,
-                                                      ParamType.String,
-                                                    ),
-                                                    'name': serializeParam(
-                                                      widget.name,
-                                                      ParamType.String,
-                                                    ),
-                                                    'image': serializeParam(
-                                                      widget.image,
-                                                      ParamType.String,
-                                                    ),
-                                                  }.withoutNulls,
-                                                );
+                        //                   if (accessType == 'free') {
+                        //                     // Free book - show "Read Book" button
+                        //                     return FFButtonWidget(
+                        //                       onPressed: () async {
+                        //                         context.pushNamed(
+                        //                           ReadBookCustomPageWidget.routeName,
+                        //                           queryParameters: {
+                        //                             'pdf': serializeParam(
+                        //                               '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                        //                                 bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                        //                               )}',
+                        //                               ParamType.String,
+                        //                             ),
+                        //                             'id': serializeParam(
+                        //                               widget.id,
+                        //                               ParamType.String,
+                        //                             ),
+                        //                             'name': serializeParam(
+                        //                               widget.name,
+                        //                               ParamType.String,
+                        //                             ),
+                        //                             'image': serializeParam(
+                        //                               widget.image,
+                        //                               ParamType.String,
+                        //                             ),
+                        //                           }.withoutNulls,
+                        //                         );
 
-                                                if (widget.id == FFAppState().homePageBookId) {
-                                                  FFAppState().totalPages = 1;
-                                                  FFAppState().update(() {});
-                                                } else {
-                                                  FFAppState().totalPages = 1;
-                                                  FFAppState().homePageCurrentPdfIndex = 1;
-                                                  FFAppState().update(() {});
-                                                }
-                                              },
-                                              text: 'Read Book',
-                                              options: FFButtonOptions(
-                                                width: double.infinity,
-                                                height: 56.0,
-                                                padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
-                                                iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                                                color: FlutterFlowTheme.of(context).primary,
-                                                textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                                                  fontFamily: 'SF Pro Display',
-                                                  color: FlutterFlowTheme.of(context).primaryBackground,
-                                                  fontSize: 16.0,
-                                                  letterSpacing: 0.0,
-                                                  fontWeight: FontWeight.bold,
-                                                  lineHeight: 1.2,
-                                                ),
-                                                elevation: 0.0,
-                                                borderSide: BorderSide(
-                                                  color: Colors.transparent,
-                                                  width: 1.0,
-                                                ),
-                                                borderRadius: BorderRadius.circular(12.0),
-                                              ),
-                                            );
-                                          } else {
-                                            // Paid book - show Preview, Add to Cart, and Buy Now buttons
-                                            return Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                // Preview button
-                                                FFButtonWidget(
-                                                  onPressed: () async {
+                        //                         if (widget.id == FFAppState().homePageBookId) {
+                        //                           FFAppState().totalPages = 1;
+                        //                           FFAppState().update(() {});
+                        //                         } else {
+                        //                           FFAppState().totalPages = 1;
+                        //                           FFAppState().homePageCurrentPdfIndex = 1;
+                        //                           FFAppState().update(() {});
+                        //                         }
+                        //                       },
+                        //                       text: 'Read Book',
+                        //                       options: FFButtonOptions(
+                        //                         width: double.infinity,
+                        //                         height: 56.0,
+                        //                         padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
+                        //                         iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                        //                         color: FlutterFlowTheme.of(context).primary,
+                        //                         textStyle: FlutterFlowTheme.of(context).titleSmall.override(
+                        //                           fontFamily: 'SF Pro Display',
+                        //                           color: FlutterFlowTheme.of(context).primaryBackground,
+                        //                           fontSize: 16.0,
+                        //                           letterSpacing: 0.0,
+                        //                           fontWeight: FontWeight.bold,
+                        //                           lineHeight: 1.2,
+                        //                         ),
+                        //                         elevation: 0.0,
+                        //                         borderSide: BorderSide(
+                        //                           color: Colors.transparent,
+                        //                           width: 1.0,
+                        //                         ),
+                        //                         borderRadius: BorderRadius.circular(12.0),
+                        //                       ),
+                        //                     );
+                        //                   } else {
+                        //                     // Paid book - show Preview, Add to Cart, and Buy Now buttons
+                        //                     return Column(
+                        //                       mainAxisSize: MainAxisSize.min,
+                        //                       children: [
+                        //                         // Preview button
+                        //                         FFButtonWidget(
+                        //                           onPressed: () async {
                                                     
-                                                    context.pushNamed(
-                                                      ReadBookCustomPageWidget.routeName,
-                                                      queryParameters: {
-                                                        'pdf': serializeParam(
-                                                          '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
-                                                            bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                                          )}',
-                                                          ParamType.String,
-                                                        ),
-                                                        'id': serializeParam(
-                                                          widget.id,
-                                                          ParamType.String,
-                                                        ),
-                                                        'name': serializeParam(
-                                                          widget.name,
-                                                          ParamType.String,
-                                                        ),
-                                                        'image': serializeParam(
-                                                          widget.image,
-                                                          ParamType.String,
-                                                        ),
+                        //                             context.pushNamed(
+                        //                               ReadBookCustomPageWidget.routeName,
+                        //                               queryParameters: {
+                        //                                 'pdf': serializeParam(
+                        //                                   '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
+                        //                                     bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                        //                                   )}',
+                        //                                   ParamType.String,
+                        //                                 ),
+                        //                                 'id': serializeParam(
+                        //                                   widget.id,
+                        //                                   ParamType.String,
+                        //                                 ),
+                        //                                 'name': serializeParam(
+                        //                                   widget.name,
+                        //                                   ParamType.String,
+                        //                                 ),
+                        //                                 'image': serializeParam(
+                        //                                   widget.image,
+                        //                                   ParamType.String,
+                        //                                 ),
                                                        
-                                                      }.withoutNulls,
-                                                    );
-                                                  },
-                                                  text: 'Preview',
-                                                  options: FFButtonOptions(
-                                                    width: double.infinity,
-                                                    height: 48.0,
-                                                    padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
-                                                    iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                                                    color: FlutterFlowTheme.of(context).secondaryBackground,
-                                                    textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                      fontFamily: 'SF Pro Display',
-                                                      color: FlutterFlowTheme.of(context).primaryText,
-                                                      fontSize: 14.0,
-                                                      letterSpacing: 0.0,
-                                                      fontWeight: FontWeight.w500,
-                                                      lineHeight: 1.2,
-                                                    ),
-                                                    elevation: 0.0,
-                                                    borderSide: BorderSide(
-                                                      color: FlutterFlowTheme.of(context).primary,
-                                                      width: 1.0,
-                                                    ),
-                                                    borderRadius: BorderRadius.circular(12.0),
-                                                  ),
-                                                ),
-                                                SizedBox(height: 12.0),
-                                                // Add to Cart and Buy Now buttons
-                                                Consumer<CartProvider>(
-                                                  builder: (context, cart, child) {
-                                                    final isInCart = cart.items.containsKey(widget.id ?? "");
-                                                    final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
+                        //                               }.withoutNulls,
+                        //                             );
+                        //                           },
+                        //                           text: 'Preview',
+                        //                           options: FFButtonOptions(
+                        //                             width: double.infinity,
+                        //                             height: 48.0,
+                        //                             padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
+                        //                             iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                        //                             color: FlutterFlowTheme.of(context).secondaryBackground,
+                        //                             textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                        //                               fontFamily: 'SF Pro Display',
+                        //                               color: FlutterFlowTheme.of(context).primaryText,
+                        //                               fontSize: 14.0,
+                        //                               letterSpacing: 0.0,
+                        //                               fontWeight: FontWeight.w500,
+                        //                               lineHeight: 1.2,
+                        //                             ),
+                        //                             elevation: 0.0,
+                        //                             borderSide: BorderSide(
+                        //                               color: FlutterFlowTheme.of(context).primary,
+                        //                               width: 1.0,
+                        //                             ),
+                        //                             borderRadius: BorderRadius.circular(12.0),
+                        //                           ),
+                        //                         ),
+                        //                         SizedBox(height: 12.0),
+                        //                         // Add to Cart and Buy Now buttons
+                        //                         Consumer<CartProvider>(
+                        //                           builder: (context, cart, child) {
+                        //                             final isInCart = cart.items.containsKey(widget.id ?? "");
+                        //                             final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
 
-                                                    return Row(
-                                                      mainAxisSize: MainAxisSize.max,
-                                                      children: [
-                                                        if (quantity > 0) ...[
-                                                          // Quantity controls when item is in cart
-                                                          Expanded(
-                                                            child: Padding(
-                                                              padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 6.0, 0.0),
-                                                              child: Container(
-                                                                height: 48.0,
-                                                                decoration: BoxDecoration(
-                                                                  color: FlutterFlowTheme.of(context).secondaryBackground,
-                                                                  border: Border.all(
-                                                                    color: FlutterFlowTheme.of(context).primary,
-                                                                    width: 1.0,
-                                                                  ),
-                                                                  borderRadius: BorderRadius.circular(12.0),
-                                                                ),
-                                                                child: Row(
-                                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                                  children: [
-                                                                    // Decrement button
-                                                                    InkWell(
-                                                                      onTap: () async{
-                                                                        cart.removeSingleItem(widget.id ?? "");
-                                                                       await actions.showCustomToastBottom('Quantity decreased!');
-                                                                      },
-                                                                      child: Container(
-                                                                        width: 36.0,
-                                                                        height: 36.0,
-                                                                        decoration: BoxDecoration(
-                                                                          color: FlutterFlowTheme.of(context).primary,
-                                                                          shape: BoxShape.circle,
-                                                                        ),
-                                                                        child: Icon(
-                                                                          Icons.remove,
-                                                                          color: FlutterFlowTheme.of(context).primaryBackground,
-                                                                          size: 20.0,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                    // Quantity display
-                                                                    Container(
-                                                                      padding: EdgeInsets.symmetric(horizontal: 10),
-                                                                      child: Text(
-                                                                        quantity.toString(),
-                                                                        textAlign: TextAlign.center,
-                                                                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                          fontFamily: 'SF Pro Display',
-                                                                          fontSize: 16.0,
-                                                                          fontWeight: FontWeight.bold,
-                                                                          color: FlutterFlowTheme.of(context).primaryText,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                    // Increment button
-                                                                    InkWell(
-                                                                      onTap: ()async {
-                                                                        cart.addItem(
-                                                                          widget.id!,
-                                                                          widget.name!,
-                                                                          widget.image!,
-                                                                         double.tryParse(widget.price!)??0.0,
+                        //                             return Row(
+                        //                               mainAxisSize: MainAxisSize.max,
+                        //                               children: [
+                        //                                 if (quantity > 0) ...[
+                        //                                   // Quantity controls when item is in cart
+                        //                                   Expanded(
+                        //                                     child: Padding(
+                        //                                       padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 6.0, 0.0),
+                        //                                       child: Container(
+                        //                                         height: 48.0,
+                        //                                         decoration: BoxDecoration(
+                        //                                           color: FlutterFlowTheme.of(context).secondaryBackground,
+                        //                                           border: Border.all(
+                        //                                             color: FlutterFlowTheme.of(context).primary,
+                        //                                             width: 1.0,
+                        //                                           ),
+                        //                                           borderRadius: BorderRadius.circular(12.0),
+                        //                                         ),
+                        //                                         child: Row(
+                        //                                           mainAxisAlignment: MainAxisAlignment.center,
+                        //                                           children: [
+                        //                                             // Decrement button
+                        //                                             InkWell(
+                        //                                               onTap: () async{
+                        //                                                 cart.removeSingleItem(widget.id ?? "");
+                        //                                                await actions.showCustomToastBottom('Quantity decreased!');
+                        //                                               },
+                        //                                               child: Container(
+                        //                                                 width: 36.0,
+                        //                                                 height: 36.0,
+                        //                                                 decoration: BoxDecoration(
+                        //                                                   color: FlutterFlowTheme.of(context).primary,
+                        //                                                   shape: BoxShape.circle,
+                        //                                                 ),
+                        //                                                 child: Icon(
+                        //                                                   Icons.remove,
+                        //                                                   color: FlutterFlowTheme.of(context).primaryBackground,
+                        //                                                   size: 20.0,
+                        //                                                 ),
+                        //                                               ),
+                        //                                             ),
+                        //                                             // Quantity display
+                        //                                             Container(
+                        //                                               padding: EdgeInsets.symmetric(horizontal: 10),
+                        //                                               child: Text(
+                        //                                                 quantity.toString(),
+                        //                                                 textAlign: TextAlign.center,
+                        //                                                 style: FlutterFlowTheme.of(context).bodyMedium.override(
+                        //                                                   fontFamily: 'SF Pro Display',
+                        //                                                   fontSize: 16.0,
+                        //                                                   fontWeight: FontWeight.bold,
+                        //                                                   color: FlutterFlowTheme.of(context).primaryText,
+                        //                                                 ),
+                        //                                               ),
+                        //                                             ),
+                        //                                             // Increment button
+                        //                                             InkWell(
+                        //                                               onTap: ()async {
+                        //                                                 cart.addItem(
+                        //                                                   widget.id!,
+                        //                                                   widget.name!,
+                        //                                                   widget.image!,
+                        //                                                  double.tryParse(widget.price!)??0.0,
                                                                           
-                                                                        );
-                                                                        await actions.showCustomToastBottom('Quantity increased!');
-                                                                      },
-                                                                      child: Container(
-                                                                        width: 36.0,
-                                                                        height: 36.0,
-                                                                        decoration: BoxDecoration(
-                                                                          color: FlutterFlowTheme.of(context).primary,
-                                                                          shape: BoxShape.circle,
-                                                                        ),
-                                                                        child: Icon(
-                                                                          Icons.add,
-                                                                          color: FlutterFlowTheme.of(context).primaryBackground,
-                                                                          size: 20.0,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ] else ...[
-                                                          // Add to Cart button when item is not in cart
-                                                          Expanded(
-                                                            child: Padding(
-                                                              padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 6.0, 0.0),
-                                                              child: FFButtonWidget(
-                                                                onPressed: () async {
-                                                                  cart.addItem(
-                                                                    widget.id!,
-                                                                    widget.name!,
-                                                                    widget.image!,
-                                                                    double.tryParse(widget.price!)??0.0,
-                                                                  );
-                                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                                    SnackBar(
-                                                                      content: Text(
-                                                                        'Book added to cart!',
-                                                                        style: TextStyle(
-                                                                          color: FlutterFlowTheme.of(context).primaryText,
-                                                                        ),
-                                                                      ),
-                                                                      duration: Duration(milliseconds: 2000),
-                                                                      backgroundColor: FlutterFlowTheme.of(context).secondary,
-                                                                    ),
-                                                                  );
-                                                                },
-                                                                text: 'Add to Cart',
-                                                                options: FFButtonOptions(
-                                                                  width: double.infinity,
-                                                                  height: 48.0,
-                                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                                                                  iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                                                                  color: FlutterFlowTheme.of(context).secondaryBackground,
-                                                                  textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                    fontFamily: 'SF Pro Display',
-                                                                    color: FlutterFlowTheme.of(context).primaryText,
-                                                                    fontSize: 14.0,
-                                                                    letterSpacing: 0.0,
-                                                                    fontWeight: FontWeight.w600,
-                                                                    lineHeight: 1.2,
-                                                                  ),
-                                                                  elevation: 0.0,
-                                                                  borderSide: BorderSide(
-                                                                    color: FlutterFlowTheme.of(context).primary,
-                                                                    width: 1.0,
-                                                                  ),
-                                                                  borderRadius: BorderRadius.circular(12.0),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                    Expanded(
-                                                      child: Padding(
-                                                        padding: EdgeInsetsDirectional.fromSTEB(6.0, 0.0, 0.0, 0.0),
-                                                        child: FFButtonWidget(
-                                                          onPressed: () async {
-                                                            if(FFAppState()
-                                                                .isLogin ==
-                                                            true){
-                                                               final cart = Provider.of<CartProvider>(context, listen: false);
-                                                            cart.addItem(
-                                                              widget.id!,
-                                                              widget.name!,
-                                                              widget.image!,
-                                                             double.tryParse(widget.price!)??0.0,
-                                                            );
-                                                         Navigator.push<void>(
-                                                           context,
-                                                           MaterialPageRoute<void>(
-                                                             builder: (BuildContext context) =>  CheckoutPageWidget(),
-                                                           ),
-                                                         );
-                                                            }else{
-                                                                                                                        context.pushNamed(
-                                                              SignInPageWidget
-                                                                  .routeName);
-                                                            }
+                        //                                                 );
+                        //                                                 await actions.showCustomToastBottom('Quantity increased!');
+                        //                                               },
+                        //                                               child: Container(
+                        //                                                 width: 36.0,
+                        //                                                 height: 36.0,
+                        //                                                 decoration: BoxDecoration(
+                        //                                                   color: FlutterFlowTheme.of(context).primary,
+                        //                                                   shape: BoxShape.circle,
+                        //                                                 ),
+                        //                                                 child: Icon(
+                        //                                                   Icons.add,
+                        //                                                   color: FlutterFlowTheme.of(context).primaryBackground,
+                        //                                                   size: 20.0,
+                        //                                                 ),
+                        //                                               ),
+                        //                                             ),
+                        //                                           ],
+                        //                                         ),
+                        //                                       ),
+                        //                                     ),
+                        //                                   ),
+                        //                                 ] else ...[
+                        //                                   // Add to Cart button when item is not in cart
+                        //                                   Expanded(
+                        //                                     child: Padding(
+                        //                                       padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 6.0, 0.0),
+                        //                                       child: FFButtonWidget(
+                        //                                         onPressed: () async {
+                        //                                           cart.addItem(
+                        //                                             widget.id!,
+                        //                                             widget.name!,
+                        //                                             widget.image!,
+                        //                                             double.tryParse(widget.price!)??0.0,
+                        //                                           );
+                        //                                           ScaffoldMessenger.of(context).showSnackBar(
+                        //                                             SnackBar(
+                        //                                               content: Text(
+                        //                                                 'Book added to cart!',
+                        //                                                 style: TextStyle(
+                        //                                                   color: FlutterFlowTheme.of(context).primaryText,
+                        //                                                 ),
+                        //                                               ),
+                        //                                               duration: Duration(milliseconds: 2000),
+                        //                                               backgroundColor: FlutterFlowTheme.of(context).secondary,
+                        //                                             ),
+                        //                                           );
+                        //                                         },
+                        //                                         text: 'Add to Cart',
+                        //                                         options: FFButtonOptions(
+                        //                                           width: double.infinity,
+                        //                                           height: 48.0,
+                        //                                           padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                        //                                           iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                        //                                           color: FlutterFlowTheme.of(context).secondaryBackground,
+                        //                                           textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                        //                                             fontFamily: 'SF Pro Display',
+                        //                                             color: FlutterFlowTheme.of(context).primaryText,
+                        //                                             fontSize: 14.0,
+                        //                                             letterSpacing: 0.0,
+                        //                                             fontWeight: FontWeight.w600,
+                        //                                             lineHeight: 1.2,
+                        //                                           ),
+                        //                                           elevation: 0.0,
+                        //                                           borderSide: BorderSide(
+                        //                                             color: FlutterFlowTheme.of(context).primary,
+                        //                                             width: 1.0,
+                        //                                           ),
+                        //                                           borderRadius: BorderRadius.circular(12.0),
+                        //                                         ),
+                        //                                       ),
+                        //                                     ),
+                        //                                   ),
+                        //                                 ],
+                        //                             Expanded(
+                        //                               child: Padding(
+                        //                                 padding: EdgeInsetsDirectional.fromSTEB(6.0, 0.0, 0.0, 0.0),
+                        //                                 child: FFButtonWidget(
+                        //                                   onPressed: () async {
+                        //                                     if(FFAppState()
+                        //                                         .isLogin ==
+                        //                                     true){
+                        //                                        final cart = Provider.of<CartProvider>(context, listen: false);
+                        //                                     cart.addItem(
+                        //                                       widget.id!,
+                        //                                       widget.name!,
+                        //                                       widget.image!,
+                        //                                      double.tryParse(widget.price!)??0.0,
+                        //                                     );
+                        //                                  Navigator.push<void>(
+                        //                                    context,
+                        //                                    MaterialPageRoute<void>(
+                        //                                      builder: (BuildContext context) =>  CheckoutPageWidget(),
+                        //                                    ),
+                        //                                  );
+                        //                                     }else{
+                        //                                                                                                 context.pushNamed(
+                        //                                       SignInPageWidget
+                        //                                           .routeName);
+                        //                                     }
                                                            
-                                                          },
-                                                          text: 'Buy Now',
-                                                          options: FFButtonOptions(
-                                                            width: double.infinity,
-                                                            height: 48.0,
-                                                            padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                                                            iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                                                            color: FlutterFlowTheme.of(context).primary,
-                                                            textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                              fontFamily: 'SF Pro Display',
-                                                              color: FlutterFlowTheme.of(context).primaryBackground,
-                                                              fontSize: 14.0,
-                                                              letterSpacing: 0.0,
-                                                              fontWeight: FontWeight.w600,
-                                                              lineHeight: 1.2,
-                                                            ),
-                                                            elevation: 0.0,
-                                                            borderSide: BorderSide(
-                                                              color: Colors.transparent,
-                                                              width: 1.0,
-                                                            ),
-                                                            borderRadius: BorderRadius.circular(12.0),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );})
-                                              ],
-                                            );
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
+                        //                                   },
+                        //                                   text: 'Buy Now',
+                        //                                   options: FFButtonOptions(
+                        //                                     width: double.infinity,
+                        //                                     height: 48.0,
+                        //                                     padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                        //                                     iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                        //                                     color: FlutterFlowTheme.of(context).primary,
+                        //                                     textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                        //                                       fontFamily: 'SF Pro Display',
+                        //                                       color: FlutterFlowTheme.of(context).primaryBackground,
+                        //                                       fontSize: 14.0,
+                        //                                       letterSpacing: 0.0,
+                        //                                       fontWeight: FontWeight.w600,
+                        //                                       lineHeight: 1.2,
+                        //                                     ),
+                        //                                     elevation: 0.0,
+                        //                                     borderSide: BorderSide(
+                        //                                       color: Colors.transparent,
+                        //                                       width: 1.0,
+                        //                                     ),
+                        //                                     borderRadius: BorderRadius.circular(12.0),
+                        //                                   ),
+                        //                                 ),
+                        //                               ),
+                        //                             ),
+                        //                           ],
+                        //                         );})
+                        //                       ],
+                        //                     );
+                        //                   }
+                        //                 },
+                        //               ),
+                        //             ),
+                        //           );
+                        //         },
+                        //       ),
+                        //     );
+                        //   },
+                        // ),
                       ],
                     );
                   },
