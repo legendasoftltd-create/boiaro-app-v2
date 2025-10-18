@@ -377,6 +377,20 @@ extension StatefulWidgetExtensions on State<StatefulWidget> {
       setState(fn);
     }
   }
+
+  Future<void> waitForPendingApiCall({
+    required Function stopActiveLoop,
+    required Function resetStatus,
+    required double minWait,
+    required double maxWait,
+  }) async {
+    await Future.delayed(Duration(milliseconds: (minWait * 1000).round()));
+    while (!stopActiveLoop()) {
+      await Future.delayed(Duration(milliseconds: 50));
+    }
+    await Future.delayed(Duration(milliseconds: (maxWait * 1000).round()));
+    resetStatus();
+  }
 }
 
 // For iOS 16 and below, set the status bar color to match the app's theme.

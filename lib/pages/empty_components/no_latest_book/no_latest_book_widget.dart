@@ -8,7 +8,8 @@ class NoLatestBookWidget extends StatefulWidget {
   const NoLatestBookWidget({super.key});
 
   @override
-  State<NoLatestBookWidget> createState() => _NoLatestBookWidgetState();
+  State<NoLatestBookWidget> createState() =>
+      _NoLatestBookWidgetState();
 }
 
 class _NoLatestBookWidgetState extends State<NoLatestBookWidget> {
@@ -61,7 +62,7 @@ class _NoLatestBookWidgetState extends State<NoLatestBookWidget> {
             Padding(
               padding: EdgeInsetsDirectional.fromSTEB(0.0, 28.0, 0.0, 16.0),
               child: Text(
-                'No latest book yet',
+                'No new book yet',
                 textAlign: TextAlign.center,
                 style: FlutterFlowTheme.of(context).bodyMedium.override(
                       fontFamily: 'SF Pro Display',
@@ -73,7 +74,7 @@ class _NoLatestBookWidgetState extends State<NoLatestBookWidget> {
               ),
             ),
             Text(
-              'Your latest book list is empty please wait for some time go to home and enjoy your service',
+              'Your new book list is empty please wait for some time go to home and enjoy your service',
               textAlign: TextAlign.center,
               style: FlutterFlowTheme.of(context).bodyMedium.override(
                     fontFamily: 'SF Pro Display',

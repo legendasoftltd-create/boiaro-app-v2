@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 import 'home_page_model.dart';
 export 'home_page_model.dart';
 import '/pages/cart_pages/cart_page_widget.dart';
+import '/pages/latest_screen/new_books_page_widget.dart';
 import '/providers/cart_provider.dart';
 class HomePageWidget extends StatefulWidget {
   const HomePageWidget({super.key});
@@ -1162,7 +1163,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                   hoverColor: Colors.transparent,
                                                                                   highlightColor: Colors.transparent,
                                                                                   onTap: () async {
-                                                                                    // context.pushNamed(LatestScreenWidget.routeName);
+                                                                                    context.pushNamed(NewBooksPageWidget.routeName);
                                                                                   },
                                                                                   child: Container(
                                                                                     padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),

@@ -82,5 +82,7 @@ export '/pages/profile_screens/purchase_history_page/purchase_history_page_widge
     show PurchaseHistoryPageWidget;
 export '/pages/profile_screens/purchase_history_page/purchase_history_page_model.dart'
     show PurchaseHistoryPageModel;
+export '/pages/latest_screen/new_books_page_widget.dart'
+    show NewBooksPageWidget;
 // export '/pages/home_pages/book_detailspage_copy/book_detailspage_copy_widget.dart'
 //     show BookDetailspageCopyWidget;

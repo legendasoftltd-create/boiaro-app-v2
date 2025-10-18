@@ -438,6 +438,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: PurchaseHistoryPageWidget.routePath,
           builder: (context, params) => PurchaseHistoryPageWidget(),
         ),
+        FFRoute(
+          name: NewBooksPageWidget.routeName,
+          path: NewBooksPageWidget.routePath,
+          builder: (context, params) => NewBooksPageWidget(),
+        ),
         // FFRoute(
         //   name: BookDetailspageCopyWidget.routeName,
         //   path: BookDetailspageCopyWidget.routePath,
