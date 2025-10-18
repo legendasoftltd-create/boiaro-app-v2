@@ -1,4 +1,6 @@
 // Automatic FlutterFlow imports
+import 'dart:developer';
+
 import '/backend/backend.dart';
 import '/backend/schema/structs/index.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -186,109 +188,123 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 60,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "🔊 Voice Settings",
-                style: FlutterFlowTheme.of(context).bodyLarge.override(
-                      fontFamily: 'SF Pro Display',
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(20),
                     ),
-              ),
-              const SizedBox(height: 24),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "🔊 Voice Settings",
+                    style: FlutterFlowTheme.of(context).bodyLarge.override(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
 
-              /// Speech Speed
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Speed",
-                      style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                          )),
-                  Text("${speechRate.toStringAsFixed(2)}x",
-                      style: FlutterFlowTheme.of(context).bodyMedium),
+                  /// Speech Speed
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Speed",
+                          style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                              )),
+                      Text("${speechRate.toStringAsFixed(2)}x",
+                          style: FlutterFlowTheme.of(context).bodyMedium),
+                    ],
+                  ),
+                  Slider(
+                    value: speechRate,
+                    min: 0.3,
+                    max: 1.5,
+                    divisions: 12,
+                    activeColor: FlutterFlowTheme.of(context).primary,
+                    label: speechRate.toStringAsFixed(2),
+                    onChanged: (val) {
+                      setModalState(() => speechRate = val);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+
+                  /// Pitch
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Pitch",
+                          style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                              )),
+                      Text("${pitch.toStringAsFixed(2)}",
+                          style: FlutterFlowTheme.of(context).bodyMedium),
+                    ],
+                  ),
+                  Slider(
+                    value: pitch,
+                    min: 0.5,
+                    max: 2.0,
+                    divisions: 15,
+                    activeColor: FlutterFlowTheme.of(context).primary,
+                    label: pitch.toStringAsFixed(2),
+                    onChanged: (val) {
+                      setModalState(() => pitch = val);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  /// Test Voice Button
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: FlutterFlowTheme.of(context).primary,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () async {
+                      bool isBnAvailable = false;
+                     await flutterTts.getLanguages.then((languages) {
+                       isBnAvailable = languages.contains("bn-BD");
+                     });
+                     log("isBnAvailable $isBnAvailable");
+                     await flutterTts.setSpeechRate(speechRate);
+                     await flutterTts.setPitch(pitch);
+                     if (isBnAvailable) {
+                       await flutterTts.setLanguage("bn-BD");
+                       await flutterTts.speak("এই সেটিংস প্রিভিউ করার জন্য ধন্যবাদ।");
+                     } else {
+                       await flutterTts.setLanguage("en-US");
+                       await flutterTts.speak("Bangla voice not available in this device, playing English sample.");
+                     }
+                    },
+                    icon: const Icon(Icons.play_arrow, color: Colors.white),
+                    label: const Text("Preview Voice",
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(height: 10),
+
+                  /// Done button
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Done",
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
                 ],
               ),
-              Slider(
-                value: speechRate,
-                min: 0.3,
-                max: 1.5,
-                divisions: 12,
-                activeColor: FlutterFlowTheme.of(context).primary,
-                label: speechRate.toStringAsFixed(2),
-                onChanged: (val) {
-                  setState(() => speechRate = val);
-                },
-              ),
-              const SizedBox(height: 10),
-
-              /// Pitch
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Pitch",
-                      style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                          )),
-                  Text("${pitch.toStringAsFixed(2)}",
-                      style: FlutterFlowTheme.of(context).bodyMedium),
-                ],
-              ),
-              Slider(
-                value: pitch,
-                min: 0.5,
-                max: 2.0,
-                divisions: 15,
-                activeColor: FlutterFlowTheme.of(context).primary,
-                label: pitch.toStringAsFixed(2),
-                onChanged: (val) {
-                  setState(() => pitch = val);
-                },
-              ),
-              const SizedBox(height: 16),
-
-              /// Test Voice Button
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: FlutterFlowTheme.of(context).primary,
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () async {
-                  await flutterTts.setLanguage("bn-BD");
-                  await flutterTts.setSpeechRate(speechRate);
-                  await flutterTts.setPitch(pitch);
-                  await flutterTts.speak("এই সেটিংস প্রিভিউ করার জন্য ধন্যবাদ।");
-                },
-                icon: const Icon(Icons.play_arrow, color: Colors.white),
-                label: const Text("Preview Voice",
-                    style: TextStyle(color: Colors.white)),
-              ),
-              const SizedBox(height: 10),
-
-              /// Done button
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Done",
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -862,22 +878,22 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                 ),
 
                 /// 🔊 Floating Read Button
-                if (selectedText.isNotEmpty && !_isFullScreen)
-                  Positioned(
-                    bottom: 110,
-                    right: 20,
-                    child: FloatingActionButton.extended(
-                      backgroundColor: isSpeaking
-                          ? Colors.redAccent
-                          : FlutterFlowTheme.of(context).primary,
-                      onPressed: isSpeaking ? _stopSpeaking : _speakSelected,
-                      icon: Icon(isSpeaking ? Icons.stop : Icons.volume_up),
-                      label: Text(
-                        isSpeaking ? "Stop" : "Listen",
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
+                // if (selectedText.isNotEmpty && !_isFullScreen)
+                //   Positioned(
+                //     bottom: 110,
+                //     right: 20,
+                //     child: FloatingActionButton.extended(
+                //       backgroundColor: isSpeaking
+                //           ? Colors.redAccent
+                //           : FlutterFlowTheme.of(context).primary,
+                //       onPressed: isSpeaking ? _stopSpeaking : _speakSelected,
+                //       icon: Icon(isSpeaking ? Icons.stop : Icons.volume_up),
+                //       label: Text(
+                //         isSpeaking ? "Stop" : "Listen",
+                //         style: const TextStyle(color: Colors.white),
+                //       ),
+                //     ),
+                //   ),
 
                 /// Full Screen Exit Button (only visible in full screen)
                 if (_isFullScreen)
