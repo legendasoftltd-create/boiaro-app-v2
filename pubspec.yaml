@@ -93,6 +93,7 @@ dependencies:
   flutter_facebook_auth: ^7.1.2
   flutter_tts: ^4.2.3
   screen_brightness: ^2.1.7
+  epubx: ^4.0.0
 
 dependency_overrides:
   device_info_plus: ^11.4.0
@@ -101,6 +102,8 @@ dependency_overrides:
   intl: ^0.20.2
   photo_view: 0.15.0
   uuid: ^4.5.1
+  image: ^3.0.8
+  archive: ^4.0.0
 #  win32: ^5.13.0
 
 dev_dependencies:
