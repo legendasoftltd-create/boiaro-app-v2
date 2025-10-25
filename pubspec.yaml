@@ -94,6 +94,10 @@ dependencies:
   flutter_tts: ^4.2.3
   screen_brightness: ^2.1.7
   epubx: ^4.0.0
+  flutter_html: ^3.0.0
+  flutter_html_table: ^3.0.0
+  flutter_html_svg: ^3.0.0
+
 
 dependency_overrides:
   device_info_plus: ^11.4.0

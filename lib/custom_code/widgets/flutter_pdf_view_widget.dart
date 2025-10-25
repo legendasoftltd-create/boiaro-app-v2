@@ -1,6 +1,10 @@
 // Automatic FlutterFlow imports
 import 'dart:developer';
 
+import 'package:a_i_ebook_app/custom_code/extensions/epub_image_extension.dart';
+import 'package:flutter_html_svg/flutter_html_svg.dart';
+import 'package:flutter_html_table/flutter_html_table.dart';
+
 import '/backend/backend.dart';
 import '/backend/schema/structs/index.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -21,7 +25,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:epubx/epubx.dart' as epubx;
 import 'package:http/http.dart' as http;
-import 'package:html/parser.dart' as html_parser;
+import 'package:flutter_html/flutter_html.dart';
 
 enum ReaderType { pdf, epub }
 
@@ -168,14 +172,8 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
 
   String _parseHtmlContent(String? htmlContent) {
     if (htmlContent == null || htmlContent.isEmpty) return "";
-    
-    try {
-      var document = html_parser.parse(htmlContent);
-      return document.body?.text ?? htmlContent;
-    } catch (e) {
-      log('Error parsing HTML: $e');
-      return htmlContent;
-    }
+    // Return raw HTML content for flutter_html to render
+    return htmlContent;
   }
 
   void _loadEpubChapter(int index) {
@@ -1208,26 +1206,83 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       child: SingleChildScrollView(
         controller: _epubScrollController,
         padding: const EdgeInsets.all(20),
-        child: SelectableText(
-          _currentEpubContent,
-          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                fontFamily: 'SF Pro Display',
-                fontSize: _epubFontSize,
-                
-                letterSpacing: 0.3,
-              ),
-          onSelectionChanged: (selection, cause) {
-            if (selection.start != selection.end) {
-              setState(() {
-                selectedText = _currentEpubContent.substring(
-                  selection.start,
-                  selection.end,
-                );
-              });
-            } else {
-              setState(() => selectedText = "");
-            }
+        child: Html(
+          data: _currentEpubContent,
+          style: {
+            "body": Style(
+              fontFamily: 'SF Pro Display',
+              fontSize: FontSize(_epubFontSize),
+              letterSpacing: 0.3,
+              lineHeight: LineHeight.em(1.6),
+              textAlign: TextAlign.justify,
+              color: FlutterFlowTheme.of(context).primaryText,
+            ),
+            "p": Style(
+              margin: Margins.zero,
+              padding: HtmlPaddings.zero,
+            ),
+            "h1": Style(
+              fontSize: FontSize(_epubFontSize * 1.8),
+              fontWeight: FontWeight.bold,
+            ),
+            "h2": Style(
+              fontSize: FontSize(_epubFontSize * 1.6),
+              fontWeight: FontWeight.bold,
+            ),
+            "h3": Style(
+              fontSize: FontSize(_epubFontSize * 1.4),
+              fontWeight: FontWeight.bold,
+            ),
+            "h4": Style(
+              fontSize: FontSize(_epubFontSize * 1.2),
+              fontWeight: FontWeight.bold,
+            ),
+            "h5": Style(
+              fontSize: FontSize(_epubFontSize * 1.1),
+              fontWeight: FontWeight.bold,
+            ),
+            "h6": Style(
+              fontSize: FontSize(_epubFontSize),
+              fontWeight: FontWeight.bold,
+            ),
+            "strong": Style(
+              fontWeight: FontWeight.bold,
+            ),
+            "em": Style(
+              fontStyle: FontStyle.italic,
+            ),
+            "ul": Style(
+              listStyleType: ListStyleType.disc,
+              margin: Margins.only(left: 20),
+            ),
+            "ol": Style(
+              listStyleType: ListStyleType.decimal,
+              margin: Margins.only(left: 20),
+            ),
+            "li": Style(
+              margin: Margins.only(bottom: 8),
+            ),
+            "table": Style(
+              backgroundColor: FlutterFlowTheme.of(context).alternate.withOpacity(0.1),
+              border: Border.all(color: FlutterFlowTheme.of(context).alternate),
+              width: Width.auto(),
+            ),
+            "th": Style(
+              padding: HtmlPaddings.all(8),
+              backgroundColor: FlutterFlowTheme.of(context).alternate,
+              fontWeight: FontWeight.bold,
+            ),
+            "td": Style(
+              padding: HtmlPaddings.all(8),
+              border: Border.all(color: FlutterFlowTheme.of(context).alternate),
+            ),
           },
+          
+          extensions: [
+             EpubImageExtension(_epubBook!),
+             TableHtmlExtension(),
+             SvgHtmlExtension(),
+             ],
         ),
       ),
     );
@@ -1236,7 +1291,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
-
+    log("_currentEpubContent: ${_currentEpubContent}");
     return Scaffold(
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: Column(
@@ -1335,7 +1390,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                     key: _pdfViewerKey,
                     controller: pdfViewerController,
                     scrollDirection: PdfScrollDirection.vertical,
-                    canShowTextSelectionMenu: false,
+                    canShowTextSelectionMenu: true,
                     onDocumentLoaded: (PdfDocumentLoadedDetails details) {
                       int totalPages = details.document.pages.count;
                       setState(() => FFAppState().totalPages = totalPages);
