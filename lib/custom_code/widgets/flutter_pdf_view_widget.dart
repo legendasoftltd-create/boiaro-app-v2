@@ -93,6 +93,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   // Font size for EPUB
   double _epubFontSize = 16.0;
 
+  // Line height for EPUB
+  double _epubLineHeight = 1.6;
+
   // Theme mode for EPUB
   AppThemeMode _currentThemeMode = AppThemeMode.light;
 
@@ -720,6 +723,45 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                   const SizedBox(height: 24),
 
                   /// Preview Text
+                  /// Line Spacing Slider
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Line Spacing",
+                          style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                              )),
+                      Text("${_epubLineHeight.toStringAsFixed(1)}x",
+                          style: FlutterFlowTheme.of(context).bodyMedium),
+                    ],
+                  ),
+                  Slider(
+                    value: _epubLineHeight,
+                    min: 1.0,
+                    max: 2.5,
+                    divisions: 15,
+                    activeColor: FlutterFlowTheme.of(context).primary,
+                    label: _epubLineHeight.toStringAsFixed(1),
+                    onChanged: (val) {
+                      setModalState(() => _epubLineHeight = val);
+                      setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  /// Line Spacing Presets
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildLineHeightPreset(context, "Compact", 1.2, setModalState),
+                      _buildLineHeightPreset(context, "Normal", 1.6, setModalState),
+                      _buildLineHeightPreset(context, "Relaxed", 2.0, setModalState),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  /// Preview Text
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -728,7 +770,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                     ),
                     child: Text(
                       "Sample Text Preview\nনমুনা পাঠ্য প্রিভিউ",
-                      style: TextStyle(fontSize: _epubFontSize, height: 1.6),
+                      style: TextStyle(fontSize: _epubFontSize, height: _epubLineHeight),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1198,6 +1240,45 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     );
   }
 
+  Widget _buildLineHeightPreset(
+    BuildContext context,
+    String label,
+    double value,
+    StateSetter setModalState,
+  ) {
+    final isSelected = (_epubLineHeight - value).abs() < 0.05;
+    return InkWell(
+      onTap: () {
+        setModalState(() => _epubLineHeight = value);
+        setState(() {});
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? FlutterFlowTheme.of(context).primary
+              : FlutterFlowTheme.of(context).alternate.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? FlutterFlowTheme.of(context).primary
+                : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : FlutterFlowTheme.of(context).primaryText,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFontPreset(
     BuildContext context,
     String label,
@@ -1248,7 +1329,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
             ),
             const SizedBox(height: 16),
             Text(
-              "Loading EPUB...",
+              "Loading...",
               style: FlutterFlowTheme.of(context).bodyMedium,
             ),
           ],
@@ -1305,101 +1386,114 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
             setState(() => selectedText = "");
           }
         },
-        child: SingleChildScrollView(
-          controller: _epubScrollController,
-          padding: const EdgeInsets.all(20),
-          child: Html(
-            data: _currentEpubContent,
-            style: {
-              "body": Style(
-                fontFamily: 'SF Pro Display',
-                fontSize: FontSize(_epubFontSize),
-                letterSpacing: 0.3,
-                lineHeight: LineHeight.em(1.6),
-                textAlign: TextAlign.justify,
-                color: textColor,
-              ),
-              "p": Style(
-                margin: Margins.zero,
-                padding: HtmlPaddings.zero,
-                color: textColor,
-              ),
-              "h1": Style(
-                fontSize: FontSize(_epubFontSize * 1.8),
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-              "h2": Style(
-                fontSize: FontSize(_epubFontSize * 1.6),
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-              "h3": Style(
-                fontSize: FontSize(_epubFontSize * 1.4),
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-              "h4": Style(
-                fontSize: FontSize(_epubFontSize * 1.2),
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-              "h5": Style(
-                fontSize: FontSize(_epubFontSize * 1.1),
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-              "h6": Style(
-                fontSize: FontSize(_epubFontSize),
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-              "strong": Style(
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-              "em": Style(
-                fontStyle: FontStyle.italic,
-                color: textColor,
-              ),
-              "ul": Style(
-                listStyleType: ListStyleType.disc,
-                margin: Margins.only(left: 20),
-                color: textColor,
-              ),
-              "ol": Style(
-                listStyleType: ListStyleType.decimal,
-                margin: Margins.only(left: 20),
-                color: textColor,
-              ),
-              "li": Style(
-                margin: Margins.only(bottom: 8),
-                color: textColor,
-              ),
-              "table": Style(
-                backgroundColor: FlutterFlowTheme.of(context).alternate.withOpacity(0.1),
-                border: Border.all(color: FlutterFlowTheme.of(context).alternate),
-                width: Width.auto(),
-                color: textColor,
-              ),
-              "th": Style(
-                padding: HtmlPaddings.all(8),
-                backgroundColor: FlutterFlowTheme.of(context).alternate,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-              "td": Style(
-                padding: HtmlPaddings.all(8),
-                border: Border.all(color: FlutterFlowTheme.of(context).alternate),
-                color: textColor,
-              ),
-            },
-            
-            extensions: [
-               EpubImageExtension(_epubBook!),
-               TableHtmlExtension(),
-               SvgHtmlExtension(),
-               ],
+        child: NotificationListener<ScrollEndNotification>(
+          onNotification: (ScrollEndNotification notification) {
+            if (notification.metrics.pixels == notification.metrics.maxScrollExtent) {
+              // User has scrolled to the end of the current chapter
+              if (_currentEpubChapterIndex < _epubChapters.length - 1) {
+                _loadEpubChapter(_currentEpubChapterIndex + 1);
+                return true; // Prevent further notifications
+              }
+            }
+            return false;
+          },
+          child: SingleChildScrollView(
+            controller: _epubScrollController,
+            padding: const EdgeInsets.all(20),
+            child: Html(
+              data: _currentEpubContent,
+              style: {
+                "body": Style(
+                  fontFamily: 'SF Pro Display',
+                  fontSize: FontSize(_epubFontSize),
+                  letterSpacing: 0.3,
+                  lineHeight: LineHeight.em(_epubLineHeight),
+                  textAlign: TextAlign.justify,
+                  color: textColor,
+                  backgroundColor: backgroundColor,
+                ),
+                "p": Style(
+                  margin: Margins.zero,
+                  padding: HtmlPaddings.zero,
+                  color: textColor,
+                ),
+                "h1": Style(
+                  fontSize: FontSize(_epubFontSize * 1.8),
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                "h2": Style(
+                  fontSize: FontSize(_epubFontSize * 1.6),
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                "h3": Style(
+                  fontSize: FontSize(_epubFontSize * 1.4),
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                "h4": Style(
+                  fontSize: FontSize(_epubFontSize * 1.2),
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                "h5": Style(
+                  fontSize: FontSize(_epubFontSize * 1.1),
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                "h6": Style(
+                  fontSize: FontSize(_epubFontSize),
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                "strong": Style(
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                "em": Style(
+                  fontStyle: FontStyle.italic,
+                  color: textColor,
+                ),
+                "ul": Style(
+                  listStyleType: ListStyleType.disc,
+                  margin: Margins.only(left: 20),
+                  color: textColor,
+                ),
+                "ol": Style(
+                  listStyleType: ListStyleType.decimal,
+                  margin: Margins.only(left: 20),
+                  color: textColor,
+                ),
+                "li": Style(
+                  margin: Margins.only(bottom: 8),
+                  color: textColor,
+                ),
+                "table": Style(
+                  backgroundColor: FlutterFlowTheme.of(context).alternate.withOpacity(0.1),
+                  border: Border.all(color: FlutterFlowTheme.of(context).alternate),
+                  width: Width.auto(),
+                  color: textColor,
+                ),
+                "th": Style(
+                  padding: HtmlPaddings.all(8),
+                  backgroundColor: FlutterFlowTheme.of(context).alternate,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                "td": Style(
+                  padding: HtmlPaddings.all(8),
+                  border: Border.all(color: FlutterFlowTheme.of(context).alternate),
+                  color: textColor,
+                ),
+              },
+              
+              extensions: [
+                 EpubImageExtension(_epubBook!),
+                 TableHtmlExtension(),
+                 SvgHtmlExtension(),
+                 ],
+            ),
           ),
         ),
       ),

@@ -75,8 +75,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget> {
           child: custom_widgets.FlutterPdfViewWidget(
             width: double.infinity,
             height: double.infinity,
-            // filePath: widget.pdf,
-            filePath: "https://raw.githubusercontent.com/ai-rayhan/qdata/refs/heads/main/tes%20uno.epub",
+            filePath: widget.pdf,
+            // filePath: "https://raw.githubusercontent.com/ai-rayhan/qdata/refs/heads/main/tes%20uno.epub",
             // filePath: "assets/pdfs/test.epub",
             namePage: widget.name,
           ),
