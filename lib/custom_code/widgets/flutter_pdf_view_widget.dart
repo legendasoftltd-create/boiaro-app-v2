@@ -1507,6 +1507,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     Color scaffoldBackgroundColor;
     Color appBarBackgroundColor;
     Color appBarTextColor;
+    Color bottomNavIconColor;
 
     if (_readerType == ReaderType.epub) {
       switch (_currentThemeMode) {
@@ -1514,26 +1515,38 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           scaffoldBackgroundColor = Colors.white;
           appBarBackgroundColor = FlutterFlowTheme.of(context).secondaryBackground;
           appBarTextColor = Colors.black;
+          bottomNavIconColor = FlutterFlowTheme.of(context).secondaryText;
           break;
         case AppThemeMode.dark:
           scaffoldBackgroundColor = Colors.black;
-          appBarBackgroundColor = FlutterFlowTheme.of(context).secondaryBackground;
+          appBarBackgroundColor = Colors.black; // Darker app bar for full screen
           appBarTextColor = Colors.white;
+          bottomNavIconColor = Colors.white;
           break;
         case AppThemeMode.sepia:
           scaffoldBackgroundColor = const Color(0xFFF5DEB3); // Sepia color
           appBarBackgroundColor = FlutterFlowTheme.of(context).secondaryBackground;
           appBarTextColor = Colors.black;
+          bottomNavIconColor = FlutterFlowTheme.of(context).secondaryText;
           break;
       }
     } else {
       scaffoldBackgroundColor = FlutterFlowTheme.of(context).primaryBackground;
       appBarBackgroundColor = FlutterFlowTheme.of(context).secondaryBackground;
       appBarTextColor = FlutterFlowTheme.of(context).primaryText;
+      bottomNavIconColor = FlutterFlowTheme.of(context).secondaryText;
+    }
+
+    // Adjust colors for full screen mode if it's dark theme
+    if (_isFullScreen && _currentThemeMode == AppThemeMode.dark) {
+      scaffoldBackgroundColor = Colors.black;
+      appBarBackgroundColor = Colors.black;
+      appBarTextColor = Colors.white;
+      bottomNavIconColor = Colors.white;
     }
 
     return Scaffold(
-      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      backgroundColor: scaffoldBackgroundColor,
       body: Column(
         children: [
           /// ---------- AppBar ----------
@@ -1548,7 +1561,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                 right: 16,
               ),
               decoration: BoxDecoration(
-                color: FlutterFlowTheme.of(context).secondaryBackground,
+                color: appBarBackgroundColor,
                 border: Border(
                   bottom: BorderSide(
                     color: FlutterFlowTheme.of(context).alternate.withOpacity(0.2),
@@ -1564,7 +1577,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                     child: Icon(
                       Icons.arrow_back_ios,
                       size: 22,
-                      color: FlutterFlowTheme.of(context).primaryText,
+                      color: appBarTextColor,
                     ),
                   ),
                   Expanded(
@@ -1579,6 +1592,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                             letterSpacing: 0.0,
                             fontWeight: FontWeight.w600,
                             useGoogleFonts: false,
+                            color: appBarTextColor,
                           ),
                     ),
                   ),
@@ -1590,7 +1604,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                           child: Icon(
                             Icons.search,
                             size: 24,
-                            color: FlutterFlowTheme.of(context).primaryText,
+                            color: appBarTextColor,
                           ),
                         ),
                       if (_readerType == ReaderType.pdf) const SizedBox(width: 16),
@@ -1601,7 +1615,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                               ? Icons.bookmark
                               : Icons.bookmark_border,
                           size: 24,
-                          color: FlutterFlowTheme.of(context).primaryText,
+                          color: appBarTextColor,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -1610,7 +1624,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                         child: Icon(
                           Icons.more_vert,
                           size: 24,
-                          color: FlutterFlowTheme.of(context).primaryText,
+                          color: appBarTextColor,
                         ),
                       ),
                     ],
@@ -1745,7 +1759,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: FlutterFlowTheme.of(context).secondaryBackground,
+                color: appBarBackgroundColor,
                 border: Border(
                   top: BorderSide(
                     color: FlutterFlowTheme.of(context).alternate.withOpacity(0.2),
@@ -1774,8 +1788,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                     fontFamily: 'SF Pro Display',
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
+                                    color: appBarTextColor,
                                   ),
                             ),
                           ],
@@ -1836,11 +1849,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                     ),
                                   );
                                 },
+                          bottomNavIconColor,
                         ),
                         _buildBottomIcon(
                           Icons.collections_bookmark_outlined,
                           'Bookmark Collection',
                           _openBookmarkCollection,
+                          bottomNavIconColor,
                         ),
                         _buildBottomIcon(
                           _isFullScreen
@@ -1848,6 +1863,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                               : Icons.fullscreen_outlined,
                           'Full Screen Mode',
                           _toggleFullScreen,
+                          bottomNavIconColor,
                         ),
                         _buildBottomIcon(
                           _isAutoRotateEnabled
@@ -1855,11 +1871,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                               : Icons.screen_lock_rotation,
                           'Screen rotation',
                           _toggleAutoRotate,
+                          bottomNavIconColor,
                         ),
                         _buildBottomIcon(
                           Icons.brightness_6,
                           'Brightness',
                           _openBrightnessSettings,
+                          bottomNavIconColor,
                         ),
                         _buildBottomIcon(
                           Icons.text_fields,
@@ -1874,6 +1892,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                     ),
                                   );
                                 },
+                          bottomNavIconColor,
                         ),
                       ],
                     ),
@@ -1887,7 +1906,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     );
   }
 
-  Widget _buildBottomIcon(IconData icon, String tooltip, VoidCallback onTap) {
+  Widget _buildBottomIcon(IconData icon, String tooltip, VoidCallback onTap, Color iconColor) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -1895,7 +1914,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         child: Icon(
           icon,
           size: 24,
-          color: FlutterFlowTheme.of(context).secondaryText,
+          color: iconColor,
         ),
       ),
     );
