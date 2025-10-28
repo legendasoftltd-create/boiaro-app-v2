@@ -2,6 +2,7 @@
 import 'dart:developer';
 
 import 'package:a_i_ebook_app/custom_code/extensions/epub_image_extension.dart';
+import 'package:a_i_ebook_app/custom_code/extensions/custom_text_selection_controls.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_html_svg/flutter_html_svg.dart';
 import 'package:flutter_html_table/flutter_html_table.dart';
@@ -82,6 +83,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   // Bookmark variables
   List<int> _bookmarkedPages = [];
 
+  // Highlight variables for EPUB
+  List<String> _highlights = [];
+
   // EPUB variables
   epubx.EpubBook? _epubBook;
   List<epubx.EpubChapter> _epubChapters = [];
@@ -89,6 +93,8 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   String _currentEpubContent = "";
   bool _isLoadingEpub = false;
   final ScrollController _epubScrollController = ScrollController();
+  final ValueNotifier<String> _currentEpubContentNotifier =
+      ValueNotifier<String>('');
   
   // Font size for EPUB
   double _epubFontSize = 16.0;
@@ -196,6 +202,15 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         
         final chapter = _epubChapters[index];
         _currentEpubContent = _parseHtmlContent(chapter.HtmlContent);
+
+        // Apply highlights
+        for (final highlight in _highlights) {
+          _currentEpubContent = _currentEpubContent.replaceAll(
+            highlight,
+            '<mark style="background-color: yellow;">$highlight</mark>',
+          );
+        }
+        _currentEpubContentNotifier.value = _currentEpubContent;
         
         // Update total pages for EPUB (based on chapters)
         FFAppState().totalPages = _epubChapters.length;
@@ -219,6 +234,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _searchController.dispose();
     _epubScrollController.dispose();
+    _currentEpubContentNotifier.dispose();
     flutterTts.stop();
     super.dispose();
   }
@@ -302,6 +318,24 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         }
       }
     });
+  }
+
+  void _addHighlight() {
+    if (selectedText.isNotEmpty && _readerType == ReaderType.epub) {
+      if (!_highlights.contains(selectedText)) {
+        _highlights.add(selectedText);
+      }
+      final newContent = _currentEpubContent.replaceAll(
+        selectedText,
+        '<mark style="background-color: yellow;">$selectedText</mark>',
+      );
+      if (newContent != _currentEpubContent) {
+        _currentEpubContent = newContent;
+        _currentEpubContentNotifier.value = _currentEpubContent;
+      }
+      // Do not clear selection, so the buttons remain.
+      // User can tap away to clear selection.
+    }
   }
 
   void _toggleBookmark() {
@@ -1319,186 +1353,204 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   }
 
   Widget _buildEpubReader() {
-    if (_isLoadingEpub) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              color: FlutterFlowTheme.of(context).primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Loading...",
-              style: FlutterFlowTheme.of(context).bodyMedium,
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_epubBook == null || _currentEpubContent.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.book_outlined,
-              size: 64,
-              color: FlutterFlowTheme.of(context).secondaryText,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Failed to load EPUB file",
-              style: FlutterFlowTheme.of(context).bodyMedium,
-            ),
-          ],
-        ),
-      );
-    }
-
-    Color backgroundColor;
-    Color textColor;
-
-    switch (_currentThemeMode) {
-      case AppThemeMode.light:
-        backgroundColor = Colors.white;
-        textColor = Colors.black;
-        break;
-      case AppThemeMode.dark:
-        backgroundColor = Colors.black;
-        textColor = Colors.white;
-        break;
-      case AppThemeMode.sepia:
-        backgroundColor = const Color(0xFFF5DEB3); // Sepia color
-        textColor = Colors.black;
-        break;
-    }
-
-    return Container(
-      color: backgroundColor,
-      child: SelectionArea(
-        selectionControls: MaterialTextSelectionControls(),
-        onSelectionChanged: (SelectedContent? selection) {
-          if (selection != null && selection.plainText.isNotEmpty) {
-            setState(() => selectedText = selection.plainText);
-          } else {
-            setState(() => selectedText = "");
-          }
-        },
-        child: NotificationListener<ScrollEndNotification>(
-          onNotification: (ScrollEndNotification notification) {
-            if (notification.metrics.pixels == notification.metrics.maxScrollExtent) {
-              // User has scrolled to the end of the current chapter
-              if (_currentEpubChapterIndex < _epubChapters.length - 1) {
-                _loadEpubChapter(_currentEpubChapterIndex + 1);
-                return true; // Prevent further notifications
-              }
-            }
-            return false;
-          },
-          child: SingleChildScrollView(
-            controller: _epubScrollController,
-            padding: const EdgeInsets.all(20),
-            child: Html(
-              data: _currentEpubContent,
-              style: {
-                "body": Style(
-                  fontFamily: 'SF Pro Display',
-                  fontSize: FontSize(_epubFontSize),
-                  letterSpacing: 0.3,
-                  lineHeight: LineHeight.em(_epubLineHeight),
-                  textAlign: TextAlign.justify,
-                  color: textColor,
-                  backgroundColor: backgroundColor,
-                ),
-                "p": Style(
-                  margin: Margins.zero,
-                  padding: HtmlPaddings.zero,
-                  color: textColor,
-                ),
-                "h1": Style(
-                  fontSize: FontSize(_epubFontSize * 1.8),
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-                "h2": Style(
-                  fontSize: FontSize(_epubFontSize * 1.6),
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-                "h3": Style(
-                  fontSize: FontSize(_epubFontSize * 1.4),
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-                "h4": Style(
-                  fontSize: FontSize(_epubFontSize * 1.2),
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-                "h5": Style(
-                  fontSize: FontSize(_epubFontSize * 1.1),
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-                "h6": Style(
-                  fontSize: FontSize(_epubFontSize),
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-                "strong": Style(
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-                "em": Style(
-                  fontStyle: FontStyle.italic,
-                  color: textColor,
-                ),
-                "ul": Style(
-                  listStyleType: ListStyleType.disc,
-                  margin: Margins.only(left: 20),
-                  color: textColor,
-                ),
-                "ol": Style(
-                  listStyleType: ListStyleType.decimal,
-                  margin: Margins.only(left: 20),
-                  color: textColor,
-                ),
-                "li": Style(
-                  margin: Margins.only(bottom: 8),
-                  color: textColor,
-                ),
-                "table": Style(
-                  backgroundColor: FlutterFlowTheme.of(context).alternate.withOpacity(0.1),
-                  border: Border.all(color: FlutterFlowTheme.of(context).alternate),
-                  width: Width.auto(),
-                  color: textColor,
-                ),
-                "th": Style(
-                  padding: HtmlPaddings.all(8),
-                  backgroundColor: FlutterFlowTheme.of(context).alternate,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-                "td": Style(
-                  padding: HtmlPaddings.all(8),
-                  border: Border.all(color: FlutterFlowTheme.of(context).alternate),
-                  color: textColor,
-                ),
-              },
-              
-              extensions: [
-                 EpubImageExtension(_epubBook!),
-                 TableHtmlExtension(),
-                 SvgHtmlExtension(),
-                 ],
-            ),
+  if (_isLoadingEpub) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            color: FlutterFlowTheme.of(context).primary,
           ),
-        ),
+          const SizedBox(height: 16),
+          Text(
+            "Loading...",
+            style: FlutterFlowTheme.of(context).bodyMedium,
+          ),
+        ],
       ),
     );
   }
+
+  if (_epubBook == null || _currentEpubContent.isEmpty) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.book_outlined,
+            size: 64,
+            color: FlutterFlowTheme.of(context).secondaryText,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Failed to load EPUB file",
+            style: FlutterFlowTheme.of(context).bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color backgroundColor;
+  Color textColor;
+
+  switch (_currentThemeMode) {
+    case AppThemeMode.light:
+      backgroundColor = Colors.white;
+      textColor = Colors.black;
+      break;
+    case AppThemeMode.dark:
+      backgroundColor = Colors.black;
+      textColor = Colors.white;
+      break;
+    case AppThemeMode.sepia:
+      backgroundColor = const Color(0xFFF5DEB3); // Sepia color
+      textColor = Colors.black;
+      break;
+  }
+
+  return Container(
+    color: backgroundColor,
+    child: SelectionArea(
+      selectionControls: CustomTextSelectionControls(
+        onHighlight: _addHighlight,
+        onListen: () {
+          setState(() {
+            selectedText=selectedText;
+          });
+          isSpeaking ? _stopSpeaking() : _speakSelected();
+        },
+      ),
+      onSelectionChanged: (SelectedContent? selection) {
+        final newSelectedText = selection?.plainText ?? '';
+        if ((selectedText.isEmpty && newSelectedText.isNotEmpty) ||
+            (selectedText.isNotEmpty && newSelectedText.isEmpty)) {
+            selectedText = newSelectedText;
+        } else {
+          selectedText = newSelectedText;
+        }
+      },
+      child: NotificationListener<ScrollEndNotification>(
+        onNotification: (ScrollEndNotification notification) {
+          if (notification.metrics.pixels == notification.metrics.maxScrollExtent) {
+            // User has scrolled to the end of the current chapter
+            if (_currentEpubChapterIndex < _epubChapters.length - 1) {
+              _loadEpubChapter(_currentEpubChapterIndex + 1);
+              return true; // Prevent further notifications
+            }
+          }
+          return false;
+        },
+        child: SingleChildScrollView(
+          controller: _epubScrollController,
+          padding: const EdgeInsets.all(20),
+          child: ValueListenableBuilder<String>(
+            valueListenable: _currentEpubContentNotifier,
+            builder: (context, content, child) {
+              return Html(
+                data: content,
+                style: {
+                  "body": Style(
+                    fontFamily: 'SF Pro Display',
+                    fontSize: FontSize(_epubFontSize),
+                    letterSpacing: 0.3,
+                    lineHeight: LineHeight.em(_epubLineHeight),
+                    textAlign: TextAlign.justify,
+                    color: textColor,
+                    backgroundColor: backgroundColor,
+                  ),
+                  "p": Style(
+                    margin: Margins.zero,
+                    padding: HtmlPaddings.zero,
+                    color: textColor,
+                  ),
+                  "h1": Style(
+                    fontSize: FontSize(_epubFontSize * 1.8),
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  "h2": Style(
+                    fontSize: FontSize(_epubFontSize * 1.6),
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  "h3": Style(
+                    fontSize: FontSize(_epubFontSize * 1.4),
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  "h4": Style(
+                    fontSize: FontSize(_epubFontSize * 1.2),
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  "h5": Style(
+                    fontSize: FontSize(_epubFontSize * 1.1),
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  "h6": Style(
+                    fontSize: FontSize(_epubFontSize),
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  "strong": Style(
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  "em": Style(
+                    fontStyle: FontStyle.italic,
+                    color: textColor,
+                  ),
+                  "ul": Style(
+                    listStyleType: ListStyleType.disc,
+                    margin: Margins.only(left: 20),
+                    color: textColor,
+                  ),
+                  "ol": Style(
+                    listStyleType: ListStyleType.decimal,
+                    margin: Margins.only(left: 20),
+                    color: textColor,
+                  ),
+                  "li": Style(
+                    margin: Margins.only(bottom: 8),
+                    color: textColor,
+                  ),
+                  "table": Style(
+                    backgroundColor: FlutterFlowTheme.of(context)
+                        .alternate
+                        .withOpacity(0.1),
+                    border: Border.all(
+                        color: FlutterFlowTheme.of(context).alternate),
+                    width: Width.auto(),
+                    color: textColor,
+                  ),
+                  "th": Style(
+                    padding: HtmlPaddings.all(8),
+                    backgroundColor: FlutterFlowTheme.of(context).alternate,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  "td": Style(
+                    padding: HtmlPaddings.all(8),
+                    border: Border.all(
+                        color: FlutterFlowTheme.of(context).alternate),
+                    color: textColor,
+                  ),
+                },
+                extensions: [
+                  EpubImageExtension(_epubBook!),
+                  TableHtmlExtension(),
+                  SvgHtmlExtension(),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1703,56 +1755,67 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           ),
 
           /// ---------- Bottom Navigation ----------
-          /// Listen to Selected Text Button
+          /// Listen and Highlight controls
           if (selectedText.isNotEmpty && !_isFullScreen)
-             GestureDetector(
-              onTap: isSpeaking ? _stopSpeaking : _speakSelected,
-               child: Align(
-                 alignment: Alignment.bottomCenter,
-                 child: Padding(
-                   padding: const EdgeInsets.all(12.0),
-                   child: AnimatedContainer(
-                     duration: const Duration(milliseconds: 300),
-                     height: 60,
-                     decoration: BoxDecoration(
-                       color: isSpeaking
-                           ? Colors.redAccent.withOpacity(0.9)
-                           : FlutterFlowTheme.of(context).primary,
-                       borderRadius: BorderRadius.circular(16),
-                       boxShadow: [
-                         BoxShadow(
-                           color: Colors.black.withOpacity(0.2),
-                           blurRadius: 8,
-                           offset: const Offset(0, 3),
-                         ),
-                       ],
-                     ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            isSpeaking ? Icons.stop_circle_rounded : Icons.play_circle_fill_rounded,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                          onPressed: isSpeaking ? _stopSpeaking : _speakSelected,
-                        ),
-                        Expanded(
-                          child: Text(
-                            isSpeaking ? "Listening..." : "Tap to Listen",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: appBarBackgroundColor,
+                border: Border(
+                  top: BorderSide(
+                    color:
+                        FlutterFlowTheme.of(context).alternate.withOpacity(0.2),
+                    width: 1,
                   ),
                 ),
-                           ),
-             ),
+              ),
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: MediaQuery.of(context).padding.bottom + 8,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Listen Button
+                  Expanded(
+                    child: InkWell(
+                      onTap: isSpeaking ? _stopSpeaking : _speakSelected,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: isSpeaking
+                              ? Colors.redAccent
+                              : FlutterFlowTheme.of(context).primary,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              isSpeaking ? Icons.stop : Icons.volume_up,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              isSpeaking ? "Stop" : "Listen",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
           Visibility(
             visible: !_isFullScreen && selectedText.isEmpty,

@@ -74,25 +74,25 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget> {
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         body: SafeArea(
           top: true,
-          // child: custom_widgets.FlutterPdfViewWidget(
-          //   width: double.infinity,
-          //   height: double.infinity,
-          //   filePath: widget.pdf,
-          //   // filePath: "https://raw.githubusercontent.com/ai-rayhan/qdata/refs/heads/main/tes%20uno.epub",
-          //   // filePath: "assets/pdfs/test.epub",
-          //   namePage: widget.name,
-          // ),
-          child:  EpubReaderWidget(
-           epubPath: "assets/pdfs/test.epub",
-           bookTitle: "Test Book",
-           themeColor: Colors.blue,
-           enableTts: true,
-           allowSharing: true,
-           onLocationChanged: (locator) {
-             print('Reading progress: ${locator.toJson()}');
-             // Save progress to database or shared preferences
-           },
-         ),
+          child: custom_widgets.FlutterPdfViewWidget(
+            width: double.infinity,
+            height: double.infinity,
+            filePath: widget.pdf,
+            // filePath: "https://raw.githubusercontent.com/ai-rayhan/qdata/refs/heads/main/tes%20uno.epub",
+            // filePath: "assets/pdfs/test.epub",
+            namePage: widget.name,
+          ),
+        //   child:  EpubReaderWidget(
+        //    epubPath: "assets/pdfs/test.epub",
+        //    bookTitle: "Test Book",
+        //    themeColor: Colors.blue,
+        //    enableTts: true,
+        //    allowSharing: true,
+        //    onLocationChanged: (locator) {
+        //      print('Reading progress: ${locator.toJson()}');
+        //      // Save progress to database or shared preferences
+        //    },
+        //  ),
         ),
       ),
     );
