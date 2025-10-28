@@ -105,6 +105,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   // Theme mode for EPUB
   AppThemeMode _currentThemeMode = AppThemeMode.light;
 
+  bool _isChangingChapter = false;
+  double _lastScrollPosition = 0;
+
   @override
   void initState() {
     super.initState();
@@ -1352,7 +1355,8 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     );
   }
 
-  Widget _buildEpubReader() {
+
+Widget _buildEpubReader() {
   if (_isLoadingEpub) {
     return Center(
       child: Column(
@@ -1416,7 +1420,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         onHighlight: _addHighlight,
         onListen: () {
           setState(() {
-            selectedText=selectedText;
+            selectedText = selectedText;
           });
           isSpeaking ? _stopSpeaking() : _speakSelected();
         },
@@ -1425,18 +1429,69 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         final newSelectedText = selection?.plainText ?? '';
         if ((selectedText.isEmpty && newSelectedText.isNotEmpty) ||
             (selectedText.isNotEmpty && newSelectedText.isEmpty)) {
-            selectedText = newSelectedText;
+          selectedText = newSelectedText;
         } else {
           selectedText = newSelectedText;
         }
       },
-      child: NotificationListener<ScrollEndNotification>(
-        onNotification: (ScrollEndNotification notification) {
-          if (notification.metrics.pixels == notification.metrics.maxScrollExtent) {
-            // User has scrolled to the end of the current chapter
-            if (_currentEpubChapterIndex < _epubChapters.length - 1) {
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification notification) {
+          if (notification is ScrollUpdateNotification) {
+            _lastScrollPosition = notification.metrics.pixels;
+          }
+          
+          if (notification is ScrollEndNotification) {
+            if (_isChangingChapter) return true;
+            
+            final metrics = notification.metrics;
+            final scrollingDown = _lastScrollPosition > metrics.minScrollExtent + 50;
+            final scrollingUp = _lastScrollPosition < metrics.maxScrollExtent - 50;
+            
+            // User scrolled down and reached bottom - go to NEXT chapter
+            if (scrollingDown && 
+                metrics.pixels >= metrics.maxScrollExtent - 10 &&
+                _currentEpubChapterIndex < _epubChapters.length - 1) {
+              
+              _isChangingChapter = true;
               _loadEpubChapter(_currentEpubChapterIndex + 1);
-              return true; // Prevent further notifications
+              
+              // After chapter loads, position at TOP
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Future.delayed(const Duration(milliseconds: 200), () {
+                  if (_epubScrollController.hasClients) {
+                    _epubScrollController.jumpTo(1); // Very top with tiny offset
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      _isChangingChapter = false;
+                    });
+                  }
+                });
+              });
+              return true;
+            }
+            
+            // User scrolled up and reached top - go to PREVIOUS chapter
+            if (scrollingUp && 
+                metrics.pixels <= metrics.minScrollExtent + 10 &&
+                _currentEpubChapterIndex > 0) {
+              
+              _isChangingChapter = true;
+              _loadEpubChapter(_currentEpubChapterIndex - 1);
+              
+              // After chapter loads, position at BOTTOM
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Future.delayed(const Duration(milliseconds: 200), () {
+                  if (_epubScrollController.hasClients) {
+                    final maxScroll = _epubScrollController.position.maxScrollExtent;
+                    if (maxScroll > 0) {
+                      _epubScrollController.jumpTo(maxScroll - 1); // Very bottom with tiny offset
+                    }
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      _isChangingChapter = false;
+                    });
+                  }
+                });
+              });
+              return true;
             }
           }
           return false;
@@ -1551,7 +1606,6 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     ),
   );
 }
-
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
