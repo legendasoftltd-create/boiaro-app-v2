@@ -97,6 +97,13 @@ dependencies:
   flutter_html: ^3.0.0
   flutter_html_table: ^3.0.0
   flutter_html_svg: ^3.0.0
+  # vocsy_epub_viewer:
+  #   git:
+  #     url: https://github.com/ai-rayhan/vocsy_epub_viewer
+  #     ref: main
+  vocsy_epub_viewer:
+    path: ./vocsy_epub_viewer
+
 
 
 dependency_overrides:
