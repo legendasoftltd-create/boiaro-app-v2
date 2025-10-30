@@ -1832,6 +1832,26 @@ Widget _buildEpubReader() {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  // Close Button
+                  InkWell(
+                    onTap: () => setState(() => selectedText = ""),
+                    borderRadius: BorderRadius.circular(25),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: FlutterFlowTheme.of(context)
+                            .alternate
+                            .withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        color: appBarTextColor,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   // Listen Button
                   Expanded(
                     child: InkWell(
@@ -1864,6 +1884,26 @@ Widget _buildEpubReader() {
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Voice Settings Button
+                  InkWell(
+                    onTap: _openTtsSettings,
+                    borderRadius: BorderRadius.circular(25),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: FlutterFlowTheme.of(context)
+                            .alternate
+                            .withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.settings_voice,
+                        color: appBarTextColor,
+                        size: 24,
                       ),
                     ),
                   ),

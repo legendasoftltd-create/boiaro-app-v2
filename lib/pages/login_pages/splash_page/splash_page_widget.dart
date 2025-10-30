@@ -36,7 +36,7 @@ class _SplashPageWidgetState extends State<SplashPageWidget>
 
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(milliseconds: 3000));
+      await Future.delayed(const Duration(milliseconds: 500));
       await actions.getDeviceId();
       await actions.getCountryCodeLocal();
       if (FFAppState().isIntro == true) {
@@ -53,7 +53,7 @@ class _SplashPageWidgetState extends State<SplashPageWidget>
           FadeEffect(
             curve: Curves.easeInOut,
             delay: 50.0.ms,
-            duration: 2000.0.ms,
+            duration: 200.0.ms,
             begin: 0.0,
             end: 1.0,
           ),
@@ -118,18 +118,18 @@ class _SplashPageWidgetState extends State<SplashPageWidget>
                   //     animate: true,
                   //   ),
                   // ),
-                  Text(
-                    'Boi Aro',
-                    textAlign: TextAlign.center,
-                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 28.0,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.bold,
-                          lineHeight: 1.5,
-                        ),
-                  ).animateOnPageLoad(
-                      animationsMap['textOnPageLoadAnimation']!),
+                  // Text(
+                  //   'Boi Aro',
+                  //   textAlign: TextAlign.center,
+                  //   style: FlutterFlowTheme.of(context).bodyMedium.override(
+                  //         fontFamily: 'SF Pro Display',
+                  //         fontSize: 28.0,
+                  //         letterSpacing: 0.0,
+                  //         fontWeight: FontWeight.bold,
+                  //         lineHeight: 1.5,
+                  //       ),
+                  // ).animateOnPageLoad(
+                  //     animationsMap['textOnPageLoadAnimation']!),
                 ],
               ),
             ),

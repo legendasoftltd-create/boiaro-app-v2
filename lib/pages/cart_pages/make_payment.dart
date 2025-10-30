@@ -269,7 +269,7 @@ class OrderPlaceDialogWidget extends StatelessWidget {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: onOkPressed ?? () => Navigator.of(context).pop(),
-            child:  Text(isSuccess?"Start Reading": "Back to Home", style: FlutterFlowTheme.of(context).titleMedium.override(
+            child:  Text(isSuccess?"Start Reading": "Go Back", style: FlutterFlowTheme.of(context).titleMedium.override(
                         fontFamily: 'SF Pro Display',
                         color: Colors.white,
                         fontWeight: FontWeight.w600,

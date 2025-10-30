@@ -669,8 +669,9 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                 hoverColor: Colors.transparent,
                                 highlightColor: Colors.transparent,
                                 onTap: () async {
-                                  context.pushNamed(
-                                      SubscriptionPageWidget.routeName);
+                                  await actions.showCustomToastBottom('Comming soon!');
+                                  // context.pushNamed(
+                                  //     SubscriptionPageWidget.routeName);
                                 },
                                 child: Container(
                                   width: double.infinity,

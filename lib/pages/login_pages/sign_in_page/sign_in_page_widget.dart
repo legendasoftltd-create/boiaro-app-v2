@@ -581,9 +581,11 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                 },
                                 child: Container(
                                   padding: EdgeInsets.all(12),
+                                  width: 300,
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    shape: BoxShape.circle,
+                                    // shape: BoxShape.circle,
+                                    borderRadius: BorderRadius.circular(16.0),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black12,
@@ -592,72 +594,89 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                       )
                                     ],
                                   ),
-                                  child: Image.asset(
-                                    "assets/images/google_ic.png",
-                                    height: 30,
-                                    width: 30,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              GestureDetector(
-                                onTap: () async {
-                                  final socialLoginRepository =
-                                      SocialLoginRepository();
-                                  final response = await socialLoginRepository
-                                      .signInWithFacebook();
-                                  if (response != null &&
-                                      EbookGroup.socialLoginCall.success(
-                                            (response.jsonBody ?? ''),
-                                          ) ==
-                                          1) {
-                                    FFAppState().isLogin = true;
-                                    FFAppState().token =
-                                        EbookGroup.socialLoginCall.token(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().userId =
-                                        EbookGroup.socialLoginCall.userId(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().userDetail =
-                                        EbookGroup.socialLoginCall.userDetails(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().update(() {});
-                                    context.safePop();
-                                  } else {
-                                    await actions.showCustomToastBottom(
-                                      EbookGroup.socialLoginCall.message(
-                                        (response?.jsonBody ?? ''),
-                                      ) ??
-                                          '',
-                                    );
-                                  }
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      )
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        "assets/images/google_ic.png",
+                                        height: 30,
+                                        width: 30,
+                                      ),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        "Continue with Google",
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              fontSize: 16.0,
+                                              letterSpacing: 0.0,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
                                     ],
                                   ),
-                                  child: Image.asset(
-                                    "assets/images/facebook_ic.png",
-                                    height: 30,
-                                    width: 30,
-                                  ),
                                 ),
                               ),
+                              // SizedBox(width: 10),
+                              // GestureDetector(
+                              //   onTap: () async {
+                              //     final socialLoginRepository =
+                              //         SocialLoginRepository();
+                              //     final response = await socialLoginRepository
+                              //         .signInWithFacebook();
+                              //     if (response != null &&
+                              //         EbookGroup.socialLoginCall.success(
+                              //               (response.jsonBody ?? ''),
+                              //             ) ==
+                              //             1) {
+                              //       FFAppState().isLogin = true;
+                              //       FFAppState().token =
+                              //           EbookGroup.socialLoginCall.token(
+                              //                 (response.jsonBody ?? ''),
+                              //               ) ??
+                              //               '';
+                              //       FFAppState().userId =
+                              //           EbookGroup.socialLoginCall.userId(
+                              //                 (response.jsonBody ?? ''),
+                              //               ) ??
+                              //               '';
+                              //       FFAppState().userDetail =
+                              //           EbookGroup.socialLoginCall.userDetails(
+                              //                 (response.jsonBody ?? ''),
+                              //               ) ??
+                              //               '';
+                              //       FFAppState().update(() {});
+                              //       context.safePop();
+                              //     } else {
+                              //       await actions.showCustomToastBottom(
+                              //         EbookGroup.socialLoginCall.message(
+                              //           (response?.jsonBody ?? ''),
+                              //         ) ??
+                              //             '',
+                              //       );
+                              //     }
+                              //   },
+                              //   child: Container(
+                              //     padding: EdgeInsets.all(12),
+                              //     decoration: BoxDecoration(
+                              //       color: Colors.white,
+                              //       shape: BoxShape.circle,
+                              //       boxShadow: [
+                              //         BoxShadow(
+                              //           color: Colors.black12,
+                              //           blurRadius: 4,
+                              //           offset: Offset(0, 2),
+                              //         )
+                              //       ],
+                              //     ),
+                              //     child: Image.asset(
+                              //       "assets/images/facebook_ic.png",
+                              //       height: 30,
+                              //       width: 30,
+                              //     ),
+                              //   ),
+                              // ),
                             ],
                           ),
                         ],

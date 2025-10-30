@@ -71,7 +71,13 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                   }
                   return NavigationActionPolicy.ALLOW;
                 },
-
+                onLoadStart: (controller, uri) async{
+                  final url = uri.toString();
+                  if(url.contains('payment-cancel')){
+                    await controller.stopLoading();
+                    _handleUrlChange(url.toString());
+                  }
+                },
                 onProgressChanged: (controller, progressValue) {
                   setState(() {
                     progress = progressValue / 100;
