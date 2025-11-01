@@ -90,7 +90,9 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
             calculatedDiscount = discountValue;
           }
           // apply max discount cap and ensure not exceeding cart total
-          calculatedDiscount = calculatedDiscount.clamp(0.0, maxDiscount);
+          if (maxDiscount > 0) {
+            calculatedDiscount = calculatedDiscount.clamp(0.0, maxDiscount);
+          }
           calculatedDiscount = calculatedDiscount > cartTotalAfterBookDiscounts ? cartTotalAfterBookDiscounts : calculatedDiscount;
 
           setState(() {

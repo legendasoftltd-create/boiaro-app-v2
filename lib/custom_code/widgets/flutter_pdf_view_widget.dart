@@ -29,6 +29,7 @@ import 'package:epubx/epubx.dart' as epubx;
 import 'package:http/http.dart' as http;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:html/parser.dart' as html_parser; // Import html parser
+import 'package:screen_protector/screen_protector.dart';
 
 enum ReaderType { pdf, epub }
 
@@ -119,6 +120,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       if (_readerType == ReaderType.epub) {
         _loadEpubBook();
       }
+      ScreenProtector.protectDataLeakageOn();
     });
   }
 
@@ -239,6 +241,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     _epubScrollController.dispose();
     _currentEpubContentNotifier.dispose();
     flutterTts.stop();
+    ScreenProtector.protectDataLeakageOff();
     super.dispose();
   }
 
