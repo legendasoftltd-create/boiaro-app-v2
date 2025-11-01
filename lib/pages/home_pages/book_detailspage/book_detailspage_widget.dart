@@ -84,6 +84,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           );
         }
         final bookDetailspageGetbookdetailsApiResponse = snapshot.data!;
+        String price = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.price(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
+        String discountAmount = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.discountAmount(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
+        String discountPercentage = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.discountPercentage(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
+                   
 
         return Scaffold(
           key: scaffoldKey,
@@ -593,6 +597,53 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   // ),
                                                 ],
                                               ),
+                                              SizedBox(height: 10.0),
+                                              // price and discount
+                                              Row(
+                                                children: [
+                                                  SizedBox(width: 5.0),
+                                                  Text(
+                                                    'Price: ',
+                                                    style: FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily: 'SF Pro Display',
+                                                          fontSize: 14.0,
+                                                          letterSpacing: 0.0,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                  ),
+                                                    Text(
+                                                      '৳${widget.price}',
+                                                      style: FlutterFlowTheme.of(context)
+                                                          .bodyMedium
+                                                          .override(
+                                                            fontFamily: 'SF Pro Display',
+                                                            color: (discountAmount != '0' && discountPercentage != '0') ? FlutterFlowTheme.of(context).secondaryText : FlutterFlowTheme.of(context).primary,
+                                                            fontSize: 14.0,
+                                                            letterSpacing: 0.0,
+                                                            fontWeight: (discountAmount != '0' && discountPercentage != '0') ? FontWeight.normal : FontWeight.bold,
+                                                            decoration: (discountAmount != '0' && discountPercentage != '0')?TextDecoration.lineThrough:null,
+                                                          ),
+                                                    ),
+                                                  if (discountPercentage != "0" && discountPercentage != '0')
+                                                  SizedBox(width: 8.0),
+                                                  if (discountPercentage != "0" && discountPercentage != '0')
+                                                  Text(
+                                                    '৳${(double.tryParse(price)??0) - (double.tryParse(discountAmount)??0)}',
+                                                    style: FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily: 'SF Pro Display',
+                                                          fontSize: 16.0,
+                                                          letterSpacing: 0.0,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: FlutterFlowTheme.of(context).primary,
+                                                        ),
+                                                  ),
+                                                 
+                                                ],
+                                              )
                                             ],
                                           ),
                                         ),
@@ -758,7 +809,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         widget.name!,
                                                         widget.image!,
                                                         double.tryParse(widget.price!) ?? 0.0,
-                                                        increment: false
+                                                        increment: false,
+                                                        // discountAmount: discountAmount,
+                                                        // discountPercentage: widget.discountPercentage,
                                                       );
                                                       Navigator.push<void>(
                                                         context,
@@ -1834,6 +1887,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               getJsonField(
                                                             authorRelatedbookDetailslistItem,
                                                             r'''$.price''',
+                                                          ).toString(),
+                                                          discountAmount:
+                                                              getJsonField(
+                                                            authorRelatedbookDetailslistItem,
+                                                            r'''$.discount_amount''',
+                                                          ).toString(),
+                                                          discountPercentage:
+                                                              getJsonField(
+                                                            authorRelatedbookDetailslistItem,
+                                                            r'''$.discount_percentage''',
                                                           ).toString(),
                                                           authorsName:
                                                               getJsonField(

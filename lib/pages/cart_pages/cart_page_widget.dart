@@ -102,8 +102,14 @@ class _CartPageWidgetState extends State<CartPageWidget> {
                                   IconButton(
                                     icon: Icon(Icons.add_circle_outline_outlined,color: FlutterFlowTheme.of(context).primary,),
                                     onPressed: () {
-                                      cart.addItem(productId, cartItem.name,
-                                          cartItem.imageUrl, cartItem.price);
+                                      cart.addItem(
+                                        productId, 
+                                        cartItem.name,
+                                        cartItem.imageUrl, 
+                                        cartItem.price,
+                                        discountAmount: cartItem.discountAmount,
+                                        discountPercentage: cartItem.discountPercentage,
+                                      );
                                     },
                                   ),
                                 ],

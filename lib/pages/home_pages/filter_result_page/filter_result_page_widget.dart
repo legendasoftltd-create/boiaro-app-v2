@@ -301,6 +301,16 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
                                                                     filterBookListItem,
                                                                     r'''$.price''',
                                                                   ).toString(),
+                                                                  discountAmount:
+                                                                      getJsonField(
+                                                                    filterBookListItem,
+                                                                    r'''$.discount_amount''',
+                                                                  ).toString(),
+                                                                  discountPercentage:
+                                                                      getJsonField(
+                                                                    filterBookListItem,
+                                                                    r'''$.discount_percentage''',
+                                                                  ).toString(),
                                                                   authorsName:
                                                                       getJsonField(
                                                                     filterBookListItem,

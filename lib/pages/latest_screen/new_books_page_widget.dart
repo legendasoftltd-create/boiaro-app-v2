@@ -399,6 +399,16 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                                                     newBooksListItem,
                                                                     r'''$.price''',
                                                                   ).toString(),
+                                                                  discountAmount:
+                                                                      getJsonField(
+                                                                    newBooksListItem,
+                                                                    r'''$.discount_amount''',
+                                                                  ).toString(),
+                                                                  discountPercentage:
+                                                                      getJsonField(
+                                                                    newBooksListItem,
+                                                                    r'''$.discount_percentage''',
+                                                                  ).toString(),
                                                                   authorsName:
                                                                       getJsonField(
                                                                     newBooksListItem,

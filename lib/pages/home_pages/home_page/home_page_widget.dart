@@ -1244,6 +1244,14 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                           newbookDetailsListItem,
                                                                                           r'''$.price''',
                                                                                         ).toString(),
+                                                                                        discountAmount: getJsonField(
+                                                                                          newbookDetailsListItem,
+                                                                                          r'''$.discount_amount''',
+                                                                                        ).toString(),
+                                                                                        discountPercentage: getJsonField(
+                                                                                          newbookDetailsListItem,
+                                                                                          r'''$.discount_percentage''',
+                                                                                        ).toString(),
                                                                                         id: getJsonField(
                                                                                           newbookDetailsListItem,
                                                                                           r'''$._id''',
@@ -1514,6 +1522,14 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                     price: getJsonField(
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$.price''',
+                                                                                    ).toString(),
+                                                                                    discountAmount: getJsonField(
+                                                                                      trendbookDetailsListItem,
+                                                                                      r'''$.discount_amount''',
+                                                                                    ).toString(),
+                                                                                    discountPercentage: getJsonField(
+                                                                                      trendbookDetailsListItem,
+                                                                                      r'''$.discount_percentage''',
                                                                                     ).toString(),
                                                                                     id: getJsonField(
                                                                                       trendbookDetailsListItem,
@@ -1956,6 +1972,14 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                 price: getJsonField(
                                                                                   popularbookDetailsListItem,
                                                                                   r'''$.price''',
+                                                                                ).toString(),
+                                                                                discountAmount: getJsonField(
+                                                                                  popularbookDetailsListItem,
+                                                                                  r'''$.discount_amount''',
+                                                                                ).toString(),
+                                                                                discountPercentage: getJsonField(
+                                                                                  popularbookDetailsListItem,
+                                                                                  r'''$.discount_percentage''',
                                                                                 ).toString(),
                                                                                 id: getJsonField(
                                                                                   popularbookDetailsListItem,

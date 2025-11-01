@@ -249,6 +249,16 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                               favListItem,
                                                               r'''$.bookDetails.price''',
                                                             ).toString(),
+                                                              discountAmount:
+                                                                  getJsonField(
+                                                                favListItem,
+                                                                r'''$.bookDetails.discount_amount''',
+                                                              ).toString(),
+                                                              discountPercentage:
+                                                                  getJsonField(
+                                                                favListItem,
+                                                                r'''$.bookDetails.discount_percentage''',
+                                                              ).toString(),
                                                             authorsName:
                                                                 getJsonField(
                                                               favListItem,

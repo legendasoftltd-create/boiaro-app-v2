@@ -313,6 +313,14 @@ class _LatestPageWidgetState extends State<LatestPageWidget>
                                                                     bookDetailsListItem,
                                                                     r'''$.price''',
                                                                   ).toString()}',
+                                                                  discountAmount: getJsonField(
+                                                                    bookDetailsListItem,
+                                                                    r'''$.discount_amount''',
+                                                                  ).toString(),
+                                                                  discountPercentage: getJsonField(
+                                                                    bookDetailsListItem,
+                                                                    r'''$.discount_percentage''',
+                                                                  ).toString(),
                                                                   id:
                                                                       '${getJsonField(
                                                                     bookDetailsListItem,

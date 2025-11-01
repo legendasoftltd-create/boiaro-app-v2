@@ -10,12 +10,14 @@ class MakeCheckOutScreen extends StatefulWidget {
   final List<String> bookIds;
   final String jwtToken;
   final String userId;
+  final String? couponCode;
 
   const MakeCheckOutScreen({
     Key? key,
     required this.bookIds,
     required this.jwtToken,
     required this.userId,
+    this.couponCode,
   }) : super(key: key);
 
   @override
@@ -42,7 +44,10 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
     try {
       print('Initiating payment for books: ${widget.bookIds}');
 
-      final response = await _checkoutController.initiatePayment(widget.bookIds);
+      final response = await _checkoutController.initiatePayment(
+        widget.bookIds,
+        couponCode: widget.couponCode,
+      );
       print('Payment initiation response: $response');
       if (response['success'] == 1) {
         final tranId = response['tran_id'];
@@ -110,7 +115,10 @@ class CheckoutController {
   });
 
   // Initiate payment
-  Future<Map<String, dynamic>> initiatePayment(List<String> bookIds) async {
+  Future<Map<String, dynamic>> initiatePayment(
+    List<String> bookIds, {
+    String? couponCode,
+  }) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/purchasebooks'),
@@ -121,7 +129,8 @@ class CheckoutController {
         body: jsonEncode({
           'userId': userId,
           'books': bookIds,
-          'paymentmode': 'SSLCOMMERZ'
+          'paymentmode': 'SSLCOMMERZ',
+          if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
         }),
       );
 

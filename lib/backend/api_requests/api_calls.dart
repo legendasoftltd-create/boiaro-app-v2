@@ -1562,6 +1562,18 @@ class GetbookdetailsApiCall {
         response,
         r'''$.data.bookDetails[:].preview_pdf''',
       ));
+  dynamic price(dynamic response) => castToType<dynamic>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].price''',
+      ));
+  dynamic discountAmount(dynamic response) => castToType<dynamic>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].discount_amount''',
+      ));
+  dynamic discountPercentage(dynamic response) => castToType<dynamic>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].discount_percentage''',
+      ));
   String? categoryId(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.bookDetails[:].category._id''',

@@ -782,6 +782,16 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                           bookDetailsListItem,
                                                                           r'''$.price''',
                                                                         ).toString(),
+                                                                        discountAmount:
+                                                                            getJsonField(
+                                                                          bookDetailsListItem,
+                                                                          r'''$.discount_amount''',
+                                                                        ).toString(),
+                                                                        discountPercentage:
+                                                                            getJsonField(
+                                                                          bookDetailsListItem,
+                                                                          r'''$.discount_percentage''',
+                                                                        ).toString(),
                                                                         authorsName:
                                                                             'By ${getJsonField(
                                                                           bookDetailsListItem,

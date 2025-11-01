@@ -532,6 +532,14 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                                         seachFilterListItem,
                                                          r'''$.price''',
                                                       ).toString()}',
+                                                      discountAmount: getJsonField(
+                                                        seachFilterListItem,
+                                                        r'''$.discount_amount''',
+                                                      ).toString(),
+                                                      discountPercentage: getJsonField(
+                                                        seachFilterListItem,
+                                                        r'''$.discount_percentage''',
+                                                      ).toString(),
                                                       name: getJsonField(
                                                         seachFilterListItem,
                                                         r'''$.name''',

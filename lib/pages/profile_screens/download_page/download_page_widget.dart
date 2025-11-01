@@ -307,6 +307,15 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                                                     downloadDetailsListItem,
                                                                     r'''$.bookDetails.price''',
                                                                   ).toString(),
+                                                                  discountAmount: getJsonField(
+                                                                    downloadDetailsListItem,
+                                                                    r'''$.bookDetails.discount_amount''',
+                                                                  ).toString(),
+                                                                  discountPercentage:
+                                                                      getJsonField(
+                                                                    downloadDetailsListItem,
+                                                                    r'''$.bookDetails.discount_percentage''',
+                                                                  ).toString(),
                                                                   authorsName:
                                                                       getJsonField(
                                                                     downloadDetailsListItem,

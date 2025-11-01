@@ -24,6 +24,8 @@ class ListMainContainerComponentWidget extends StatefulWidget {
     required this.onMainTap,
     required this.width,
      this.price="",
+    this.discountAmount,
+    this.discountPercentage,
     // this.addToCartAction,
   })  : this.isFav = isFav ?? false,
         this.indicator = indicator ?? false;
@@ -39,6 +41,8 @@ class ListMainContainerComponentWidget extends StatefulWidget {
   final Future Function()? onMainTap;
   final double? width;
   final String? price;
+  final String? discountAmount;
+  final String? discountPercentage;
   // final Future Function()? addToCartAction;
 
   @override
@@ -285,6 +289,8 @@ class _ListMainContainerComponentWidgetState
                                                   widget.name ?? "",
                                                   widget.image ?? "",
                                                   double.parse(widget.price ?? "0"),
+                                                  discountAmount: double.tryParse(widget.discountAmount ?? "0") ?? 0,
+                                                  discountPercentage: double.tryParse(widget.discountPercentage ?? "0") ?? 0,
                                                 );
                                                 await actions.showCustomToastBottom('Quantity increased!');
                                               },
@@ -317,6 +323,8 @@ class _ListMainContainerComponentWidgetState
                                               widget.name ?? "",
                                               widget.image ?? "",
                                               double.parse(widget.price ?? "0"),
+                                              discountAmount:double.tryParse(widget.discountAmount ?? "0") ?? 0,
+                                              discountPercentage: double.tryParse(widget.discountPercentage ?? "0") ?? 0,
                                             );
                                             await actions.showCustomToastBottom('Added to cart!');
                                           },
@@ -343,65 +351,92 @@ class _ListMainContainerComponentWidgetState
                   ),
                 ),
               ),
-              InkWell(
-                splashColor: Colors.transparent,
-                focusColor: Colors.transparent,
-                hoverColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-                onTap: () async {
-                  await widget.isFavAction?.call();
-                },
-                child: Container(
-                  width: 28.0,
-                  height: 28.0,
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).primaryBackground,
-                    boxShadow: [
-                      BoxShadow(
-                        blurRadius: 16.0,
-                        color: FlutterFlowTheme.of(context).shadowColor,
-                        offset: Offset(
-                          0.0,
-                          4.0,
-                        ),
-                      )
-                    ],
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: AlignmentDirectional(0.0, 0.0),
-                  child: Builder(
-                    builder: (context) {
-                      if (!widget.indicator) {
-                        return Builder(
-                          builder: (context) {
-                            if (widget.isFav == true) {
-                              return Icon(
-                                Icons.favorite_sharp,
-                                color: FlutterFlowTheme.of(context).primaryText,
-                                size: 16.0,
-                              );
-                            } else {
-                              return Icon(
-                                Icons.favorite_border_rounded,
-                                color: FlutterFlowTheme.of(context).primaryText,
-                                size: 16.0,
-                              );
-                            }
-                          },
-                        );
-                      } else {
-                        return Container(
-                          width: 16.0,
-                          height: 16.0,
-                          child: custom_widgets.CirculatIndicator(
-                            width: 16.0,
-                            height: 16.0,
-                          ),
-                        );
-                      }
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if ((double.tryParse(widget.discountAmount ?? '0')??0) > 0 ||
+                      (double.tryParse(widget.discountPercentage ?? '0')??0) > 0)
+                    Container(
+                      margin: EdgeInsets.only(right: 8.0),
+                      padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                      decoration: BoxDecoration(
+                        color: FlutterFlowTheme.of(context).primary,
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Text(
+                        (double.tryParse(widget.discountPercentage ?? '0')??0) > 0
+                            ? '${widget.discountPercentage}% OFF'
+                            : '৳${widget.discountAmount} OFF',
+                        style: FlutterFlowTheme.of(context).bodySmall.override(
+                              fontFamily: 'SF Pro Display',
+                              color: FlutterFlowTheme.of(context).primaryBackground,
+                              fontSize: 10.0,
+                              letterSpacing: 0.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                  InkWell(
+                    splashColor: Colors.transparent,
+                    focusColor: Colors.transparent,
+                    hoverColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    onTap: () async {
+                      await widget.isFavAction?.call();
                     },
+                    child: Container(
+                      width: 28.0,
+                      height: 28.0,
+                      decoration: BoxDecoration(
+                        color: FlutterFlowTheme.of(context).primaryBackground,
+                        boxShadow: [
+                          BoxShadow(
+                            blurRadius: 16.0,
+                            color: FlutterFlowTheme.of(context).shadowColor,
+                            offset: Offset(
+                              0.0,
+                              4.0,
+                            ),
+                          )
+                        ],
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: AlignmentDirectional(0.0, 0.0),
+                      child: Builder(
+                        builder: (context) {
+                          if (!widget.indicator) {
+                            return Builder(
+                              builder: (context) {
+                                if (widget.isFav == true) {
+                                  return Icon(
+                                    Icons.favorite_sharp,
+                                    color: FlutterFlowTheme.of(context).primaryText,
+                                    size: 16.0,
+                                  );
+                                } else {
+                                  return Icon(
+                                    Icons.favorite_border_rounded,
+                                    color: FlutterFlowTheme.of(context).primaryText,
+                                    size: 16.0,
+                                  );
+                                }
+                              },
+                            );
+                          } else {
+                            return Container(
+                              width: 16.0,
+                              height: 16.0,
+                              child: custom_widgets.CirculatIndicator(
+                                width: 16.0,
+                                height: 16.0,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
