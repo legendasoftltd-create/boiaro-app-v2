@@ -1,3 +1,5 @@
+import 'package:share_plus/share_plus.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -87,7 +89,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         String price = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.price(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
         String discountAmount = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.discountAmount(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
         String discountPercentage = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.discountPercentage(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
-                   
+        String bookId=valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.id(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"", "");
 
         return Scaffold(
           key: scaffoldKey,
@@ -258,29 +260,31 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           //       ),
                                           //     ),
                                           //     SizedBox(width: 8.0),
-                                          //     InkWell(
-                                          //       splashColor: Colors.transparent,
-                                          //       focusColor: Colors.transparent,
-                                          //       hoverColor: Colors.transparent,
-                                          //       highlightColor: Colors.transparent,
-                                          //       onTap: () async {
-                                          //         // Share action
-                                          //       },
-                                          //       child: Container(
-                                          //         width: 40.0,
-                                          //         height: 40.0,
-                                          //         decoration: BoxDecoration(
-                                          //           color: Colors.white.withOpacity(0.2),
-                                          //           shape: BoxShape.circle,
-                                          //         ),
-                                          //         alignment: AlignmentDirectional(0.0, 0.0),
-                                          //         child: Icon(
-                                          //           Icons.share,
-                                          //           color: Colors.white,
-                                          //           size: 20.0,
-                                          //         ),
-                                          //       ),
-                                          //     ),
+                                              InkWell(
+                                                splashColor: Colors.transparent,
+                                                focusColor: Colors.transparent,
+                                                hoverColor: Colors.transparent,
+                                                highlightColor: Colors.transparent,
+                                                onTap: () async {
+                                                 await SharePlus.instance.share(ShareParams(uri: Uri.parse(
+                                                  "${FFAppConstants.baseUrl}/product/${bookId}"
+                                                 )));
+                                                },
+                                                child: Container(
+                                                  width: 40.0,
+                                                  height: 40.0,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white.withOpacity(0.2),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  alignment: AlignmentDirectional(0.0, 0.0),
+                                                  child: Icon(
+                                                    Icons.share,
+                                                    color: Colors.white,
+                                                    size: 20.0,
+                                                  ),
+                                                ),
+                                              ),
                                           //   ],
                                           // ),
                                         ],
@@ -614,7 +618,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         ),
                                                   ),
                                                     Text(
-                                                      '৳${widget.price}',
+                                                      '৳${price}',
                                                       style: FlutterFlowTheme.of(context)
                                                           .bodyMedium
                                                           .override(

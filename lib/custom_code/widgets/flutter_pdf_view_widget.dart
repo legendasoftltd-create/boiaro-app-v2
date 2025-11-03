@@ -1727,15 +1727,15 @@ Widget _buildEpubReader() {
                           color: appBarTextColor,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      InkWell(
-                        onTap: _openTtsSettings,
-                        child: Icon(
-                          Icons.more_vert,
-                          size: 24,
-                          color: appBarTextColor,
-                        ),
-                      ),
+                      // const SizedBox(width: 16),
+                      // InkWell(
+                      //   onTap: _openTtsSettings,
+                      //   child: Icon(
+                      //     Icons.more_vert,
+                      //     size: 24,
+                      //     color: appBarTextColor,
+                      //   ),
+                      // ),
                     ],
                   ),
                 ],
