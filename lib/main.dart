@@ -4,9 +4,11 @@ import '/custom_code/actions/index.dart' as actions;
 import 'package:provider/provider.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:device_preview/device_preview.dart';
 import 'backend/firebase/firebase_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
@@ -33,13 +35,16 @@ void main() async {
   await appState.initializePersistedState();
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => appState),
-        ChangeNotifierProvider(create: (context) => CartProvider()),
-        ChangeNotifierProvider(create: (context) => PdfViewerProvider()),
-      ],
-      child: MyApp(),
+    DevicePreview(
+      enabled: kDebugMode,
+      builder: (context) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => appState),
+          ChangeNotifierProvider(create: (context) => CartProvider()),
+          ChangeNotifierProvider(create: (context) => PdfViewerProvider()),
+        ],
+        child: MyApp(),
+      ),
     ),
   );
 }
@@ -94,7 +99,10 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router( 
+    return MaterialApp.router(
+      // Use DevicePreview's locale and builder in debug mode
+      locale: DevicePreview.locale(context),
+      builder: DevicePreview.appBuilder,
       debugShowCheckedModeBanner: false,
       title: 'Boi Aro',
       scrollBehavior: MyAppScrollBehavior(),

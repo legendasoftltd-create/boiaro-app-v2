@@ -1902,26 +1902,118 @@ Widget _buildEpubReader() {
                 children: [
                   /// Page indicator and slider
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.only(right: 16,left: 16, top: 12),
                     child: Column(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              provider.readerType == ReaderType.epub
-                                  ? 'অধ্যায় ${provider.currentPage}/${FFAppState().totalPages}'
-                                  : 'পৃষ্ঠা ${provider.currentPage}/${FFAppState().totalPages}',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: appBarTextColor,
+                        Selector<PdfViewerProvider, (int, int, bool)>(
+                          selector: (_, p) => (
+                            p.currentEpubChapterIndex,
+                            p.epubChapters.length,
+                            p.isChangingChapter,
+                          ),
+                          builder: (context, chapterData, child) {
+                            final currentChapterIndex = chapterData.$1;
+                            final totalChapters = chapterData.$2;
+                            final isChangingChapter = chapterData.$3;
+                            final provider = context.read<PdfViewerProvider>();
+                            
+                            return Row(
+                              mainAxisAlignment: provider.readerType == ReaderType.epub
+                                  ? MainAxisAlignment.spaceBetween
+                                  : MainAxisAlignment.center,
+                              children: [
+                                // Previous chapter button (only for EPUB)
+                                if (provider.readerType == ReaderType.epub)
+                                  ElevatedButton.icon(
+                                    onPressed: currentChapterIndex > 0 && !isChangingChapter
+                                        ? () {
+                                            EpubReaderWidget.loadEpubChapter(
+                                              provider,
+                                              currentChapterIndex - 1,
+                                              _currentEpubContentNotifier,
+                                              _epubScrollController,
+                                            );
+                                          }
+                                        : null,
+                                    icon: const Icon(Icons.chevron_left, size: 16),
+                                    label: const Text(
+                                      'Previous',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 5,
+                                      ),
+                                      elevation: 0,
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      backgroundColor: currentChapterIndex > 0 && !isChangingChapter
+                                          ? FlutterFlowTheme.of(context).black40
+                                          : FlutterFlowTheme.of(context).alternate,
+                                      foregroundColor: currentChapterIndex > 0 && !isChangingChapter
+                                          ? Colors.white
+                                          : appBarTextColor.withOpacity(0.5),
+                                    ),
                                   ),
-                            ),
-                          ],
+                                // Center text
+                                Expanded(
+                                  child: Text(
+                                    provider.readerType == ReaderType.epub
+                                        ? 'অধ্যায় ${provider.currentPage}/${FFAppState().totalPages}'
+                                        : 'পৃষ্ঠা ${provider.currentPage}/${FFAppState().totalPages}',
+                                    textAlign: TextAlign.center,
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodyMedium
+                                        .override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: appBarTextColor,
+                                        ),
+                                  ),
+                                ),
+                                // Next chapter button (only for EPUB)
+                                if (provider.readerType == ReaderType.epub)
+                                  ElevatedButton.icon(
+                                    onPressed: currentChapterIndex < totalChapters - 1 &&
+                                            !isChangingChapter
+                                        ? () {
+                                            EpubReaderWidget.loadEpubChapter(
+                                              provider,
+                                              currentChapterIndex + 1,
+                                              _currentEpubContentNotifier,
+                                              _epubScrollController,
+                                            );
+                                          }
+                                        : null,
+                                    icon: const Icon(Icons.chevron_right, size: 16),
+                                    label: const Text(
+                                      'Next',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                    iconAlignment: IconAlignment.end,
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 5,
+                                      ),
+                                      elevation: 0,
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      backgroundColor: currentChapterIndex < totalChapters - 1 &&
+                                              !isChangingChapter
+                                          ? FlutterFlowTheme.of(context).black40
+                                          : FlutterFlowTheme.of(context).alternate,
+                                      foregroundColor: currentChapterIndex < totalChapters - 1 &&
+                                              !isChangingChapter
+                                          ? Colors.white
+                                          : appBarTextColor.withOpacity(0.5),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 8),
                         if (FFAppState().totalPages > 1)
@@ -1965,7 +2057,7 @@ Widget _buildEpubReader() {
                       left: 16,
                       right: 16,
                       bottom: MediaQuery.of(context).padding.bottom + 8,
-                      top: 8,
+                      top: 5,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
