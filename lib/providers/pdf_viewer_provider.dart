@@ -83,6 +83,19 @@ class PdfViewerProvider with ChangeNotifier {
   double _lastScrollPosition = 0;
   double get lastScrollPosition => _lastScrollPosition;
 
+  // Chapter Read-Aloud State
+  bool _isReadingChapter = false;
+  bool get isReadingChapter => _isReadingChapter;
+
+  bool _isPaused = false;
+  bool get isPaused => _isPaused;
+
+  int _currentReadingSentenceIndex = 0;
+  int get currentReadingSentenceIndex => _currentReadingSentenceIndex;
+
+  List<String> _chapterSentences = [];
+  List<String> get chapterSentences => List.unmodifiable(_chapterSentences);
+
   // Reader Type Methods
   void setReaderType(ReaderType type) {
     _readerType = type;
@@ -301,6 +314,54 @@ class PdfViewerProvider with ChangeNotifier {
     // This is just internal state tracking
     _lastScrollPosition = position;
     // No notifyListeners() - scroll position doesn't need UI updates
+  }
+
+  // Chapter Read-Aloud Methods
+  void setReadingChapter(bool reading) {
+    _isReadingChapter = reading;
+    if (!reading) {
+      _currentReadingSentenceIndex = 0;
+      _chapterSentences = [];
+      _isPaused = false;
+    }
+    notifyListeners();
+  }
+
+  void setPaused(bool paused) {
+    _isPaused = paused;
+    notifyListeners();
+  }
+
+  void togglePause() {
+    _isPaused = !_isPaused;
+    notifyListeners();
+  }
+
+  void setChapterSentences(List<String> sentences) {
+    _chapterSentences = sentences;
+    _currentReadingSentenceIndex = 0;
+    notifyListeners();
+  }
+
+  void setCurrentReadingSentenceIndex(int index) {
+    if (index >= 0 && index < _chapterSentences.length) {
+      _currentReadingSentenceIndex = index;
+      notifyListeners();
+    }
+  }
+
+  void incrementReadingSentenceIndex() {
+    if (_currentReadingSentenceIndex < _chapterSentences.length - 1) {
+      _currentReadingSentenceIndex++;
+      notifyListeners();
+    }
+  }
+
+  void decrementReadingSentenceIndex() {
+    if (_currentReadingSentenceIndex > 0) {
+      _currentReadingSentenceIndex--;
+      notifyListeners();
+    }
   }
 
   // Reset method for cleanup

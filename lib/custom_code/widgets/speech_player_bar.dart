@@ -38,11 +38,6 @@ class SpeechPlayerBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _ControlButton(
-            icon: Icons.shuffle,
-            onPressed: onShuffleToggle,
-            iconColor: isShuffleOn ? Colors.blue : iconColor,
-          ),
-          _ControlButton(
             icon: Icons.settings,
             onPressed: onSettings,
             iconColor: iconColor,

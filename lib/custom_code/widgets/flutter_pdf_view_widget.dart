@@ -18,6 +18,7 @@ import 'pdf_viewer_epub_reader.dart';
 import 'pdf_viewer_text_operations.dart';
 import 'pdf_viewer_pdf_operations.dart';
 import 'pdf_viewer_settings_dialogs.dart';
+import 'speech_player_bar.dart';
 
 class FlutterPdfViewWidget extends StatefulWidget {
   const FlutterPdfViewWidget({
@@ -350,6 +351,68 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
 
   Future<void> _stopSpeaking(PdfViewerProvider provider) async {
     await PdfViewerTextOperations.stopSpeaking(provider, flutterTts);
+  }
+
+  Future<void> _startReadingChapter(PdfViewerProvider provider) async {
+    final htmlContent = _currentEpubContentNotifier.value;
+    if (htmlContent.isEmpty) return;
+
+    await PdfViewerTextOperations.startReadingChapter(
+      provider,
+      flutterTts,
+      htmlContent,
+      (sentence) {
+        // Highlight sentence in HTML content
+        _highlightSentenceInContent(sentence);
+      },
+      (position) {
+        // Auto-scroll to position
+        if (_epubScrollController.hasClients) {
+          _epubScrollController.animateTo(
+            position,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _pauseReadingChapter(PdfViewerProvider provider) async {
+    await PdfViewerTextOperations.pauseReadingChapter(provider, flutterTts);
+  }
+
+  Future<void> _resumeReadingChapter(PdfViewerProvider provider) async {
+    await PdfViewerTextOperations.resumeReadingChapter(provider, flutterTts);
+  }
+
+  Future<void> _stopReadingChapter(PdfViewerProvider provider) async {
+    await PdfViewerTextOperations.stopReadingChapter(provider, flutterTts);
+  }
+
+  void _highlightSentenceInContent(String sentence) {
+    final currentContent = _currentEpubContentNotifier.value;
+    final normalizedSentence = sentence.trim();
+    
+    // Try to find and highlight the sentence in HTML
+    // This is a simplified version - you may need more sophisticated matching
+    if (currentContent.contains(normalizedSentence)) {
+      // Remove existing read-aloud highlights
+      String cleanedContent = currentContent.replaceAll(
+        RegExp(r'<mark class="reading-sentence"[^>]*>.*?</mark>'),
+        '',
+      );
+      
+      // Add new highlight
+      final highlightedContent = cleanedContent.replaceFirst(
+        normalizedSentence,
+        '<mark class="reading-sentence" style="background-color: rgba(33, 150, 243, 0.3);">$normalizedSentence</mark>',
+      );
+      
+      _currentEpubContentNotifier.value = highlightedContent;
+      final p = context.read<PdfViewerProvider>();
+      p.setCurrentEpubContent(highlightedContent);
+    }
   }
 
   void _openTtsSettings(PdfViewerProvider provider) {
@@ -1482,6 +1545,32 @@ Widget _buildEpubReader() {
                             color: appBarTextColor,
                           ),
                         ),
+                      if (readerType == ReaderType.epub)
+                        Selector<PdfViewerProvider, bool>(
+                          selector: (_, p) => p.isReadingChapter,
+                          builder: (context, isReadingChapter, child) {
+                            final p = context.read<PdfViewerProvider>();
+                            return InkWell(
+                              onTap: () {
+                                if (isReadingChapter) {
+                                  _stopReadingChapter(p);
+                                } else {
+                                  _startReadingChapter(p);
+                                }
+                              },
+                              child: Icon(
+                                isReadingChapter
+                                    ? Icons.spatial_audio
+                                    : Icons.spatial_audio_off_rounded,
+                                size: 24,
+                                color: isReadingChapter
+                                    ? FlutterFlowTheme.of(context).primary
+                                    : appBarTextColor,
+                              ),
+                            );
+                          },
+                        ),
+                      const SizedBox(width: 10),
                       if (provider.readerType == ReaderType.pdf) const SizedBox(width: 16),
                       Selector<PdfViewerProvider, (List<int>, int)>(
                         selector: (_, p) => (p.bookmarkedPages, p.currentPage),
@@ -1501,7 +1590,6 @@ Widget _buildEpubReader() {
                           );
                         },
                       ),
-                      // const SizedBox(width: 16),
                       // InkWell(
                       //   onTap: _openTtsSettings,
                       //   child: Icon(
@@ -1715,13 +1803,86 @@ Widget _buildEpubReader() {
             },
           ),
 
-          Selector<PdfViewerProvider, bool>(
-            selector: (_, p) => p.isFullScreen,
-            builder: (context, isFullScreen, child) {
+          /// Chapter Read-Aloud Player Bar
+          Selector<PdfViewerProvider, (bool, bool, bool)>(
+            selector: (_, p) => (p.isFullScreen, p.isReadingChapter, p.isPaused),
+            builder: (context, data, child) {
+              final isFullScreen = data.$1;
+              final isReadingChapter = data.$2;
+              final isPaused = data.$3;
+              final provider = context.read<PdfViewerProvider>();
+              
+              if (isFullScreen || !isReadingChapter) {
+                return const SizedBox.shrink();
+              }
+              
+              return Container(
+                width: double.infinity,
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 12,
+                  bottom: MediaQuery.of(context).padding.bottom + 8,
+                ),
+                decoration: BoxDecoration(
+                  color: appBarBackgroundColor,
+                  border: Border(
+                    top: BorderSide(
+                      color: FlutterFlowTheme.of(context).alternate.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: SpeechPlayerBar(
+                  isPlaying: isReadingChapter && !isPaused,
+                  backgroundColor: appBarBackgroundColor,
+                  iconColor: appBarTextColor,
+                  onPlayPause: () {
+                    if (isReadingChapter) {
+                      if (isPaused) {
+                        _resumeReadingChapter(provider);
+                      } else {
+                        _pauseReadingChapter(provider);
+                      }
+                    } else {
+                      _startReadingChapter(provider);
+                    }
+                  },
+                  onPrevious: () {
+                    provider.decrementReadingSentenceIndex();
+                    if (provider.currentReadingSentenceIndex >= 0 &&
+                        provider.currentReadingSentenceIndex < provider.chapterSentences.length) {
+                      final sentence = provider.chapterSentences[provider.currentReadingSentenceIndex];
+                      _highlightSentenceInContent(sentence);
+                    }
+                  },
+                  onNext: () {
+                    provider.incrementReadingSentenceIndex();
+                    if (provider.currentReadingSentenceIndex >= 0 &&
+                        provider.currentReadingSentenceIndex < provider.chapterSentences.length) {
+                      final sentence = provider.chapterSentences[provider.currentReadingSentenceIndex];
+                      _highlightSentenceInContent(sentence);
+                    }
+                  },
+                  onStop: () => _stopReadingChapter(provider),
+                  onSettings: () => _openTtsSettings(provider),
+                  onShuffleToggle: () {
+                    // Optional: Implement shuffle reading
+                  },
+                ),
+              );
+            },
+          ),
+
+          Selector<PdfViewerProvider, (bool, bool)>(
+            selector: (_, p) => (p.isFullScreen, p.isReadingChapter),
+            builder: (context, data, child) {
+              final isFullScreen = data.$1;
+              final isReadingChapter = data.$2;
               return ValueListenableBuilder<String>(
                 valueListenable: _localSelectedTextNotifier,
                 builder: (context, selectedText, child) {
-                  if (isFullScreen || selectedText.isNotEmpty) {
+                  if (isFullScreen || selectedText.isNotEmpty || isReadingChapter) {
                     return const SizedBox.shrink();
                   }
                   final provider = context.read<PdfViewerProvider>();
