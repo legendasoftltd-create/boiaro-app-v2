@@ -62,7 +62,7 @@ class PdfViewerProvider with ChangeNotifier {
   bool _isSpeaking = false;
   bool get isSpeaking => _isSpeaking;
   
-  double _speechRate = 0.9;
+  double _speechRate = 0.6;
   double get speechRate => _speechRate;
   
   double _pitch = 1.0;
