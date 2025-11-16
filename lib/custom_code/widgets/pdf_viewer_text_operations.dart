@@ -334,9 +334,20 @@ class PdfViewerTextOperations {
       await flutterTts.setSpeechRate(provider.speechRate);
       await flutterTts.setPitch(provider.pitch);
       
-      // Set up completion handler
+      // Use provider's sentences array for consistency
+      final chapterSentences = provider.chapterSentences;
+      if (chapterSentences.isEmpty) {
+        provider.setReadingChapter(false);
+        return;
+      }
+      
+      // Set up completion handler with proper tracking
       Completer<void>? sentenceCompleter;
+      
       flutterTts.setCompletionHandler(() {
+        // Complete the current completer if it exists and isn't already completed
+        // The completer is created fresh for each sentence, so this should always
+        // complete the correct one for the sentence currently being spoken
         final completer = sentenceCompleter;
         if (completer != null && !completer.isCompleted) {
           completer.complete();
@@ -354,22 +365,23 @@ class PdfViewerTextOperations {
         
         // Get current sentence index
         int currentIndex = provider.currentReadingSentenceIndex;
-        if (currentIndex >= sentences.length) {
+        if (currentIndex >= chapterSentences.length) {
           // Loop back to beginning
           currentIndex = 0;
           provider.setCurrentReadingSentenceIndex(0);
         }
         
-        provider.setCurrentReadingSentenceIndex(currentIndex);
-        
-        // Highlight current sentence in HTML
-        onSentenceHighlight(sentences[currentIndex]);
-        
-        // Create new completer for this sentence
+        // Create new completer for this sentence BEFORE speaking
+        // This ensures the completion handler always references the correct completer
+        // and prevents race conditions where a previous sentence's completion
+        // handler might complete the wrong completer
         sentenceCompleter = Completer<void>();
         
+        // Highlight current sentence in HTML
+        onSentenceHighlight(chapterSentences[currentIndex]);
+        
         // Speak the sentence
-        await flutterTts.speak(sentences[currentIndex]);
+        await flutterTts.speak(chapterSentences[currentIndex]);
         
         // Wait for speech to complete (with timeout)
         // But check for pause during waiting and complete completer if paused
@@ -428,6 +440,7 @@ class PdfViewerTextOperations {
         }
         
         // Move to next sentence (will loop if at end)
+        // Only increment AFTER we've confirmed the current sentence completed
         provider.incrementReadingSentenceIndex();
         
         // Small delay between sentences

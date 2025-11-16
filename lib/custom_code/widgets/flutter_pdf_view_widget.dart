@@ -393,25 +393,107 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   void _highlightSentenceInContent(String sentence) {
     final currentContent = _currentEpubContentNotifier.value;
     final normalizedSentence = sentence.trim();
+    final p = context.read<PdfViewerProvider>();
     
     // Try to find and highlight the sentence in HTML
-    // This is a simplified version - you may need more sophisticated matching
     if (currentContent.contains(normalizedSentence)) {
-      // Remove existing read-aloud highlights
-      String cleanedContent = currentContent.replaceAll(
-        RegExp(r'<mark class="reading-sentence"[^>]*>.*?</mark>'),
-        '',
+      // Remove existing read-aloud highlights but preserve the text
+      // Extract text from mark tags before removing them - handle both plain text and HTML entities
+      String cleanedContent = currentContent;
+      
+      // Remove mark tags but keep the text inside
+      // Use a more robust regex that handles nested content
+      cleanedContent = cleanedContent.replaceAllMapped(
+        RegExp(r'<mark class="reading-sentence"[^>]*>(.*?)</mark>', dotAll: true),
+        (match) {
+          final innerText = match.group(1) ?? '';
+          // Return the inner text, preserving any HTML entities
+          return innerText;
+        },
       );
       
-      // Add new highlight
-      final highlightedContent = cleanedContent.replaceFirst(
-        normalizedSentence,
-        '<mark class="reading-sentence" style="background-color: rgba(33, 150, 243, 0.3);">$normalizedSentence</mark>',
-      );
+      // Calculate scroll position based on sentence index (more accurate than character position)
+      double? scrollPosition;
+      final currentSentenceIndex = p.currentReadingSentenceIndex;
+      final totalSentences = p.chapterSentences.length;
       
+      if (totalSentences > 0 && _epubScrollController.hasClients) {
+        try {
+          final maxScroll = _epubScrollController.position.maxScrollExtent;
+          if (maxScroll > 0) {
+            // Use sentence index for more accurate scrolling
+            // Scroll proportionally based on which sentence we're on
+            scrollPosition = (currentSentenceIndex / totalSentences) * maxScroll;
+            // Clamp to valid range
+            scrollPosition = scrollPosition.clamp(0.0, maxScroll);
+          }
+        } catch (e) {
+          // Fallback: use character position if sentence index calculation fails
+          final sentenceIndex = cleanedContent.indexOf(normalizedSentence);
+          if (sentenceIndex != -1) {
+            final contentLength = cleanedContent.length;
+            if (contentLength > 0 && _epubScrollController.hasClients) {
+              try {
+                final maxScroll = _epubScrollController.position.maxScrollExtent;
+                scrollPosition = (sentenceIndex / contentLength) * maxScroll;
+                scrollPosition = scrollPosition.clamp(0.0, maxScroll);
+              } catch (_) {
+                // Ignore scroll errors
+              }
+            }
+          }
+        }
+      }
+      
+      // Add new highlight - find the sentence in cleaned content
+      String highlightedContent = cleanedContent;
+      
+      // Try to find sentence in cleaned content (handle HTML entities)
+      int sentenceStartIndex = cleanedContent.indexOf(normalizedSentence);
+      
+      // If not found, try with HTML entities escaped
+      if (sentenceStartIndex == -1) {
+        final escapedSentence = normalizedSentence
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;');
+        sentenceStartIndex = cleanedContent.indexOf(escapedSentence);
+        if (sentenceStartIndex != -1) {
+          highlightedContent = cleanedContent.replaceFirst(
+            escapedSentence,
+            '<mark class="reading-sentence" style="background-color: rgba(33, 150, 243, 0.3);">$escapedSentence</mark>',
+            sentenceStartIndex,
+          );
+        }
+      } else {
+        // Found with plain text
+        highlightedContent = cleanedContent.replaceFirst(
+          normalizedSentence,
+          '<mark class="reading-sentence" style="background-color: rgba(33, 150, 243, 0.3);">$normalizedSentence</mark>',
+          sentenceStartIndex,
+        );
+      }
+      
+      // Update content
       _currentEpubContentNotifier.value = highlightedContent;
-      final p = context.read<PdfViewerProvider>();
       p.setCurrentEpubContent(highlightedContent);
+      
+      // Auto-scroll to the sentence
+      if (scrollPosition != null && _epubScrollController.hasClients) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_epubScrollController.hasClients) {
+            try {
+              _epubScrollController.animateTo(
+                scrollPosition!,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            } catch (e) {
+              // Ignore scroll errors
+            }
+          }
+        });
+      }
     }
   }
 
