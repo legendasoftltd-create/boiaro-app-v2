@@ -24,8 +24,10 @@ class MainBookComponentWidget extends StatefulWidget {
     bool? indicator,
     this.discountAmount,
     this.discountPercentage,
+    bool? isPurchased,
   })  : this.isFav = isFav ?? false,
-        this.indicator = indicator ?? false;
+        this.indicator = indicator ?? false,
+        this.isPurchased = isPurchased ?? false;
 
   final String? image;
   final String? bookName;
@@ -38,6 +40,7 @@ class MainBookComponentWidget extends StatefulWidget {
   final bool indicator;
   final String? discountAmount;
   final String? discountPercentage;
+  final bool isPurchased;
 
   @override
   State<MainBookComponentWidget> createState() =>
@@ -194,6 +197,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                     MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
+                                  if(!widget.isPurchased)
                                 Text(double.parse(widget.price??'0')>0?"${valueOrDefault<String>(
                               "৳ ${widget.price}",
                               '\$0.00',
@@ -214,6 +218,35 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                   ),
                                   Consumer<CartProvider>(
                                     builder: (context, cart, child) {
+                                      if (widget.isPurchased) {
+                                        // Show Read Now button for purchased books
+                                        return InkWell(
+                                          splashColor: Colors.transparent,
+                                          focusColor: Colors.transparent,
+                                          hoverColor: Colors.transparent,
+                                          highlightColor: Colors.transparent,
+                                          onTap: () async {
+                                            await widget.isMainTap?.call();
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                                            decoration: BoxDecoration(
+                                              color: FlutterFlowTheme.of(context).primary,
+                                              borderRadius: BorderRadius.circular(16.0),
+                                            ),
+                                            child: Text(
+                                              'Read Now',
+                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                fontFamily: 'SF Pro Display',
+                                                fontSize: 12.0,
+                                                fontWeight: FontWeight.w600,
+                                                color: FlutterFlowTheme.of(context).primaryBackground,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+
                                       final isInCart = cart.items.containsKey(widget.id ?? "");
                                       final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
 
@@ -346,8 +379,8 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if ((double.tryParse(widget.discountAmount ?? '0')??0) > 0 ||
-                        (double.tryParse(widget.discountPercentage ?? '0')??0) > 0)
+                    if (((double.tryParse(widget.discountAmount ?? '0')??0) > 0 ||
+                        (double.tryParse(widget.discountPercentage ?? '0')??0) > 0) && !widget.isPurchased)
                       Container(
                         margin: EdgeInsets.only(right: 8.0),
                         padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
@@ -430,6 +463,27 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                 ),
               ),
             ),
+             if (widget.isPurchased)
+              Positioned(
+                top: 8.0,
+                left: 8.0,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  decoration: BoxDecoration(
+                    color: FlutterFlowTheme.of(context).primary,
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: Text(
+                    'Purchased',
+                    style: FlutterFlowTheme.of(context).bodySmall.override(
+                      fontFamily: 'SF Pro Display',
+                      fontSize: 10.0,
+                      fontWeight: FontWeight.w600,
+                      color: FlutterFlowTheme.of(context).primaryBackground,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

@@ -33,7 +33,34 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
     super.initState();
     _model = createModel(context, () => FavouritePageModel());
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (FFAppState().isLogin) {
+        await _loadPurchasedBooks();
+      }
+      safeSetState(() {});
+    });
+  }
+
+  Future<void> _loadPurchasedBooks() async {
+    try {
+      final response = await EbookGroup.userBookPurchaseRecordsApiCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      );
+      
+      if (EbookGroup.userBookPurchaseRecordsApiCall.success(
+            response.jsonBody ?? '',
+          ) ==
+          1) {
+        final bookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
+          response.jsonBody ?? '',
+        );
+        _model.purchasedBookIds = bookIds ?? [];
+        safeSetState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error loading purchased books: $e');
+    }
   }
 
   @override
@@ -315,6 +342,12 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                               safeSetState(
                                                                   () {});
                                                             },
+                                                            isPurchased: _model.purchasedBookIds.contains(
+                                                              getJsonField(
+                                                                favListItem,
+                                                                r'''$._id''',
+                                                              ).toString(),
+                                                            ),
                                                             isMainTap:
                                                                 () async {
                                                               context.pushNamed(

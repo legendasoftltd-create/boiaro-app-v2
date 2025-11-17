@@ -15,6 +15,8 @@ class FilterResultPageModel extends FlutterFlowModel<FilterResultPageWidget> {
 
   int? filterIndex = 0;
 
+  List<String> purchasedBookIds = [];
+
   ///  State fields for stateful widgets in this page.
 
   // Model for CustomCenterAppbar component.

@@ -135,7 +135,34 @@ class _HomePageWidgetState extends State<HomePageWidget>
       ),
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (FFAppState().isLogin) {
+        await _loadPurchasedBooks();
+      }
+      safeSetState(() {});
+    });
+  }
+
+  Future<void> _loadPurchasedBooks() async {
+    try {
+      final response = await EbookGroup.userBookPurchaseRecordsApiCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      );
+      
+      if (EbookGroup.userBookPurchaseRecordsApiCall.success(
+            response?.jsonBody ?? '',
+          ) ==
+          1) {
+        final bookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
+          response?.jsonBody ?? '',
+        );
+        _model.purchasedBookIds = bookIds ?? [];
+        safeSetState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error loading purchased books: $e');
+    }
   }
 
   @override
@@ -1256,6 +1283,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                           newbookDetailsListItem,
                                                                                           r'''$._id''',
                                                                                         ).toString(),
+                                                                                        isPurchased: _model.purchasedBookIds.contains(
+                                                                                          getJsonField(
+                                                                                            newbookDetailsListItem,
+                                                                                            r'''$._id''',
+                                                                                          ).toString(),
+                                                                                        ),
                                                                                         authorsName: getJsonField(
                                                                                           newbookDetailsListItem,
                                                                                           r'''$.author.name''',
@@ -1535,6 +1568,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$._id''',
                                                                                     ).toString(),
+                                                                                    isPurchased: _model.purchasedBookIds.contains(
+                                                                                      getJsonField(
+                                                                                        trendbookDetailsListItem,
+                                                                                        r'''$._id''',
+                                                                                      ).toString(),
+                                                                                    ),
                                                                                     authorsName: getJsonField(
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$.author.name''',
@@ -1985,6 +2024,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                   popularbookDetailsListItem,
                                                                                   r'''$._id''',
                                                                                 ).toString(),
+                                                                                isPurchased: _model.purchasedBookIds.contains(
+                                                                                  getJsonField(
+                                                                                    popularbookDetailsListItem,
+                                                                                    r'''$._id''',
+                                                                                  ).toString(),
+                                                                                ),
                                                                                 authorName: getJsonField(
                                                                                   popularbookDetailsListItem,
                                                                                   r'''$.author.name''',

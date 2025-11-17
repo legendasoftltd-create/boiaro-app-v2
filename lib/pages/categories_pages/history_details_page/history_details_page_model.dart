@@ -16,6 +16,8 @@ class HistoryDetailsPageModel
 
   int? historyIndex = 0;
 
+  List<String> purchasedBookIds = [];
+
   ///  State fields for stateful widgets in this page.
 
   // Model for CustomCenterAppbar component.

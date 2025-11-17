@@ -15,6 +15,8 @@ class LatestPageModel extends FlutterFlowModel<LatestPageWidget> {
 
   int? latestIndex = 0;
 
+  List<String> purchasedBookIds = [];
+
   ///  State fields for stateful widgets in this page.
 
   // Model for SingleAppbar component.

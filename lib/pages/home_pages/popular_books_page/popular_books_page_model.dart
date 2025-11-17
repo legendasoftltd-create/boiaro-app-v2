@@ -14,6 +14,8 @@ class PopularBooksPageModel extends FlutterFlowModel<PopularBooksPageWidget> {
 
   int? popularBookIndex = 0;
 
+  List<String> purchasedBookIds = [];
+
   ///  State fields for stateful widgets in this page.
 
   // Model for CustomCenterAppbar component.

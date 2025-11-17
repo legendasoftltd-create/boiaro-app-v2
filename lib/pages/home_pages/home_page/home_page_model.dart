@@ -23,6 +23,8 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
 
   int? newBooksIndex = 0;
 
+  List<String> purchasedBookIds = [];
+
   ///  State fields for stateful widgets in this page.
 
   bool apiRequestCompleted1 = false;

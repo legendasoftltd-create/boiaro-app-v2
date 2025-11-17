@@ -16,6 +16,8 @@ class SearchPageModel extends FlutterFlowModel<SearchPageWidget> {
 
   int? searchIndex = 0;
 
+  List<String> purchasedBookIds = [];
+
   ///  State fields for stateful widgets in this page.
 
   // Model for CustomCenterAppbar component.

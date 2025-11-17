@@ -55,7 +55,35 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     super.initState();
     _model = createModel(context, () => BookDetailspageModel());
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (FFAppState().isLogin) {
+        await _checkIfPurchased();
+      }
+      safeSetState(() {});
+    });
+  }
+
+  Future<void> _checkIfPurchased() async {
+    try {
+      final response = await EbookGroup.userBookPurchaseRecordsApiCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      );
+      
+      if (EbookGroup.userBookPurchaseRecordsApiCall.success(
+            response?.jsonBody ?? '',
+          ) ==
+          1) {
+        final bookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
+          response?.jsonBody ?? '',
+        );
+        _model.purchasedBookIds = bookIds ?? [];
+        _model.isPurchased = _model.purchasedBookIds.contains(widget.id);
+        safeSetState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error checking purchased status: $e');
+    }
   }
 
   @override
@@ -333,38 +361,63 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               ),
                                             );
                                           },
-                                          child: Container(
-                                            width: 120.0,
-                                            height: 160.0,
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(8.0),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  blurRadius: 8.0,
-                                                  color: FlutterFlowTheme.of(context).shadowColor,
-                                                  offset: Offset(0.0, 2.0),
-                                                )
-                                              ],
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(8.0),
-                                              child: CachedNetworkImage(
-                                                fadeInDuration: Duration(milliseconds: 200),
-                                                fadeOutDuration: Duration(milliseconds: 200),
-                                                imageUrl: widget.image!,
+                                          child: Stack(
+                                            children: [
+                                              Container(
                                                 width: 120.0,
                                                 height: 160.0,
-                                                fit: BoxFit.cover,
-                                                alignment: Alignment(0.0, 0.0),
-                                                errorWidget: (context, error, stackTrace) => Image.asset(
-                                                  'assets/images/error_image.png',
-                                                  width: 120.0,
-                                                  height: 160.0,
-                                                  fit: BoxFit.cover,
-                                                  alignment: Alignment(0.0, 0.0),
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(8.0),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      blurRadius: 8.0,
+                                                      color: FlutterFlowTheme.of(context).shadowColor,
+                                                      offset: Offset(0.0, 2.0),
+                                                    )
+                                                  ],
+                                                ),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(8.0),
+                                                  child: CachedNetworkImage(
+                                                    fadeInDuration: Duration(milliseconds: 200),
+                                                    fadeOutDuration: Duration(milliseconds: 200),
+                                                    imageUrl: widget.image!,
+                                                    width: 120.0,
+                                                    height: 160.0,
+                                                    fit: BoxFit.cover,
+                                                    alignment: Alignment(0.0, 0.0),
+                                                    errorWidget: (context, error, stackTrace) => Image.asset(
+                                                      'assets/images/error_image.png',
+                                                      width: 120.0,
+                                                      height: 160.0,
+                                                      fit: BoxFit.cover,
+                                                      alignment: Alignment(0.0, 0.0),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
+                                              if (_model.isPurchased)
+                                                Positioned(
+                                                  top: 8.0,
+                                                  right: 8.0,
+                                                  child: Container(
+                                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                                    decoration: BoxDecoration(
+                                                      color: FlutterFlowTheme.of(context).primary,
+                                                      borderRadius: BorderRadius.circular(12.0),
+                                                    ),
+                                                    child: Text(
+                                                      'Purchased',
+                                                      style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                        fontFamily: 'SF Pro Display',
+                                                        fontSize: 10.0,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: FlutterFlowTheme.of(context).primaryBackground,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
                                           ),
                                         ),
                                         SizedBox(width: 16.0),
@@ -665,8 +718,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                       );
                                       final isFree = accessType == 'free' || accessType == 'Free';
                                       
-                                      if (isFree) {
-                                        // Show Read Now button for free books
+                                      if (isFree || _model.isPurchased) {
+                                        // Show Read Now button for free books or purchased books
                                         return Row(
                                           children: [
                                             Expanded(
@@ -1887,6 +1940,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             authorRelatedbookDetailslistItem,
                                                             r'''$._id''',
                                                           ).toString(),
+                                                          isPurchased: _model.purchasedBookIds.contains(
+                                                            getJsonField(
+                                                              authorRelatedbookDetailslistItem,
+                                                              r'''$._id''',
+                                                            ).toString(),
+                                                          ),
                                                           price:
                                                               getJsonField(
                                                             authorRelatedbookDetailslistItem,

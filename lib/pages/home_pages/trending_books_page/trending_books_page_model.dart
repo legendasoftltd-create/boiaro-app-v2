@@ -14,6 +14,8 @@ class TrendingBooksPageModel extends FlutterFlowModel<TrendingBooksPageWidget> {
 
   int? trendingIndex = 0;
 
+  List<String> purchasedBookIds = [];
+
   ///  State fields for stateful widgets in this page.
 
   bool apiRequestCompleted2 = false;

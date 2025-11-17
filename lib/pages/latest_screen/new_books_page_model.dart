@@ -29,6 +29,8 @@ class NewBooksPageModel extends FlutterFlowModel<NewBooksPageWidget> {
   int newBooksIndex = 0;
   bool isNewBook = false;
 
+  List<String> purchasedBookIds = [];
+
   @override
   void initState(BuildContext context) {
     mainBookComponentModels =

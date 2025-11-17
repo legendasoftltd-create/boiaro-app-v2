@@ -43,7 +43,34 @@ class _GetBookByCategoryPageWidgetState
     super.initState();
     _model = createModel(context, () => GetBookByCategoryPageModel());
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (FFAppState().isLogin) {
+        await _loadPurchasedBooks();
+      }
+      safeSetState(() {});
+    });
+  }
+
+  Future<void> _loadPurchasedBooks() async {
+    try {
+      final response = await EbookGroup.userBookPurchaseRecordsApiCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      );
+      
+      if (EbookGroup.userBookPurchaseRecordsApiCall.success(
+            response.jsonBody ?? '',
+          ) ==
+          1) {
+        final bookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
+          response.jsonBody ?? '',
+        );
+        _model.purchasedBookIds = bookIds ?? [];
+        safeSetState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error loading purchased books: $e');
+    }
   }
 
   @override
@@ -345,6 +372,12 @@ class _GetBookByCategoryPageWidgetState
                                                                               .categoryBookIndex) &&
                                                                       (_model.isCategoryBook ==
                                                                           true),
+                                                                  isPurchased: _model.purchasedBookIds.contains(
+                                                                    getJsonField(
+                                                                      bookDetailsListItem,
+                                                                      r'''$._id''',
+                                                                    ).toString(),
+                                                                  ),
                                                                   isFavAction:
                                                                       () async {
                                                                     if (FFAppState()

@@ -26,9 +26,11 @@ class ListMainContainerComponentWidget extends StatefulWidget {
      this.price="",
     this.discountAmount,
     this.discountPercentage,
+    bool? isPurchased,
     // this.addToCartAction,
   })  : this.isFav = isFav ?? false,
-        this.indicator = indicator ?? false;
+        this.indicator = indicator ?? false,
+        this.isPurchased = isPurchased ?? false;
 
   final String? image;
   final String? name;
@@ -43,6 +45,7 @@ class ListMainContainerComponentWidget extends StatefulWidget {
   final String? price;
   final String? discountAmount;
   final String? discountPercentage;
+  final bool isPurchased;
   // final Future Function()? addToCartAction;
 
   @override
@@ -113,24 +116,71 @@ class _ListMainContainerComponentWidgetState
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(0.0),
-                child: CachedNetworkImage(
-                  fadeInDuration: Duration(milliseconds: 200),
-                  fadeOutDuration: Duration(milliseconds: 200),
-                  imageUrl: widget.image!,
-                  width: 77.0,
-                  height: 114.0,
-                  fit: BoxFit.fitWidth,
-                  alignment: Alignment(0.0, 0.0),
-                  errorWidget: (context, error, stackTrace) => Image.asset(
-                    'assets/images/error_image.png',
-                    width: 77.0,
-                    height: 114.0,
-                    fit: BoxFit.fitWidth,
-                    alignment: Alignment(0.0, 0.0),
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(0.0),
+                    child: CachedNetworkImage(
+                      fadeInDuration: Duration(milliseconds: 200),
+                      fadeOutDuration: Duration(milliseconds: 200),
+                      imageUrl: widget.image!,
+                      width: 77.0,
+                      height: 114.0,
+                      fit: BoxFit.fitWidth,
+                      alignment: Alignment(0.0, 0.0),
+                      errorWidget: (context, error, stackTrace) => Image.asset(
+                        'assets/images/error_image.png',
+                        width: 77.0,
+                        height: 114.0,
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment(0.0, 0.0),
+                      ),
+                    ),
                   ),
-                ),
+                  if (widget.isPurchased)
+                    Positioned(
+                      top: 4.0,
+                      right: 4.0,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
+                        decoration: BoxDecoration(
+                          color: FlutterFlowTheme.of(context).primary,
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        child: Text(
+                          'Purchased',
+                          style: FlutterFlowTheme.of(context).bodySmall.override(
+                            fontFamily: 'SF Pro Display',
+                            fontSize: 9.0,
+                            fontWeight: FontWeight.w600,
+                            color: FlutterFlowTheme.of(context).primaryBackground,
+                          ),
+                        ),
+                      ),
+                    ),
+                   if (((double.tryParse(widget.discountAmount ?? '0')??0) > 0 ||
+                      (double.tryParse(widget.discountPercentage ?? '0')??0) > 0)&&!widget.isPurchased)
+                    Container(
+                      margin: EdgeInsets.only(right: 8.0),
+                      padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                      decoration: BoxDecoration(
+                        color: FlutterFlowTheme.of(context).primary,
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Text(
+                        (double.tryParse(widget.discountPercentage ?? '0')??0) > 0
+                            ? '${widget.discountPercentage}% OFF'
+                            : '৳${widget.discountAmount} OFF',
+                        style: FlutterFlowTheme.of(context).bodySmall.override(
+                              fontFamily: 'SF Pro Display',
+                              color: FlutterFlowTheme.of(context).primaryBackground,
+                              fontSize: 10.0,
+                              letterSpacing: 0.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                ],
               ),
               Expanded(
                 child: Padding(
@@ -231,6 +281,35 @@ class _ListMainContainerComponentWidgetState
                           ),
                          Consumer<CartProvider>(
                                     builder: (context, cart, child) {
+                                      if (widget.isPurchased) {
+                                        // Show Read Now button for purchased books
+                                        return InkWell(
+                                          splashColor: Colors.transparent,
+                                          focusColor: Colors.transparent,
+                                          hoverColor: Colors.transparent,
+                                          highlightColor: Colors.transparent,
+                                          onTap: () async {
+                                            await widget.onMainTap?.call();
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                                            decoration: BoxDecoration(
+                                              color: FlutterFlowTheme.of(context).primary,
+                                              borderRadius: BorderRadius.circular(16.0),
+                                            ),
+                                            child: Text(
+                                              'Read Now',
+                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                fontFamily: 'SF Pro Display',
+                                                fontSize: 12.0,
+                                                fontWeight: FontWeight.w600,
+                                                color: FlutterFlowTheme.of(context).primaryBackground,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+
                                       final isInCart = cart.items.containsKey(widget.id ?? "");
                                       final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
 
@@ -351,92 +430,65 @@ class _ListMainContainerComponentWidgetState
                   ),
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if ((double.tryParse(widget.discountAmount ?? '0')??0) > 0 ||
-                      (double.tryParse(widget.discountPercentage ?? '0')??0) > 0)
-                    Container(
-                      margin: EdgeInsets.only(right: 8.0),
-                      padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
-                      decoration: BoxDecoration(
-                        color: FlutterFlowTheme.of(context).primary,
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: Text(
-                        (double.tryParse(widget.discountPercentage ?? '0')??0) > 0
-                            ? '${widget.discountPercentage}% OFF'
-                            : '৳${widget.discountAmount} OFF',
-                        style: FlutterFlowTheme.of(context).bodySmall.override(
-                              fontFamily: 'SF Pro Display',
-                              color: FlutterFlowTheme.of(context).primaryBackground,
-                              fontSize: 10.0,
-                              letterSpacing: 0.0,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ),
-                  InkWell(
-                    splashColor: Colors.transparent,
-                    focusColor: Colors.transparent,
-                    hoverColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                    onTap: () async {
-                      await widget.isFavAction?.call();
-                    },
-                    child: Container(
-                      width: 28.0,
-                      height: 28.0,
-                      decoration: BoxDecoration(
-                        color: FlutterFlowTheme.of(context).primaryBackground,
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: 16.0,
-                            color: FlutterFlowTheme.of(context).shadowColor,
-                            offset: Offset(
-                              0.0,
-                              4.0,
-                            ),
-                          )
-                        ],
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: AlignmentDirectional(0.0, 0.0),
-                      child: Builder(
-                        builder: (context) {
-                          if (!widget.indicator) {
-                            return Builder(
-                              builder: (context) {
-                                if (widget.isFav == true) {
-                                  return Icon(
-                                    Icons.favorite_sharp,
-                                    color: FlutterFlowTheme.of(context).primaryText,
-                                    size: 16.0,
-                                  );
-                                } else {
-                                  return Icon(
-                                    Icons.favorite_border_rounded,
-                                    color: FlutterFlowTheme.of(context).primaryText,
-                                    size: 16.0,
-                                  );
-                                }
-                              },
-                            );
-                          } else {
-                            return Container(
-                              width: 16.0,
-                              height: 16.0,
-                              child: custom_widgets.CirculatIndicator(
-                                width: 16.0,
-                                height: 16.0,
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ),
+              InkWell(
+                splashColor: Colors.transparent,
+                focusColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                onTap: () async {
+                  await widget.isFavAction?.call();
+                },
+                child: Container(
+                  width: 28.0,
+                  height: 28.0,
+                  decoration: BoxDecoration(
+                    color: FlutterFlowTheme.of(context).primaryBackground,
+                    boxShadow: [
+                      BoxShadow(
+                        blurRadius: 16.0,
+                        color: FlutterFlowTheme.of(context).shadowColor,
+                        offset: Offset(
+                          0.0,
+                          4.0,
+                        ),
+                      )
+                    ],
+                    shape: BoxShape.circle,
                   ),
-                ],
+                  alignment: AlignmentDirectional(0.0, 0.0),
+                  child: Builder(
+                    builder: (context) {
+                      if (!widget.indicator) {
+                        return Builder(
+                          builder: (context) {
+                            if (widget.isFav == true) {
+                              return Icon(
+                                Icons.favorite_sharp,
+                                color: FlutterFlowTheme.of(context).primaryText,
+                                size: 16.0,
+                              );
+                            } else {
+                              return Icon(
+                                Icons.favorite_border_rounded,
+                                color: FlutterFlowTheme.of(context).primaryText,
+                                size: 16.0,
+                              );
+                            }
+                          },
+                        );
+                      } else {
+                        return Container(
+                          width: 16.0,
+                          height: 16.0,
+                          child: custom_widgets.CirculatIndicator(
+                            width: 16.0,
+                            height: 16.0,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
               ),
             ],
           ),
