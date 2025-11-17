@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:a_i_ebook_app/pages/cart_pages/make_payment.dart';
+import 'package:a_i_ebook_app/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import 'package:a_i_ebook_app/providers/cart_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -38,29 +39,55 @@ class _PaymentWebViewState extends State<PaymentWebView> {
       // 🚫 Prevent back navigation when payment successful
       onWillPop: () async {
         if (isPaymentSuccess) return false;
+        
+        // First try to go back in webview
+        if (webViewController != null) {
+          final canGoBack = await webViewController!.canGoBack();
+          if (canGoBack) {
+            webViewController!.goBack();
+            return false; // Prevent screen from popping, webview handled it
+          }
+        }
+        
+        // If webview can't go back, allow screen to pop
         return true;
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Payment"),
-          automaticallyImplyLeading: !isPaymentSuccess, // hide back button when success
-        ),
-        body: SafeArea(
-          child: Stack(
+      child: SafeArea(
+        child: Scaffold(
+          appBar: PreferredSize(
+            preferredSize: Size.fromHeight(79.0),
+            child: CustomCenterAppbarWidget(
+            title: "Payment",
+            backIcon: false,
+            addIcon: false,
+            onTapAdd: () async {},
+            onBackPressed: () async {
+              if (webViewController != null) {
+                final canGoBack = await webViewController!.canGoBack();
+                if (canGoBack) {
+                  webViewController!.goBack();
+                }else{
+                  context.safePop();
+                }
+              }
+            },
+          ),
+          ),
+          body: Stack(
             children: [
               InAppWebView(
                 initialUrlRequest: URLRequest(url: WebUri(widget.url)),
-
+                  
                 onWebViewCreated: (controller) {
                   webViewController = controller;
                 },
-
+                  
                 shouldOverrideUrlLoading: (controller, action) async {
                   final uri = action.request.url;
                   if (uri != null) {
                     final url = uri.toString();
                     log('Intercepted URL: $url');
-
+                  
                     if (url.contains('payment-success') ||
                         url.contains('payment-fail') ||
                         url.contains('payment-cancel')) {
@@ -76,6 +103,9 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                   if(url.contains('payment-cancel')){
                     await controller.stopLoading();
                     _handleUrlChange(url.toString());
+                  }else if(url.contains('payment-fail')){
+                    await controller.stopLoading();
+                    _handleUrlChange(url.toString());
                   }
                 },
                 onProgressChanged: (controller, progressValue) {
@@ -84,11 +114,11 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                   });
                 },
               ),
-
+                  
               // 🔄 Progress bar
               if (progress < 1.0)
                 LinearProgressIndicator(value: progress),
-
+                  
               // 🕑 Loading overlay
               if (isLoading)
                 Container(
@@ -174,7 +204,7 @@ void _showSuccessDialog(String message) {
     showAnimatedDialog(
       context,
       OrderPlaceDialogWidget(
-        icon: Icons.clear,
+        icon: Icons.cancel,
         title: "Payment Failed",
         description: message,
         isFailed: true,

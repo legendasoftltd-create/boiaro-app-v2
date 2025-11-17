@@ -867,8 +867,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         widget.image!,
                                                         double.tryParse(widget.price!) ?? 0.0,
                                                         increment: false,
-                                                        // discountAmount: discountAmount,
-                                                        // discountPercentage: widget.discountPercentage,
+                                                        discountAmount: double.tryParse(discountAmount) ?? 0.0,
+                                                        discountPercentage: double.tryParse(discountPercentage) ?? 0.0,
                                                       );
                                                       Navigator.push<void>(
                                                         context,

@@ -12,13 +12,14 @@ class CustomCenterAppbarWidget extends StatefulWidget {
     required this.backIcon,
     required this.addIcon,
     required this.onTapAdd,
+    this.onBackPressed,
   }) : this.title = title ?? 'Title';
 
   final String title;
   final bool? backIcon;
   final bool? addIcon;
   final Future Function()? onTapAdd;
-
+  final Future Function()? onBackPressed;
   @override
   State<CustomCenterAppbarWidget> createState() =>
       _CustomCenterAppbarWidgetState();
@@ -76,7 +77,11 @@ class _CustomCenterAppbarWidgetState extends State<CustomCenterAppbarWidget> {
                           hoverColor: Colors.transparent,
                           highlightColor: Colors.transparent,
                           onTap: () async {
-                            context.safePop();
+                            if(widget.onBackPressed != null){
+                              await widget.onBackPressed?.call();
+                            }else{
+                              context.safePop();
+                            }
                           },
                           child: Container(
                             width: 40.0,

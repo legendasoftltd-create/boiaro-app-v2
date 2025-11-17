@@ -436,7 +436,7 @@ class FFAppState extends ChangeNotifier {
     prefs.setString('ff_unFavText', value);
   }
 
-  String _countryName = 'IN';
+  String _countryName = 'BD';
   String get countryName => _countryName;
   set countryName(String value) {
     _countryName = value;

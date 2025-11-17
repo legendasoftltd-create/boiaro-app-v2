@@ -330,19 +330,19 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                                                     r'''$.bookDetails._id''',
                                                                   ).toString(),
                                                                   price:
-                                                                      getJsonField(
+                                                                      (getJsonField(
                                                                     downloadDetailsListItem,
                                                                     r'''$.bookDetails.price''',
-                                                                  ).toString(),
-                                                                  discountAmount: getJsonField(
+                                                                  )?.toString() ?? '0'),
+                                                                  discountAmount: (getJsonField(
                                                                     downloadDetailsListItem,
                                                                     r'''$.bookDetails.discount_amount''',
-                                                                  ).toString(),
+                                                                  )?.toString() ?? '0'),
                                                                   discountPercentage:
-                                                                      getJsonField(
+                                                                      (getJsonField(
                                                                     downloadDetailsListItem,
                                                                     r'''$.bookDetails.discount_percentage''',
-                                                                  ).toString(),
+                                                                  )?.toString() ?? '0'),
                                                                   authorsName:
                                                                       getJsonField(
                                                                     downloadDetailsListItem,

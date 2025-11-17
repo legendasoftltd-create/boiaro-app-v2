@@ -245,6 +245,22 @@ class ApiManager {
           "${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value.toString())}")
       .join('&');
 
+  /// Converts params to a JSON-safe format for logging by replacing
+  /// FFUploadedFile objects with string representations
+  static Map<String, dynamic> _paramsForLogging(Map<String, dynamic> params) {
+    return params.map((key, value) {
+      if (value is FFUploadedFile) {
+        return MapEntry(key, 'FFUploadedFile(name: ${value.name}, size: ${value.bytes?.length ?? 0} bytes)');
+      } else if (value is List && value.isNotEmpty && value.first is FFUploadedFile) {
+        return MapEntry(key, 'List<FFUploadedFile>(${value.length} files)');
+      } else if (value is List && value.isEmpty) {
+        return MapEntry(key, 'List(empty)');
+      } else {
+        return MapEntry(key, value);
+      }
+    });
+  }
+
   static Future<ApiCallResponse> urlRequest(
     ApiCallType callType,
     String apiUrl,
@@ -498,7 +514,8 @@ class ApiManager {
     if (!apiUrl.startsWith('http')) {
       apiUrl = 'https://$apiUrl';
     }
-    log('Making API call: ${callOptions.callName} to $apiUrl Headers: ${json.encode(callOptions.headers)} Params: ${json.encode(callOptions.params)} Body: ${callOptions.body} Body:String ${body }',);
+    final safeParams = _paramsForLogging(callOptions.params);
+    log('Making API call: ${callOptions.callName} to $apiUrl Headers: ${json.encode(callOptions.headers)} Params: ${json.encode(safeParams)} Body: ${callOptions.body} Body:String ${body }',);
 
     // If we've already made this exact call before and caching is on,
     // return the cached result.

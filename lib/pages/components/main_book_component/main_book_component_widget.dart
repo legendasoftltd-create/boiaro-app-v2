@@ -198,10 +198,10 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   if(!widget.isPurchased)
-                                Text(double.parse(widget.price??'0')>0?"${valueOrDefault<String>(
+                                Text((double.tryParse(widget.price ?? '0') ?? 0) > 0 ? "${valueOrDefault<String>(
                               "৳ ${widget.price}",
                               '\$0.00',
-                            )}":"Free",
+                            )}" : "Free",
                                     textAlign: TextAlign.start,
                                     maxLines: 1,
                                     style: FlutterFlowTheme.of(context)
@@ -304,9 +304,9 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                                   widget.id ?? "",
                                                   widget.bookName ?? "",
                                                   widget.image ?? "",
-                                                  double.parse(widget.price ?? "0"),
-                                                  discountAmount: double.tryParse(widget.discountAmount??'0'),
-                                                  discountPercentage: double.tryParse(widget.discountPercentage??'0'),
+                                                  double.tryParse(widget.price ?? "0") ?? 0,
+                                                  discountAmount: double.tryParse(widget.discountAmount ?? '0'),
+                                                  discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
                                                 );
                                                 await actions.showCustomToastBottom('Quantity increased!');
                                               },
@@ -328,7 +328,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                         );
                                       } else {
                                         // Show add to cart button
-                                        return double.parse(widget.price??'0')>0? InkWell(
+                                        return (double.tryParse(widget.price ?? '0') ?? 0) > 0 ? InkWell(
                                           splashColor: Colors.transparent,
                                           focusColor: Colors.transparent,
                                           hoverColor: Colors.transparent,
@@ -338,9 +338,9 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                               widget.id ?? "",
                                               widget.bookName ?? "",
                                               widget.image ?? "",
-                                              double.parse(widget.price ?? "0"),
-                                              discountAmount: double.tryParse(widget.discountAmount??'0'),
-                                              discountPercentage: double.tryParse(widget.discountPercentage??'0'),
+                                              double.tryParse(widget.price ?? "0") ?? 0,
+                                              discountAmount: double.tryParse(widget.discountAmount ?? '0'),
+                                              discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
                                             );
                                             await actions.showCustomToastBottom('Added to cart!');
                                           },

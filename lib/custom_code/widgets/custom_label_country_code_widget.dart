@@ -36,7 +36,9 @@ class _CustomLabelCountryCodeWidgetState
     extends State<CustomLabelCountryCodeWidget> {
   @override
   Widget build(BuildContext context) {
+    final countryCode = widget.initialCountryCodeLocal ?? 'BD';
     return IntlPhoneField(
+      key: ValueKey('intl_phone_$countryCode'),
       showCountryFlag: false,
       autofocus: false,
       dropdownIcon: Icon(
@@ -123,7 +125,7 @@ class _CustomLabelCountryCodeWidgetState
             borderSide: BorderSide(
                 color: FlutterFlowTheme.of(context).primaryText, width: 1)),
       ),
-      initialCountryCode: widget.initialCountryCodeLocal!,
+      initialCountryCode: countryCode,
       validator: (num) {
         return "Please enter valid number.";
       },

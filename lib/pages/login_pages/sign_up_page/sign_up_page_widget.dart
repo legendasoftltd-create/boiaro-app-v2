@@ -477,9 +477,10 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                             padding: EdgeInsetsDirectional.fromSTEB(
                                 16.0, 0.0, 16.0, 0.0),
                             child: custom_widgets.CustomLabelCountryCodeWidget(
+                              key: ValueKey('signup_phone_BD'),
                               width: double.infinity,
                               height: 50.0,
-                              initialCountryCodeLocal: FFAppState().countryName,
+                              initialCountryCodeLocal: 'BD',
                             ),
                           ),
                           Padding(
