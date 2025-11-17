@@ -18,7 +18,6 @@ class SocialLoginRepository {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
       if (googleUser == null) {
-        // The user canceled the sign-in
         return null;
       }
 
@@ -43,20 +42,38 @@ class SocialLoginRepository {
 
   Future<ApiCallResponse?> signInWithFacebook() async {
     try {
-      final LoginResult result = await FacebookAuth.instance.login();
+      final LoginResult result = await FacebookAuth.instance.login(
+        permissions: ['email', 'public_profile'],
+      );
 
       if (result.status == LoginStatus.success) {
-        final userData = await FacebookAuth.instance.getUserData();
         final String? deviceId = FFAppState().deviceId;
         final String? fcmToken = FFAppState().tokenFcm;
 
+        final userData = await FacebookAuth.instance.getUserData();
+        final String? userId = userData['id'] as String?;
+
+        if (userId == null) {
+          debugPrint('Facebook login failed: Could not retrieve user ID');
+          return null;
+        }
+
+        final String? email = userData['email'] as String?;
+        final String? name = userData['name'] as String?;
+        final String? firstName = userData['first_name'] as String? ?? 
+                                  (name != null ? name.split(' ').first : '');
+        final String? lastName = userData['last_name'] as String? ?? 
+                                 (name != null && name.split(' ').length > 1 
+                                  ? name.split(' ').sublist(1).join(' ') 
+                                  : '');
+
         return EbookGroup.socialLoginCall.call(
-          email: userData['email'],
-          firstname: userData['name']?.split(' ').first ?? '',
-          lastname: userData['name']?.split(' ').last ?? '',
-          username: userData['name'] ?? '',
+          email: email ?? '',
+          firstname: firstName ?? '',
+          lastname: lastName ?? '',
+          username: name ?? '',
           provider: 'facebook',
-          providerId: userData['id'],
+          providerId: userId,
           registrationToken: fcmToken,
           deviceId: deviceId,
         );
