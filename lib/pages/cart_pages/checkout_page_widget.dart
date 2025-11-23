@@ -605,49 +605,50 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                         'SSLCommerz',
                         'Credit Card, Debit Card & Bank Transfer',
                         'assets/images/ssl_logo.png',
+                        
                       ),
         
                       SizedBox(height: 24.0),
         
                       // Digital Delivery Info
-                      Container(
-                        padding: EdgeInsets.all(16.0),
-                        decoration: BoxDecoration(
-                          color: FlutterFlowTheme.of(context).accent1.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12.0),
-                          border: Border.all(
-                            color: FlutterFlowTheme.of(context).accent1.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              color: FlutterFlowTheme.of(context).primary,
-                            ),
-                            SizedBox(width: 12.0),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Instant Digital Delivery',
-                                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Your ebook(s) will be delivered instantly to your profile after successful payment.',
-                                    style: FlutterFlowTheme.of(context).bodySmall.override(
-                                      color: FlutterFlowTheme.of(context).secondaryText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // Container(
+                      //   padding: EdgeInsets.all(16.0),
+                      //   decoration: BoxDecoration(
+                      //     color: FlutterFlowTheme.of(context).accent1.withOpacity(0.1),
+                      //     borderRadius: BorderRadius.circular(12.0),
+                      //     border: Border.all(
+                      //       color: FlutterFlowTheme.of(context).accent1.withOpacity(0.3),
+                      //     ),
+                      //   ),
+                      //   child: Row(
+                      //     children: [
+                      //       Icon(
+                      //         Icons.info_outline,
+                      //         color: FlutterFlowTheme.of(context).primary,
+                      //       ),
+                      //       SizedBox(width: 12.0),
+                      //       Expanded(
+                      //         child: Column(
+                      //           crossAxisAlignment: CrossAxisAlignment.start,
+                      //           children: [
+                      //             Text(
+                      //               'Instant Digital Delivery',
+                      //               style: FlutterFlowTheme.of(context).bodyMedium.override(
+                      //                 fontWeight: FontWeight.w600,
+                      //               ),
+                      //             ),
+                      //             Text(
+                      //               'Your ebook(s) will be delivered instantly to your profile after successful payment.',
+                      //               style: FlutterFlowTheme.of(context).bodySmall.override(
+                      //                 color: FlutterFlowTheme.of(context).secondaryText,
+                      //               ),
+                      //             ),
+                      //           ],
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),

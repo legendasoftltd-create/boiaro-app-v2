@@ -83,58 +83,63 @@ class _SplashPageWidgetState extends State<SplashPageWidget>
       child: Scaffold(
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-        body: SafeArea(
-          top: true,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              color: FlutterFlowTheme.of(context).primaryBackground,
-            ),
-            child: Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding:
-                        EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 12.0),
-                    child: Image.asset('assets/images/logo.png',
-                      width: 160.0,
-                      height: 120.0,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // Padding(
-                  //   padding:
-                  //       EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 12.0),
-                  //   child: Lottie.asset(
-                  //     'assets/jsons/Animation_-_1714827570006.json',
-                  //     width: 102.0,
-                  //     height: 102.0,
-                  //     fit: BoxFit.cover,
-                  //     animate: true,
-                  //   ),
-                  // ),
-                  // Text(
-                  //   'Boi Aro',
-                  //   textAlign: TextAlign.center,
-                  //   style: FlutterFlowTheme.of(context).bodyMedium.override(
-                  //         fontFamily: 'SF Pro Display',
-                  //         fontSize: 28.0,
-                  //         letterSpacing: 0.0,
-                  //         fontWeight: FontWeight.bold,
-                  //         lineHeight: 1.5,
-                  //       ),
-                  // ).animateOnPageLoad(
-                  //     animationsMap['textOnPageLoadAnimation']!),
-                ],
-              ),
-            ),
-          ),
+        body:Image.asset('assets/images/splash.jpg',
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.fill,
         ),
+        //  SafeArea(
+        //   top: true,
+        //   child: Container(
+        //     width: double.infinity,
+        //     height: double.infinity,
+        //     decoration: BoxDecoration(
+        //       color: FlutterFlowTheme.of(context).primaryBackground,
+        //     ),
+        //     child: Padding(
+        //       padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+        //       child: Column(
+        //         mainAxisSize: MainAxisSize.max,
+        //         mainAxisAlignment: MainAxisAlignment.center,
+        //         crossAxisAlignment: CrossAxisAlignment.center,
+        //         children: [
+        //           Padding(
+        //             padding:
+        //                 EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 12.0),
+        //             child: Image.asset('assets/images/logo.png',
+        //               width: 160.0,
+        //               height: 120.0,
+        //               fit: BoxFit.contain,
+        //             ),
+        //           ),
+        //           // Padding(
+        //           //   padding:
+        //           //       EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 12.0),
+        //           //   child: Lottie.asset(
+        //           //     'assets/jsons/Animation_-_1714827570006.json',
+        //           //     width: 102.0,
+        //           //     height: 102.0,
+        //           //     fit: BoxFit.cover,
+        //           //     animate: true,
+        //           //   ),
+        //           // ),
+        //           // Text(
+        //           //   'Boi Aro',
+        //           //   textAlign: TextAlign.center,
+        //           //   style: FlutterFlowTheme.of(context).bodyMedium.override(
+        //           //         fontFamily: 'SF Pro Display',
+        //           //         fontSize: 28.0,
+        //           //         letterSpacing: 0.0,
+        //           //         fontWeight: FontWeight.bold,
+        //           //         lineHeight: 1.5,
+        //           //       ),
+        //           // ).animateOnPageLoad(
+        //           //     animationsMap['textOnPageLoadAnimation']!),
+        //         ],
+        //       ),
+        //     ),
+        //   ),
+        // ),
       ),
     );
   }
