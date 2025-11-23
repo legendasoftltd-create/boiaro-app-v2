@@ -10,6 +10,10 @@ import 'package:flutter/material.dart';
 
 class SubCategoriesScreenModel
     extends FlutterFlowModel<SubCategoriesScreenWidget> {
+  ///  Local state fields for this page.
+
+  List<String> purchasedBookIds = [];
+
   ///  State fields for stateful widgets in this page.
 
   // Model for CustomCenterAppbar component.

@@ -3,7 +3,10 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/category_component/category_component_widget.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
+import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/empty_components/no_categories_yet/no_categories_yet_widget.dart';
+import '/custom_code/actions/index.dart' as actions;
+import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -34,13 +37,67 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
   late SubCategoriesScreenModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  String? selectedId;
+  bool isAllSelected = true;
+  late Completer<ApiCallResponse> _booksCompleter;
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => SubCategoriesScreenModel());
+    selectedId = widget.id; // Initialize with category id for "All"
+    _booksCompleter = Completer<ApiCallResponse>()..complete(
+      EbookGroup.getbookbycategoryApiCall.call(categoryId: widget.id)
+    );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (FFAppState().isLogin) {
+        await _loadPurchasedBooks();
+      }
+      safeSetState(() {});
+    });
+  }
+
+  Future<void> _loadPurchasedBooks() async {
+    try {
+      final response = await EbookGroup.userBookPurchaseRecordsApiCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      );
+
+      if (EbookGroup.userBookPurchaseRecordsApiCall.success(
+            response.jsonBody ?? '',
+          ) ==
+          1) {
+        final bookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
+          response.jsonBody ?? '',
+        );
+        _model.purchasedBookIds = bookIds ?? [];
+        safeSetState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error loading purchased books: $e');
+    }
+  }
+
+  void _selectAll() {
+    setState(() {
+      isAllSelected = true;
+      selectedId = widget.id;
+      _booksCompleter = Completer<ApiCallResponse>()..complete(
+        EbookGroup.getbookbycategoryApiCall.call(categoryId: widget.id)
+      );
+    });
+  }
+
+  void _selectSubcategory(String id, String name) {
+    setState(() {
+      isAllSelected = false;
+      selectedId = id;
+      _booksCompleter = Completer<ApiCallResponse>()..complete(
+        EbookGroup.getbookbysubcategoryApiCall.call(subcategoryId: id)
+      );
+    });
   }
 
   @override
@@ -92,7 +149,6 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                                   )))
                             .future,
                         builder: (context, snapshot) {
-                          // Customize what your widget looks like when it's loading.
                           if (!snapshot.hasData) {
                             return Center(
                               child: SizedBox(
@@ -106,205 +162,263 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                               ),
                             );
                           }
-                          final containerGetsubcategoriesbycategoryApiResponse =
-                              snapshot.data!;
+                          final subcategoriesResponse = snapshot.data!;
 
-                          return Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(),
-                            child: Builder(
-                              builder: (context) {
-                                if (EbookGroup.getsubcategoriesbycategoryApiCall
-                                        .success(
-                                      containerGetsubcategoriesbycategoryApiResponse
-                                          .jsonBody,
-                                    ) ==
-                                    2) {
-                                  return Align(
-                                    alignment: AlignmentDirectional(0.0, 0.0),
-                                    child: Padding(
-                                      padding: EdgeInsetsDirectional.fromSTEB(
-                                          16.0, 0.0, 16.0, 0.0),
-                                      child: Text(
-                                        valueOrDefault<String>(
-                                          EbookGroup
-                                              .getsubcategoriesbycategoryApiCall
-                                              .message(
-                                            containerGetsubcategoriesbycategoryApiResponse
-                                                .jsonBody,
+                          final subcategoryList = EbookGroup.getsubcategoriesbycategoryApiCall
+                              .subcategoryDetailsList(subcategoriesResponse.jsonBody)
+                              ?.toList();
+
+                          final hasSubcategories = subcategoryList != null && subcategoryList.isNotEmpty;
+
+                          return Column(
+                            children: [
+                              // Only show horizontal categories list if subcategories exist
+                              if (hasSubcategories) ...[
+                                Container(
+                                  height: 40.0,
+                                  child: ListView(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                                    children: [
+                                      // "All" button
+                                      GestureDetector(
+                                        onTap: _selectAll,
+                                        child: Container(
+                                          margin: EdgeInsets.only(right: 10.0),
+                                          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                          decoration: BoxDecoration(
+                                            color: isAllSelected
+                                                ? FlutterFlowTheme.of(context).primary
+                                                : FlutterFlowTheme.of(context).gray100,
+                                            borderRadius: BorderRadius.circular(20.0),
                                           ),
-                                          'Message',
+                                          child: Center(
+                                            child: Text(
+                                              'All',
+                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                color: isAllSelected
+                                                    ? FlutterFlowTheme.of(context).secondaryBackground
+                                                    : FlutterFlowTheme.of(context).primaryText,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                        textAlign: TextAlign.center,
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 18.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.w600,
-                                              lineHeight: 1.5,
-                                            ),
                                       ),
-                                    ),
-                                  );
-                                } else {
-                                  return Builder(
-                                    builder: (context) {
-                                      if (EbookGroup
-                                                  .getsubcategoriesbycategoryApiCall
-                                                  .subcategoryDetailsList(
-                                                containerGetsubcategoriesbycategoryApiResponse
-                                                    .jsonBody,
-                                              ) !=
-                                              null &&
-                                          (EbookGroup
-                                                  .getsubcategoriesbycategoryApiCall
-                                                  .subcategoryDetailsList(
-                                            containerGetsubcategoriesbycategoryApiResponse
-                                                .jsonBody,
-                                          ))!
-                                              .isNotEmpty) {
-                                        return InkWell(
-                                          splashColor: Colors.transparent,
-                                          focusColor: Colors.transparent,
-                                          hoverColor: Colors.transparent,
-                                          highlightColor: Colors.transparent,
-                                          onTap: () async {
-                                            safeSetState(() => _model
-                                                .apiRequestCompleter = null);
-                                            await _model
-                                                .waitForApiRequestCompleted();
-                                          },
-                                          child: ListView(
-                                            padding: EdgeInsets.fromLTRB(
-                                              0,
-                                              16.0,
-                                              0,
-                                              16.0,
+                                      // Subcategories
+                                      ...subcategoryList.map((subcategory) => GestureDetector(
+                                            onTap: () => _selectSubcategory(
+                                              getJsonField(subcategory, r'''$._id''').toString(),
+                                              getJsonField(subcategory, r'''$.name''').toString(),
                                             ),
-                                            scrollDirection: Axis.vertical,
-                                            children: [
-                                              Padding(
-                                                padding: EdgeInsetsDirectional
-                                                    .fromSTEB(
-                                                        16.0, 0.0, 16.0, 0.0),
-                                                child: Builder(
-                                                  builder: (context) {
-                                                    final subcategoryDetailsList =
-                                                        EbookGroup
-                                                                .getsubcategoriesbycategoryApiCall
-                                                                .subcategoryDetailsList(
-                                                                  containerGetsubcategoriesbycategoryApiResponse
-                                                                      .jsonBody,
-                                                                )
-                                                                ?.toList() ??
-                                                            [];
-
-                                                    return Wrap(
-                                                      spacing: 18.0,
-                                                      runSpacing: 16.0,
-                                                      alignment:
-                                                          WrapAlignment.start,
-                                                      crossAxisAlignment:
-                                                          WrapCrossAlignment
-                                                              .start,
-                                                      direction:
-                                                          Axis.horizontal,
-                                                      runAlignment:
-                                                          WrapAlignment.start,
-                                                      verticalDirection:
-                                                          VerticalDirection
-                                                              .down,
-                                                      clipBehavior: Clip.none,
-                                                      children: List.generate(
-                                                          subcategoryDetailsList
-                                                              .length,
-                                                          (subcategoryDetailsListIndex) {
-                                                        final subcategoryDetailsListItem =
-                                                            subcategoryDetailsList[
-                                                                subcategoryDetailsListIndex];
-                                                        return wrapWithModel(
-                                                          model: _model
-                                                              .categoryComponentModels
-                                                              .getModel(
-                                                            getJsonField(
-                                                              subcategoryDetailsListItem,
-                                                              r'''$.name''',
-                                                            ).toString(),
-                                                            subcategoryDetailsListIndex,
-                                                          ),
-                                                          updateCallback: () =>
-                                                              safeSetState(
-                                                                  () {}),
-                                                          child:
-                                                              CategoryComponentWidget(
-                                                            key: Key(
-                                                              'Keymy6_${getJsonField(
-                                                                subcategoryDetailsListItem,
-                                                                r'''$.name''',
-                                                              ).toString()}',
-                                                            ),
-                                                            image:
-                                                                '${FFAppConstants.imageUrl}${getJsonField(
-                                                              subcategoryDetailsListItem,
-                                                              r'''$.image''',
-                                                            ).toString()}',
-                                                            name: getJsonField(
-                                                              subcategoryDetailsListItem,
-                                                              r'''$.name''',
-                                                            ).toString(),
-                                                            onMainTap:
-                                                                () async {
-                                                              context.pushNamed(
-                                                                HistoryDetailsPageWidget
-                                                                    .routeName,
-                                                                queryParameters:
-                                                                    {
-                                                                  'name':
-                                                                      serializeParam(
-                                                                    getJsonField(
-                                                                      subcategoryDetailsListItem,
-                                                                      r'''$.name''',
-                                                                    ).toString(),
-                                                                    ParamType
-                                                                        .String,
-                                                                  ),
-                                                                  'id':
-                                                                      serializeParam(
-                                                                    getJsonField(
-                                                                      subcategoryDetailsListItem,
-                                                                      r'''$._id''',
-                                                                    ).toString(),
-                                                                    ParamType
-                                                                        .String,
-                                                                  ),
-                                                                }.withoutNulls,
-                                                              );
-                                                            },
-                                                          ),
-                                                        );
-                                                      }),
-                                                    );
-                                                  },
+                                            child: Container(
+                                              margin: EdgeInsets.only(right: 10.0),
+                                              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                              decoration: BoxDecoration(
+                                                color: !isAllSelected &&
+                                                        selectedId == getJsonField(subcategory, r'''$._id''').toString()
+                                                    ? FlutterFlowTheme.of(context).primary
+                                                    : FlutterFlowTheme.of(context).gray100,
+                                                borderRadius: BorderRadius.circular(20.0),
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  getJsonField(subcategory, r'''$.name''').toString(),
+                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                    color: !isAllSelected &&
+                                                            selectedId == getJsonField(subcategory, r'''$._id''').toString()
+                                                        ? FlutterFlowTheme.of(context).secondaryBackground
+                                                        : FlutterFlowTheme.of(context).primaryText,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                        );
-                                      } else {
-                                        return wrapWithModel(
-                                          model: _model.noCategoriesYetModel,
-                                          updateCallback: () =>
-                                              safeSetState(() {}),
-                                          child: NoCategoriesYetWidget(),
-                                        );
-                                      }
-                                    },
-                                  );
-                                }
-                              },
-                            ),
+                                            ),
+                                          ))
+                                          .toList(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              // Books section with favourites
+                              Expanded(
+                                child: FutureBuilder<ApiCallResponse>(
+                                  future: FFAppState()
+                                      .getFavouriteBookCache(
+                                    requestFn: () => EbookGroup.getFavouriteBookCall.call(
+                                      userId: FFAppState().userId,
+                                      token: FFAppState().token,
+                                    ),
+                                  ),
+                                  builder: (context, favouritesSnapshot) {
+                                    return FutureBuilder<ApiCallResponse>(
+                                      future: _booksCompleter.future,
+                                      builder: (context, booksSnapshot) {
+                                        if (!booksSnapshot.hasData) {
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                FlutterFlowTheme.of(context).primary,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        final booksResponse = booksSnapshot.data!;
+
+                                        final success = isAllSelected
+                                            ? EbookGroup.getbookbycategoryApiCall.success(booksResponse.jsonBody)
+                                            : EbookGroup.getbookbysubcategoryApiCall.success(booksResponse.jsonBody);
+
+                                        if (success == 2) {
+                                          return Align(
+                                            alignment: AlignmentDirectional(0.0, 0.0),
+                                            child: Padding(
+                                              padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                              child: Text(
+                                                valueOrDefault<String>(
+                                                  isAllSelected
+                                                      ? EbookGroup.getbookbycategoryApiCall.message(booksResponse.jsonBody)
+                                                      : EbookGroup.getbookbysubcategoryApiCall.message(booksResponse.jsonBody),
+                                                  'Message',
+                                                ),
+                                                textAlign: TextAlign.center,
+                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontSize: 18.0,
+                                                  letterSpacing: 0.0,
+                                                  fontWeight: FontWeight.w600,
+                                                  lineHeight: 1.5,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          final bookDetailsList = isAllSelected
+                                              ? EbookGroup.getbookbycategoryApiCall.bookDetailsList(booksResponse.jsonBody)?.toList()
+                                              : EbookGroup.getbookbysubcategoryApiCall.bookDetailsList(booksResponse.jsonBody)?.toList();
+
+                                          if (bookDetailsList == null || bookDetailsList.isEmpty) {
+                                            return Center(child: NoCategoriesYetWidget());
+                                          }
+
+                                          return RefreshIndicator(
+                                            color: FlutterFlowTheme.of(context).primary,
+                                            onRefresh: () async {
+                                              safeSetState(() {
+                                                FFAppState().clearGetFavouriteBookCacheCache();
+                                              });
+                                              await FFAppState().getFavouriteBookCache(
+                                                requestFn: () => EbookGroup.getFavouriteBookCall.call(
+                                                  userId: FFAppState().userId,
+                                                  token: FFAppState().token,
+                                                ),
+                                              );
+                                              if (isAllSelected) {
+                                                _selectAll();
+                                              } else {
+                                                _selectSubcategory(selectedId!, 'Reload');
+                                              }
+                                            },
+                                            child: ListView(
+                                              padding: EdgeInsets.fromLTRB(0, 16.0, 0, 16.0),
+                                              children: [
+                                                Padding(
+                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                                  child: Wrap(
+                                                    spacing: 16.0,
+                                                    runSpacing: 16.0,
+                                                    alignment: WrapAlignment.start,
+                                                    crossAxisAlignment: WrapCrossAlignment.start,
+                                                    direction: Axis.horizontal,
+                                                    runAlignment: WrapAlignment.start,
+                                                    verticalDirection: VerticalDirection.down,
+                                                    clipBehavior: Clip.none,
+                                                    children: List.generate(
+                                                      bookDetailsList.length,
+                                                      (bookIndex) {
+                                                        final bookItem = bookDetailsList[bookIndex];
+                                                        return MainBookComponentWidget(
+                                                          key: Key('Key_${getJsonField(bookItem, r'''$._id''').toString()}'),
+                                                          image: '${isAllSelected ? FFAppConstants.bookImagesUrl : FFAppConstants.imageUrl}${getJsonField(bookItem, r'''$.image''').toString()}',
+                                                          price: '${getJsonField(bookItem, r'''$.price''').toString()}',
+                                                          discountAmount: getJsonField(bookItem, r'''$.discount_amount''').toString(),
+                                                          discountPercentage: getJsonField(bookItem, r'''$.discount_percentage''').toString(),
+                                                          id: '${getJsonField(bookItem, r'''$._id''').toString()}',
+                                                          bookName: getJsonField(bookItem, r'''$.name''').toString(),
+                                                          authorsName: getJsonField(bookItem, r'''$.author.name''').toString(),
+                                                          isFav: functions.checkFavOrNot(
+                                                            EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(
+                                                              favouritesSnapshot.data?.jsonBody,
+                                                            )?.toList(),
+                                                            getJsonField(bookItem, r'''$._id''').toString(),
+                                                          ) == true,
+                                                          indicator: false,
+                                                          isFavAction: () async {
+                                                            if (FFAppState().isLogin == true) {
+                                                              if (functions.checkFavOrNot(
+                                                                EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(
+                                                                  favouritesSnapshot.data?.jsonBody,
+                                                                )?.toList(),
+                                                                getJsonField(bookItem, r'''$._id''').toString(),
+                                                              ) == true) {
+                                                                await EbookGroup.removeFavouritebookCall.call(
+                                                                  userId: FFAppState().userId,
+                                                                  token: FFAppState().token,
+                                                                  bookId: getJsonField(bookItem, r'''$._id''').toString(),
+                                                                );
+                                                                safeSetState(() {
+                                                                  FFAppState().clearGetFavouriteBookCacheCache();
+                                                                });
+                                                                await actions.showCustomToastBottom(
+                                                                  FFAppState().unFavText,
+                                                                );
+                                                              } else {
+                                                                await EbookGroup.addFavouriteBookApiCall.call(
+                                                                  userId: FFAppState().userId,
+                                                                  token: FFAppState().token,
+                                                                  bookId: getJsonField(bookItem, r'''$._id''').toString(),
+                                                                );
+                                                                safeSetState(() {
+                                                                  FFAppState().clearGetFavouriteBookCacheCache();
+                                                                });
+                                                                await actions.showCustomToastBottom(
+                                                                  FFAppState().favText,
+                                                                );
+                                                              }
+                                                            } else {
+                                                              FFAppState().favChange = true;
+                                                              FFAppState().bookId = getJsonField(bookItem, r'''$._id''').toString();
+                                                              FFAppState().update(() {});
+                                                              context.pushNamed(SignInPageWidget.routeName);
+                                                            }
+                                                          },
+                                                          isPurchased: _model.purchasedBookIds.contains(getJsonField(bookItem, r'''$._id''').toString()),
+                                                          isMainTap: () async {
+                                                            context.pushNamed(
+                                                              BookDetailspageWidget.routeName,
+                                                              queryParameters: {
+                                                                'name': serializeParam(getJsonField(bookItem, r'''$.name''').toString(), ParamType.String),
+                                                                'price': serializeParam(getJsonField(bookItem, r'''$.price''').toString(), ParamType.String),
+                                                                'image': serializeParam('${isAllSelected ? FFAppConstants.bookImagesUrl : FFAppConstants.imageUrl}${getJsonField(bookItem, r'''$.image''').toString()}', ParamType.String),
+                                                                'id': serializeParam(getJsonField(bookItem, r'''$._id''').toString(), ParamType.String),
+                                                              }.withoutNulls,
+                                                            );
+                                                          },
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
                           );
                         },
                       );
