@@ -339,7 +339,7 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                                                         final bookItem = bookDetailsList[bookIndex];
                                                         return MainBookComponentWidget(
                                                           key: Key('Key_${getJsonField(bookItem, r'''$._id''').toString()}'),
-                                                          image: '${isAllSelected ? FFAppConstants.bookImagesUrl : FFAppConstants.imageUrl}${getJsonField(bookItem, r'''$.image''').toString()}',
+                                                          image: '${isAllSelected ? FFAppConstants.bookImagesUrl : FFAppConstants.bookImagesUrl}${getJsonField(bookItem, r'''$.image''').toString()}',
                                                           price: '${getJsonField(bookItem, r'''$.price''').toString()}',
                                                           discountAmount: getJsonField(bookItem, r'''$.discount_amount''').toString(),
                                                           discountPercentage: getJsonField(bookItem, r'''$.discount_percentage''').toString(),
