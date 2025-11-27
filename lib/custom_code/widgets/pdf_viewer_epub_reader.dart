@@ -83,7 +83,7 @@ class EpubReaderWidget {
     return htmlContent;
   }
 
-  /// Load EPUB chapter
+  /// Load EPUB chapter with smooth animation
   static void loadEpubChapter(
     PdfViewerProvider provider,
     int index,
@@ -92,32 +92,54 @@ class EpubReaderWidget {
   ) {
     final chapters = provider.epubChapters;
     if (index >= 0 && index < chapters.length) {
-      provider.setCurrentEpubChapterIndex(index);
+      // Set loading state
+      provider.setChangingChapter(true);
 
-      final chapter = chapters[index];
-      var content = parseHtmlContent(chapter.HtmlContent);
+      // Add a small delay to show loading indicator
+      Future.delayed(const Duration(milliseconds: 100), () {
+        provider.setCurrentEpubChapterIndex(index);
 
-      // Apply highlights
-      for (final highlight in provider.highlights) {
-        content = content.replaceAll(
-          highlight,
-          '<mark style="background-color: yellow;">$highlight</mark>',
-        );
-      }
-      provider.setCurrentEpubContent(content);
-      currentEpubContentNotifier.value = content;
+        final chapter = chapters[index];
+        var content = parseHtmlContent(chapter.HtmlContent);
 
-      // Update total pages for EPUB (based on chapters)
-      FFAppState().totalPages = chapters.length;
-      FFAppState().update(() {
-        FFAppState().homePageTotalPdfPageIndex = chapters.length;
-        FFAppState().homePageCurrentPdfIndex = provider.currentPage;
+        // Apply highlights
+        for (final highlight in provider.highlights) {
+          content = content.replaceAll(
+            highlight,
+            '<mark style="background-color: yellow;">$highlight</mark>',
+          );
+        }
+        provider.setCurrentEpubContent(content);
+        
+        // Update total pages for EPUB (based on chapters)
+        FFAppState().totalPages = chapters.length;
+        FFAppState().update(() {
+          FFAppState().homePageTotalPdfPageIndex = chapters.length;
+          FFAppState().homePageCurrentPdfIndex = provider.currentPage;
+        });
+
+        // Animate content change with fade transition
+        // First fade out, then update content, then fade in
+        currentEpubContentNotifier.value = '';
+        
+        Future.delayed(const Duration(milliseconds: 150), () {
+          currentEpubContentNotifier.value = content;
+          
+          // Scroll to top when changing chapters with animation
+          if (epubScrollController.hasClients) {
+            epubScrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+          
+          // Reset loading state after animation
+          Future.delayed(const Duration(milliseconds: 300), () {
+            provider.setChangingChapter(false);
+          });
+        });
       });
-
-      // Scroll to top when changing chapters
-      if (epubScrollController.hasClients) {
-        epubScrollController.jumpTo(0);
-      }
     }
   }
 
@@ -235,168 +257,12 @@ class EpubReaderWidget {
                   return false;
                 }
 
-                // Get viewport size for dynamic thresholds
-                final viewportHeight = metrics.viewportDimension;
-                final edgeThreshold = viewportHeight * 0.1; // 10% of viewport height
-                final scrollDirectionThreshold = viewportHeight * 0.05; // 5% for direction detection
-                final edgeScrollThreshold = 1.0; // Smaller threshold when at edges
-
+                // Update last scroll position for tracking
                 final currentPos = metrics.pixels;
-                final previousPos = p.lastScrollPosition;
-                final scrollDelta = currentPos - previousPos;
-
-                // Check if at edges first (before updating position)
-                final isAtBottom = currentPos >= metrics.maxScrollExtent - edgeThreshold;
-                final isAtTop = currentPos <= metrics.minScrollExtent + edgeThreshold;
-
-                // Update last scroll position
                 p.setLastScrollPosition(currentPos);
 
-                // Determine scroll direction based on actual movement
-                // Use smaller threshold when at edges to catch edge cases
-                final effectiveThreshold = (isAtBottom || isAtTop) 
-                    ? edgeScrollThreshold 
-                    : scrollDirectionThreshold;
-                
-                final isScrollingDown = scrollDelta > effectiveThreshold;
-                final isScrollingUp = scrollDelta < -effectiveThreshold;
-                
-                // Also check if user is attempting to scroll at edges (even if delta is small)
-                // This handles cases where user is at edge and tries to scroll further
-                final attemptingScrollDown = isAtBottom && scrollDelta >= 0 && !isScrollingUp;
-                final attemptingScrollUp = isAtTop && scrollDelta <= 0 && !isScrollingDown;
-
-                // Handle edge detection during active scrolling (ScrollUpdateNotification)
-                if (notification is ScrollUpdateNotification) {
-                  // User scrolled down and reached bottom - go to NEXT chapter
-                  if ((isScrollingDown || attemptingScrollDown) && 
-                      isAtBottom &&
-                      p.currentEpubChapterIndex < p.epubChapters.length - 1) {
-                    p.setChangingChapter(true);
-                    loadEpubChapter(p.currentEpubChapterIndex + 1);
-
-                    // After chapter loads, position at TOP
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        if (epubScrollController.hasClients) {
-                          epubScrollController.jumpTo(1);
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            if (context.mounted) {
-                              p.setChangingChapter(false);
-                            }
-                          });
-                        } else {
-                          // Fallback: reset flag if controller not ready
-                          Future.delayed(const Duration(milliseconds: 500), () {
-                            if (context.mounted) {
-                              p.setChangingChapter(false);
-                            }
-                          });
-                        }
-                      });
-                    });
-                    return true;
-                  }
-
-                  // User scrolled up and reached top - go to PREVIOUS chapter
-                  if ((isScrollingUp || attemptingScrollUp) && 
-                      isAtTop &&
-                      p.currentEpubChapterIndex > 0) {
-                    p.setChangingChapter(true);
-                    loadEpubChapter(p.currentEpubChapterIndex - 1);
-
-                    // After chapter loads, position at BOTTOM
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        if (epubScrollController.hasClients) {
-                          final maxScroll = epubScrollController.position.maxScrollExtent;
-                          if (maxScroll > 0) {
-                            epubScrollController.jumpTo(maxScroll - 1);
-                          }
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            if (context.mounted) {
-                              p.setChangingChapter(false);
-                            }
-                          });
-                        } else {
-                          // Fallback: reset flag if controller not ready
-                          Future.delayed(const Duration(milliseconds: 500), () {
-                            if (context.mounted) {
-                              p.setChangingChapter(false);
-                            }
-                          });
-                        }
-                      });
-                    });
-                    return true;
-                  }
-                }
-
-                // Handle edge detection on scroll end (ScrollEndNotification) as fallback
-                if (notification is ScrollEndNotification) {
-                  // User scrolled down and reached bottom - go to NEXT chapter
-                  if ((isScrollingDown || attemptingScrollDown) && 
-                      isAtBottom &&
-                      p.currentEpubChapterIndex < p.epubChapters.length - 1) {
-                    p.setChangingChapter(true);
-                    loadEpubChapter(p.currentEpubChapterIndex + 1);
-
-                    // After chapter loads, position at TOP
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        if (epubScrollController.hasClients) {
-                          epubScrollController.jumpTo(1);
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            if (context.mounted) {
-                              p.setChangingChapter(false);
-                            }
-                          });
-                        } else {
-                          // Fallback: reset flag if controller not ready
-                          Future.delayed(const Duration(milliseconds: 500), () {
-                            if (context.mounted) {
-                              p.setChangingChapter(false);
-                            }
-                          });
-                        }
-                      });
-                    });
-                    return true;
-                  }
-
-                  // User scrolled up and reached top - go to PREVIOUS chapter
-                  if ((isScrollingUp || attemptingScrollUp) && 
-                      isAtTop &&
-                      p.currentEpubChapterIndex > 0) {
-                    p.setChangingChapter(true);
-                    loadEpubChapter(p.currentEpubChapterIndex - 1);
-
-                    // After chapter loads, position at BOTTOM
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        if (epubScrollController.hasClients) {
-                          final maxScroll = epubScrollController.position.maxScrollExtent;
-                          if (maxScroll > 0) {
-                            epubScrollController.jumpTo(maxScroll - 1);
-                          }
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            if (context.mounted) {
-                              p.setChangingChapter(false);
-                            }
-                          });
-                        } else {
-                          // Fallback: reset flag if controller not ready
-                          Future.delayed(const Duration(milliseconds: 500), () {
-                            if (context.mounted) {
-                              p.setChangingChapter(false);
-                            }
-                          });
-                        }
-                      });
-                    });
-                    return true;
-                  }
-                }
+                // Automatic chapter loading on scroll disabled
+                // Users can manually navigate chapters using navigation controls
                 return false;
               },
               child: SingleChildScrollView(
@@ -405,22 +271,32 @@ class EpubReaderWidget {
                 child: ValueListenableBuilder<String>(
                   valueListenable: currentEpubContentNotifier,
                   builder: (context, content, child) {
-                    return Selector<PdfViewerProvider, (double, double, AppThemeMode)>(
-                      selector: (_, p) => (p.epubFontSize, p.epubLineHeight, p.currentThemeMode),
-                      builder: (context, settings, child) {
-                        final fontSize = settings.$1;
-                        final lineHeight = settings.$2;
-                        final themeMode = settings.$3;
-
-                        return HtmlParserWidget(
-                          htmlContent: content,
-                          fontSize: fontSize,
-                          lineHeight: lineHeight,
-                          themeMode: themeMode,
-                          epubBook: epubBook,
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: child,
                         );
                       },
-                      child: child,
+                      child: Selector<PdfViewerProvider, (double, double, AppThemeMode)>(
+                        key: ValueKey<String>(content),
+                        selector: (_, p) => (p.epubFontSize, p.epubLineHeight, p.currentThemeMode),
+                        builder: (context, settings, child) {
+                          final fontSize = settings.$1;
+                          final lineHeight = settings.$2;
+                          final themeMode = settings.$3;
+
+                          return HtmlParserWidget(
+                            htmlContent: content,
+                            fontSize: fontSize,
+                            lineHeight: lineHeight,
+                            themeMode: themeMode,
+                            epubBook: epubBook,
+                          );
+                        },
+                        child: child,
+                      ),
                     );
                   },
                 ),

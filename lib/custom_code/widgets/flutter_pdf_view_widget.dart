@@ -2017,7 +2017,23 @@ Widget _buildEpubReader() {
                                             );
                                           }
                                         : null,
-                                    icon: const Icon(Icons.chevron_left, size: 16),
+                                    icon: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: isChangingChapter
+                                          ? const SizedBox(
+                                              key: ValueKey('loading-icon-prev'),
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.chevron_left,
+                                              size: 16,
+                                              key: ValueKey('icon-prev'),
+                                            ),
+                                    ),
                                     label: const Text(
                                       'Previous',
                                       style: TextStyle(fontSize: 12),
@@ -2069,7 +2085,23 @@ Widget _buildEpubReader() {
                                             );
                                           }
                                         : null,
-                                    icon: const Icon(Icons.chevron_right, size: 16),
+                                    icon: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: isChangingChapter
+                                          ? const SizedBox(
+                                              key: ValueKey('loading-icon'),
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.chevron_right,
+                                              size: 16,
+                                              key: ValueKey('icon'),
+                                            ),
+                                    ),
                                     label: const Text(
                                       'Next',
                                       style: TextStyle(fontSize: 12),
