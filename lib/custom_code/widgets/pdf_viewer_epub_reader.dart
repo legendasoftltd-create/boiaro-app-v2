@@ -6,15 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:epubx/epubx.dart' as epubx;
 import 'package:http/http.dart' as http;
-import 'package:flutter_html/flutter_html.dart';
-import 'package:flutter_html_svg/flutter_html_svg.dart';
-import 'package:flutter_html_table/flutter_html_table.dart';
 import '/backend/backend.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/providers/pdf_viewer_provider.dart';
-import 'package:a_i_ebook_app/custom_code/extensions/epub_image_extension.dart';
 import 'package:a_i_ebook_app/custom_code/extensions/custom_text_selection_controls.dart';
+import 'package:a_i_ebook_app/custom_code/widgets/html_parser_widget.dart';
 
 /// EPUB Reader Widget and related methods
 class EpubReaderWidget {
@@ -415,119 +412,12 @@ class EpubReaderWidget {
                         final lineHeight = settings.$2;
                         final themeMode = settings.$3;
 
-                        Color bgColor;
-                        Color txtColor;
-                        switch (themeMode) {
-                          case AppThemeMode.light:
-                            bgColor = Colors.white;
-                            txtColor = Colors.black;
-                            break;
-                          case AppThemeMode.dark:
-                            bgColor = Colors.black;
-                            txtColor = Colors.white;
-                            break;
-                          case AppThemeMode.sepia:
-                            bgColor = const Color(0xFFF5DEB3);
-                            txtColor = Colors.black;
-                            break;
-                        }
-
-                        return Html(
-                          data: content,
-                          style: {
-                            "body": Style(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: FontSize(fontSize),
-                              letterSpacing: 0.3,
-                              lineHeight: LineHeight.em(lineHeight),
-                              textAlign: TextAlign.justify,
-                              color: txtColor,
-                              backgroundColor: bgColor,
-                            ),
-                            "p": Style(
-                              margin: Margins.zero,
-                              padding: HtmlPaddings.zero,
-                              color: txtColor,
-                            ),
-                            "h1": Style(
-                              fontSize: FontSize(fontSize * 1.8),
-                              fontWeight: FontWeight.bold,
-                              color: txtColor,
-                            ),
-                            "h2": Style(
-                              fontSize: FontSize(fontSize * 1.6),
-                              fontWeight: FontWeight.bold,
-                              color: txtColor,
-                            ),
-                            "h3": Style(
-                              fontSize: FontSize(fontSize * 1.4),
-                              fontWeight: FontWeight.bold,
-                              color: txtColor,
-                            ),
-                            "h4": Style(
-                              fontSize: FontSize(fontSize * 1.2),
-                              fontWeight: FontWeight.bold,
-                              color: txtColor,
-                            ),
-                            "h5": Style(
-                              fontSize: FontSize(fontSize * 1.1),
-                              fontWeight: FontWeight.bold,
-                              color: txtColor,
-                            ),
-                            "h6": Style(
-                              fontSize: FontSize(fontSize),
-                              fontWeight: FontWeight.bold,
-                              color: txtColor,
-                            ),
-                            "strong": Style(
-                              fontWeight: FontWeight.bold,
-                              color: txtColor,
-                            ),
-                            "em": Style(
-                              fontStyle: FontStyle.italic,
-                              color: txtColor,
-                            ),
-                            "ul": Style(
-                              listStyleType: ListStyleType.disc,
-                              margin: Margins.only(left: 20),
-                              color: txtColor,
-                            ),
-                            "ol": Style(
-                              listStyleType: ListStyleType.decimal,
-                              margin: Margins.only(left: 20),
-                              color: txtColor,
-                            ),
-                            "li": Style(
-                              margin: Margins.only(bottom: 8),
-                              color: txtColor,
-                            ),
-                            "table": Style(
-                              backgroundColor: FlutterFlowTheme.of(context)
-                                  .alternate
-                                  .withOpacity(0.1),
-                              border: Border.all(
-                                  color: FlutterFlowTheme.of(context).alternate),
-                              width: Width.auto(),
-                              color: txtColor,
-                            ),
-                            "th": Style(
-                              padding: HtmlPaddings.all(8),
-                              backgroundColor: FlutterFlowTheme.of(context).alternate,
-                              fontWeight: FontWeight.bold,
-                              color: txtColor,
-                            ),
-                            "td": Style(
-                              padding: HtmlPaddings.all(8),
-                              border: Border.all(
-                                  color: FlutterFlowTheme.of(context).alternate),
-                              color: txtColor,
-                            ),
-                          },
-                          extensions: [
-                            EpubImageExtension(epubBook),
-                            TableHtmlExtension(),
-                            SvgHtmlExtension(),
-                          ],
+                        return HtmlParserWidget(
+                          htmlContent: content,
+                          fontSize: fontSize,
+                          lineHeight: lineHeight,
+                          themeMode: themeMode,
+                          epubBook: epubBook,
                         );
                       },
                       child: child,
