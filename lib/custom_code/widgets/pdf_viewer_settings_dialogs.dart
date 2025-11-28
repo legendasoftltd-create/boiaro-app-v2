@@ -604,7 +604,7 @@ class PdfViewerSettingsDialogs {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground.withValues(alpha:0.9),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
