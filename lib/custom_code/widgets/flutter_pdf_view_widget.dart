@@ -17,6 +17,7 @@ import 'pdf_viewer_helpers.dart';
 import 'pdf_viewer_epub_reader.dart';
 import 'pdf_viewer_text_operations.dart';
 import 'pdf_viewer_pdf_operations.dart';
+import 'pdf_viewer_epub_search.dart';
 import 'pdf_viewer_settings_dialogs.dart';
 import 'speech_player_bar.dart';
 
@@ -89,6 +90,12 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
             onOriginalContentReady: (originalHtml) {
               // Store original HTML for position tracking
               _originalChapterHtml = originalHtml;
+              // Apply search highlights if there's an active search
+              if (provider.epubSearchText != null && provider.epubSearchText!.isNotEmpty) {
+                Future.delayed(const Duration(milliseconds: 200), () {
+                  _applyEpubSearchHighlights(provider);
+                });
+              }
             },
           ),
         );
@@ -978,6 +985,10 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       provider,
       _searchController,
       pdfViewerController,
+      onSearchEpub: () => _searchEpub(provider),
+      onNextResult: () => _goToNextSearchResult(provider),
+      onPreviousResult: () => _goToPreviousSearchResult(provider),
+      onClearSearch: () => _clearSearch(provider),
     );
   }
 
@@ -1393,19 +1404,134 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   }
 
   void _searchPdf(PdfViewerProvider provider) {
-    PdfViewerPdfOperations.searchPdf(provider, pdfViewerController);
+    if (provider.readerType == ReaderType.pdf) {
+      PdfViewerPdfOperations.searchPdf(provider, pdfViewerController);
+    } else {
+      _searchEpub(provider);
+    }
+  }
+
+  Future<void> _searchEpub(PdfViewerProvider provider) async {
+    final searchText = provider.searchText.trim();
+    if (searchText.isEmpty) {
+      _clearEpubSearch(provider);
+      return;
+    }
+
+    // Search across all chapters
+    final results = await PdfViewerEpubSearch.searchInEpub(provider, searchText);
+    
+    if (results.isNotEmpty) {
+      provider.setEpubSearchResults(
+        results.length,
+        PdfViewerEpubSearch.getCurrentResultIndex(),
+        searchText,
+      );
+      
+      // Navigate to first result
+      final firstResult = results[0];
+      _navigateToEpubSearchResult(provider, firstResult);
+    } else {
+      provider.setEpubSearchResults(0, -1, searchText);
+    }
+  }
+
+  void _navigateToEpubSearchResult(PdfViewerProvider provider, EpubSearchResult result) {
+    // Load the chapter if not already loaded
+    if (provider.currentEpubChapterIndex != result.chapterIndex) {
+      EpubReaderWidget.loadEpubChapter(
+        provider,
+        result.chapterIndex,
+        _currentEpubContentNotifier,
+        _epubScrollController,
+        onOriginalContentReady: (originalHtml) {
+          _originalChapterHtml = originalHtml;
+          // Apply search highlights after chapter loads
+          _applyEpubSearchHighlights(provider);
+        },
+      );
+    } else {
+      // Chapter already loaded, just apply highlights
+      _applyEpubSearchHighlights(provider);
+    }
+  }
+
+  void _applyEpubSearchHighlights(PdfViewerProvider provider) {
+    if (provider.epubSearchText == null || provider.epubSearchText!.isEmpty) {
+      return;
+    }
+
+    final currentContent = _currentEpubContentNotifier.value;
+    // Clear previous search highlights
+    final cleanContent = PdfViewerEpubSearch.clearSearchHighlights(currentContent);
+    // Apply new search highlights
+    final highlightedContent = PdfViewerEpubSearch.highlightSearchResults(
+      cleanContent,
+      provider.epubSearchText!,
+    );
+    
+    provider.setCurrentEpubContent(highlightedContent);
+    _currentEpubContentNotifier.value = highlightedContent;
+  }
+
+  void _clearEpubSearch(PdfViewerProvider provider) {
+    PdfViewerEpubSearch.clearResults();
+    provider.clearEpubSearch();
+    
+    // Remove search highlights from current content
+    final currentContent = _currentEpubContentNotifier.value;
+    final cleanContent = PdfViewerEpubSearch.clearSearchHighlights(currentContent);
+    provider.setCurrentEpubContent(cleanContent);
+    _currentEpubContentNotifier.value = cleanContent;
   }
 
   void _clearSearch(PdfViewerProvider provider) {
-    PdfViewerPdfOperations.clearSearch(provider, _searchController);
+    if (provider.readerType == ReaderType.pdf) {
+      PdfViewerPdfOperations.clearSearch(provider, _searchController);
+    } else {
+      _clearEpubSearch(provider);
+      _searchController.clear();
+    }
   }
 
   void _goToNextSearchResult(PdfViewerProvider provider) {
-    PdfViewerPdfOperations.goToNextSearchResult(provider);
+    if (provider.readerType == ReaderType.pdf) {
+      PdfViewerPdfOperations.goToNextSearchResult(provider);
+    } else {
+      _goToNextEpubSearchResult(provider);
+    }
   }
 
   void _goToPreviousSearchResult(PdfViewerProvider provider) {
-    PdfViewerPdfOperations.goToPreviousSearchResult(provider);
+    if (provider.readerType == ReaderType.pdf) {
+      PdfViewerPdfOperations.goToPreviousSearchResult(provider);
+    } else {
+      _goToPreviousEpubSearchResult(provider);
+    }
+  }
+
+  void _goToNextEpubSearchResult(PdfViewerProvider provider) {
+    final nextResult = PdfViewerEpubSearch.getNextResult();
+    if (nextResult != null) {
+      provider.setEpubSearchResults(
+        PdfViewerEpubSearch.getTotalResults(),
+        PdfViewerEpubSearch.getCurrentResultIndex(),
+        provider.epubSearchText ?? '',
+      );
+      _navigateToEpubSearchResult(provider, nextResult);
+    }
+  }
+
+  void _goToPreviousEpubSearchResult(PdfViewerProvider provider) {
+    final prevResult = PdfViewerEpubSearch.getPreviousResult();
+    if (prevResult != null) {
+      provider.setEpubSearchResults(
+        PdfViewerEpubSearch.getTotalResults(),
+        PdfViewerEpubSearch.getCurrentResultIndex(),
+        provider.epubSearchText ?? '',
+      );
+      _navigateToEpubSearchResult(provider, prevResult);
+    }
   }
 
   Widget _buildBrightnessPreset(
@@ -1650,16 +1776,17 @@ Widget _buildEpubReader() {
                   ),
                   Row(
                     children: [
-                      if (readerType == ReaderType.pdf)
-                        InkWell(
-                          onTap: () => _openSearchOverlay(provider),
-                          child: Icon(
-                            Icons.search,
-                            size: 24,
-                            color: appBarTextColor,
-                          ),
+                      // Search button - available for both PDF and EPUB
+                      InkWell(
+                        onTap: () => _openSearchOverlay(provider),
+                        child: Icon(
+                          Icons.search,
+                          size: 24,
+                          color: appBarTextColor,
                         ),
-                      if (readerType == ReaderType.epub)
+                      ),
+                      if (readerType == ReaderType.epub) ...[
+                        const SizedBox(width: 16),
                         Selector<PdfViewerProvider, bool>(
                           selector: (_, p) => p.isReadingChapter,
                           builder: (context, isReadingChapter, child) {
@@ -1684,7 +1811,8 @@ Widget _buildEpubReader() {
                             );
                           },
                         ),
-                      const SizedBox(width: 10),
+                        const SizedBox(width: 10),
+                      ],
                       if (provider.readerType == ReaderType.pdf) const SizedBox(width: 16),
                       Selector<PdfViewerProvider, (List<int>, int)>(
                         selector: (_, p) => (p.bookmarkedPages, p.currentPage),

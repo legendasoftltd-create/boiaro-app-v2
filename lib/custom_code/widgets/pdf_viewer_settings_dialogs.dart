@@ -595,8 +595,12 @@ class PdfViewerSettingsDialogs {
     BuildContext context,
     PdfViewerProvider provider,
     TextEditingController searchController,
-    PdfViewerController pdfController,
-  ) {
+    PdfViewerController pdfController, {
+    VoidCallback? onSearchEpub,
+    VoidCallback? onNextResult,
+    VoidCallback? onPreviousResult,
+    VoidCallback? onClearSearch,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -647,7 +651,12 @@ class PdfViewerSettingsDialogs {
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           searchController.clear();
-                          PdfViewerPdfOperations.clearSearch(provider, searchController);
+                          // Clear search for both PDF and EPUB
+                          if (provider.readerType == ReaderType.pdf) {
+                            PdfViewerPdfOperations.clearSearch(provider, searchController);
+                          } else {
+                            onClearSearch?.call();
+                          }
                         },
                       ),
                     ),
@@ -657,10 +666,13 @@ class PdfViewerSettingsDialogs {
                     onSubmitted: (value) {
                       if (provider.readerType == ReaderType.pdf) {
                         PdfViewerPdfOperations.searchPdf(provider, pdfController);
+                      } else {
+                        onSearchEpub?.call();
                       }
                     },
                   ),
                   const SizedBox(height: 16),
+                  // Search results info and navigation
                   if (provider.readerType == ReaderType.pdf)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -678,7 +690,7 @@ class PdfViewerSettingsDialogs {
                               onPressed: provider.searchResult.hasResult &&
                                       provider.searchResult.currentInstanceIndex > 0
                                   ? () {
-                                      PdfViewerPdfOperations.goToPreviousSearchResult(provider);
+                                      onPreviousResult?.call();
                                     }
                                   : null,
                             ),
@@ -688,7 +700,42 @@ class PdfViewerSettingsDialogs {
                                       provider.searchResult.currentInstanceIndex <
                                           provider.searchResult.totalInstanceCount - 1
                                   ? () {
-                                      PdfViewerPdfOperations.goToNextSearchResult(provider);
+                                      onNextResult?.call();
+                                    }
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  else if (provider.readerType == ReaderType.epub)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          provider.hasEpubSearchResults
+                              ? "${provider.epubCurrentSearchIndex + 1} of ${provider.epubSearchResultCount}"
+                              : "No results",
+                          style: FlutterFlowTheme.of(context).bodyMedium,
+                        ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_upward),
+                              onPressed: provider.hasEpubSearchResults &&
+                                      provider.epubCurrentSearchIndex > 0
+                                  ? () {
+                                      onPreviousResult?.call();
+                                    }
+                                  : null,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_downward),
+                              onPressed: provider.hasEpubSearchResults &&
+                                      provider.epubCurrentSearchIndex <
+                                          provider.epubSearchResultCount - 1
+                                  ? () {
+                                      onNextResult?.call();
                                     }
                                   : null,
                             ),
@@ -707,6 +754,10 @@ class PdfViewerSettingsDialogs {
                     onPressed: () {
                       if (provider.readerType == ReaderType.pdf) {
                         PdfViewerPdfOperations.searchPdf(provider, pdfController);
+                      } else {
+                        //hide keyboard
+                        FocusScope.of(context).unfocus();
+                        onSearchEpub?.call();
                       }
                     },
                     child: const Text("Search",
@@ -718,7 +769,12 @@ class PdfViewerSettingsDialogs {
                   const SizedBox(height: 10),
                   TextButton(
                     onPressed: () {
-                      PdfViewerPdfOperations.clearSearch(provider, searchController);
+                      // Clear search for both PDF and EPUB
+                      if (provider.readerType == ReaderType.pdf) {
+                        PdfViewerPdfOperations.clearSearch(provider, searchController);
+                      } else {
+                        onClearSearch?.call();
+                      }
                       Navigator.pop(context);
                     },
                     child: const Text("Done",

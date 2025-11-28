@@ -78,6 +78,16 @@ class PdfViewerProvider with ChangeNotifier {
   PdfTextSearchResult _searchResult = PdfTextSearchResult();
   PdfTextSearchResult get searchResult => _searchResult;
   
+  // EPUB Search state
+  int _epubSearchResultCount = 0;
+  int get epubSearchResultCount => _epubSearchResultCount;
+  
+  int _epubCurrentSearchIndex = -1;
+  int get epubCurrentSearchIndex => _epubCurrentSearchIndex;
+  
+  String? _epubSearchText;
+  String? get epubSearchText => _epubSearchText;
+  
   List<BookmarkModel> _bookmarks = [];
   List<BookmarkModel> get bookmarks => List.unmodifiable(_bookmarks);
   
@@ -270,6 +280,23 @@ class PdfViewerProvider with ChangeNotifier {
     _searchResult = result;
     notifyListeners();
   }
+
+  // EPUB Search Methods
+  void setEpubSearchResults(int totalCount, int currentIndex, String searchText) {
+    _epubSearchResultCount = totalCount;
+    _epubCurrentSearchIndex = currentIndex;
+    _epubSearchText = searchText;
+    notifyListeners();
+  }
+
+  void clearEpubSearch() {
+    _epubSearchResultCount = 0;
+    _epubCurrentSearchIndex = -1;
+    _epubSearchText = null;
+    notifyListeners();
+  }
+
+  bool get hasEpubSearchResults => _epubSearchResultCount > 0;
 
   void clearSearch() {
     _searchResult = PdfTextSearchResult();

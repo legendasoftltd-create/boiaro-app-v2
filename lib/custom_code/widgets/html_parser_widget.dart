@@ -233,6 +233,15 @@ class HtmlParserWidget extends StatelessWidget {
         display: Display.inline, // Ensure inline display
         verticalAlign: VerticalAlign.baseline, // Align to baseline
       ),
+      "mark.search-result": Style( // Search result highlights (brighter yellow)
+        backgroundColor: const Color(0xFFFFEB3B).withOpacity(0.5),
+        color: txtColor,
+        // lineHeight will inherit from parent automatically
+        padding: HtmlPaddings.zero,
+        margin: Margins.zero,
+        display: Display.inline,
+        verticalAlign: VerticalAlign.baseline,
+      ),
       // Override styles for spans inside mark tags to prevent gaps
       "mark span": Style(
         // Inherit line-height from parent paragraph, don't override

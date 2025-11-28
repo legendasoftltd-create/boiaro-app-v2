@@ -125,6 +125,10 @@ class EpubReaderWidget {
           content = _applyHighlightAtPosition(content, highlight);
         }
         
+        // Apply search highlights if there's an active search
+        // Note: Search highlights are applied in the widget after chapter loads
+        // to avoid circular dependencies
+        
         provider.setCurrentEpubContent(content);
         
         // Update total pages for EPUB (based on chapters)
