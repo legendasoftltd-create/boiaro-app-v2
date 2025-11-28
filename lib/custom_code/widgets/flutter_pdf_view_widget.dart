@@ -49,11 +49,20 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       ValueNotifier<String>('');
   final ValueNotifier<String> _localSelectedTextNotifier =
       ValueNotifier<String>('');
+  final ValueNotifier<bool> _isAtTopNotifier = ValueNotifier<bool>(true);
+  final ValueNotifier<bool> _isAtBottomNotifier = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    
+    // Add scroll listener to detect top/bottom position
+    _epubScrollController.addListener(_checkScrollPosition);
+    
+    // Listen to content changes to check scroll position after content loads
+    _currentEpubContentNotifier.addListener(_onContentChanged);
+    
     SchedulerBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<PdfViewerProvider>();
       PdfViewerHelpers.determineReaderType(widget.filePath, provider);
@@ -76,6 +85,78 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     });
   }
 
+  void _onContentChanged() {
+    // Check scroll position after content changes and layout completes
+    // Use post frame callback to ensure layout is complete
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      // Additional delay to ensure scroll animation completes (if any)
+      Future.delayed(const Duration(milliseconds: 400), () {
+        _checkScrollPosition();
+      });
+    });
+  }
+
+  void _checkScrollPosition() {
+    if (!mounted) return;
+    
+    if (!_epubScrollController.hasClients) {
+      // If no clients, assume we're at top
+      if (_isAtTopNotifier.value != true) {
+        _isAtTopNotifier.value = true;
+      }
+      if (_isAtBottomNotifier.value != false) {
+        _isAtBottomNotifier.value = false;
+      }
+      return;
+    }
+    
+    try {
+      final position = _epubScrollController.position;
+      
+      // Check if position is valid
+      if (!position.hasContentDimensions) {
+        // Wait a bit and try again if layout isn't ready
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) _checkScrollPosition();
+        });
+        return;
+      }
+      
+      if (!position.hasPixels) {
+        return;
+      }
+      
+      // Check if content is scrollable
+      final maxScroll = position.maxScrollExtent;
+      final currentPixels = position.pixels.clamp(0.0, maxScroll);
+      
+      if (maxScroll <= 0) {
+        // Content is not scrollable (too short), show both buttons
+        _isAtTopNotifier.value = true;
+        _isAtBottomNotifier.value = true;
+        return;
+      }
+      
+      // 20px threshold for detecting top/bottom (reduced for more sensitive detection)
+      final threshold = 100.0;
+      
+      final isAtTop = currentPixels <= threshold;
+      final isAtBottom = currentPixels >= (maxScroll - threshold);
+      
+      // Always update to ensure state is correct (even if same value to trigger rebuild)
+      if (_isAtTopNotifier.value != isAtTop) {
+        _isAtTopNotifier.value = isAtTop;
+      }
+      if (_isAtBottomNotifier.value != isAtBottom) {
+        _isAtBottomNotifier.value = isAtBottom;
+      }
+    } catch (e) {
+      // If there's an error, default to top
+      _isAtTopNotifier.value = true;
+      _isAtBottomNotifier.value = false;
+    }
+  }
+
 
   @override
   void dispose() {
@@ -84,9 +165,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _searchController.dispose();
+    _epubScrollController.removeListener(_checkScrollPosition);
     _epubScrollController.dispose();
+    _currentEpubContentNotifier.removeListener(_onContentChanged);
     _currentEpubContentNotifier.dispose();
     _localSelectedTextNotifier.dispose();
+    _isAtTopNotifier.dispose();
+    _isAtBottomNotifier.dispose();
     flutterTts.stop();
     ScreenProtector.protectDataLeakageOff();
     super.dispose();
@@ -2004,55 +2089,61 @@ Widget _buildEpubReader() {
                                   ? MainAxisAlignment.spaceBetween
                                   : MainAxisAlignment.center,
                               children: [
-                                // Previous chapter button (only for EPUB)
+                                // Previous chapter button (only for EPUB) - always show, disabled when not at top
                                 if (provider.readerType == ReaderType.epub)
-                                  ElevatedButton.icon(
-                                    onPressed: currentChapterIndex > 0 && !isChangingChapter
-                                        ? () {
-                                            EpubReaderWidget.loadEpubChapter(
-                                              provider,
-                                              currentChapterIndex - 1,
-                                              _currentEpubContentNotifier,
-                                              _epubScrollController,
-                                            );
-                                          }
-                                        : null,
-                                    icon: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
-                                      child: isChangingChapter
-                                          ? const SizedBox(
-                                              key: ValueKey('loading-icon-prev'),
-                                              width: 16,
-                                              height: 16,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : const Icon(
-                                              Icons.chevron_left,
-                                              size: 16,
-                                              key: ValueKey('icon-prev'),
-                                            ),
-                                    ),
-                                    label: const Text(
-                                      'Previous',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 5,
-                                      ),
-                                      elevation: 0,
-                                      minimumSize: Size.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      backgroundColor: currentChapterIndex > 0 && !isChangingChapter
-                                          ? FlutterFlowTheme.of(context).black40
-                                          : FlutterFlowTheme.of(context).alternate,
-                                      foregroundColor: currentChapterIndex > 0 && !isChangingChapter
-                                          ? Colors.white
-                                          : appBarTextColor.withOpacity(0.5),
-                                    ),
+                                  ValueListenableBuilder<bool>(
+                                    valueListenable: _isAtTopNotifier,
+                                    builder: (context, isAtTop, child) {
+                                      final isEnabled = isAtTop && currentChapterIndex > 0 && !isChangingChapter;
+                                      return ElevatedButton.icon(
+                                        onPressed: isEnabled
+                                            ? () {
+                                                EpubReaderWidget.loadEpubChapter(
+                                                  provider,
+                                                  currentChapterIndex - 1,
+                                                  _currentEpubContentNotifier,
+                                                  _epubScrollController,
+                                                );
+                                              }
+                                            : null,
+                                        icon: AnimatedSwitcher(
+                                          duration: const Duration(milliseconds: 200),
+                                          child: isChangingChapter
+                                              ? const SizedBox(
+                                                  key: ValueKey('loading-icon-prev'),
+                                                  width: 16,
+                                                  height: 16,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                  ),
+                                                )
+                                              : const Icon(
+                                                  Icons.chevron_left,
+                                                  size: 16,
+                                                  key: ValueKey('icon-prev'),
+                                                ),
+                                        ),
+                                        label: const Text(
+                                          'Previous',
+                                          style: TextStyle(fontSize: 12),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 5,
+                                          ),
+                                          elevation: 0,
+                                          minimumSize: Size.zero,
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          backgroundColor: isEnabled
+                                              ? FlutterFlowTheme.of(context).black40
+                                              : FlutterFlowTheme.of(context).alternate,
+                                          foregroundColor: isEnabled
+                                              ? Colors.white
+                                              : appBarTextColor.withOpacity(0.5),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 // Center text
                                 Expanded(
@@ -2071,59 +2162,62 @@ Widget _buildEpubReader() {
                                         ),
                                   ),
                                 ),
-                                // Next chapter button (only for EPUB)
+                                // Next chapter button (only for EPUB) - always show, disabled when not at bottom
                                 if (provider.readerType == ReaderType.epub)
-                                  ElevatedButton.icon(
-                                    onPressed: currentChapterIndex < totalChapters - 1 &&
-                                            !isChangingChapter
-                                        ? () {
-                                            EpubReaderWidget.loadEpubChapter(
-                                              provider,
-                                              currentChapterIndex + 1,
-                                              _currentEpubContentNotifier,
-                                              _epubScrollController,
-                                            );
-                                          }
-                                        : null,
-                                    icon: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
-                                      child: isChangingChapter
-                                          ? const SizedBox(
-                                              key: ValueKey('loading-icon'),
-                                              width: 16,
-                                              height: 16,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : const Icon(
-                                              Icons.chevron_right,
-                                              size: 16,
-                                              key: ValueKey('icon'),
-                                            ),
-                                    ),
-                                    label: const Text(
-                                      'Next',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    iconAlignment: IconAlignment.end,
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 5,
-                                      ),
-                                      elevation: 0,
-                                      minimumSize: Size.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      backgroundColor: currentChapterIndex < totalChapters - 1 &&
-                                              !isChangingChapter
-                                          ? FlutterFlowTheme.of(context).black40
-                                          : FlutterFlowTheme.of(context).alternate,
-                                      foregroundColor: currentChapterIndex < totalChapters - 1 &&
-                                              !isChangingChapter
-                                          ? Colors.white
-                                          : appBarTextColor.withOpacity(0.5),
-                                    ),
+                                  ValueListenableBuilder<bool>(
+                                    valueListenable: _isAtBottomNotifier,
+                                    builder: (context, isAtBottom, child) {
+                                      final isEnabled = isAtBottom && currentChapterIndex < totalChapters - 1 && !isChangingChapter;
+                                      return ElevatedButton.icon(
+                                        onPressed: isEnabled
+                                            ? () {
+                                                EpubReaderWidget.loadEpubChapter(
+                                                  provider,
+                                                  currentChapterIndex + 1,
+                                                  _currentEpubContentNotifier,
+                                                  _epubScrollController,
+                                                );
+                                              }
+                                            : null,
+                                        icon: AnimatedSwitcher(
+                                          duration: const Duration(milliseconds: 200),
+                                          child: isChangingChapter
+                                              ? const SizedBox(
+                                                  key: ValueKey('loading-icon'),
+                                                  width: 16,
+                                                  height: 16,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                  ),
+                                                )
+                                              : const Icon(
+                                                  Icons.chevron_right,
+                                                  size: 16,
+                                                  key: ValueKey('icon'),
+                                                ),
+                                        ),
+                                        label: const Text(
+                                          'Next',
+                                          style: TextStyle(fontSize: 12),
+                                        ),
+                                        iconAlignment: IconAlignment.end,
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 5,
+                                          ),
+                                          elevation: 0,
+                                          minimumSize: Size.zero,
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          backgroundColor: isEnabled
+                                              ? FlutterFlowTheme.of(context).black40
+                                              : FlutterFlowTheme.of(context).alternate,
+                                          foregroundColor: isEnabled
+                                              ? Colors.white
+                                              : appBarTextColor.withOpacity(0.5),
+                                        ),
+                                      );
+                                    },
                                   ),
                               ],
                             );
