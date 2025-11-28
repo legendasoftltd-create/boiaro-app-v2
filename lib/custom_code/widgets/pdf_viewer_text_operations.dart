@@ -49,7 +49,7 @@ class PdfViewerTextOperations {
       if (index != -1 && !_isInsideMark(index, currentContent)) {
         newContent = currentContent.replaceFirst(
           normalizedSelected,
-          '<mark style="background-color: yellow;">$normalizedSelected</mark>',
+          '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedSelected</mark>',
         );
         found = true;
         log('Highlight added using exact match: $normalizedSelected');
@@ -69,7 +69,7 @@ class PdfViewerTextOperations {
         if (index != -1 && !_isInsideMark(index, currentContent)) {
           newContent = currentContent.replaceFirst(
             escapedText,
-            '<mark style="background-color: yellow;">$escapedText</mark>',
+            '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$escapedText</mark>',
           );
           found = true;
           log('Highlight added using escaped match: $normalizedSelected');
@@ -88,7 +88,7 @@ class PdfViewerTextOperations {
           final actualText = currentContent.substring(index, index + normalizedSelected.length);
           newContent = currentContent.replaceFirst(
             actualText,
-            '<mark style="background-color: yellow;">$actualText</mark>',
+            '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$actualText</mark>',
           );
           found = true;
           log('Highlight added using case-insensitive match: $normalizedSelected');
@@ -96,7 +96,17 @@ class PdfViewerTextOperations {
       }
     }
 
-    // Strategy 4: Try matching with flexible whitespace (normalize both)
+    // Strategy 4: Try matching text that spans across HTML tags (for Bangla and other languages)
+    // This handles cases where text is split across multiple <span> or other tags
+    if (!found) {
+      newContent = _highlightTextAcrossTags(currentContent, normalizedSelected);
+      if (newContent != currentContent) {
+        found = true;
+        log('Highlight added using cross-tag matching: $normalizedSelected');
+      }
+    }
+
+    // Strategy 5: Try matching with flexible whitespace (normalize both)
     if (!found) {
       // Normalize both content and selected text for comparison
       final normalizedContent = currentContent.replaceAll(RegExp(r'\s+'), ' ');
@@ -135,7 +145,7 @@ class PdfViewerTextOperations {
               if (normalizedExtracted.toLowerCase() == normalizedSelected.toLowerCase()) {
                 newContent = currentContent.replaceFirst(
                   textAtPos,
-                  '<mark style="background-color: yellow;">$textAtPos</mark>',
+                  '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$textAtPos</mark>',
                 );
                 found = true;
                 log('Highlight added using normalized whitespace match: $normalizedSelected');
@@ -174,6 +184,111 @@ class PdfViewerTextOperations {
       start--;
     }
     return false;
+  }
+
+  /// Highlight text that spans across HTML tags (e.g., multiple spans)
+  /// This handles cases where text is split across multiple HTML elements
+  static String _highlightTextAcrossTags(String htmlContent, String searchText) {
+    final normalizedSearch = searchText.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    // Create a regex pattern that matches the text even when split by HTML tags
+    // This pattern allows for optional HTML tags between characters
+    final escapedSearch = RegExp.escape(normalizedSearch);
+    // Replace each character with pattern that allows HTML tags in between
+    final pattern = escapedSearch.split('').join(r'(?:<[^>]*>)*\s*(?:</[^>]*>)*\s*');
+    
+    try {
+      final regex = RegExp(pattern, caseSensitive: false, dotAll: true);
+      final match = regex.firstMatch(htmlContent);
+      
+      if (match != null) {
+        final matchedText = match.group(0)!;
+        final startPos = match.start;
+        
+        // Check if already highlighted
+        if (_isInsideMark(startPos, htmlContent)) {
+          return htmlContent; // Already highlighted
+        }
+        
+        // Wrap the matched text with mark tag
+        final wrappedText = '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$matchedText</mark>';
+        return htmlContent.replaceRange(startPos, match.end, wrappedText);
+      }
+    } catch (e) {
+      log('Error in cross-tag matching: $e');
+    }
+    
+    // Fallback: Try a simpler approach - find text and wrap it, handling tags
+    // Remove HTML tags temporarily to find position, then wrap in original HTML
+    final plainText = extractPlainTextFromHtml(htmlContent);
+    final normalizedPlainText = plainText.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final searchIndex = normalizedPlainText.toLowerCase().indexOf(normalizedSearch.toLowerCase());
+    
+    if (searchIndex != -1) {
+      // Try to find and wrap the actual HTML structure
+      // This is a simplified version - in practice, you might need a proper HTML parser
+      final searchLower = normalizedSearch.toLowerCase();
+      
+      // Try to find a substring that contains the search text
+      // Look for patterns like: text1</span> <span>text2 where text1+text2 = searchText
+      int start = 0;
+      while (start < htmlContent.length) {
+        final remaining = htmlContent.substring(start);
+        final plainRemaining = extractPlainTextFromHtml(remaining);
+        final normalizedRemaining = plainRemaining.replaceAll(RegExp(r'\s+'), ' ').trim();
+        
+        if (normalizedRemaining.toLowerCase().startsWith(searchLower)) {
+          // Found a match starting at 'start'
+          // Now we need to find where it ends in the HTML
+          // This is approximate - find the end by counting characters
+          int charCount = 0;
+          int endPos = start;
+          bool inTag = false;
+          
+          for (int i = start; i < htmlContent.length && charCount < normalizedSearch.length; i++) {
+            if (htmlContent[i] == '<') {
+              inTag = true;
+            } else if (htmlContent[i] == '>') {
+              inTag = false;
+            } else if (!inTag) {
+              if (htmlContent[i] == '&') {
+                int entityEnd = htmlContent.indexOf(';', i);
+                if (entityEnd != -1) {
+                  charCount++;
+                  i = entityEnd;
+                  endPos = entityEnd + 1;
+                  continue;
+                }
+              }
+              charCount++;
+              endPos = i + 1;
+            }
+          }
+          
+          if (endPos > start && !_isInsideMark(start, htmlContent)) {
+            final before = htmlContent.substring(0, start);
+            final toWrap = htmlContent.substring(start, endPos);
+            final after = htmlContent.substring(endPos);
+            final wrapped = '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$toWrap</mark>';
+            return before + wrapped + after;
+          }
+        }
+        
+        // Move to next potential start (skip tags)
+        if (htmlContent[start] == '<') {
+          final tagEnd = htmlContent.indexOf('>', start);
+          if (tagEnd != -1) {
+            start = tagEnd + 1;
+          } else {
+            start++;
+          }
+        } else {
+          start++;
+        }
+      }
+    }
+    
+    return htmlContent; // Not found
   }
 
   /// Helper method to extract text at a position, skipping HTML tags

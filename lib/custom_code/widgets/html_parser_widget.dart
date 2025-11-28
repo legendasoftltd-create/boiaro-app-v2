@@ -182,6 +182,13 @@ class HtmlParserWidget extends StatelessWidget {
         fontSize: FontSize(fontSize),
         lineHeight: LineHeight.em(lineHeight),
       ),
+      // Ensure paragraphs with mark tags don't create gaps
+      "p mark": Style(
+        // Inherit line-height from paragraph to maintain consistent spacing
+        padding: HtmlPaddings.zero,
+        margin: Margins.zero,
+        verticalAlign: VerticalAlign.baseline,
+      ),
       "br": Style(
         height: Height(lineHeight),
       ),
@@ -220,6 +227,18 @@ class HtmlParserWidget extends StatelessWidget {
       "mark": Style(
         backgroundColor: Colors.yellow.withOpacity(0.3),
         color: txtColor,
+        // Don't override line-height - inherit from parent to avoid gaps
+        padding: HtmlPaddings.zero, // Remove padding
+        margin: Margins.zero, // Remove margin
+        display: Display.inline, // Ensure inline display
+        verticalAlign: VerticalAlign.baseline, // Align to baseline
+      ),
+      // Override styles for spans inside mark tags to prevent gaps
+      "mark span": Style(
+        // Inherit line-height from parent paragraph, don't override
+        padding: HtmlPaddings.zero,
+        margin: Margins.zero,
+        verticalAlign: VerticalAlign.baseline,
       ),
       "small": Style(
         fontSize: FontSize(fontSize * 0.85),
