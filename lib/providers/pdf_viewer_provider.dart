@@ -3,6 +3,8 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:epubx/epubx.dart' as epubx;
 import '../models/highlight_model.dart';
 import '../services/highlight_storage_service.dart';
+import '../models/bookmark_model.dart';
+import '../services/bookmark_storage_service.dart';
 
 enum ReaderType { pdf, epub }
 
@@ -76,8 +78,13 @@ class PdfViewerProvider with ChangeNotifier {
   PdfTextSearchResult _searchResult = PdfTextSearchResult();
   PdfTextSearchResult get searchResult => _searchResult;
   
-  List<int> _bookmarkedPages = [];
-  List<int> get bookmarkedPages => List.unmodifiable(_bookmarkedPages);
+  List<BookmarkModel> _bookmarks = [];
+  List<BookmarkModel> get bookmarks => List.unmodifiable(_bookmarks);
+  
+  // Legacy getter for backward compatibility (returns page numbers)
+  List<int> get bookmarkedPages {
+    return _bookmarks.map((b) => b.pageNumber).toList();
+  }
   
   List<HighlightModel> _highlights = [];
   List<HighlightModel> get highlights => List.unmodifiable(_highlights);
@@ -284,22 +291,106 @@ class PdfViewerProvider with ChangeNotifier {
     }
   }
 
-  void toggleBookmark(int page) {
-    if (_bookmarkedPages.contains(page)) {
-      _bookmarkedPages.remove(page);
+  /// Load bookmarks for current book
+  Future<void> loadBookmarks(String bookId) async {
+    _bookmarks = await BookmarkStorageService.getBookmarksForBook(bookId);
+    notifyListeners();
+  }
+
+  /// Toggle bookmark (add or remove)
+  Future<void> toggleBookmark(int page, {String? bookId, String? chapterId, String? chapterName}) async {
+    if (bookId == null) {
+      // If no bookId provided, try to use current book
+      bookId = _currentBookId;
+    }
+    
+    if (bookId == null) {
+      print('Cannot toggle bookmark: bookId is null');
+      return;
+    }
+
+    // Use page as chapterId if not provided
+    chapterId ??= page.toString();
+    chapterName ??= 'Page $page';
+
+    final bookmarkId = BookmarkModel.generateId(bookId, chapterId);
+    final existingBookmark = _bookmarks.firstWhere(
+      (b) => b.id == bookmarkId,
+      orElse: () => BookmarkModel(
+        id: '',
+        bookId: '',
+        chapterId: '',
+        chapterName: '',
+        pageNumber: 0,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    if (existingBookmark.id.isNotEmpty) {
+      // Remove bookmark
+      await BookmarkStorageService.deleteBookmark(existingBookmark);
+      _bookmarks.removeWhere((b) => b.id == bookmarkId);
     } else {
-      _bookmarkedPages.add(page);
+      // Add bookmark
+      final bookmark = BookmarkModel(
+        id: bookmarkId,
+        bookId: bookId,
+        chapterId: chapterId,
+        chapterName: chapterName,
+        pageNumber: page,
+        createdAt: DateTime.now(),
+      );
+      await BookmarkStorageService.saveBookmark(bookmark);
+      _bookmarks.add(bookmark);
     }
     notifyListeners();
   }
 
-  void removeBookmark(int page) {
-    _bookmarkedPages.remove(page);
-    notifyListeners();
+  /// Remove bookmark
+  Future<void> removeBookmark(int page, {String? bookId}) async {
+    if (bookId == null) {
+      bookId = _currentBookId;
+    }
+    
+    if (bookId == null) {
+      print('Cannot remove bookmark: bookId is null');
+      return;
+    }
+
+    final chapterId = page.toString();
+    final bookmarkId = BookmarkModel.generateId(bookId, chapterId);
+    
+    final bookmark = _bookmarks.firstWhere(
+      (b) => b.id == bookmarkId,
+      orElse: () => BookmarkModel(
+        id: '',
+        bookId: '',
+        chapterId: '',
+        chapterName: '',
+        pageNumber: 0,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    if (bookmark.id.isNotEmpty) {
+      await BookmarkStorageService.deleteBookmark(bookmark);
+      _bookmarks.removeWhere((b) => b.id == bookmarkId);
+      notifyListeners();
+    }
   }
 
-  bool isBookmarked(int page) {
-    return _bookmarkedPages.contains(page);
+  bool isBookmarked(int page, {String? bookId}) {
+    if (bookId == null) {
+      bookId = _currentBookId;
+    }
+    
+    if (bookId == null) {
+      return false;
+    }
+
+    final chapterId = page.toString();
+    final bookmarkId = BookmarkModel.generateId(bookId, chapterId);
+    return _bookmarks.any((b) => b.id == bookmarkId);
   }
 
   /// Set current book ID (used for highlights)
@@ -421,7 +512,7 @@ class PdfViewerProvider with ChangeNotifier {
     _pitch = 1.0;
     _searchText = "";
     _searchResult = PdfTextSearchResult();
-    _bookmarkedPages = [];
+    _bookmarks = [];
     _highlights = [];
     _currentBookId = null;
     _lastScrollPosition = 0;

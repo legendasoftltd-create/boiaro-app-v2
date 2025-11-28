@@ -774,7 +774,7 @@ class PdfViewerSettingsDialogs {
                         ),
                   ),
                   const SizedBox(height: 24),
-                  provider.bookmarkedPages.isEmpty
+                  provider.bookmarks.isEmpty
                       ? Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Text(
@@ -788,20 +788,10 @@ class PdfViewerSettingsDialogs {
                           ),
                           child: ListView.builder(
                             shrinkWrap: true,
-                            itemCount: provider.bookmarkedPages.length,
+                            itemCount: provider.bookmarks.length,
                             itemBuilder: (context, index) {
-                              final pageNumber = provider.bookmarkedPages[index];
-                              String title = provider.readerType == ReaderType.epub
-                                  ? "Chapter $pageNumber"
-                                  : "Page $pageNumber";
-
-                              if (provider.readerType == ReaderType.epub &&
-                                  pageNumber - 1 < provider.epubChapters.length) {
-                                final chapterTitle = provider.epubChapters[pageNumber - 1].Title;
-                                if (chapterTitle != null && chapterTitle.isNotEmpty) {
-                                  title = chapterTitle;
-                                }
-                              }
+                              final bookmark = provider.bookmarks[index];
+                              final pageNumber = bookmark.pageNumber;
 
                               return ListTile(
                                 leading: Icon(
@@ -809,13 +799,13 @@ class PdfViewerSettingsDialogs {
                                   color: FlutterFlowTheme.of(context).primary,
                                 ),
                                 title: Text(
-                                  title,
+                                  bookmark.chapterName,
                                   style: FlutterFlowTheme.of(context).bodyMedium,
                                 ),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.delete),
-                                  onPressed: () {
-                                    provider.removeBookmark(pageNumber);
+                                  onPressed: () async {
+                                    await provider.removeBookmark(pageNumber, bookId: provider.currentBookId);
                                   },
                                 ),
                                 onTap: () {

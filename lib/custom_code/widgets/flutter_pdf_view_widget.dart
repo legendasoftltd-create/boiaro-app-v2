@@ -69,8 +69,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       final provider = context.read<PdfViewerProvider>();
       // Generate book ID from file path
       _currentBookId = PdfViewerTextOperations.generateBookId(widget.filePath);
-      // Load highlights for this book
+      // Load highlights and bookmarks for this book
       provider.loadHighlights(_currentBookId!);
+      provider.loadBookmarks(_currentBookId!);
       
       PdfViewerHelpers.determineReaderType(widget.filePath, provider);
       provider.setCurrentPage(1);
@@ -316,8 +317,38 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     return result.length >= length ? result : null;
   }
 
-  void _toggleBookmark(PdfViewerProvider provider) {
-    PdfViewerHelpers.toggleBookmark(provider);
+  void _toggleBookmark(PdfViewerProvider provider) async {
+    if (_currentBookId == null) {
+      log('Cannot toggle bookmark: bookId is null');
+      return;
+    }
+
+    final currentPage = provider.currentPage;
+    String? chapterId;
+    String? chapterName;
+
+    // For EPUB, get chapter info
+    if (provider.readerType == ReaderType.epub) {
+      chapterId = provider.currentEpubChapterIndex.toString();
+      if (provider.epubChapters.isNotEmpty && 
+          provider.currentEpubChapterIndex < provider.epubChapters.length) {
+        chapterName = provider.epubChapters[provider.currentEpubChapterIndex].Title ?? 
+            'Chapter ${provider.currentEpubChapterIndex + 1}';
+      } else {
+        chapterName = 'Chapter ${provider.currentEpubChapterIndex + 1}';
+      }
+    } else {
+      // For PDF, use page number
+      chapterId = currentPage.toString();
+      chapterName = 'Page $currentPage';
+    }
+
+    await provider.toggleBookmark(
+      currentPage,
+      bookId: _currentBookId,
+      chapterId: chapterId,
+      chapterName: chapterName,
+    );
   }
 
   Future<void> _speakSelected(PdfViewerProvider provider) async {
@@ -1156,7 +1187,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                         ),
                   ),
                   const SizedBox(height: 24),
-                  provider.bookmarkedPages.isEmpty
+                  provider.bookmarks.isEmpty
                       ? Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Text(
@@ -1170,20 +1201,10 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                           ),
                           child: ListView.builder(
                             shrinkWrap: true,
-                            itemCount: provider.bookmarkedPages.length,
+                            itemCount: provider.bookmarks.length,
                             itemBuilder: (context, index) {
-                              final pageNumber = provider.bookmarkedPages[index];
-                              String title = provider.readerType == ReaderType.epub
-                                  ? "Chapter $pageNumber"
-                                  : "Page $pageNumber";
-                              
-                              if (provider.readerType == ReaderType.epub && 
-                                  pageNumber - 1 < provider.epubChapters.length) {
-                                final chapterTitle = provider.epubChapters[pageNumber - 1].Title;
-                                if (chapterTitle != null && chapterTitle.isNotEmpty) {
-                                  title = chapterTitle;
-                                }
-                              }
+                              final bookmark = provider.bookmarks[index];
+                              final pageNumber = bookmark.pageNumber;
                               
                               return ListTile(
                                 leading: Icon(
@@ -1191,13 +1212,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                   color: FlutterFlowTheme.of(context).primary,
                                 ),
                                 title: Text(
-                                  title,
+                                  bookmark.chapterName,
                                   style: FlutterFlowTheme.of(context).bodyMedium,
                                 ),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.delete),
-                                  onPressed: () {
-                                    provider.removeBookmark(pageNumber);
+                                  onPressed: () async {
+                                    await provider.removeBookmark(pageNumber, bookId: _currentBookId);
                                   },
                                 ),
                                 onTap: () {
