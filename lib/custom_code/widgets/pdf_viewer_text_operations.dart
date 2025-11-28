@@ -1,58 +1,139 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '/providers/pdf_viewer_provider.dart';
+import '/models/highlight_model.dart';
+import '/services/highlight_storage_service.dart';
 
 /// Text operations for PDF Viewer (highlighting and text-to-speech)
 class PdfViewerTextOperations {
-  /// Add highlight to selected text
-  static void addHighlight(
+  /// Generate book ID from file path
+  static String generateBookId(String? filePath) {
+    if (filePath == null || filePath.isEmpty) {
+      return 'unknown_book';
+    }
+    // Use file path as book ID (or hash it for shorter ID)
+    // For now, use a hash of the path
+    return base64Encode(utf8.encode(filePath)).replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').substring(0, 32);
+  }
+
+  /// Add highlight to selected text with position tracking
+  static Future<void> addHighlight(
     PdfViewerProvider provider,
     ValueNotifier<String> localSelectedTextNotifier,
     ValueNotifier<String> currentEpubContentNotifier,
-  ) {
+    String? bookId,
+    String? chapterId,
+    String? chapterName,
+    String originalHtmlContent, // Original HTML before any highlights
+  ) async {
     final selectedText = localSelectedTextNotifier.value.trim();
     if (selectedText.isEmpty || provider.readerType != ReaderType.epub) {
       return;
     }
 
-    // Add to highlights list
-    provider.addHighlight(selectedText);
+    if (bookId == null || chapterId == null) {
+      log('Cannot add highlight: missing bookId or chapterId');
+      return;
+    }
 
     // Get current content from ValueNotifier (which is the displayed content)
     final currentContent = currentEpubContentNotifier.value;
-
-    // Normalize the selected text for matching (handle multiple spaces, newlines, etc.)
+    
+    // Find the position of the selected text in the original HTML
     final normalizedSelected = selectedText
-        .replaceAll(RegExp(r'\s+'), ' ') // Normalize all whitespace to single space
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
+    
+    // Find position in original HTML (before any highlights were applied)
+    int startPosition = -1;
+    int endPosition = -1;
+    
+    // Try to find the text in original HTML
+    final plainText = _extractPlainTextFromHtml(originalHtmlContent);
+    final normalizedPlainText = plainText.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final searchIndex = normalizedPlainText.toLowerCase().indexOf(normalizedSelected.toLowerCase());
+    
+    if (searchIndex != -1) {
+      // Map plain text position back to HTML position
+      startPosition = _mapPlainTextToHtmlPosition(originalHtmlContent, searchIndex);
+      endPosition = _mapPlainTextToHtmlPosition(originalHtmlContent, searchIndex + normalizedSelected.length);
+    } else {
+      // Fallback: use character count from start of content
+      startPosition = 0;
+      endPosition = normalizedSelected.length;
+    }
+    
+    if (startPosition == -1 || endPosition == -1) {
+      log('Could not determine position for highlight');
+      return;
+    }
+
+    // Create highlight model
+    final highlightId = HighlightModel.generateId(bookId, chapterId, startPosition);
+    final highlight = HighlightModel(
+      id: highlightId,
+      bookId: bookId,
+      chapterId: chapterId,
+      chapterName: chapterName ?? 'Chapter ${provider.currentEpubChapterIndex + 1}',
+      text: selectedText,
+      startPosition: startPosition,
+      endPosition: endPosition,
+      createdAt: DateTime.now(),
+    );
+
+    // Save to storage
+    await HighlightStorageService.saveHighlight(highlight);
+    
+    // Add to provider
+    provider.addHighlight(highlight);
 
     // Check if text is already highlighted (avoid double highlighting)
-    // Check both escaped and unescaped versions
+    // Use a more flexible check that looks for any mark tag containing the text
     final escapedSelected = normalizedSelected.replaceAll('&', '&amp;');
-    if (currentContent.contains('<mark style="background-color: yellow;">$normalizedSelected</mark>') ||
-        currentContent.contains('<mark style="background-color: yellow;">$escapedSelected</mark>') ||
-        currentContent.contains('background-color: yellow;">$normalizedSelected</mark>') ||
-        currentContent.contains('background-color: yellow;">$escapedSelected</mark>')) {
+    final normalizedPattern = RegExp.escape(normalizedSelected);
+    final escapedPattern = RegExp.escape(escapedSelected);
+    final markPattern1 = RegExp('<mark[^>]*>$normalizedPattern</mark>', caseSensitive: false);
+    final markPattern2 = RegExp('<mark[^>]*>$escapedPattern</mark>', caseSensitive: false);
+    final markPattern3 = RegExp('<mark[^>]*>.*?$normalizedPattern.*?</mark>', caseSensitive: false, dotAll: true);
+    final isAlreadyHighlighted = markPattern1.hasMatch(currentContent) ||
+        markPattern2.hasMatch(currentContent) ||
+        markPattern3.hasMatch(currentContent);
+    
+    if (isAlreadyHighlighted) {
       log('Text already highlighted: $normalizedSelected');
-      return; // Already highlighted
+      // Still update the content to ensure it's visible, but don't add another highlight
+      return;
     }
 
     // Try multiple matching strategies with increasing flexibility
     String newContent = currentContent;
     bool found = false;
 
+    log('Attempting to highlight text: "$normalizedSelected"');
+    log('Current content length: ${currentContent.length}');
+    log('Content preview: ${currentContent.substring(0, currentContent.length > 200 ? 200 : currentContent.length)}...');
+
     // Strategy 1: Try exact match (for plain text in HTML)
     if (!found && currentContent.contains(normalizedSelected)) {
-      final index = currentContent.indexOf(normalizedSelected);
-      if (index != -1 && !_isInsideMark(index, currentContent)) {
-        newContent = currentContent.replaceFirst(
-          normalizedSelected,
-          '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedSelected</mark>',
-        );
-        found = true;
-        log('Highlight added using exact match: $normalizedSelected');
+      // Find all occurrences and try each one
+      int searchIndex = 0;
+      while (searchIndex < currentContent.length) {
+        final index = currentContent.indexOf(normalizedSelected, searchIndex);
+        if (index == -1) break;
+        
+        if (!_isInsideMark(index, currentContent)) {
+          // Replace at specific position
+          newContent = currentContent.substring(0, index) +
+              '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedSelected</mark>' +
+              currentContent.substring(index + normalizedSelected.length);
+          found = true;
+          log('Highlight added using exact match at position $index: "$normalizedSelected"');
+          break;
+        }
+        searchIndex = index + 1;
       }
     }
 
@@ -157,17 +238,124 @@ class PdfViewerTextOperations {
       }
     }
 
-    // Update both provider and ValueNotifier if content changed
+    // Update content if found (the matching strategies above should have set found and newContent)
     if (found && newContent != currentContent) {
       provider.setCurrentEpubContent(newContent);
       currentEpubContentNotifier.value = newContent;
+      log('Highlight applied and saved: $highlightId');
     } else {
-      log('Could not find text to highlight: "$normalizedSelected" (length: ${normalizedSelected.length})');
-      log('Content preview: ${currentContent.substring(0, currentContent.length > 500 ? 500 : currentContent.length)}...');
+      // Fallback: Try to apply highlight using position if text matching failed
+      log('Text matching failed, trying position-based highlighting for: "$normalizedSelected"');
+      log('Start position: $startPosition, End position: $endPosition');
+      log('Original HTML length: ${originalHtmlContent.length}');
+      
+      if (startPosition >= 0 && endPosition > startPosition && endPosition <= originalHtmlContent.length) {
+        try {
+          // Use current content (which may already have some highlights) but work with original positions
+          // Find the text at the position in current content
+          final plainText = _extractPlainTextFromHtml(currentContent);
+          if (startPosition < plainText.length) {
+            // Try to find the corresponding position in currentContent
+            // This is approximate but should work for most cases
+            int htmlPos = 0;
+            int plainPos = 0;
+            int targetStartPos = -1;
+            int targetEndPos = -1;
+            
+            // Map plain text position to HTML position in current content
+            for (int i = 0; i < currentContent.length && plainPos <= endPosition; i++) {
+              if (plainPos == startPosition && targetStartPos == -1) {
+                targetStartPos = htmlPos;
+              }
+              if (plainPos == endPosition && targetEndPos == -1) {
+                targetEndPos = htmlPos;
+                break;
+              }
+              
+              // Skip HTML tags
+              if (currentContent[i] == '<') {
+                while (i < currentContent.length && currentContent[i] != '>') i++;
+                htmlPos = i + 1;
+                continue;
+              }
+              
+              // Count text characters
+              if (currentContent[i] != ' ' || (i > 0 && currentContent[i-1] != ' ')) {
+                plainPos++;
+              }
+              htmlPos++;
+            }
+            
+            if (targetStartPos != -1 && targetEndPos > targetStartPos) {
+              final beforeText = currentContent.substring(0, targetStartPos);
+              final highlightedText = currentContent.substring(targetStartPos, targetEndPos);
+              final afterText = currentContent.substring(targetEndPos);
+              
+              // Check if already highlighted
+              if (!highlightedText.contains('<mark')) {
+                final positionBasedContent = beforeText +
+                    '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$highlightedText</mark>' +
+                    afterText;
+                
+                provider.setCurrentEpubContent(positionBasedContent);
+                currentEpubContentNotifier.value = positionBasedContent;
+                log('Highlight applied using position-based method: $highlightId');
+              } else {
+                log('Text at position already contains mark tag');
+              }
+            } else {
+              log('Could not map positions to current content');
+            }
+          }
+        } catch (e) {
+          log('Error applying position-based highlight: $e');
+        }
+      } else {
+        log('Could not find text to highlight: "$normalizedSelected" (positions invalid: $startPosition-$endPosition)');
+      }
+    }
+  }
+
+  /// Extract plain text from HTML (helper for position mapping)
+  static String _extractPlainTextFromHtml(String html) {
+    return html
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  /// Map plain text position to HTML position
+  static int _mapPlainTextToHtmlPosition(String html, int plainTextPos) {
+    int htmlPos = 0;
+    int plainPos = 0;
+    bool inTag = false;
+
+    for (int i = 0; i < html.length && plainPos < plainTextPos; i++) {
+      if (html[i] == '<') {
+        inTag = true;
+      } else if (html[i] == '>') {
+        inTag = false;
+      } else if (!inTag) {
+        if (html[i] == '&') {
+          int entityEnd = html.indexOf(';', i);
+          if (entityEnd != -1) {
+            plainPos++;
+            i = entityEnd;
+            htmlPos = entityEnd + 1;
+            continue;
+          }
+        }
+        plainPos++;
+        htmlPos = i + 1;
+      }
     }
 
-    // Do not clear selection, so the buttons remain.
-    // User can tap away to clear selection.
+    return htmlPos;
   }
 
   /// Helper method to check if a position is inside an existing mark tag

@@ -51,6 +51,8 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       ValueNotifier<String>('');
   final ValueNotifier<bool> _isAtTopNotifier = ValueNotifier<bool>(true);
   final ValueNotifier<bool> _isAtBottomNotifier = ValueNotifier<bool>(false);
+  String? _currentBookId;
+  String? _originalChapterHtml; // Store original HTML before highlights
 
   @override
   void initState() {
@@ -65,6 +67,11 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     
     SchedulerBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<PdfViewerProvider>();
+      // Generate book ID from file path
+      _currentBookId = PdfViewerTextOperations.generateBookId(widget.filePath);
+      // Load highlights for this book
+      provider.loadHighlights(_currentBookId!);
+      
       PdfViewerHelpers.determineReaderType(widget.filePath, provider);
       provider.setCurrentPage(1);
       PdfViewerHelpers.getInitialBrightness(provider);
@@ -78,6 +85,10 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
             index,
             _currentEpubContentNotifier,
             _epubScrollController,
+            onOriginalContentReady: (originalHtml) {
+              // Store original HTML for position tracking
+              _originalChapterHtml = originalHtml;
+            },
           ),
         );
       }
@@ -185,6 +196,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           provider.currentEpubChapterIndex + 1,
           _currentEpubContentNotifier,
           _epubScrollController,
+          onOriginalContentReady: (originalHtml) {
+            _originalChapterHtml = originalHtml;
+          },
         );
       }
     } else {
@@ -203,6 +217,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           provider.currentEpubChapterIndex - 1,
           _currentEpubContentNotifier,
           _epubScrollController,
+          onOriginalContentReady: (originalHtml) {
+            _originalChapterHtml = originalHtml;
+          },
         );
       }
     } else {
@@ -213,162 +230,39 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     }
   }
 
-  void _addHighlight(PdfViewerProvider provider) {
-    PdfViewerTextOperations.addHighlight(
-      provider,
-      _localSelectedTextNotifier,
-      _currentEpubContentNotifier,
-    );
-  }
-
-  void _addHighlightOld(PdfViewerProvider provider) {
-    final selectedText = _localSelectedTextNotifier.value.trim();
-    if (selectedText.isEmpty || provider.readerType != ReaderType.epub) {
+  void _addHighlight(PdfViewerProvider provider) async {
+    if (_currentBookId == null) {
+      log('Cannot highlight: bookId is null');
       return;
     }
     
-    // Add to highlights list
-    provider.addHighlight(selectedText);
+    // If original HTML is not stored, use current content (before any highlights)
+    // This handles the case where chapter was loaded before we started tracking original content
+    String originalHtml = _originalChapterHtml ?? _currentEpubContentNotifier.value;
     
-    // Get current content from ValueNotifier (which is the displayed content)
-    final currentContent = _currentEpubContentNotifier.value;
-    
-    // Normalize the selected text for matching (handle multiple spaces, newlines, etc.)
-    final normalizedSelected = selectedText
-        .replaceAll(RegExp(r'\s+'), ' ')  // Normalize all whitespace to single space
-        .trim();
-    
-    // Check if text is already highlighted (avoid double highlighting)
-    // Check both escaped and unescaped versions
-    final escapedSelected = normalizedSelected.replaceAll('&', '&amp;');
-    if (currentContent.contains('<mark style="background-color: yellow;">$normalizedSelected</mark>') ||
-        currentContent.contains('<mark style="background-color: yellow;">$escapedSelected</mark>') ||
-        currentContent.contains('background-color: yellow;">$normalizedSelected</mark>') ||
-        currentContent.contains('background-color: yellow;">$escapedSelected</mark>')) {
-      log('Text already highlighted: $normalizedSelected');
-      return; // Already highlighted
+    // Remove any existing mark tags from original HTML to get clean content
+    if (originalHtml.contains('<mark')) {
+      originalHtml = originalHtml.replaceAll(RegExp(r'<mark[^>]*>'), '').replaceAll('</mark>', '');
     }
     
-    // Try multiple matching strategies with increasing flexibility
-    String newContent = currentContent;
-    bool found = false;
+    final chapterId = provider.currentEpubChapterIndex.toString();
+    final chapterName = provider.epubChapters.isNotEmpty && 
+        provider.currentEpubChapterIndex < provider.epubChapters.length
+        ? provider.epubChapters[provider.currentEpubChapterIndex].Title ?? 'Chapter ${provider.currentEpubChapterIndex + 1}'
+        : 'Chapter ${provider.currentEpubChapterIndex + 1}';
     
-    // Strategy 1: Try exact match (for plain text in HTML)
-    if (!found && currentContent.contains(normalizedSelected)) {
-      final index = currentContent.indexOf(normalizedSelected);
-      if (index != -1 && !_isInsideMark(index, currentContent)) {
-        newContent = currentContent.replaceFirst(
-          normalizedSelected,
-          '<mark style="background-color: yellow;">$normalizedSelected</mark>',
-        );
-        found = true;
-        log('Highlight added using exact match: $normalizedSelected');
-      }
-    }
-    
-    // Strategy 2: Try with HTML-escaped text
-    if (!found) {
-      final escapedText = normalizedSelected
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;');
-      
-      if (currentContent.contains(escapedText)) {
-        final index = currentContent.indexOf(escapedText);
-        if (index != -1 && !_isInsideMark(index, currentContent)) {
-          newContent = currentContent.replaceFirst(
-            escapedText,
-            '<mark style="background-color: yellow;">$escapedText</mark>',
-          );
-          found = true;
-          log('Highlight added using escaped match: $normalizedSelected');
-        }
-      }
-    }
-    
-    // Strategy 3: Try case-insensitive match
-    if (!found) {
-      final lowerContent = currentContent.toLowerCase();
-      final lowerSelected = normalizedSelected.toLowerCase();
-      if (lowerContent.contains(lowerSelected)) {
-        final index = lowerContent.indexOf(lowerSelected);
-        if (index != -1 && !_isInsideMark(index, currentContent)) {
-          // Extract the actual text at this position (preserving original case)
-          final actualText = currentContent.substring(index, index + normalizedSelected.length);
-          newContent = currentContent.replaceFirst(
-            actualText,
-            '<mark style="background-color: yellow;">$actualText</mark>',
-          );
-          found = true;
-          log('Highlight added using case-insensitive match: $normalizedSelected');
-        }
-      }
-    }
-    
-    // Strategy 4: Try matching with flexible whitespace (normalize both)
-    if (!found) {
-      // Normalize both content and selected text for comparison
-      final normalizedContent = currentContent.replaceAll(RegExp(r'\s+'), ' ');
-      if (normalizedContent.contains(normalizedSelected)) {
-        // Find all occurrences to find one that's not already highlighted
-        final regex = RegExp(RegExp.escape(normalizedSelected), caseSensitive: false);
-        final matches = regex.allMatches(normalizedContent);
-        
-        for (final match in matches) {
-          final normalizedIndex = match.start;
-          // Find corresponding position in original content
-          // This is approximate but should work for most cases
-          int originalIndex = 0;
-          int normalizedPos = 0;
-          
-          // Map normalized position to original position
-          for (int i = 0; i < currentContent.length && normalizedPos < normalizedIndex; i++) {
-            if (RegExp(r'\s').hasMatch(currentContent[i])) {
-              // Skip if this whitespace would be normalized
-              if (i == 0 || !RegExp(r'\s').hasMatch(currentContent[i - 1])) {
-                normalizedPos++;
-              }
-            } else {
-              normalizedPos++;
-            }
-            originalIndex = i;
-          }
-          
-          // Check if this position is already highlighted
-          if (originalIndex != -1 && !_isInsideMark(originalIndex, currentContent)) {
-            // Try to extract actual text at this position
-            final textAtPos = _extractTextAtPosition(currentContent, originalIndex, normalizedSelected.length);
-            if (textAtPos != null) {
-              // Normalize extracted text for comparison
-              final normalizedExtracted = textAtPos.replaceAll(RegExp(r'\s+'), ' ').trim();
-              if (normalizedExtracted.toLowerCase() == normalizedSelected.toLowerCase()) {
-                newContent = currentContent.replaceFirst(
-                  textAtPos,
-                  '<mark style="background-color: yellow;">$textAtPos</mark>',
-                );
-                found = true;
-                log('Highlight added using normalized whitespace match: $normalizedSelected');
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    // Update both provider and ValueNotifier if content changed
-    if (found && newContent != currentContent) {
-      provider.setCurrentEpubContent(newContent);
-      _currentEpubContentNotifier.value = newContent;
-    } else {
-      log('Could not find text to highlight: "$normalizedSelected" (length: ${normalizedSelected.length})');
-      log('Content preview: ${currentContent.substring(0, currentContent.length > 500 ? 500 : currentContent.length)}...');
-    }
-    
-    // Do not clear selection, so the buttons remain.
-    // User can tap away to clear selection.
+    await PdfViewerTextOperations.addHighlight(
+      provider,
+      _localSelectedTextNotifier,
+      _currentEpubContentNotifier,
+      _currentBookId,
+      chapterId,
+      chapterName,
+      originalHtml,
+    );
   }
+
+  // Old _addHighlightOld function removed - using new HighlightModel system in _addHighlight
   
   // Helper method to check if a position is inside an existing mark tag
   bool _isInsideMark(int position, String content) {
@@ -1204,6 +1098,26 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         index,
         _currentEpubContentNotifier,
         _epubScrollController,
+        onOriginalContentReady: (originalHtml) {
+          _originalChapterHtml = originalHtml;
+        },
+      ),
+    );
+  }
+
+  void _openHighlightsCollection(PdfViewerProvider provider) {
+    PdfViewerSettingsDialogs.openHighlightsCollection(
+      context,
+      provider,
+      pdfViewerController,
+      (index) => EpubReaderWidget.loadEpubChapter(
+        provider,
+        index,
+        _currentEpubContentNotifier,
+        _epubScrollController,
+        onOriginalContentReady: (originalHtml) {
+          _originalChapterHtml = originalHtml;
+        },
       ),
     );
   }
@@ -1296,6 +1210,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                       pageNumber - 1,
                                       _currentEpubContentNotifier,
                                       _epubScrollController,
+                                      onOriginalContentReady: (originalHtml) {
+                                        _originalChapterHtml = originalHtml;
+                                      },
                                     );
                                   }
                                   Navigator.pop(context);
@@ -1337,6 +1254,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         index,
         _currentEpubContentNotifier,
         _epubScrollController,
+        onOriginalContentReady: (originalHtml) {
+          _originalChapterHtml = originalHtml;
+        },
       ),
     );
   }
@@ -1417,6 +1337,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                               index,
                               _currentEpubContentNotifier,
                               _epubScrollController,
+                              onOriginalContentReady: (originalHtml) {
+                                _originalChapterHtml = originalHtml;
+                              },
                             );
                             Navigator.pop(context);
                           },
@@ -1592,6 +1515,9 @@ Widget _buildEpubReader() {
         index,
         _currentEpubContentNotifier,
         _epubScrollController,
+        onOriginalContentReady: (originalHtml) {
+          _originalChapterHtml = originalHtml;
+        },
       ),
     );
   }
@@ -2103,6 +2029,9 @@ Widget _buildEpubReader() {
                                                   currentChapterIndex - 1,
                                                   _currentEpubContentNotifier,
                                                   _epubScrollController,
+                                                  onOriginalContentReady: (originalHtml) {
+                                                    _originalChapterHtml = originalHtml;
+                                                  },
                                                 );
                                               }
                                             : null,
@@ -2176,6 +2105,9 @@ Widget _buildEpubReader() {
                                                   currentChapterIndex + 1,
                                                   _currentEpubContentNotifier,
                                                   _epubScrollController,
+                                                  onOriginalContentReady: (originalHtml) {
+                                                    _originalChapterHtml = originalHtml;
+                                                  },
                                                 );
                                               }
                                             : null,
@@ -2290,6 +2222,12 @@ Widget _buildEpubReader() {
                           Icons.collections_bookmark_outlined,
                           'Bookmark Collection',
                           () => _openBookmarkCollection(provider),
+                          bottomNavIconColor,
+                        ),
+                        _buildBottomIcon(
+                          Icons.highlight_outlined,
+                          'Highlights',
+                          () => _openHighlightsCollection(provider),
                           bottomNavIconColor,
                         ),
                         _buildBottomIcon(

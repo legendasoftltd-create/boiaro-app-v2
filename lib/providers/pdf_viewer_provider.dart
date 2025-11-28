@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:epubx/epubx.dart' as epubx;
+import '../models/highlight_model.dart';
+import '../services/highlight_storage_service.dart';
 
 enum ReaderType { pdf, epub }
 
@@ -77,8 +79,11 @@ class PdfViewerProvider with ChangeNotifier {
   List<int> _bookmarkedPages = [];
   List<int> get bookmarkedPages => List.unmodifiable(_bookmarkedPages);
   
-  List<String> _highlights = [];
-  List<String> get highlights => List.unmodifiable(_highlights);
+  List<HighlightModel> _highlights = [];
+  List<HighlightModel> get highlights => List.unmodifiable(_highlights);
+  
+  String? _currentBookId; // Track current book ID
+  String? get currentBookId => _currentBookId;
   
   double _lastScrollPosition = 0;
   double get lastScrollPosition => _lastScrollPosition;
@@ -297,16 +302,45 @@ class PdfViewerProvider with ChangeNotifier {
     return _bookmarkedPages.contains(page);
   }
 
-  void addHighlight(String text) {
-    if (!_highlights.contains(text)) {
-      _highlights.add(text);
+  /// Set current book ID (used for highlights)
+  void setCurrentBookId(String? bookId) {
+    _currentBookId = bookId;
+    notifyListeners();
+  }
+
+  /// Load highlights for current book
+  Future<void> loadHighlights(String bookId) async {
+    _currentBookId = bookId;
+    final highlights = await HighlightStorageService.getHighlightsForBook(bookId);
+    _highlights = highlights;
+    notifyListeners();
+  }
+
+  /// Add a highlight
+  void addHighlight(HighlightModel highlight) {
+    if (!_highlights.any((h) => h.id == highlight.id)) {
+      _highlights.add(highlight);
       notifyListeners();
     }
   }
 
-  void removeHighlight(String text) {
-    _highlights.remove(text);
+  /// Remove a highlight
+  void removeHighlight(HighlightModel highlight) {
+    _highlights.removeWhere((h) => h.id == highlight.id);
     notifyListeners();
+  }
+
+  /// Get highlights for current chapter
+  List<HighlightModel> getHighlightsForChapter(String chapterId) {
+    return _highlights.where((h) => h.chapterId == chapterId).toList();
+  }
+
+  /// Check if a position is highlighted
+  bool isPositionHighlighted(String chapterId, int startPosition, int endPosition) {
+    return _highlights.any((h) =>
+        h.chapterId == chapterId &&
+        h.startPosition == startPosition &&
+        h.endPosition == endPosition);
   }
 
   void setLastScrollPosition(double position) {
@@ -389,6 +423,7 @@ class PdfViewerProvider with ChangeNotifier {
     _searchResult = PdfTextSearchResult();
     _bookmarkedPages = [];
     _highlights = [];
+    _currentBookId = null;
     _lastScrollPosition = 0;
     notifyListeners();
   }

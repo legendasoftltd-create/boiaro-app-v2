@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/providers/pdf_viewer_provider.dart';
+import '/services/highlight_storage_service.dart';
 import 'pdf_viewer_pdf_operations.dart';
 
 /// Settings dialogs for PDF Viewer
@@ -952,6 +953,142 @@ class PdfViewerSettingsDialogs {
                             fontSize: 16,
                             fontWeight: FontWeight.bold)),
                   ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Open highlights collection dialog
+  static void openHighlightsCollection(
+    BuildContext context,
+    PdfViewerProvider provider,
+    PdfViewerController pdfController,
+    Function(int) loadEpubChapter,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return Consumer<PdfViewerProvider>(
+          builder: (context, provider, child) {
+            final highlights = provider.highlights;
+            
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "✨ Highlights",
+                    style: FlutterFlowTheme.of(context).bodyLarge.override(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  highlights.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Text(
+                            "No highlights yet. Select text and tap 'Highlight' to create one.",
+                            style: FlutterFlowTheme.of(context).bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.of(context).size.height * 0.6,
+                          ),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: highlights.length,
+                            itemBuilder: (context, index) {
+                              final highlight = highlights[index];
+                              
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  leading: Container(
+                                    width: 4,
+                                    height: double.infinity,
+                                    color: Colors.yellow.withOpacity(0.5),
+                                  ),
+                                  title: Text(
+                                    highlight.chapterName,
+                                    style: FlutterFlowTheme.of(context).bodySmall.override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 12,
+                                          color: FlutterFlowTheme.of(context).secondaryText,
+                                        ),
+                                  ),
+                                  subtitle: Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      highlight.text,
+                                      style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 14,
+                                          ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    color: Colors.red,
+                                    onPressed: () async {
+                                      // Delete from storage
+                                      await HighlightStorageService.deleteHighlight(highlight);
+                                      // Remove from provider
+                                      provider.removeHighlight(highlight);
+                                      
+                                      // If this highlight was in the current chapter, reload the chapter
+                                      if (provider.readerType == ReaderType.epub) {
+                                        final currentChapterId = provider.currentEpubChapterIndex.toString();
+                                        if (highlight.chapterId == currentChapterId) {
+                                          // Reload current chapter to reflect the deletion
+                                          final chapterIndex = provider.currentEpubChapterIndex;
+                                          loadEpubChapter(chapterIndex);
+                                        }
+                                      }
+                                    },
+                                  ),
+                                  onTap: () {
+                                    // Navigate to chapter
+                                    if (provider.readerType == ReaderType.epub) {
+                                      final chapterIndex = int.tryParse(highlight.chapterId);
+                                      if (chapterIndex != null) {
+                                        loadEpubChapter(chapterIndex);
+                                      }
+                                    } else {
+                                      // For PDF, jump to page if we have position info
+                                      pdfController.jumpToPage(provider.currentPage);
+                                    }
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                 ],
               ),
             );

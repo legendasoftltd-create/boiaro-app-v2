@@ -10,6 +10,7 @@ import '/backend/backend.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/providers/pdf_viewer_provider.dart';
+import '/models/highlight_model.dart';
 import 'package:a_i_ebook_app/custom_code/extensions/custom_text_selection_controls.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/html_parser_widget.dart';
 
@@ -84,12 +85,14 @@ class EpubReaderWidget {
   }
 
   /// Load EPUB chapter with smooth animation
+  /// Returns the original HTML content (before highlights) via callback
   static void loadEpubChapter(
     PdfViewerProvider provider,
     int index,
     ValueNotifier<String> currentEpubContentNotifier,
-    ScrollController epubScrollController,
-  ) {
+    ScrollController epubScrollController, {
+    Function(String)? onOriginalContentReady, // Callback to get original HTML
+  }) {
     final chapters = provider.epubChapters;
     if (index >= 0 && index < chapters.length) {
       // Set loading state
@@ -100,15 +103,28 @@ class EpubReaderWidget {
         provider.setCurrentEpubChapterIndex(index);
 
         final chapter = chapters[index];
-        var content = parseHtmlContent(chapter.HtmlContent);
+        var originalContent = parseHtmlContent(chapter.HtmlContent);
+        final chapterId = index.toString();
 
-        // Apply highlights
-        for (final highlight in provider.highlights) {
-          content = content.replaceAll(
-            highlight,
-            '<mark style="background-color: yellow;">$highlight</mark>',
-          );
+        // Notify about original content (before highlights)
+        if (onOriginalContentReady != null) {
+          onOriginalContentReady(originalContent);
         }
+
+        // Apply highlights for this chapter only (from saved highlights)
+        var content = originalContent;
+        final chapterHighlights = provider.getHighlightsForChapter(chapterId);
+        
+        // Sort highlights by end position (descending) so we apply from end to start
+        // This ensures that applying earlier highlights doesn't affect positions of later ones
+        final sortedHighlights = List<HighlightModel>.from(chapterHighlights)
+          ..sort((a, b) => b.endPosition.compareTo(a.endPosition));
+        
+        for (final highlight in sortedHighlights) {
+          // Apply highlight at specific position
+          content = _applyHighlightAtPosition(content, highlight);
+        }
+        
         provider.setCurrentEpubContent(content);
         
         // Update total pages for EPUB (based on chapters)
@@ -328,6 +344,72 @@ class EpubReaderWidget {
       );
       },
     );
+  }
+
+  /// Apply highlight at specific position in HTML content
+  static String _applyHighlightAtPosition(String htmlContent, HighlightModel highlight) {
+    // Check if already highlighted
+    if (htmlContent.contains('data-highlight-id="${highlight.id}"')) {
+      return htmlContent; // Already highlighted
+    }
+
+    // Use the saved position to apply highlight accurately
+    final startPos = highlight.startPosition;
+    final endPos = highlight.endPosition;
+    
+    // Validate positions
+    if (startPos < 0 || endPos <= startPos || endPos > htmlContent.length) {
+      // Fallback to text search if positions are invalid
+      final text = highlight.text;
+      final normalizedText = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+      
+      if (htmlContent.contains(normalizedText)) {
+        final index = htmlContent.indexOf(normalizedText);
+        if (index != -1 && !_isInsideMark(index, htmlContent)) {
+          return htmlContent.replaceFirst(
+            normalizedText,
+            '<mark data-highlight-id="${highlight.id}" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedText</mark>',
+          );
+        }
+      }
+      return htmlContent;
+    }
+
+    // Check if position is already inside a mark tag
+    if (_isInsideMark(startPos, htmlContent)) {
+      return htmlContent; // Already highlighted
+    }
+
+    // Extract the text at the position
+    final highlightedText = htmlContent.substring(startPos, endPos);
+    
+    // Check if this text is already wrapped in a mark tag
+    if (highlightedText.contains('<mark') || highlightedText.contains('</mark>')) {
+      return htmlContent; // Already highlighted
+    }
+
+    // Apply highlight at the exact position
+    final beforeText = htmlContent.substring(0, startPos);
+    final afterText = htmlContent.substring(endPos);
+    
+    return beforeText +
+        '<mark data-highlight-id="${highlight.id}" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$highlightedText</mark>' +
+        afterText;
+  }
+
+  /// Check if position is inside a mark tag
+  static bool _isInsideMark(int position, String content) {
+    int start = position;
+    while (start > 0 && start > position - 100) {
+      if (start + 5 <= content.length && content.substring(start, start + 5) == '<mark') {
+        return true;
+      }
+      if (start + 6 <= content.length && content.substring(start, start + 6) == '</mark') {
+        return false;
+      }
+      start--;
+    }
+    return false;
   }
 }
 
