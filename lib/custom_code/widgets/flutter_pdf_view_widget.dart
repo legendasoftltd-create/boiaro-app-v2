@@ -1405,7 +1405,12 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
 
   void _searchPdf(PdfViewerProvider provider) {
     if (provider.readerType == ReaderType.pdf) {
+      provider.setSearching(true);
       PdfViewerPdfOperations.searchPdf(provider, pdfViewerController);
+      // Clear loading after search completes (PDF search is synchronous)
+      Future.delayed(const Duration(milliseconds: 300), () {
+        provider.setSearching(false);
+      });
     } else {
       _searchEpub(provider);
     }
@@ -1418,25 +1423,35 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       return;
     }
 
-    // Search across all chapters
-    final results = await PdfViewerEpubSearch.searchInEpub(provider, searchText);
-    
-    if (results.isNotEmpty) {
-      provider.setEpubSearchResults(
-        results.length,
-        PdfViewerEpubSearch.getCurrentResultIndex(),
-        searchText,
-      );
+    // Set loading state
+    provider.setSearching(true);
+
+    try {
+      // Search across all chapters
+      final results = await PdfViewerEpubSearch.searchInEpub(provider, searchText);
       
-      // Navigate to first result
-      final firstResult = results[0];
-      _navigateToEpubSearchResult(provider, firstResult);
-    } else {
-      provider.setEpubSearchResults(0, -1, searchText);
+      if (results.isNotEmpty) {
+        provider.setEpubSearchResults(
+          results.length,
+          PdfViewerEpubSearch.getCurrentResultIndex(),
+          searchText,
+        );
+        
+        // Navigate to first result
+        final firstResult = results[0];
+        _navigateToEpubSearchResult(provider, firstResult);
+      } else {
+        provider.setEpubSearchResults(0, -1, searchText);
+      }
+    } finally {
+      // Loading state will be cleared in setEpubSearchResults
     }
   }
 
   void _navigateToEpubSearchResult(PdfViewerProvider provider, EpubSearchResult result) {
+    // Set navigating state
+    provider.setNavigatingSearchResult(true);
+
     // Load the chapter if not already loaded
     if (provider.currentEpubChapterIndex != result.chapterIndex) {
       EpubReaderWidget.loadEpubChapter(
@@ -1448,11 +1463,19 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           _originalChapterHtml = originalHtml;
           // Apply search highlights after chapter loads
           _applyEpubSearchHighlights(provider);
+          // Clear navigating state after a delay to allow UI to update
+          Future.delayed(const Duration(milliseconds: 300), () {
+            provider.setNavigatingSearchResult(false);
+          });
         },
       );
     } else {
       // Chapter already loaded, just apply highlights
       _applyEpubSearchHighlights(provider);
+      // Clear navigating state after a delay
+      Future.delayed(const Duration(milliseconds: 300), () {
+        provider.setNavigatingSearchResult(false);
+      });
     }
   }
 
@@ -1496,7 +1519,11 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
 
   void _goToNextSearchResult(PdfViewerProvider provider) {
     if (provider.readerType == ReaderType.pdf) {
+      provider.setNavigatingSearchResult(true);
       PdfViewerPdfOperations.goToNextSearchResult(provider);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        provider.setNavigatingSearchResult(false);
+      });
     } else {
       _goToNextEpubSearchResult(provider);
     }
@@ -1504,7 +1531,11 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
 
   void _goToPreviousSearchResult(PdfViewerProvider provider) {
     if (provider.readerType == ReaderType.pdf) {
+      provider.setNavigatingSearchResult(true);
       PdfViewerPdfOperations.goToPreviousSearchResult(provider);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        provider.setNavigatingSearchResult(false);
+      });
     } else {
       _goToPreviousEpubSearchResult(provider);
     }

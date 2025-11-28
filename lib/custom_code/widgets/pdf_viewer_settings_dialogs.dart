@@ -686,19 +686,39 @@ class PdfViewerSettingsDialogs {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_upward),
-                              onPressed: provider.searchResult.hasResult &&
-                                      provider.searchResult.currentInstanceIndex > 0
+                              icon: provider.isNavigatingSearchResult
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.arrow_upward),
+                              onPressed: (provider.searchResult.hasResult &&
+                                      provider.searchResult.currentInstanceIndex > 0 &&
+                                      !provider.isNavigatingSearchResult &&
+                                      !provider.isSearching)
                                   ? () {
                                       onPreviousResult?.call();
                                     }
                                   : null,
                             ),
                             IconButton(
-                              icon: const Icon(Icons.arrow_downward),
-                              onPressed: provider.searchResult.hasResult &&
+                              icon: provider.isNavigatingSearchResult
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.arrow_downward),
+                              onPressed: (provider.searchResult.hasResult &&
                                       provider.searchResult.currentInstanceIndex <
-                                          provider.searchResult.totalInstanceCount - 1
+                                          provider.searchResult.totalInstanceCount - 1 &&
+                                      !provider.isNavigatingSearchResult &&
+                                      !provider.isSearching)
                                   ? () {
                                       onNextResult?.call();
                                     }
@@ -717,23 +737,35 @@ class PdfViewerSettingsDialogs {
                               ? "${provider.epubCurrentSearchIndex + 1} of ${provider.epubSearchResultCount}"
                               : "No results",
                           style: FlutterFlowTheme.of(context).bodyMedium,
-                        ),
+                        ),provider.isNavigatingSearchResult
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                             :
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_upward),
-                              onPressed: provider.hasEpubSearchResults &&
-                                      provider.epubCurrentSearchIndex > 0
+                              icon:  const Icon(Icons.arrow_upward),
+                              onPressed: (provider.hasEpubSearchResults &&
+                                      provider.epubCurrentSearchIndex > 0 &&
+                                      !provider.isNavigatingSearchResult &&
+                                      !provider.isSearching)
                                   ? () {
                                       onPreviousResult?.call();
                                     }
                                   : null,
                             ),
                             IconButton(
-                              icon: const Icon(Icons.arrow_downward),
-                              onPressed: provider.hasEpubSearchResults &&
+                              icon:const Icon(Icons.arrow_downward),
+                              onPressed: (provider.hasEpubSearchResults &&
                                       provider.epubCurrentSearchIndex <
-                                          provider.epubSearchResultCount - 1
+                                          provider.epubSearchResultCount - 1 &&
+                                      !provider.isNavigatingSearchResult &&
+                                      !provider.isSearching)
                                   ? () {
                                       onNextResult?.call();
                                     }
@@ -751,20 +783,31 @@ class PdfViewerSettingsDialogs {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: () {
-                      if (provider.readerType == ReaderType.pdf) {
-                        PdfViewerPdfOperations.searchPdf(provider, pdfController);
-                      } else {
-                        //hide keyboard
-                        FocusScope.of(context).unfocus();
-                        onSearchEpub?.call();
-                      }
-                    },
-                    child: const Text("Search",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
+                    onPressed: (provider.isSearching || provider.isNavigatingSearchResult)
+                        ? null
+                        : () {
+                            if (provider.readerType == ReaderType.pdf) {
+                              PdfViewerPdfOperations.searchPdf(provider, pdfController);
+                            } else {
+                              //hide keyboard
+                              FocusScope.of(context).unfocus();
+                              onSearchEpub?.call();
+                            }
+                          },
+                    child: provider.isSearching
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text("Search",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 10),
                   TextButton(

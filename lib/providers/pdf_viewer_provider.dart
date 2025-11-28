@@ -88,6 +88,13 @@ class PdfViewerProvider with ChangeNotifier {
   String? _epubSearchText;
   String? get epubSearchText => _epubSearchText;
   
+  // Search loading state
+  bool _isSearching = false;
+  bool get isSearching => _isSearching;
+  
+  bool _isNavigatingSearchResult = false;
+  bool get isNavigatingSearchResult => _isNavigatingSearchResult;
+  
   List<BookmarkModel> _bookmarks = [];
   List<BookmarkModel> get bookmarks => List.unmodifiable(_bookmarks);
   
@@ -286,6 +293,8 @@ class PdfViewerProvider with ChangeNotifier {
     _epubSearchResultCount = totalCount;
     _epubCurrentSearchIndex = currentIndex;
     _epubSearchText = searchText;
+    _isSearching = false;
+    _isNavigatingSearchResult = false;
     notifyListeners();
   }
 
@@ -293,10 +302,23 @@ class PdfViewerProvider with ChangeNotifier {
     _epubSearchResultCount = 0;
     _epubCurrentSearchIndex = -1;
     _epubSearchText = null;
+    _isSearching = false;
+    _isNavigatingSearchResult = false;
     notifyListeners();
   }
 
   bool get hasEpubSearchResults => _epubSearchResultCount > 0;
+
+  // Search loading methods
+  void setSearching(bool searching) {
+    _isSearching = searching;
+    notifyListeners();
+  }
+
+  void setNavigatingSearchResult(bool navigating) {
+    _isNavigatingSearchResult = navigating;
+    notifyListeners();
+  }
 
   void clearSearch() {
     _searchResult = PdfTextSearchResult();
