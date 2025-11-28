@@ -2130,37 +2130,37 @@ Widget _buildEpubReader() {
                           },
                         ),
                         const SizedBox(height: 8),
-                        if (FFAppState().totalPages > 1)
-                          SliderTheme(
-                            data: SliderThemeData(
-                              activeTrackColor: const Color(0xFFFFD700),
-                              inactiveTrackColor:
-                                  FlutterFlowTheme.of(context).alternate,
-                              thumbColor: const Color(0xFFFFD700),
-                              overlayColor: const Color(0xFFFFD700).withOpacity(0.2),
-                              thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 8),
-                              trackHeight: 4,
-                            ),
-                            child: Slider(
-                              value: provider.currentPage.toDouble(),
-                              min: 1,
-                              max: FFAppState().totalPages.toDouble(),
-                              onChanged: (value) {
-                                provider.setCurrentPage(value.toInt());
-                                if (provider.readerType == ReaderType.pdf) {
-                                  pdfViewerController.jumpToPage(provider.currentPage);
-                                } else {
-                                  EpubReaderWidget.loadEpubChapter(
-                                    provider,
-                                    provider.currentPage - 1,
-                                    _currentEpubContentNotifier,
-                                    _epubScrollController,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
+                        // if (FFAppState().totalPages > 1)
+                        //   SliderTheme(
+                        //     data: SliderThemeData(
+                        //       activeTrackColor: const Color(0xFFFFD700),
+                        //       inactiveTrackColor:
+                        //           FlutterFlowTheme.of(context).alternate,
+                        //       thumbColor: const Color(0xFFFFD700),
+                        //       overlayColor: const Color(0xFFFFD700).withOpacity(0.2),
+                        //       thumbShape: const RoundSliderThumbShape(
+                        //           enabledThumbRadius: 8),
+                        //       trackHeight: 4,
+                        //     ),
+                        //     child: Slider(
+                        //       value: provider.currentPage.toDouble(),
+                        //       min: 1,
+                        //       max: FFAppState().totalPages.toDouble(),
+                        //       onChanged: (value) {
+                        //         provider.setCurrentPage(value.toInt());
+                        //         if (provider.readerType == ReaderType.pdf) {
+                        //           pdfViewerController.jumpToPage(provider.currentPage);
+                        //         } else {
+                        //           EpubReaderWidget.loadEpubChapter(
+                        //             provider,
+                        //             provider.currentPage - 1,
+                        //             _currentEpubContentNotifier,
+                        //             _epubScrollController,
+                        //           );
+                        //         }
+                        //       },
+                        //     ),
+                        //   ),
                       ],
                     ),
                   ),

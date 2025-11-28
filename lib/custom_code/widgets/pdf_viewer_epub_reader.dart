@@ -205,16 +205,20 @@ class EpubReaderWidget {
         }
 
         Color backgroundColor;
+        Color scrollbarColor;
 
         switch (themeMode) {
           case AppThemeMode.light:
             backgroundColor = Colors.white;
+            scrollbarColor = Colors.black.withOpacity(0.3);
             break;
           case AppThemeMode.dark:
             backgroundColor = Colors.black;
+            scrollbarColor = Colors.white.withOpacity(0.5);
             break;
           case AppThemeMode.sepia:
             backgroundColor = const Color(0xFFF5DEB3); // Sepia color
+            scrollbarColor = Colors.black.withOpacity(0.3);
             break;
         }
 
@@ -265,45 +269,63 @@ class EpubReaderWidget {
                 // Users can manually navigate chapters using navigation controls
                 return false;
               },
-              child: SingleChildScrollView(
-                controller: epubScrollController,
-                padding: const EdgeInsets.all(20),
-                child: ValueListenableBuilder<String>(
-                  valueListenable: currentEpubContentNotifier,
-                  builder: (context, content, child) {
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (Widget child, Animation<double> animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        );
-                      },
-                      child: Selector<PdfViewerProvider, (double, double, AppThemeMode)>(
-                        key: ValueKey<String>(content),
-                        selector: (_, p) => (p.epubFontSize, p.epubLineHeight, p.currentThemeMode),
-                        builder: (context, settings, child) {
-                          final fontSize = settings.$1;
-                          final lineHeight = settings.$2;
-                          final themeMode = settings.$3;
-
-                          return HtmlParserWidget(
-                            htmlContent: content,
-                            fontSize: fontSize,
-                            lineHeight: lineHeight,
-                            themeMode: themeMode,
-                            epubBook: epubBook,
+              child: ScrollbarTheme(
+                data: ScrollbarThemeData(
+                  thumbColor: WidgetStateProperty.all(scrollbarColor),
+                  thickness: WidgetStateProperty.all(8.0),
+                  radius: const Radius.circular(4),
+                  minThumbLength: 50,
+                  crossAxisMargin: 2.0,
+                  mainAxisMargin: 8.0,
+                ),
+                child: Scrollbar(
+                  controller: epubScrollController,
+                  // thumbVisibility: true,
+                  // trackVisibility: false,
+                  radius: const Radius.circular(4),
+                  // thickness: 8.0,
+                  interactive: true,
+                  child: SingleChildScrollView(
+                  controller: epubScrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: currentEpubContentNotifier,
+                    builder: (context, content, child) {
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
                           );
                         },
-                        child: child,
-                      ),
-                    );
-                  },
+                        child: Selector<PdfViewerProvider, (double, double, AppThemeMode)>(
+                          key: ValueKey<String>(content),
+                          selector: (_, p) => (p.epubFontSize, p.epubLineHeight, p.currentThemeMode),
+                          builder: (context, settings, child) {
+                            final fontSize = settings.$1;
+                            final lineHeight = settings.$2;
+                            final themeMode = settings.$3;
+
+                            return HtmlParserWidget(
+                              htmlContent: content,
+                              fontSize: fontSize,
+                              lineHeight: lineHeight,
+                              themeMode: themeMode,
+                              epubBook: epubBook,
+                            );
+                          },
+                          child: child,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }
