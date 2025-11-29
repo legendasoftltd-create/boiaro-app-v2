@@ -620,17 +620,22 @@ class PdfViewerTextOperations {
       provider.setChapterSentences(sentences);
     }
     
-    // Set reading state - if already reading, the loop is already running
-    // so we just need to unpause. Otherwise, start the loop.
+    // Set reading state - if already reading and not paused, the loop is already running
+    // so we just need to return. Otherwise, start the loop.
     final wasAlreadyReading = provider.isReadingChapter;
-    if (!wasAlreadyReading) {
-      provider.setReadingChapter(true);
-      provider.setPaused(false);
-    } else {
-      // If already reading, just unpause - the loop will continue
-      provider.setPaused(false);
-      return; // Don't start a new loop if one is already running
+    if (wasAlreadyReading && !provider.isPaused) {
+      // Already reading and not paused - loop is running, don't start a new one
+      return;
     }
+    
+    // If we're here, either:
+    // 1. Not reading (need to start)
+    // 2. Reading but paused (need to restart the loop)
+    // In both cases, we start/restart the loop
+    
+    // Start or restart reading
+    provider.setReadingChapter(true);
+    provider.setPaused(false);
     
     try {
       await flutterTts.setLanguage("bn-BD");
@@ -668,11 +673,17 @@ class PdfViewerTextOperations {
         
         // Get current sentence index
         int currentIndex = provider.currentReadingSentenceIndex;
+        
+        // Check if we've reached or exceeded the end
         if (currentIndex >= chapterSentences.length) {
-          // Loop back to beginning
-          currentIndex = 0;
-          provider.setCurrentReadingSentenceIndex(0);
+          // Reached the end - stop reading instead of looping
+          provider.setReadingChapter(false);
+          provider.setPaused(false);
+          break;
         }
+        
+        // Check if this is the last sentence - after reading it, we'll stop
+        bool isLastSentence = (currentIndex == chapterSentences.length - 1);
         
         // Create new completer for this sentence BEFORE speaking
         // This ensures the completion handler always references the correct completer
@@ -742,7 +753,14 @@ class PdfViewerTextOperations {
           continue; // Will re-read current sentence when resumed
         }
         
-        // Move to next sentence (will loop if at end)
+        // If this was the last sentence, stop reading
+        if (isLastSentence) {
+          provider.setReadingChapter(false);
+          provider.setPaused(false);
+          break;
+        }
+        
+        // Move to next sentence
         // Only increment AFTER we've confirmed the current sentence completed
         provider.incrementReadingSentenceIndex();
         
@@ -772,10 +790,9 @@ class PdfViewerTextOperations {
     PdfViewerProvider provider,
     FlutterTts flutterTts,
   ) async {
+    // Just unpause - the loop will continue from where it paused
+    // If the loop has exited, the UI should call startReadingChapter to restart it
     provider.setPaused(false);
-    // The loop will continue from the current sentence index
-    // The while loop in startReadingChapter will detect the pause state change
-    // and continue reading from the current sentence
   }
 
   /// Stop reading chapter

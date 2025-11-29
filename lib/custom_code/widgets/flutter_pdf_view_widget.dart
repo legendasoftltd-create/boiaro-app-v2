@@ -400,7 +400,18 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   }
 
   Future<void> _resumeReadingChapter(PdfViewerProvider provider) async {
-    await PdfViewerTextOperations.resumeReadingChapter(provider, flutterTts);
+    // Always restart the reading loop to ensure it's running
+    // This handles cases where the loop might have exited while paused
+    if (provider.chapterSentences.isNotEmpty) {
+      // Restart reading from current sentence index
+      // The startReadingChapter function will handle the pause state correctly
+      await _startReadingChapter(provider);
+    } else {
+      // No sentences available, just unpause if reading
+      if (provider.isReadingChapter) {
+        provider.setPaused(false);
+      }
+    }
   }
 
   Future<void> _stopReadingChapter(PdfViewerProvider provider) async {
