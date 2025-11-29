@@ -429,39 +429,6 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         },
       );
       
-      // Calculate scroll position based on sentence index (more accurate than character position)
-      double? scrollPosition;
-      final currentSentenceIndex = p.currentReadingSentenceIndex;
-      final totalSentences = p.chapterSentences.length;
-      
-      if (totalSentences > 0 && _epubScrollController.hasClients) {
-        try {
-          final maxScroll = _epubScrollController.position.maxScrollExtent;
-          if (maxScroll > 0) {
-            // Use sentence index for more accurate scrolling
-            // Scroll proportionally based on which sentence we're on
-            scrollPosition = (currentSentenceIndex / totalSentences) * maxScroll;
-            // Clamp to valid range
-            scrollPosition = scrollPosition.clamp(0.0, maxScroll);
-          }
-        } catch (e) {
-          // Fallback: use character position if sentence index calculation fails
-          final sentenceIndex = cleanedContent.indexOf(normalizedSentence);
-          if (sentenceIndex != -1) {
-            final contentLength = cleanedContent.length;
-            if (contentLength > 0 && _epubScrollController.hasClients) {
-              try {
-                final maxScroll = _epubScrollController.position.maxScrollExtent;
-                scrollPosition = (sentenceIndex / contentLength) * maxScroll;
-                scrollPosition = scrollPosition.clamp(0.0, maxScroll);
-              } catch (_) {
-                // Ignore scroll errors
-              }
-            }
-          }
-        }
-      }
-      
       // Add new highlight - find the sentence in cleaned content
       String highlightedContent = cleanedContent;
       
@@ -478,7 +445,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         if (sentenceStartIndex != -1) {
           highlightedContent = cleanedContent.replaceFirst(
             escapedSentence,
-            '<mark class="reading-sentence" style="background-color: rgba(33, 150, 243, 0.3);">$escapedSentence</mark>',
+            '<mark class="reading-sentence" id="reading-sentence-${p.currentReadingSentenceIndex}" style="background-color: rgba(33, 150, 243, 0.3);">$escapedSentence</mark>',
             sentenceStartIndex,
           );
         }
@@ -486,32 +453,154 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         // Found with plain text
         highlightedContent = cleanedContent.replaceFirst(
           normalizedSentence,
-          '<mark class="reading-sentence" style="background-color: rgba(33, 150, 243, 0.3);">$normalizedSentence</mark>',
+          '<mark class="reading-sentence" id="reading-sentence-${p.currentReadingSentenceIndex}" style="background-color: rgba(33, 150, 243, 0.3);">$normalizedSentence</mark>',
           sentenceStartIndex,
         );
       }
       
-      // Update content
+      // Update content first
       _currentEpubContentNotifier.value = highlightedContent;
       p.setCurrentEpubContent(highlightedContent);
       
-      // Auto-scroll to the sentence
-      if (scrollPosition != null && _epubScrollController.hasClients) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_epubScrollController.hasClients) {
-            try {
+      // Calculate and scroll to position after content is updated
+      // Wait for layout to complete before calculating scroll position
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToHighlightedSentence(sentenceStartIndex, cleanedContent.length);
+      });
+    }
+  }
+
+  /// Extract visible text from HTML (excluding tags) for accurate position calculation
+  String _extractVisibleText(String html) {
+    // Remove HTML tags but keep text content
+    return html.replaceAll(RegExp(r'<[^>]*>'), '');
+  }
+
+  void _scrollToHighlightedSentence(int sentenceCharIndex, int totalContentLength) {
+    if (!_epubScrollController.hasClients || !mounted) return;
+    
+    // Wait for layout to complete after content update
+    // Use multiple post-frame callbacks to ensure layout is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (!_epubScrollController.hasClients || !mounted) return;
+        
+        try {
+          final scrollPosition = _epubScrollController.position;
+          final maxScroll = scrollPosition.maxScrollExtent;
+          final viewportHeight = scrollPosition.viewportDimension;
+          
+          if (maxScroll <= 0) return;
+          
+          final p = context.read<PdfViewerProvider>();
+          final currentSentenceIndex = p.currentReadingSentenceIndex;
+          final totalSentences = p.chapterSentences.length;
+          
+          // Get the current content to calculate visible text position
+          final currentContent = _currentEpubContentNotifier.value;
+          
+          double contentRatio;
+          
+          // Primary method: Use sentence index for more accurate positioning
+          // This is more reliable than character position since sentences are evenly distributed
+          if (totalSentences > 0) {
+            // Use sentence index with slight adjustment for better accuracy
+            contentRatio = currentSentenceIndex / totalSentences;
+            
+            // Fine-tune using visible text position as a secondary check
+            if (totalContentLength > 0 && currentContent.isNotEmpty) {
+              final contentBeforeSentence = currentContent.substring(0, sentenceCharIndex.clamp(0, currentContent.length));
+              final visibleTextBefore = _extractVisibleText(contentBeforeSentence);
+              final totalVisibleText = _extractVisibleText(currentContent);
+              
+              if (totalVisibleText.isNotEmpty) {
+                final visibleTextRatio = visibleTextBefore.length / totalVisibleText.length;
+                // Blend both methods: 70% sentence index, 30% visible text position
+                contentRatio = (contentRatio * 0.7) + (visibleTextRatio * 0.3);
+              }
+            }
+          } else if (totalContentLength > 0) {
+            // Fallback: Use visible text position if sentence index not available
+            final contentBeforeSentence = currentContent.substring(0, sentenceCharIndex.clamp(0, currentContent.length));
+            final visibleTextBefore = _extractVisibleText(contentBeforeSentence);
+            final totalVisibleText = _extractVisibleText(currentContent);
+            
+            if (totalVisibleText.isNotEmpty) {
+              contentRatio = visibleTextBefore.length / totalVisibleText.length;
+            } else {
+              // Last resort: use character position
+              contentRatio = sentenceCharIndex / totalContentLength;
+            }
+          } else {
+            return; // Cannot calculate position
+          }
+          
+          // Calculate target scroll position
+          // Position the sentence in the upper-middle of viewport (about 20% from top)
+          // This ensures the sentence is visible and there's context above it
+          double targetScrollPosition = contentRatio * maxScroll;
+          
+          // Adjust to account for viewport height - position text in upper-middle area
+          // Subtract about 20% of viewport height to position text optimally
+          // This ensures the highlighted sentence is visible in the viewport
+          final viewportOffset = viewportHeight * 0.2;
+          targetScrollPosition = (targetScrollPosition - viewportOffset).clamp(0.0, maxScroll);
+          
+          // Get current scroll position
+          final currentScroll = scrollPosition.pixels;
+          
+          // Only scroll if the target position is significantly different from current
+          // This prevents unnecessary scrolling when already close to target
+          final scrollDifference = (targetScrollPosition - currentScroll).abs();
+          if (scrollDifference > 80) {
+            _epubScrollController.animateTo(
+              targetScrollPosition,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+            );
+          } else if (scrollDifference > 20) {
+            // For smaller differences, use a faster animation
+            _epubScrollController.animateTo(
+              targetScrollPosition,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        } catch (e) {
+          // Fallback: use simpler proportional scrolling based on sentence index
+          try {
+            if (!_epubScrollController.hasClients || !mounted) return;
+            final p = context.read<PdfViewerProvider>();
+            final maxScroll = _epubScrollController.position.maxScrollExtent;
+            final totalSentences = p.chapterSentences.length;
+            
+            if (maxScroll > 0 && totalSentences > 0) {
+              final currentSentenceIndex = p.currentReadingSentenceIndex;
+              final contentRatio = currentSentenceIndex / totalSentences;
+              final targetScroll = (contentRatio * maxScroll).clamp(0.0, maxScroll);
+              
               _epubScrollController.animateTo(
-                scrollPosition!,
-                duration: const Duration(milliseconds: 300),
+                targetScroll,
+                duration: const Duration(milliseconds: 400),
                 curve: Curves.easeInOut,
               );
-            } catch (e) {
-              // Ignore scroll errors
+            } else if (maxScroll > 0 && totalContentLength > 0) {
+              // Last fallback: character position
+              final contentRatio = sentenceCharIndex / totalContentLength;
+              final targetScroll = (contentRatio * maxScroll).clamp(0.0, maxScroll);
+              
+              _epubScrollController.animateTo(
+                targetScroll,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOut,
+              );
             }
+          } catch (_) {
+            // Ignore scroll errors
           }
-        });
-      }
-    }
+        }
+      });
+    });
   }
 
   void _openTtsSettings(PdfViewerProvider provider) {
