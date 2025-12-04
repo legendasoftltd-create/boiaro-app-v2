@@ -7,6 +7,7 @@ import 'package:html/parser.dart' as html_parser;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/providers/pdf_viewer_provider.dart';
 import 'package:a_i_ebook_app/custom_code/extensions/epub_image_extension.dart';
+import 'package:a_i_ebook_app/custom_code/extensions/epub_text_indent_extension.dart';
 
 /// Comprehensive HTML Parser Widget
 /// Handles all HTML tags with proper styling and rendering
@@ -28,21 +29,203 @@ class HtmlParserWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Handle empty or null content
+    if (htmlContent.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    // Preprocess HTML: Remove XML declaration and DOCTYPE, extract body with attributes
+    // This handles full HTML documents while preserving body styles like text-align
+    String htmlToProcess = htmlContent;
+    
+    // Check if this is a full HTML document
+    final hasXmlDeclaration = htmlContent.trim().startsWith('<?xml');
+    final hasDoctype = htmlContent.contains('<!DOCTYPE') || htmlContent.contains('<!doctype');
+    final hasHtmlStructure = htmlContent.contains('<html') && htmlContent.contains('<body');
+    
+    if (hasHtmlStructure) {
+      try {
+        // Remove XML declaration if present
+        if (hasXmlDeclaration) {
+          final xmlEnd = htmlContent.indexOf('?>');
+          if (xmlEnd != -1) {
+            htmlToProcess = htmlContent.substring(xmlEnd + 2).trim();
+          }
+        }
+        
+        // Remove DOCTYPE if present
+        if (hasDoctype) {
+          final doctypeEnd = htmlToProcess.indexOf('>', htmlToProcess.indexOf('<!DOCTYPE') == -1 
+              ? htmlToProcess.indexOf('<!doctype') 
+              : htmlToProcess.indexOf('<!DOCTYPE'));
+          if (doctypeEnd != -1) {
+            htmlToProcess = htmlToProcess.substring(doctypeEnd + 1).trim();
+          }
+        }
+        
+        // Parse and extract body content, wrap in div with body styles
+        // flutter_html doesn't handle standalone <body> tags well, so we use a div instead
+        try {
+          final document = html_parser.parse(htmlToProcess);
+          final body = document.querySelector('body');
+          if (body != null) {
+            final bodyContent = body.innerHtml;
+            
+            // Only extract if body has content
+            if (bodyContent.trim().isNotEmpty) {
+              // Extract body styles and apply to a wrapper div
+              final bodyStyle = body.attributes['style'] ?? '';
+              
+              // Add word-break CSS for Bengali and complex scripts
+              // This prevents words from breaking in the middle
+              final wordBreakStyle = 'word-break: normal; overflow-wrap: break-word;';
+              
+              if (bodyStyle.isNotEmpty) {
+                // Append word-break styles to existing body styles
+                final combinedStyle = bodyStyle.endsWith(';') 
+                    ? '$bodyStyle $wordBreakStyle'
+                    : '$bodyStyle; $wordBreakStyle';
+                // Wrap content in div with body's style
+                htmlToProcess = '<div style="$combinedStyle">$bodyContent</div>';
+              } else {
+                // No body styles, add word-break styles
+                htmlToProcess = '<div style="$wordBreakStyle">$bodyContent</div>';
+              }
+              
+              debugPrint('Body extracted successfully. Content length: ${bodyContent.length}, Final HTML length: ${htmlToProcess.length}');
+            } else {
+              debugPrint('Warning: Body content is empty');
+            }
+          } else {
+            debugPrint('Warning: Body tag not found in HTML');
+          }
+        } catch (e) {
+          debugPrint('Error extracting body: $e');
+          // Keep original htmlToProcess if extraction fails
+        }
+      } catch (e) {
+        debugPrint('Error preprocessing HTML: $e');
+        // If parsing fails, try to at least remove XML/DOCTYPE
+        if (hasXmlDeclaration) {
+          final xmlEnd = htmlContent.indexOf('?>');
+          if (xmlEnd != -1) {
+            htmlToProcess = htmlContent.substring(xmlEnd + 2).trim();
+          }
+        }
+        if (hasDoctype && htmlToProcess.contains('<!DOCTYPE')) {
+          final doctypeEnd = htmlToProcess.indexOf('>', htmlToProcess.indexOf('<!DOCTYPE'));
+          if (doctypeEnd != -1) {
+            htmlToProcess = htmlToProcess.substring(doctypeEnd + 1).trim();
+          }
+        }
+      }
+    }
+    
+    // Debug: Log what we're processing
+    if (htmlToProcess != htmlContent) {
+      debugPrint('Extracted body from full HTML document. Body length: ${htmlToProcess.length}');
+      debugPrint('Body preview: ${htmlToProcess.length > 200 ? htmlToProcess.substring(0, 200) : htmlToProcess}');
+    }
+    
     final (bgColor, txtColor) = _getThemeColors();
-    final cssStyles = _parseCssFromHtml(htmlContent);
+    final cssStyles = _parseCssFromHtml(htmlToProcess);
+    
+    // Preprocess HTML to convert inline-block indentation spans to padding
+    final htmlWithIndentation = _convertInlineBlockIndentation(htmlToProcess, fontSize);
     
     // Preprocess HTML to apply CSS classes as inline styles
     final processedHtml = _applyCssClassesToHtml(
-      htmlContent, 
+      htmlWithIndentation, 
       cssStyles, 
       fontSize,
       baseLineHeight: lineHeight,
     );
 
-    return Html(
-      data: processedHtml,
-      style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
-      extensions: _buildExtensions(context),
+    // Debug: Log processed HTML
+    debugPrint('Processed HTML length: ${processedHtml.length}');
+    if (processedHtml.length > 200) {
+      debugPrint('Processed HTML preview: ${processedHtml.substring(0, 200)}...');
+    } else {
+      debugPrint('Processed HTML: $processedHtml');
+    }
+
+    // Ensure processed HTML is not empty
+    if (processedHtml.isEmpty || processedHtml.trim().isEmpty) {
+      debugPrint('Warning: Processed HTML is empty after processing.');
+      debugPrint('Original length: ${htmlContent.length}, htmlToProcess length: ${htmlToProcess.length}');
+      debugPrint('htmlToProcess preview: ${htmlToProcess.length > 300 ? htmlToProcess.substring(0, 300) : htmlToProcess}');
+      // Return original HTML if processing removed everything
+      return Html(
+        data: htmlContent,
+        style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
+        extensions: _buildExtensions(context),
+      );
+    }
+
+    // Wrap in error boundary to catch rendering errors
+    return Builder(
+      builder: (context) {
+        try {
+          // Ensure we have valid HTML to render
+          final htmlToRender = processedHtml.trim().isNotEmpty ? processedHtml : htmlToProcess;
+          
+          if (htmlToRender.trim().isEmpty) {
+            debugPrint('Error: All HTML processing resulted in empty content');
+            return Center(
+              child: Text(
+                'No content to display',
+                style: TextStyle(color: txtColor),
+              ),
+            );
+          }
+          
+          debugPrint('Rendering HTML widget with ${htmlToRender.length} characters');
+          debugPrint('HTML to render preview: ${htmlToRender.length > 300 ? htmlToRender.substring(0, 300) : htmlToRender}');
+          
+          return Html(
+            data: htmlToRender,
+            style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
+            extensions: _buildExtensions(context),
+          );
+        } catch (e, stackTrace) {
+          debugPrint('Error rendering HTML: $e');
+          debugPrint('Stack trace: $stackTrace');
+          debugPrint('Processed HTML length: ${processedHtml.length}');
+          debugPrint('htmlToProcess length: ${htmlToProcess.length}');
+          debugPrint('Original HTML length: ${htmlContent.length}');
+          debugPrint('Processed HTML preview: ${processedHtml.length > 200 ? processedHtml.substring(0, 200) : processedHtml}');
+          
+          // Fallback: try rendering htmlToProcess (before CSS processing)
+          try {
+            if (htmlToProcess.trim().isNotEmpty) {
+              return Html(
+                data: htmlToProcess,
+                style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
+                extensions: _buildExtensions(context),
+              );
+            }
+          } catch (e2) {
+            debugPrint('Error rendering htmlToProcess: $e2');
+          }
+          
+          // Final fallback: try rendering original HTML
+          try {
+            return Html(
+              data: htmlContent,
+              style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
+              extensions: _buildExtensions(context),
+            );
+          } catch (e3) {
+            debugPrint('Error rendering fallback HTML: $e3');
+            return Center(
+              child: Text(
+                'Error rendering content',
+                style: TextStyle(color: txtColor),
+              ),
+            );
+          }
+        }
+      },
     );
   }
 
@@ -99,10 +282,13 @@ class HtmlParserWidget extends StatelessWidget {
         backgroundColor: bgColor,
         margin: Margins.zero,
         padding: HtmlPaddings.zero,
+        // Add word-break handling for Bengali and complex scripts
+        // This prevents words from breaking in the middle
       ),
       "div": Style(
         color: txtColor,
-        margin: Margins.only(bottom: 8),
+        // Don't set margin - allow inline styles (like text-align) to work
+        // margin: Margins.only(bottom: 8),
       ),
       "span": Style(
         color: txtColor,
@@ -177,7 +363,8 @@ class HtmlParserWidget extends StatelessWidget {
       // Text formatting
       "p": Style(
         margin: Margins.only(bottom: 12),
-        padding: HtmlPaddings.zero,
+        // Don't set padding to zero - allow inline styles to work
+        // padding: HtmlPaddings.zero, // Removed to allow inline padding-left
         color: txtColor,
         fontSize: FontSize(fontSize),
         lineHeight: LineHeight.em(lineHeight),
@@ -1014,10 +1201,24 @@ class HtmlParserWidget extends StatelessWidget {
               .map((e) => '${e.key}: ${e.value}')
               .join('; ');
           
-          if (existingStyle.isNotEmpty) {
-            element.attributes['style'] = '$existingStyle; $newStyle';
-          } else {
-            element.attributes['style'] = newStyle;
+          // Add word-break handling for Bengali and complex scripts on paragraphs
+          final wordBreakStyle = 'word-break: normal; overflow-wrap: break-word;';
+          final finalStyle = existingStyle.isNotEmpty
+              ? '$existingStyle; $newStyle; $wordBreakStyle'
+              : '$newStyle; $wordBreakStyle';
+          
+          element.attributes['style'] = finalStyle;
+        } else {
+          // Even if no CSS classes, add word-break for paragraphs and divs
+          final tagName = element.localName?.toLowerCase() ?? '';
+          if (tagName == 'p' || tagName == 'div') {
+            final existingStyle = element.attributes['style'] ?? '';
+            final wordBreakStyle = 'word-break: normal; overflow-wrap: break-word;';
+            if (existingStyle.isNotEmpty) {
+              element.attributes['style'] = '$existingStyle; $wordBreakStyle';
+            } else {
+              element.attributes['style'] = wordBreakStyle;
+            }
           }
         }
       }
@@ -1088,11 +1289,194 @@ class HtmlParserWidget extends StatelessWidget {
     return baseFontSize * scaleRatio;
   }
 
+  /// Convert inline-block indentation spans to paragraph padding-left
+  /// This handles patterns like: <p><span style="display:inline-block; width:2em;"> </span>text...</p>
+  String _convertInlineBlockIndentation(String html, double baseFontSize) {
+    try {
+      // Skip processing if HTML is empty or too short
+      if (html.isEmpty || html.length < 10) {
+        return html;
+      }
+      
+      // Use regex-based approach for more reliable matching
+      // Pattern: <p><span style="...display:inline-block...width:Xem..."> </span>
+      // Handle both single and double quotes, and various spacing
+      // More flexible pattern that handles different HTML formatting
+      final pattern = RegExp(
+        r'<p([^>]*)>\s*<span\s+style\s*=\s*["'']([^"'']*display\s*:\s*inline-block[^"'']*width\s*:\s*([^;"'']+)[^"'']*)["''][^>]*>\s*(?:&nbsp;|\u00A0|[\s\u00A0])*</span>',
+        caseSensitive: false,
+        dotAll: true,
+      );
+      
+      final matches = pattern.allMatches(html);
+      if (matches.isEmpty) {
+        return html;
+      }
+      
+      final result = html.replaceAllMapped(pattern, (match) {
+        final pAttributes = match.group(1) ?? '';
+        final widthValue = match.group(3)?.trim() ?? '';
+        if (widthValue.isEmpty) {
+          return match.group(0)!;
+        }
+        
+        // Convert width to text-indent
+        final paddingValue = _convertCssSize(widthValue, baseFontSize);
+        
+        if (paddingValue == null || paddingValue <= 0) {
+          return match.group(0)!;
+        }
+        
+        // Build new paragraph tag with text-indent (only first line, not entire paragraph)
+        String newPAttributes = pAttributes;
+        final indentStyle = 'text-indent: ${paddingValue}px';
+        
+        // Check if paragraph already has a style attribute (handle both single and double quotes)
+        final styleMatchDouble = RegExp(r'style\s*=\s*"([^"]*)"', caseSensitive: false).firstMatch(pAttributes);
+        final styleMatchSingle = RegExp(r"style\s*=\s*'([^']*)'", caseSensitive: false).firstMatch(pAttributes);
+        final styleMatch = styleMatchDouble ?? styleMatchSingle;
+        
+        if (styleMatch != null) {
+          // Append text-indent to existing style
+          final existingStyle = styleMatch.group(1) ?? '';
+          final quote = styleMatchDouble != null ? '"' : "'";
+          
+          if (existingStyle.contains('text-indent')) {
+            // Replace existing text-indent
+            newPAttributes = pAttributes.replaceAll(
+              RegExp(r'text-indent\s*:\s*[^;]+', caseSensitive: false),
+              indentStyle,
+            );
+          } else {
+            newPAttributes = pAttributes.replaceFirst(
+              RegExp(r'style\s*=\s*["'']([^"'']*)["'']', caseSensitive: false),
+              'style=$quote$existingStyle; $indentStyle$quote',
+            );
+          }
+        } else {
+          // Add new style attribute
+          // Always add a space before the style attribute
+          if (newPAttributes.isNotEmpty && !newPAttributes.endsWith(' ')) {
+            newPAttributes += ' ';
+          } else if (newPAttributes.isEmpty) {
+            // If no attributes exist, we still need a space after <p
+            newPAttributes = ' ';
+          }
+          newPAttributes += 'style="$indentStyle"';
+        }
+        
+        return '<p$newPAttributes>';
+      });
+      
+      return result;
+    } catch (e, stackTrace) {
+      debugPrint('Error converting inline-block indentation: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // Fallback to DOM-based approach
+      return _convertInlineBlockIndentationDom(html, baseFontSize);
+    }
+  }
+  
+  /// DOM-based fallback for converting inline-block indentation
+  String _convertInlineBlockIndentationDom(String html, double baseFontSize) {
+    try {
+      final document = html_parser.parse(html);
+      
+      // Find all paragraphs
+      final paragraphs = document.querySelectorAll('p');
+      
+      for (final paragraph in paragraphs) {
+        // Get all nodes (including text nodes)
+        final nodes = paragraph.nodes.toList();
+        if (nodes.isEmpty) continue;
+        
+        // Find first span element (skip any leading text nodes)
+        dynamic firstSpan;
+        for (final node in nodes) {
+          try {
+            final element = node as dynamic;
+            if (element.localName == 'span') {
+              firstSpan = element;
+              break;
+            }
+          } catch (e) {
+            // Not an element node, continue
+            continue;
+          }
+        }
+        
+        if (firstSpan == null) continue;
+        
+        final style = (firstSpan.attributes as Map<String, String>?)?['style'] ?? '';
+        
+        // Check if it has display:inline-block and width (case-insensitive)
+        final styleLower = style.toLowerCase();
+        if (styleLower.contains('display:inline-block') || styleLower.contains('display: inline-block')) {
+          // Extract width value (handle various formats: width:2em, width: 2em, width:2em;, etc.)
+          final widthMatch = RegExp(r'width\s*:\s*([^;]+)', caseSensitive: false).firstMatch(style);
+          
+          if (widthMatch != null) {
+            final widthValue = widthMatch.group(1)?.trim() ?? '';
+            
+            // Check if span contains only whitespace (indentation marker)
+            // Handle &nbsp;, regular spaces, and empty content
+            final spanText = (firstSpan.text as String? ?? '').trim();
+            final spanInnerHtml = (firstSpan.innerHtml as String? ?? '').trim();
+            
+            // Check if it's just whitespace, &nbsp;, or empty
+            final isWhitespaceOnly = spanText.isEmpty || 
+                                    spanText == '\u00A0' || 
+                                    spanText == ' ' ||
+                                    spanInnerHtml == '&nbsp;' ||
+                                    spanInnerHtml == ' ' ||
+                                    spanInnerHtml.isEmpty;
+            
+            if (isWhitespaceOnly) {
+              // Convert width to padding-left
+              final paddingValue = _convertCssSize(widthValue, baseFontSize);
+              
+              if (paddingValue != null && paddingValue > 0) {
+                // Add padding-left to paragraph
+                final existingStyle = paragraph.attributes['style'] ?? '';
+                final paddingStyle = 'padding-left: ${paddingValue}px';
+                
+                if (existingStyle.isNotEmpty) {
+                  // Check if padding-left already exists
+                  if (existingStyle.contains('padding-left')) {
+                    // Replace existing padding-left
+                    paragraph.attributes['style'] = existingStyle.replaceAll(
+                      RegExp(r'padding-left\s*:\s*[^;]+', caseSensitive: false),
+                      paddingStyle,
+                    );
+                  } else {
+                    paragraph.attributes['style'] = '$existingStyle; $paddingStyle';
+                  }
+                } else {
+                  paragraph.attributes['style'] = paddingStyle;
+                }
+                
+                // Remove the span
+                (firstSpan as dynamic).remove();
+              }
+            }
+          }
+        }
+      }
+      
+      return document.outerHtml;
+    } catch (e, stackTrace) {
+      debugPrint('Error in DOM-based inline-block conversion: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return html; // Return original HTML if processing fails
+    }
+  }
+
   /// Build HTML extensions for EPUB support
   List<HtmlExtension> _buildExtensions(BuildContext context) {
     final extensions = <HtmlExtension>[
       TableHtmlExtension(),
       SvgHtmlExtension(),
+      EpubTextIndentExtension(), // Add text-indent support
     ];
 
     // Add EPUB image extension if epubBook is provided

@@ -59,6 +59,10 @@ class PdfViewerProvider with ChangeNotifier {
   double _originalBrightness = 0.5;
   double get originalBrightness => _originalBrightness;
 
+  // Theme Selection Widget
+  bool _showThemeSelectionWidget = false;
+  bool get showThemeSelectionWidget => _showThemeSelectionWidget;
+
   // Interactions
   String _selectedText = "";
   String get selectedText => _selectedText;
@@ -225,6 +229,13 @@ class PdfViewerProvider with ChangeNotifier {
 
   void setOriginalBrightness(double brightness) {
     _originalBrightness = brightness;
+  }
+
+  void setShowThemeSelectionWidget(bool show) {
+    if (_showThemeSelectionWidget != show) {
+      _showThemeSelectionWidget = show;
+      notifyListeners();
+    }
   }
 
   // Interaction Methods
@@ -555,6 +566,7 @@ class PdfViewerProvider with ChangeNotifier {
     _isAutoRotateEnabled = true;
     _currentBrightness = 0.5;
     _originalBrightness = 0.5;
+    _showThemeSelectionWidget = false;
     _selectedText = "";
     _isSpeaking = false;
     _speechRate = 0.9;

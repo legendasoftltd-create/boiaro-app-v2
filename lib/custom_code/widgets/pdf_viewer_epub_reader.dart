@@ -307,7 +307,7 @@ class EpubReaderWidget {
                   interactive: true,
                   child: SingleChildScrollView(
                   controller: epubScrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
                   child: ValueListenableBuilder<String>(
                     valueListenable: currentEpubContentNotifier,
                     builder: (context, content, child) {

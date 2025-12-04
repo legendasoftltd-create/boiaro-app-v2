@@ -1,6 +1,8 @@
 // Automatic FlutterFlow imports
 import 'dart:developer';
 
+import 'package:a_i_ebook_app/custom_code/widgets/theme_selection_widget.dart';
+
 import '/backend/backend.dart';
 import '/backend/schema/structs/index.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -2043,6 +2045,44 @@ Widget _buildEpubReader() {
                       ),
                     ),
                   ),
+
+                /// Theme Selection Widget Overlay (shown on top)
+                Selector<PdfViewerProvider, bool>(
+                  selector: (_, p) => p.showThemeSelectionWidget,
+                  builder: (context, showWidget, child) {
+                    if (!showWidget) return const SizedBox.shrink();
+                    
+                    return Stack(
+                      children: [
+                        // Backdrop to allow tapping outside to close
+                        Positioned.fill(
+                          child: GestureDetector(
+                            onTap: () {
+                              context.read<PdfViewerProvider>()
+                                  .setShowThemeSelectionWidget(false);
+                            },
+                            child: Container(
+                              color: Colors.black.withOpacity(0.3),
+                            ),
+                          ),
+                        ),
+                        // Theme selection widget
+                        Positioned(
+                          bottom: 100, // Position above bottom action buttons
+                          left: 0,
+                          right: 0,
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: GestureDetector(
+                              onTap: () {}, // Prevent backdrop tap when tapping widget
+                              child: ThemeBrightnessWidget(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -2470,7 +2510,6 @@ Widget _buildEpubReader() {
                       ],
                     ),
                   ),
-
                   /// Bottom action buttons
                   Container(
                     padding: EdgeInsets.only(
@@ -2529,7 +2568,12 @@ Widget _buildEpubReader() {
                         _buildBottomIcon(
                           Icons.brightness_6,
                           'Brightness',
-                          () => _openBrightnessSettings(provider),
+                          () {
+                            // Toggle theme selection widget overlay
+                            provider.setShowThemeSelectionWidget(
+                              !provider.showThemeSelectionWidget,
+                            );
+                          },
                           bottomNavIconColor,
                         ),
                         _buildBottomIcon(
