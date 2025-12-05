@@ -63,6 +63,24 @@ class PdfViewerProvider with ChangeNotifier {
   bool _showThemeSelectionWidget = false;
   bool get showThemeSelectionWidget => _showThemeSelectionWidget;
 
+  // Font Selection Widget
+  bool _showFontSelectionWidget = false;
+  bool get showFontSelectionWidget => _showFontSelectionWidget;
+
+  // Drawer State
+  String? _openDrawer; // 'bookmarks' or 'toc' (table of contents)
+  String? get openDrawer => _openDrawer;
+
+  // Loading States
+  bool _isChangingFont = false;
+  bool get isChangingFont => _isChangingFont;
+  
+  bool _isChangingBrightness = false;
+  bool get isChangingBrightness => _isChangingBrightness;
+  
+  bool _isChangingTheme = false;
+  bool get isChangingTheme => _isChangingTheme;
+
   // Interactions
   String _selectedText = "";
   String get selectedText => _selectedText;
@@ -187,8 +205,16 @@ class PdfViewerProvider with ChangeNotifier {
 
   // EPUB Settings Methods
   void setEpubFontSize(double size) {
-    _epubFontSize = size;
-    notifyListeners();
+    if (_epubFontSize != size) {
+      _isChangingFont = true;
+      notifyListeners();
+      
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _epubFontSize = size;
+        _isChangingFont = false;
+        notifyListeners();
+      });
+    }
   }
 
   void setEpubLineHeight(double height) {
@@ -197,8 +223,16 @@ class PdfViewerProvider with ChangeNotifier {
   }
 
   void setThemeMode(AppThemeMode mode) {
-    _currentThemeMode = mode;
-    notifyListeners();
+    if (_currentThemeMode != mode) {
+      _isChangingTheme = true;
+      notifyListeners();
+      
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _currentThemeMode = mode;
+        _isChangingTheme = false;
+        notifyListeners();
+      });
+    }
   }
 
   // UI State Methods
@@ -223,8 +257,16 @@ class PdfViewerProvider with ChangeNotifier {
   }
 
   void setCurrentBrightness(double brightness) {
-    _currentBrightness = brightness;
-    notifyListeners();
+    if ((_currentBrightness - brightness).abs() > 0.01) {
+      _isChangingBrightness = true;
+      notifyListeners();
+      
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _currentBrightness = brightness;
+        _isChangingBrightness = false;
+        notifyListeners();
+      });
+    }
   }
 
   void setOriginalBrightness(double brightness) {
@@ -234,6 +276,20 @@ class PdfViewerProvider with ChangeNotifier {
   void setShowThemeSelectionWidget(bool show) {
     if (_showThemeSelectionWidget != show) {
       _showThemeSelectionWidget = show;
+      notifyListeners();
+    }
+  }
+
+  void setShowFontSelectionWidget(bool show) {
+    if (_showFontSelectionWidget != show) {
+      _showFontSelectionWidget = show;
+      notifyListeners();
+    }
+  }
+
+  void setOpenDrawer(String? drawer) {
+    if (_openDrawer != drawer) {
+      _openDrawer = drawer;
       notifyListeners();
     }
   }

@@ -2,6 +2,10 @@
 import 'dart:developer';
 
 import 'package:a_i_ebook_app/custom_code/widgets/theme_selection_widget.dart';
+import 'package:a_i_ebook_app/custom_code/widgets/font_selection_widget.dart';
+import 'package:a_i_ebook_app/custom_code/widgets/bookmarks_highlights_drawer.dart';
+import 'package:a_i_ebook_app/custom_code/widgets/table_of_contents_drawer.dart';
+import 'package:a_i_ebook_app/custom_code/widgets/search_drawer.dart';
 
 import '/backend/backend.dart';
 import '/backend/schema/structs/index.dart';
@@ -45,6 +49,7 @@ PdfViewerController pdfViewerController = PdfViewerController();
 
 class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final FlutterTts flutterTts = FlutterTts();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _epubScrollController = ScrollController();
@@ -1857,9 +1862,87 @@ Widget _buildEpubReader() {
         }
 
         return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: scaffoldBackgroundColor,
-      body: Column(
-        children: [
+      onDrawerChanged: (isOpened) {
+        if (!isOpened && (provider.openDrawer == 'bookmarks' || provider.openDrawer == 'toc')) {
+          // Clear the drawer state when drawer is dismissed
+          provider.setOpenDrawer(null);
+        }
+      },
+      onEndDrawerChanged: (isOpened) {
+        if (!isOpened && provider.openDrawer == 'search') {
+          // Clear the drawer state when drawer is dismissed
+          provider.setOpenDrawer(null);
+        }
+      },
+      drawer: Selector<PdfViewerProvider, String?>(
+        selector: (_, p) => p.openDrawer,
+        builder: (context, openDrawer, child) {
+          if (openDrawer == 'bookmarks') {
+            return BookmarksHighlightsDrawer(
+              pdfController: pdfViewerController,
+              loadEpubChapter: (index) => EpubReaderWidget.loadEpubChapter(
+                provider,
+                index,
+                _currentEpubContentNotifier,
+                _epubScrollController,
+                onOriginalContentReady: (originalHtml) {
+                  _originalChapterHtml = originalHtml;
+                },
+              ),
+            );
+          } else if (openDrawer == 'toc') {
+            return TableOfContentsDrawer(
+              loadEpubChapter: (index) => EpubReaderWidget.loadEpubChapter(
+                provider,
+                index,
+                _currentEpubContentNotifier,
+                _epubScrollController,
+                onOriginalContentReady: (originalHtml) {
+                  _originalChapterHtml = originalHtml;
+                },
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        },
+      ),
+      endDrawer: Selector<PdfViewerProvider, String?>(
+        selector: (_, p) => p.openDrawer,
+        builder: (context, openDrawer, child) {
+          if (openDrawer == 'search') {
+            return SearchDrawer(
+              searchController: _searchController,
+              pdfController: pdfViewerController,
+              onSearchEpub: () => _searchEpub(provider),
+              onNextResult: () => _goToNextSearchResult(provider),
+              onPreviousResult: () => _goToPreviousSearchResult(provider),
+              onClearSearch: () => _clearSearch(provider),
+            );
+          }
+          return const SizedBox.shrink();
+        },
+      ),
+      body: Selector<PdfViewerProvider, String?>(
+        selector: (_, p) => p.openDrawer,
+        builder: (context, openDrawer, child) {
+          // Open drawer when state changes
+          if (openDrawer == 'search') {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scaffoldKey.currentState != null) {
+                _scaffoldKey.currentState!.openEndDrawer();
+              }
+            });
+          } else if (openDrawer == 'bookmarks' || openDrawer == 'toc') {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scaffoldKey.currentState != null) {
+                _scaffoldKey.currentState!.openDrawer();
+              }
+            });
+          }
+          return Column(
+            children: [
           /// ---------- AppBar ----------
           Visibility(
             visible: !isFullScreen,
@@ -1911,7 +1994,10 @@ Widget _buildEpubReader() {
                     children: [
                       // Search button - available for both PDF and EPUB
                       InkWell(
-                        onTap: () => _openSearchOverlay(provider),
+                        onTap: () {
+                          provider.setOpenDrawer('search');
+                          _scaffoldKey.currentState?.openEndDrawer();
+                        },
                         child: Icon(
                           Icons.search,
                           size: 24,
@@ -2045,48 +2131,9 @@ Widget _buildEpubReader() {
                       ),
                     ),
                   ),
-
-                /// Theme Selection Widget Overlay (shown on top)
-                Selector<PdfViewerProvider, bool>(
-                  selector: (_, p) => p.showThemeSelectionWidget,
-                  builder: (context, showWidget, child) {
-                    if (!showWidget) return const SizedBox.shrink();
-                    
-                    return Stack(
-                      children: [
-                        // Backdrop to allow tapping outside to close
-                        Positioned.fill(
-                          child: GestureDetector(
-                            onTap: () {
-                              context.read<PdfViewerProvider>()
-                                  .setShowThemeSelectionWidget(false);
-                            },
-                            child: Container(
-                              color: Colors.black.withOpacity(0.3),
-                            ),
-                          ),
-                        ),
-                        // Theme selection widget
-                        Positioned(
-                          bottom: 100, // Position above bottom action buttons
-                          left: 0,
-                          right: 0,
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: GestureDetector(
-                              onTap: () {}, // Prevent backdrop tap when tapping widget
-                              child: ThemeBrightnessWidget(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
               ],
             ),
           ),
-
           /// ---------- Bottom Navigation ----------
           /// Listen and Highlight controls
           /// Only show when user is speaking (after clicking Listen from toolbar)
@@ -2311,207 +2358,239 @@ Widget _buildEpubReader() {
                       ),
                     ),
                     child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  /// Page indicator and slider
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16,left: 16, top: 12),
-                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Selector<PdfViewerProvider, (int, int, bool)>(
-                          selector: (_, p) => (
-                            p.currentEpubChapterIndex,
-                            p.epubChapters.length,
-                            p.isChangingChapter,
-                          ),
-                          builder: (context, chapterData, child) {
-                            final currentChapterIndex = chapterData.$1;
-                            final totalChapters = chapterData.$2;
-                            final isChangingChapter = chapterData.$3;
-                            final provider = context.read<PdfViewerProvider>();
-                            
-                            return Row(
-                              mainAxisAlignment: provider.readerType == ReaderType.epub
-                                  ? MainAxisAlignment.spaceBetween
-                                  : MainAxisAlignment.center,
-                              children: [
-                                // Previous chapter button (only for EPUB) - always show, disabled when not at top
-                                if (provider.readerType == ReaderType.epub)
-                                  ValueListenableBuilder<bool>(
-                                    valueListenable: _isAtTopNotifier,
-                                    builder: (context, isAtTop, child) {
-                                      final isEnabled = isAtTop && currentChapterIndex > 0 && !isChangingChapter;
-                                      return ElevatedButton.icon(
-                                        onPressed: isEnabled
-                                            ? () {
-                                                EpubReaderWidget.loadEpubChapter(
-                                                  provider,
-                                                  currentChapterIndex - 1,
-                                                  _currentEpubContentNotifier,
-                                                  _epubScrollController,
-                                                  onOriginalContentReady: (originalHtml) {
-                                                    _originalChapterHtml = originalHtml;
-                                                  },
-                                                );
-                                              }
-                                            : null,
-                                        icon: AnimatedSwitcher(
-                                          duration: const Duration(milliseconds: 200),
-                                          child: isChangingChapter
-                                              ? const SizedBox(
-                                                  key: ValueKey('loading-icon-prev'),
-                                                  width: 16,
-                                                  height: 16,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                  ),
-                                                )
-                                              : const Icon(
-                                                  Icons.chevron_left,
-                                                  size: 16,
-                                                  key: ValueKey('icon-prev'),
-                                                ),
-                                        ),
-                                        label: const Text(
-                                          'Previous',
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 5,
-                                          ),
-                                          elevation: 0,
-                                          minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          backgroundColor: isEnabled
-                                              ? FlutterFlowTheme.of(context).black40
-                                              : FlutterFlowTheme.of(context).alternate,
-                                          foregroundColor: isEnabled
-                                              ? Colors.white
-                                              : appBarTextColor.withOpacity(0.5),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                // Center text
-                                Expanded(
-                                  child: Text(
-                                    provider.readerType == ReaderType.epub
-                                        ? 'অধ্যায় ${provider.currentPage}/${FFAppState().totalPages}'
-                                        : 'পৃষ্ঠা ${provider.currentPage}/${FFAppState().totalPages}',
-                                    textAlign: TextAlign.center,
-                                    style: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .override(
-                                          fontFamily: 'SF Pro Display',
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: appBarTextColor,
-                                        ),
-                                  ),
-                                ),
-                                // Next chapter button (only for EPUB) - always show, disabled when not at bottom
-                                if (provider.readerType == ReaderType.epub)
-                                  ValueListenableBuilder<bool>(
-                                    valueListenable: _isAtBottomNotifier,
-                                    builder: (context, isAtBottom, child) {
-                                      final isEnabled = isAtBottom && currentChapterIndex < totalChapters - 1 && !isChangingChapter;
-                                      return ElevatedButton.icon(
-                                        onPressed: isEnabled
-                                            ? () {
-                                                EpubReaderWidget.loadEpubChapter(
-                                                  provider,
-                                                  currentChapterIndex + 1,
-                                                  _currentEpubContentNotifier,
-                                                  _epubScrollController,
-                                                  onOriginalContentReady: (originalHtml) {
-                                                    _originalChapterHtml = originalHtml;
-                                                  },
-                                                );
-                                              }
-                                            : null,
-                                        icon: AnimatedSwitcher(
-                                          duration: const Duration(milliseconds: 200),
-                                          child: isChangingChapter
-                                              ? const SizedBox(
-                                                  key: ValueKey('loading-icon'),
-                                                  width: 16,
-                                                  height: 16,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                  ),
-                                                )
-                                              : const Icon(
-                                                  Icons.chevron_right,
-                                                  size: 16,
-                                                  key: ValueKey('icon'),
-                                                ),
-                                        ),
-                                        label: const Text(
-                                          'Next',
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                        iconAlignment: IconAlignment.end,
-                                        style: ElevatedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 5,
-                                          ),
-                                          elevation: 0,
-                                          minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          backgroundColor: isEnabled
-                                              ? FlutterFlowTheme.of(context).black40
-                                              : FlutterFlowTheme.of(context).alternate,
-                                          foregroundColor: isEnabled
-                                              ? Colors.white
-                                              : appBarTextColor.withOpacity(0.5),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                              ],
-                            );
-                          },
+                        /// Page indicator and slider
+                        Selector<PdfViewerProvider, (bool, bool)>(
+                    selector: (_, p) => (p.showThemeSelectionWidget, p.showFontSelectionWidget),
+                    builder: (context, data, child) {
+                      final showThemeWidget = data.$1;
+                      final showFontWidget = data.$2;
+                      if (showThemeWidget || showFontWidget) return const SizedBox.shrink();
+                      
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16,left: 16, top: 12),
+                        child: Column(
+                          children: [
+                            Selector<PdfViewerProvider, (int, int, bool)>(
+                              selector: (_, p) => (
+                                p.currentEpubChapterIndex,
+                                p.epubChapters.length,
+                                p.isChangingChapter,
+                              ),
+                              builder: (context, chapterData, child) {
+                                final currentChapterIndex = chapterData.$1;
+                                final totalChapters = chapterData.$2;
+                                final isChangingChapter = chapterData.$3;
+                                final provider = context.read<PdfViewerProvider>();
+                                
+                                return Row(
+                                  mainAxisAlignment: provider.readerType == ReaderType.epub
+                                      ? MainAxisAlignment.spaceBetween
+                                      : MainAxisAlignment.center,
+                                  children: [
+                                    // Previous chapter button (only for EPUB) - always show, disabled when not at top
+                                    if (provider.readerType == ReaderType.epub)
+                                      ValueListenableBuilder<bool>(
+                                        valueListenable: _isAtTopNotifier,
+                                        builder: (context, isAtTop, child) {
+                                          final isEnabled = isAtTop && currentChapterIndex > 0 && !isChangingChapter;
+                                          return ElevatedButton.icon(
+                                            onPressed: isEnabled
+                                                ? () {
+                                                    EpubReaderWidget.loadEpubChapter(
+                                                      provider,
+                                                      currentChapterIndex - 1,
+                                                      _currentEpubContentNotifier,
+                                                      _epubScrollController,
+                                                      onOriginalContentReady: (originalHtml) {
+                                                        _originalChapterHtml = originalHtml;
+                                                      },
+                                                    );
+                                                  }
+                                                : null,
+                                            icon: AnimatedSwitcher(
+                                              duration: const Duration(milliseconds: 200),
+                                              child: isChangingChapter
+                                                  ? const SizedBox(
+                                                      key: ValueKey('loading-icon-prev'),
+                                                      width: 16,
+                                                      height: 16,
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                    )
+                                                  : const Icon(
+                                                      Icons.chevron_left,
+                                                      size: 16,
+                                                      key: ValueKey('icon-prev'),
+                                                    ),
+                                            ),
+                                            label: const Text(
+                                              'Previous',
+                                              style: TextStyle(fontSize: 12),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 20,
+                                                vertical: 5,
+                                              ),
+                                              elevation: 0,
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              backgroundColor: isEnabled
+                                                  ? FlutterFlowTheme.of(context).black40
+                                                  : FlutterFlowTheme.of(context).alternate,
+                                              foregroundColor: isEnabled
+                                                  ? Colors.white
+                                                  : appBarTextColor.withOpacity(0.5),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    // Center text
+                                    Expanded(
+                                      child: Text(
+                                        provider.readerType == ReaderType.epub
+                                            ? 'অধ্যায় ${provider.currentPage}/${FFAppState().totalPages}'
+                                            : 'পৃষ্ঠা ${provider.currentPage}/${FFAppState().totalPages}',
+                                        textAlign: TextAlign.center,
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                              color: appBarTextColor,
+                                            ),
+                                      ),
+                                    ),
+                                    // Next chapter button (only for EPUB) - always show, disabled when not at bottom
+                                    if (provider.readerType == ReaderType.epub)
+                                      ValueListenableBuilder<bool>(
+                                        valueListenable: _isAtBottomNotifier,
+                                        builder: (context, isAtBottom, child) {
+                                          final isEnabled = isAtBottom && currentChapterIndex < totalChapters - 1 && !isChangingChapter;
+                                          return ElevatedButton.icon(
+                                            onPressed: isEnabled
+                                                ? () {
+                                                    EpubReaderWidget.loadEpubChapter(
+                                                      provider,
+                                                      currentChapterIndex + 1,
+                                                      _currentEpubContentNotifier,
+                                                      _epubScrollController,
+                                                      onOriginalContentReady: (originalHtml) {
+                                                        _originalChapterHtml = originalHtml;
+                                                      },
+                                                    );
+                                                  }
+                                                : null,
+                                            icon: AnimatedSwitcher(
+                                              duration: const Duration(milliseconds: 200),
+                                              child: isChangingChapter
+                                                  ? const SizedBox(
+                                                      key: ValueKey('loading-icon'),
+                                                      width: 16,
+                                                      height: 16,
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                    )
+                                                  : const Icon(
+                                                      Icons.chevron_right,
+                                                      size: 16,
+                                                      key: ValueKey('icon'),
+                                                    ),
+                                            ),
+                                            label: const Text(
+                                              'Next',
+                                              style: TextStyle(fontSize: 12),
+                                            ),
+                                            iconAlignment: IconAlignment.end,
+                                            style: ElevatedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 20,
+                                                vertical: 5,
+                                              ),
+                                              elevation: 0,
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              backgroundColor: isEnabled
+                                                  ? FlutterFlowTheme.of(context).black40
+                                                  : FlutterFlowTheme.of(context).alternate,
+                                              foregroundColor: isEnabled
+                                                  ? Colors.white
+                                                  : appBarTextColor.withOpacity(0.5),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            // if (FFAppState().totalPages > 1)
+                            //   SliderTheme(
+                            //     data: SliderThemeData(
+                            //       activeTrackColor: const Color(0xFFFFD700),
+                            //       inactiveTrackColor:
+                            //           FlutterFlowTheme.of(context).alternate,
+                            //       thumbColor: const Color(0xFFFFD700),
+                            //       overlayColor: const Color(0xFFFFD700).withOpacity(0.2),
+                            //       thumbShape: const RoundSliderThumbShape(
+                            //           enabledThumbRadius: 8),
+                            //       trackHeight: 4,
+                            //     ),
+                            //     child: Slider(
+                            //       value: provider.currentPage.toDouble(),
+                            //       min: 1,
+                            //       max: FFAppState().totalPages.toDouble(),
+                            //       onChanged: (value) {
+                            //         provider.setCurrentPage(value.toInt());
+                            //         if (provider.readerType == ReaderType.pdf) {
+                            //           pdfViewerController.jumpToPage(provider.currentPage);
+                            //         } else {
+                            //           EpubReaderWidget.loadEpubChapter(
+                            //             provider,
+                            //             provider.currentPage - 1,
+                            //             _currentEpubContentNotifier,
+                            //             _epubScrollController,
+                            //           );
+                            //         }
+                            //       },
+                            //     ),
+                            //   ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        // if (FFAppState().totalPages > 1)
-                        //   SliderTheme(
-                        //     data: SliderThemeData(
-                        //       activeTrackColor: const Color(0xFFFFD700),
-                        //       inactiveTrackColor:
-                        //           FlutterFlowTheme.of(context).alternate,
-                        //       thumbColor: const Color(0xFFFFD700),
-                        //       overlayColor: const Color(0xFFFFD700).withOpacity(0.2),
-                        //       thumbShape: const RoundSliderThumbShape(
-                        //           enabledThumbRadius: 8),
-                        //       trackHeight: 4,
-                        //     ),
-                        //     child: Slider(
-                        //       value: provider.currentPage.toDouble(),
-                        //       min: 1,
-                        //       max: FFAppState().totalPages.toDouble(),
-                        //       onChanged: (value) {
-                        //         provider.setCurrentPage(value.toInt());
-                        //         if (provider.readerType == ReaderType.pdf) {
-                        //           pdfViewerController.jumpToPage(provider.currentPage);
-                        //         } else {
-                        //           EpubReaderWidget.loadEpubChapter(
-                        //             provider,
-                        //             provider.currentPage - 1,
-                        //             _currentEpubContentNotifier,
-                        //             _epubScrollController,
-                        //           );
-                        //         }
-                        //       },
-                        //     ),
-                        //   ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                  /// Bottom action buttons
-                  Container(
+                        /// Theme Selection Widget (shown in bottom navigation section)
+                        Selector<PdfViewerProvider, bool>(
+                    selector: (_, p) => p.showThemeSelectionWidget,
+                    builder: (context, showWidget, child) {
+                      if (!showWidget) return const SizedBox.shrink();
+                      
+                      return Container(
+                        // padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: ThemeBrightnessWidget(),
+                      );
+                    },
+                  ),
+                        /// Font Selection Widget (shown in bottom navigation section)
+                        Selector<PdfViewerProvider, bool>(
+                    selector: (_, p) => p.showFontSelectionWidget,
+                    builder: (context, showWidget, child) {
+                      if (!showWidget) return const SizedBox.shrink();
+                      
+                      return Container(
+                        child: FontSelectionWidget(),
+                      );
+                    },
+                  ),
+                        /// Bottom action buttons
+                        Container(
                     padding: EdgeInsets.only(
                       left: 16,
                       right: 16,
@@ -2525,9 +2604,14 @@ Widget _buildEpubReader() {
                           Icons.list,
                           'Table of Contents',
                           provider.readerType == ReaderType.epub
-                              ? () => _openChapterList(provider)
+                              ? () {
+                                  provider.setOpenDrawer('toc');
+                                  // Open drawer immediately
+                                  if (_scaffoldKey.currentState != null) {
+                                    _scaffoldKey.currentState!.openDrawer();
+                                  }
+                                }
                               : () {
-                                  // Table of contents for PDF (not implemented)
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('PDF Table of Contents not available'),
@@ -2538,15 +2622,15 @@ Widget _buildEpubReader() {
                           bottomNavIconColor,
                         ),
                         _buildBottomIcon(
-                          Icons.collections_bookmark_outlined,
-                          'Bookmark Collection',
-                          () => _openBookmarkCollection(provider),
-                          bottomNavIconColor,
-                        ),
-                        _buildBottomIcon(
-                          Icons.highlight_outlined,
-                          'Highlights',
-                          () => _openHighlightsCollection(provider),
+                          Icons.bookmark,
+                          'Bookmarks',
+                          () {
+                            provider.setOpenDrawer('bookmarks');
+                            // Open drawer immediately
+                            if (_scaffoldKey.currentState != null) {
+                              _scaffoldKey.currentState!.openDrawer();
+                            }
+                          },
                           bottomNavIconColor,
                         ),
                         _buildBottomIcon(
@@ -2573,6 +2657,10 @@ Widget _buildEpubReader() {
                             provider.setShowThemeSelectionWidget(
                               !provider.showThemeSelectionWidget,
                             );
+                            // Close font widget if open
+                            if (provider.showFontSelectionWidget) {
+                              provider.setShowFontSelectionWidget(false);
+                            }
                           },
                           bottomNavIconColor,
                         ),
@@ -2580,7 +2668,16 @@ Widget _buildEpubReader() {
                           Icons.text_fields,
                           'Font',
                           provider.readerType == ReaderType.epub
-                              ? () => _openFontSettings(provider)
+                              ? () {
+                                  // Toggle font selection widget
+                                  provider.setShowFontSelectionWidget(
+                                    !provider.showFontSelectionWidget,
+                                  );
+                                  // Close theme widget if open
+                                  if (provider.showThemeSelectionWidget) {
+                                    provider.setShowThemeSelectionWidget(false);
+                                  }
+                                }
                               : () {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -2594,14 +2691,16 @@ Widget _buildEpubReader() {
                       ],
                     ),
                   ),
-                    ],
-                  ),
+                      ],
+                    ),
                   );
                 },
               );
             },
           ),
         ],
+      );
+        },
       ),
     );
       },
