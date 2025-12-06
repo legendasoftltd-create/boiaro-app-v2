@@ -6,6 +6,7 @@ import 'package:a_i_ebook_app/custom_code/widgets/font_selection_widget.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/bookmarks_highlights_drawer.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/table_of_contents_drawer.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/search_drawer.dart';
+import 'package:a_i_ebook_app/custom_code/widgets/settings_drawer.dart';
 
 import '/backend/backend.dart';
 import '/backend/schema/structs/index.dart';
@@ -46,6 +47,38 @@ class FlutterPdfViewWidget extends StatefulWidget {
 }
 
 PdfViewerController pdfViewerController = PdfViewerController();
+
+/// Lightweight widget that handles drawer opening without rebuilding body content
+class _DrawerOpener extends StatelessWidget {
+  final GlobalKey<ScaffoldState> scaffoldKey;
+
+  const _DrawerOpener({required this.scaffoldKey});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<PdfViewerProvider, String?>(
+      selector: (_, p) => p.openDrawer,
+      builder: (context, openDrawer, child) {
+        // Open drawer when state changes (this widget is invisible and doesn't affect layout)
+        if (openDrawer == 'search' || openDrawer == 'settings') {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (scaffoldKey.currentState != null) {
+              scaffoldKey.currentState!.openEndDrawer();
+            }
+          });
+        } else if (openDrawer == 'bookmarks' || openDrawer == 'toc') {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (scaffoldKey.currentState != null) {
+              scaffoldKey.currentState!.openDrawer();
+            }
+          });
+        }
+        // Return empty widget - this doesn't render anything
+        return const SizedBox.shrink();
+      },
+    );
+  }
+}
 
 class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
@@ -275,60 +308,6 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       chapterName,
       originalHtml,
     );
-  }
-
-  // Old _addHighlightOld function removed - using new HighlightModel system in _addHighlight
-  
-  // Helper method to check if a position is inside an existing mark tag
-  bool _isInsideMark(int position, String content) {
-    // Look backwards for opening mark tag
-    int start = position;
-    while (start > 0 && start > position - 100) {
-      if (content.substring(start, start + 5) == '<mark') {
-        return true;
-      }
-      if (content.substring(start, start + 6) == '</mark') {
-        return false;
-      }
-      start--;
-    }
-    return false;
-  }
-  
-  // Helper method to extract text at a position, skipping HTML tags
-  String? _extractTextAtPosition(String content, int start, int length) {
-    StringBuffer buffer = StringBuffer();
-    int pos = start;
-    int found = 0;
-    
-    while (pos < content.length && found < length && pos < start + length * 3) {
-      if (content[pos] == '<') {
-        // Skip HTML tags
-        while (pos < content.length && content[pos] != '>') {
-          pos++;
-        }
-        if (pos < content.length) pos++;
-      } else if (content[pos] == '&') {
-        // Handle HTML entities
-        int entityEnd = content.indexOf(';', pos);
-        if (entityEnd != -1) {
-          buffer.write(content.substring(pos, entityEnd + 1));
-          pos = entityEnd + 1;
-          found++;
-        } else {
-          buffer.write(content[pos]);
-          pos++;
-          found++;
-        }
-      } else {
-        buffer.write(content[pos]);
-        pos++;
-        found++;
-      }
-    }
-    
-    final result = buffer.toString();
-    return result.length >= length ? result : null;
   }
 
   void _toggleBookmark(PdfViewerProvider provider) async {
@@ -625,904 +604,6 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     PdfViewerSettingsDialogs.openTtsSettings(context, provider, flutterTts);
   }
 
-  void _openTtsSettingsOld(PdfViewerProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Consumer<PdfViewerProvider>(
-          builder: (context, provider, child) {
-            return StatefulBuilder(
-              builder: (BuildContext context, StateSetter setModalState) {
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[400],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "🔊 Voice Settings",
-                        style: FlutterFlowTheme.of(context).bodyLarge.override(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      /// Speech Speed
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("Speed",
-                              style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  )),
-                          Text("${provider.speechRate.toStringAsFixed(2)}x",
-                              style: FlutterFlowTheme.of(context).bodyMedium),
-                        ],
-                      ),
-                      Slider(
-                        value: provider.speechRate,
-                        min: 0.3,
-                        max: 1.5,
-                        divisions: 12,
-                        activeColor: FlutterFlowTheme.of(context).primary,
-                        label: provider.speechRate.toStringAsFixed(2),
-                        onChanged: (val) {
-                          provider.setSpeechRate(val);
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      /// Pitch
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("Pitch",
-                              style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  )),
-                          Text("${provider.pitch.toStringAsFixed(2)}",
-                              style: FlutterFlowTheme.of(context).bodyMedium),
-                        ],
-                      ),
-                      Slider(
-                        value: provider.pitch,
-                        min: 0.5,
-                        max: 2.0,
-                        divisions: 15,
-                        activeColor: FlutterFlowTheme.of(context).primary,
-                        label: provider.pitch.toStringAsFixed(2),
-                        onChanged: (val) {
-                          provider.setPitch(val);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      /// Test Voice Button
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: FlutterFlowTheme.of(context).primary,
-                          minimumSize: const Size(double.infinity, 48),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () async {
-                          bool isBnAvailable = false;
-                          await flutterTts.getLanguages.then((languages) {
-                            isBnAvailable = languages.contains("bn-BD");
-                          });
-                          log("isBnAvailable $isBnAvailable");
-                          await flutterTts.setSpeechRate(provider.speechRate);
-                          await flutterTts.setPitch(provider.pitch);
-                          if (isBnAvailable) {
-                            await flutterTts.setLanguage("bn-BD");
-                            await flutterTts.speak("এই সেটিংস প্রিভিউ করার জন্য ধন্যবাদ।");
-                          } else {
-                            await flutterTts.setLanguage("en-US");
-                            await flutterTts.speak(
-                                "Bangla voice not available in this device, playing English sample.");
-                          }
-                        },
-                        icon: const Icon(Icons.play_arrow, color: Colors.white),
-                        label: const Text("Preview Voice",
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                      const SizedBox(height: 10),
-
-                      /// Done button
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Done",
-                            style:
-                                TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _openBrightnessSettings(PdfViewerProvider provider) {
-    PdfViewerSettingsDialogs.openBrightnessSettings(
-      context,
-      provider,
-      (brightness) => PdfViewerHelpers.setBrightness(provider, brightness),
-    );
-  }
-
-  void _openBrightnessSettingsOld(PdfViewerProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Consumer<PdfViewerProvider>(
-          builder: (context, provider, child) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "☀️ Brightness Settings",
-                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Brightness Slider
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Icon(Icons.brightness_low,
-                          color: FlutterFlowTheme.of(context).secondaryText),
-                      Expanded(
-                        child: Slider(
-                          value: provider.currentBrightness,
-                          min: 0.0,
-                          max: 1.0,
-                          divisions: 20,
-                          activeColor: FlutterFlowTheme.of(context).primary,
-                          label: "${(provider.currentBrightness * 100).toInt()}%",
-                          onChanged: (val) {
-                            PdfViewerHelpers.setBrightness(provider, val);
-                          },
-                        ),
-                      ),
-                      Icon(Icons.brightness_high,
-                          color: FlutterFlowTheme.of(context).secondaryText),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "${(provider.currentBrightness * 100).toInt()}%",
-                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Quick Brightness Presets
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildBrightnessPreset(context, provider, "25%", 0.25),
-                      _buildBrightnessPreset(context, provider, "50%", 0.50),
-                      _buildBrightnessPreset(context, provider, "75%", 0.75),
-                      _buildBrightnessPreset(context, provider, "100%", 1.0),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Theme Mode
-                  Text(
-                    "Theme Mode",
-                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildThemeModePreset(context, provider, "Light", AppThemeMode.light),
-                      _buildThemeModePreset(context, provider, "Dark", AppThemeMode.dark),
-                      _buildThemeModePreset(context, provider, "Sepia", AppThemeMode.sepia),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Done button
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: FlutterFlowTheme.of(context).primary,
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Done",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildThemeModePreset(
-    BuildContext context,
-    PdfViewerProvider provider,
-    String label,
-    AppThemeMode mode,
-  ) {
-    final isSelected = provider.currentThemeMode == mode;
-    return InkWell(
-      onTap: () {
-        provider.setThemeMode(mode);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? FlutterFlowTheme.of(context).primary
-              : FlutterFlowTheme.of(context).alternate.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? FlutterFlowTheme.of(context).primary
-                : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : FlutterFlowTheme.of(context).primaryText,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openFontSettings(PdfViewerProvider provider) {
-    PdfViewerSettingsDialogs.openFontSettings(context, provider);
-  }
-
-  void _openFontSettingsOld(PdfViewerProvider provider) {
-    if (provider.readerType != ReaderType.epub) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Consumer<PdfViewerProvider>(
-          builder: (context, provider, child) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "🔤 Font Settings",
-                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Font Size Slider
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Font Size",
-                          style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
-                                fontWeight: FontWeight.bold,
-                              )),
-                      Text("${provider.epubFontSize.toInt()}",
-                          style: FlutterFlowTheme.of(context).bodyMedium),
-                    ],
-                  ),
-                  Slider(
-                    value: provider.epubFontSize,
-                    min: 12.0,
-                    max: 32.0,
-                    divisions: 20,
-                    activeColor: FlutterFlowTheme.of(context).primary,
-                    label: provider.epubFontSize.toInt().toString(),
-                    onChanged: (val) {
-                      provider.setEpubFontSize(val);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  /// Font Size Presets
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildFontPreset(context, provider, "Small", 14.0),
-                      _buildFontPreset(context, provider, "Medium", 18.0),
-                      _buildFontPreset(context, provider, "Large", 24.0),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Preview Text
-                  /// Line Spacing Slider
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Line Spacing",
-                          style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
-                                fontWeight: FontWeight.bold,
-                              )),
-                      Text("${provider.epubLineHeight.toStringAsFixed(1)}x",
-                          style: FlutterFlowTheme.of(context).bodyMedium),
-                    ],
-                  ),
-                  Slider(
-                    value: provider.epubLineHeight,
-                    min: 1.0,
-                    max: 2.5,
-                    divisions: 15,
-                    activeColor: FlutterFlowTheme.of(context).primary,
-                    label: provider.epubLineHeight.toStringAsFixed(1),
-                    onChanged: (val) {
-                      provider.setEpubLineHeight(val);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  /// Line Spacing Presets
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildLineHeightPreset(context, provider, "Compact", 1.2),
-                      _buildLineHeightPreset(context, provider, "Normal", 1.6),
-                      _buildLineHeightPreset(context, provider, "Relaxed", 2.0),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Preview Text
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: FlutterFlowTheme.of(context).alternate.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      "Sample Text Preview\nনমুনা পাঠ্য প্রিভিউ",
-                      style: TextStyle(fontSize: provider.epubFontSize, height: provider.epubLineHeight),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Done button
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: FlutterFlowTheme.of(context).primary,
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Done",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _openSearchOverlay(PdfViewerProvider provider) {
-    PdfViewerSettingsDialogs.openSearchOverlay(
-      context,
-      provider,
-      _searchController,
-      pdfViewerController,
-      onSearchEpub: () => _searchEpub(provider),
-      onNextResult: () => _goToNextSearchResult(provider),
-      onPreviousResult: () => _goToPreviousSearchResult(provider),
-      onClearSearch: () => _clearSearch(provider),
-    );
-  }
-
-  void _openSearchOverlayOld(PdfViewerProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Consumer<PdfViewerProvider>(
-          builder: (context, provider, child) {
-            return Padding(
-              padding: EdgeInsets.only(
-                top: 20,
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "🔍 Search in ${provider.readerType == ReaderType.pdf ? 'PDF' : 'EPUB'}",
-                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      labelText: "Search text",
-                      hintText: "Enter text to search",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _clearSearch(provider);
-                        },
-                      ),
-                    ),
-                    onChanged: (value) {
-                      provider.setSearchText(value);
-                    },
-                    onSubmitted: (value) {
-                      if (provider.readerType == ReaderType.pdf) {
-                        _searchPdf(provider);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  if (provider.readerType == ReaderType.pdf)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          provider.searchResult.hasResult
-                              ? "${provider.searchResult.currentInstanceIndex + 1} of ${provider.searchResult.totalInstanceCount}"
-                              : "No results",
-                          style: FlutterFlowTheme.of(context).bodyMedium,
-                        ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_upward),
-                              onPressed: provider.searchResult.hasResult &&
-                                      provider.searchResult.currentInstanceIndex > 0
-                                  ? () {
-                                      _goToPreviousSearchResult(provider);
-                                    }
-                                  : null,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_downward),
-                              onPressed: provider.searchResult.hasResult &&
-                                      provider.searchResult.currentInstanceIndex <
-                                          provider.searchResult.totalInstanceCount - 1
-                                  ? () {
-                                      _goToNextSearchResult(provider);
-                                    }
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: FlutterFlowTheme.of(context).primary,
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      if (provider.readerType == ReaderType.pdf) {
-                        _searchPdf(provider);
-                      }
-                    },
-                    child: const Text("Search",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () {
-                      _clearSearch(provider);
-                      Navigator.pop(context);
-                    },
-                    child: const Text("Done",
-                        style:
-                            TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _openBookmarkCollection(PdfViewerProvider provider) {
-    PdfViewerSettingsDialogs.openBookmarkCollection(
-      context,
-      provider,
-      pdfViewerController,
-      (index) => EpubReaderWidget.loadEpubChapter(
-        provider,
-        index,
-        _currentEpubContentNotifier,
-        _epubScrollController,
-        onOriginalContentReady: (originalHtml) {
-          _originalChapterHtml = originalHtml;
-        },
-      ),
-    );
-  }
-
-  void _openHighlightsCollection(PdfViewerProvider provider) {
-    PdfViewerSettingsDialogs.openHighlightsCollection(
-      context,
-      provider,
-      pdfViewerController,
-      (index) => EpubReaderWidget.loadEpubChapter(
-        provider,
-        index,
-        _currentEpubContentNotifier,
-        _epubScrollController,
-        onOriginalContentReady: (originalHtml) {
-          _originalChapterHtml = originalHtml;
-        },
-      ),
-    );
-  }
-
-  void _openBookmarkCollectionOld(PdfViewerProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Consumer<PdfViewerProvider>(
-          builder: (context, provider, child) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "🔖 Bookmarked ${provider.readerType == ReaderType.epub ? 'Chapters' : 'Pages'}",
-                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  provider.bookmarks.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Text(
-                            "No bookmarked ${provider.readerType == ReaderType.epub ? 'chapters' : 'pages'} yet.",
-                            style: FlutterFlowTheme.of(context).bodyMedium,
-                          ),
-                        )
-                      : ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxHeight: MediaQuery.of(context).size.height * 0.5,
-                          ),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: provider.bookmarks.length,
-                            itemBuilder: (context, index) {
-                              final bookmark = provider.bookmarks[index];
-                              final pageNumber = bookmark.pageNumber;
-                              
-                              return ListTile(
-                                leading: Icon(
-                                  Icons.bookmark,
-                                  color: FlutterFlowTheme.of(context).primary,
-                                ),
-                                title: Text(
-                                  bookmark.chapterName,
-                                  style: FlutterFlowTheme.of(context).bodyMedium,
-                                ),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () async {
-                                    await provider.removeBookmark(pageNumber, bookId: _currentBookId);
-                                  },
-                                ),
-                                onTap: () {
-                                  if (provider.readerType == ReaderType.pdf) {
-                                    pdfViewerController.jumpToPage(pageNumber);
-                                    provider.setCurrentPage(pageNumber);
-                                  } else {
-                                    EpubReaderWidget.loadEpubChapter(
-                                      provider,
-                                      pageNumber - 1,
-                                      _currentEpubContentNotifier,
-                                      _epubScrollController,
-                                      onOriginalContentReady: (originalHtml) {
-                                        _originalChapterHtml = originalHtml;
-                                      },
-                                    );
-                                  }
-                                  Navigator.pop(context);
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: FlutterFlowTheme.of(context).primary,
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Done",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _openChapterList(PdfViewerProvider provider) {
-    PdfViewerSettingsDialogs.openChapterList(
-      context,
-      provider,
-      (index) => EpubReaderWidget.loadEpubChapter(
-        provider,
-        index,
-        _currentEpubContentNotifier,
-        _epubScrollController,
-        onOriginalContentReady: (originalHtml) {
-          _originalChapterHtml = originalHtml;
-        },
-      ),
-    );
-  }
-
-  void _openChapterListOld(PdfViewerProvider provider) {
-    if (provider.readerType != ReaderType.epub || provider.epubChapters.isEmpty) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Consumer<PdfViewerProvider>(
-          builder: (context, provider, child) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "📖 Table of Contents",
-                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.6,
-                    ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: provider.epubChapters.length,
-                      itemBuilder: (context, index) {
-                        final chapter = provider.epubChapters[index];
-                        final isCurrentChapter = index == provider.currentEpubChapterIndex;
-                        return ListTile(
-                          leading: Icon(
-                            Icons.book_outlined,
-                            color: isCurrentChapter
-                                ? FlutterFlowTheme.of(context).primary
-                                : FlutterFlowTheme.of(context).secondaryText,
-                          ),
-                          title: Text(
-                            chapter.Title ?? "Chapter ${index + 1}",
-                            style: FlutterFlowTheme.of(context).bodyMedium.copyWith(
-                                  fontWeight: isCurrentChapter
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: isCurrentChapter
-                                      ? FlutterFlowTheme.of(context).primary
-                                      : null,
-                                ),
-                          ),
-                          trailing: isCurrentChapter
-                              ? Icon(
-                                  Icons.play_arrow,
-                                  color: FlutterFlowTheme.of(context).primary,
-                                )
-                              : null,
-                          onTap: () {
-                            EpubReaderWidget.loadEpubChapter(
-                              provider,
-                              index,
-                              _currentEpubContentNotifier,
-                              _epubScrollController,
-                              onOriginalContentReady: (originalHtml) {
-                                _originalChapterHtml = originalHtml;
-                              },
-                            );
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: FlutterFlowTheme.of(context).primary,
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Close",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _searchPdf(PdfViewerProvider provider) {
-    if (provider.readerType == ReaderType.pdf) {
-      provider.setSearching(true);
-      PdfViewerPdfOperations.searchPdf(provider, pdfViewerController);
-      // Clear loading after search completes (PDF search is synchronous)
-      Future.delayed(const Duration(milliseconds: 300), () {
-        provider.setSearching(false);
-      });
-    } else {
-      _searchEpub(provider);
-    }
-  }
-
   Future<void> _searchEpub(PdfViewerProvider provider) async {
     final searchText = provider.searchText.trim();
     if (searchText.isEmpty) {
@@ -1672,121 +753,6 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     }
   }
 
-  Widget _buildBrightnessPreset(
-    BuildContext context,
-    PdfViewerProvider provider,
-    String label,
-    double value,
-  ) {
-    final isSelected = (provider.currentBrightness - value).abs() < 0.05;
-    return InkWell(
-      onTap: () {
-        PdfViewerHelpers.setBrightness(provider, value);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? FlutterFlowTheme.of(context).primary
-              : FlutterFlowTheme.of(context).alternate.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? FlutterFlowTheme.of(context).primary
-                : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : FlutterFlowTheme.of(context).primaryText,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLineHeightPreset(
-    BuildContext context,
-    PdfViewerProvider provider,
-    String label,
-    double value,
-  ) {
-    final isSelected = (provider.epubLineHeight - value).abs() < 0.05;
-    return InkWell(
-      onTap: () {
-        provider.setEpubLineHeight(value);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? FlutterFlowTheme.of(context).primary
-              : FlutterFlowTheme.of(context).alternate.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? FlutterFlowTheme.of(context).primary
-                : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : FlutterFlowTheme.of(context).primaryText,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFontPreset(
-    BuildContext context,
-    PdfViewerProvider provider,
-    String label,
-    double value,
-  ) {
-    final isSelected = (provider.epubFontSize - value).abs() < 1.0;
-    return InkWell(
-      onTap: () {
-        provider.setEpubFontSize(value);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? FlutterFlowTheme.of(context).primary
-              : FlutterFlowTheme.of(context).alternate.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? FlutterFlowTheme.of(context).primary
-                : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : FlutterFlowTheme.of(context).primaryText,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-
-
 Widget _buildEpubReader() {
     return EpubReaderWidget.buildEpubReader(
       currentEpubContentNotifier: _currentEpubContentNotifier,
@@ -1871,7 +837,7 @@ Widget _buildEpubReader() {
         }
       },
       onEndDrawerChanged: (isOpened) {
-        if (!isOpened && provider.openDrawer == 'search') {
+        if (!isOpened && (provider.openDrawer == 'search' || provider.openDrawer == 'settings')) {
           // Clear the drawer state when drawer is dismissed
           provider.setOpenDrawer(null);
         }
@@ -1920,28 +886,16 @@ Widget _buildEpubReader() {
               onPreviousResult: () => _goToPreviousSearchResult(provider),
               onClearSearch: () => _clearSearch(provider),
             );
+          } else if (openDrawer == 'settings') {
+            return const SettingsDrawer();
           }
           return const SizedBox.shrink();
         },
       ),
-      body: Selector<PdfViewerProvider, String?>(
-        selector: (_, p) => p.openDrawer,
-        builder: (context, openDrawer, child) {
-          // Open drawer when state changes
-          if (openDrawer == 'search') {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_scaffoldKey.currentState != null) {
-                _scaffoldKey.currentState!.openEndDrawer();
-              }
-            });
-          } else if (openDrawer == 'bookmarks' || openDrawer == 'toc') {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_scaffoldKey.currentState != null) {
-                _scaffoldKey.currentState!.openDrawer();
-              }
-            });
-          }
-          return Column(
+      body: Stack(
+        children: [
+          // Main content - no longer wrapped in Selector for openDrawer
+          Column(
             children: [
           /// ---------- AppBar ----------
           Visibility(
@@ -2051,14 +1005,18 @@ Widget _buildEpubReader() {
                           );
                         },
                       ),
-                      // InkWell(
-                      //   onTap: _openTtsSettings,
-                      //   child: Icon(
-                      //     Icons.more_vert,
-                      //     size: 24,
-                      //     color: appBarTextColor,
-                      //   ),
-                      // ),
+                      InkWell(
+                        onTap: (){
+                          // Open settings drawer
+                          provider.setOpenDrawer('settings');
+                          _scaffoldKey.currentState?.openEndDrawer();
+                        },
+                        child: Icon(
+                          Icons.more_vert,
+                          size: 24,
+                          color: appBarTextColor,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -2699,8 +1657,10 @@ Widget _buildEpubReader() {
             },
           ),
         ],
-      );
-        },
+      ),
+          // Lightweight drawer opener widget - doesn't rebuild body content
+          _DrawerOpener(scaffoldKey: _scaffoldKey),
+        ],
       ),
     );
       },

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '/providers/pdf_viewer_provider.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/custom_code/widgets/loading_dots_widget.dart';
+import '/custom_code/widgets/pdf_viewer_helpers.dart';
 
 class ThemeBrightnessWidget extends StatefulWidget {
   const ThemeBrightnessWidget({Key? key}) : super(key: key);
@@ -12,26 +13,34 @@ class ThemeBrightnessWidget extends StatefulWidget {
 }
 
 class _ThemeBrightnessWidgetState extends State<ThemeBrightnessWidget> {
-  double? _localBrightness;
+  ValueNotifier<double>? _localBrightness;
+  bool _isDragging = false;
+
+  @override
+  void dispose() {
+    _localBrightness?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PdfViewerProvider>(
-      builder: (context, provider, child) {
+    return Selector<PdfViewerProvider, (double, AppThemeMode, bool, bool)>(
+      selector: (_, p) => (p.currentBrightness, p.currentThemeMode, p.isChangingBrightness, p.isChangingTheme),
+      builder: (context, data, child) {
         final theme = FlutterFlowTheme.of(context);
-        final providerBrightness = provider.currentBrightness;
-        final themeMode = provider.currentThemeMode;
-        
-        // Sync local value with provider when not dragging and provider changed
-        if (_localBrightness == null || (!provider.isChangingBrightness && (_localBrightness! - providerBrightness).abs() > 0.01)) {
-          _localBrightness = providerBrightness;
-        }
-        
-        final brightness = _localBrightness ?? providerBrightness;
-        
-        final isChangingBrightness = provider.isChangingBrightness;
-        final isChangingTheme = provider.isChangingTheme;
+        final providerBrightness = data.$1;
+        final themeMode = data.$2;
+        final isChangingBrightness = data.$3;
+        final isChangingTheme = data.$4;
         final isLoading = isChangingBrightness || isChangingTheme;
+        
+        // Initialize ValueNotifier on first build
+        _localBrightness ??= ValueNotifier<double>(providerBrightness);
+        
+        // Sync local value with provider only when not dragging and provider changed externally
+        if (!_isDragging && (_localBrightness!.value - providerBrightness).abs() > 0.01) {
+          _localBrightness!.value = providerBrightness;
+        }
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -59,30 +68,34 @@ class _ThemeBrightnessWidgetState extends State<ThemeBrightnessWidget> {
                           children: [
                             Icon(Icons.wb_sunny_outlined, color: theme.primary, size: 22),
                             Expanded(
-                              child: SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 3.0,
-                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 10.0),
-                                ),
-                                child: Slider(
-                                  value: brightness,
-                                  onChanged: (value) {
-                                    // Update local state for smooth dragging
-                                    setState(() {
-                                      _localBrightness = value;
-                                    });
-                                  },
-                                  onChangeEnd: (value) {
-                                    // Apply change only when user releases
-                                    provider.setCurrentBrightness(value);
-                                    setState(() {
-                                      _localBrightness = null; // Reset to sync with provider
-                                    });
-                                  },
-                                  activeColor: theme.primary,
-                                  inactiveColor: theme.alternate,
-                                ),
+                              child: ValueListenableBuilder<double>(
+                                valueListenable: _localBrightness!,
+                                builder: (context, brightness, child) {
+                                  return SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      trackHeight: 3.0,
+                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 10.0),
+                                    ),
+                                    child: Slider(
+                                      value: brightness,
+                                      onChanged: (value) {
+                                        // Update local value for smooth dragging - no provider updates
+                                        _isDragging = true;
+                                        _localBrightness!.value = value;
+                                      },
+                                      onChangeEnd: (value) {
+                                        // Apply change only when user releases - actually change screen brightness
+                                        _isDragging = false;
+                                        final provider = context.read<PdfViewerProvider>();
+                                        PdfViewerHelpers.setBrightness(provider, value);
+                                        // Sync will happen automatically on next build
+                                      },
+                                      activeColor: theme.primary,
+                                      inactiveColor: theme.alternate,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                             Icon(Icons.wb_sunny_rounded, color: theme.primary, size: 22),
@@ -96,7 +109,7 @@ class _ThemeBrightnessWidgetState extends State<ThemeBrightnessWidget> {
                         children: [
                           _buildThemeOption(
                             context,
-                            provider,
+                            context.read<PdfViewerProvider>(),
                             0,
                             AppThemeMode.light,
                             themeMode == AppThemeMode.light,
@@ -105,7 +118,7 @@ class _ThemeBrightnessWidgetState extends State<ThemeBrightnessWidget> {
                           const SizedBox(width: 12),
                           _buildThemeOption(
                             context,
-                            provider,
+                            context.read<PdfViewerProvider>(),
                             1,
                             AppThemeMode.sepia,
                             themeMode == AppThemeMode.sepia,
@@ -114,7 +127,7 @@ class _ThemeBrightnessWidgetState extends State<ThemeBrightnessWidget> {
                           const SizedBox(width: 12),
                           _buildThemeOption(
                             context,
-                            provider,
+                            context.read<PdfViewerProvider>(),
                             2,
                             AppThemeMode.dark,
                             themeMode == AppThemeMode.dark,

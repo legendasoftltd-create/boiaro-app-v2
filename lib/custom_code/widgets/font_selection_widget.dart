@@ -12,22 +12,31 @@ class FontSelectionWidget extends StatefulWidget {
 }
 
 class _FontSelectionWidgetState extends State<FontSelectionWidget> {
-  double? _localFontSize;
+  ValueNotifier<double>? _localFontSize;
+  bool _isDragging = false;
+
+  @override
+  void dispose() {
+    _localFontSize?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PdfViewerProvider>(
-      builder: (context, provider, child) {
+    return Selector<PdfViewerProvider, (double, bool)>(
+      selector: (_, p) => (p.epubFontSize, p.isChangingFont),
+      builder: (context, data, child) {
         final theme = FlutterFlowTheme.of(context);
-        final providerFontSize = provider.epubFontSize;
+        final providerFontSize = data.$1;
+        final isChangingFont = data.$2;
         
-        // Sync local value with provider when not dragging and provider changed
-        if (_localFontSize == null || (!provider.isChangingFont && (_localFontSize! - providerFontSize).abs() > 0.01)) {
-          _localFontSize = providerFontSize;
+        // Initialize ValueNotifier on first build
+        _localFontSize ??= ValueNotifier<double>(providerFontSize);
+        
+        // Sync local value with provider only when not dragging and provider changed externally
+        if (!_isDragging && (_localFontSize!.value - providerFontSize).abs() > 0.01) {
+          _localFontSize!.value = providerFontSize;
         }
-        
-        final fontSize = _localFontSize ?? providerFontSize;
-        final isChangingFont = provider.isChangingFont;
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -55,33 +64,37 @@ class _FontSelectionWidgetState extends State<FontSelectionWidget> {
                           children: [
                             Icon(Icons.text_fields, color: theme.primary, size: 20),
                             Expanded(
-                              child: SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 3.0,
-                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 8.0),
-                                ),
-                                child: Slider(
-                                  value: fontSize,
-                                  min: 12.0,
-                                  max: 32.0,
-                                  // divisions: 20,
-                                  onChanged: (value) {
-                                    // Update local state for smooth dragging
-                                    setState(() {
-                                      _localFontSize = value;
-                                    });
-                                  },
-                                  onChangeEnd: (value) {
-                                    // Apply change only when user releases
-                                    provider.setEpubFontSize(value);
-                                    setState(() {
-                                      _localFontSize = null; // Reset to sync with provider
-                                    });
-                                  },
-                                  activeColor: theme.primary,
-                                  inactiveColor: theme.alternate,
-                                ),
+                              child: ValueListenableBuilder<double>(
+                                valueListenable: _localFontSize!,
+                                builder: (context, fontSize, child) {
+                                  return SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      trackHeight: 3.0,
+                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 8.0),
+                                    ),
+                                    child: Slider(
+                                      value: fontSize,
+                                      min: 12.0,
+                                      max: 32.0,
+                                      // divisions: 20,
+                                      onChanged: (value) {
+                                        // Update local value for smooth dragging - no provider updates
+                                        _isDragging = true;
+                                        _localFontSize!.value = value;
+                                      },
+                                      onChangeEnd: (value) {
+                                        // Apply change only when user releases
+                                        _isDragging = false;
+                                        final provider = context.read<PdfViewerProvider>();
+                                        provider.setEpubFontSize(value);
+                                        // Sync will happen automatically on next build
+                                      },
+                                      activeColor: theme.primary,
+                                      inactiveColor: theme.alternate,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                             Icon(Icons.text_fields_outlined, color: theme.primary, size: 23),
