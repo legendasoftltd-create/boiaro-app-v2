@@ -103,61 +103,97 @@ class _FontSelectionWidgetState extends State<FontSelectionWidget> {
                       ),
                       const SizedBox(height: 6),
                       // Font Selection Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Default Font',
-                            style: theme.bodySmall.override(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: theme.primaryText,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            'আদর্শলিপি',
-                            style: theme.bodySmall.override(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 12,
-                              color: theme.secondaryText,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'অনি',
-                            style: theme.bodySmall.override(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 12,
-                              color: theme.secondaryText,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'বাংলা',
-                            style: theme.bodySmall.override(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 12,
-                              color: theme.secondaryText,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'লিখন',
-                            style: theme.bodySmall.override(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 12,
-                              color: theme.secondaryText,
-                            ),
-                          ),
-                        ],
+                      Selector<PdfViewerProvider, String>(
+                        selector: (_, p) => p.epubFontFamily,
+                        builder: (context, currentFontFamily, child) {
+                          final provider = context.read<PdfViewerProvider>();
+                          
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              _buildFontOption(
+                                context,
+                                provider,
+                                'SF Pro Display',
+                                'Default Font',
+                                currentFontFamily == 'SF Pro Display',
+                                theme,
+                              ),
+                              const SizedBox(width: 12),
+                              _buildFontOption(
+                                context,
+                                provider,
+                                'AdorshoLipi',
+                                'আদর্শলিপি',
+                                currentFontFamily == 'AdorshoLipi',
+                                theme,
+                              ),
+                              const SizedBox(width: 12),
+                              _buildFontOption(
+                                context,
+                                provider,
+                                'LikhanNormal',
+                                'লিখন',
+                                currentFontFamily == 'LikhanNormal',
+                                theme,
+                              ),
+                              const SizedBox(width: 12),
+                              _buildFontOption(
+                                context,
+                                provider,
+                                'Nikosh',
+                                'Nikosh',
+                                currentFontFamily == 'Nikosh',
+                                theme,
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFontOption(
+    BuildContext context,
+    PdfViewerProvider provider,
+    String fontFamily,
+    String label,
+    bool isSelected,
+    FlutterFlowTheme theme,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        provider.setEpubFontFamily(fontFamily);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        // decoration: BoxDecoration(
+        //   color: isSelected
+        //       ? theme.primary.withOpacity(0.1)
+        //       : Colors.transparent,
+        //   borderRadius: BorderRadius.circular(8),
+        //   border: Border.all(
+        //     color: isSelected
+        //         ? theme.primary
+        //         : theme.alternate.withOpacity(0.3),
+        //     width: isSelected ? 1.5 : 1,
+        //   ),
+        // ),
+        child: Text(
+          label,
+          style: theme.bodySmall.override(
+            fontFamily: fontFamily,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? theme.primary : theme.secondaryText,
+          ),
+        ),
+      ),
     );
   }
 }

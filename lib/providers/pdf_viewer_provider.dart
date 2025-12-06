@@ -40,6 +40,9 @@ class PdfViewerProvider with ChangeNotifier {
   double _epubLineHeight = 1.6;
   double get epubLineHeight => _epubLineHeight;
   
+  String _epubFontFamily = 'SF Pro Display';
+  String get epubFontFamily => _epubFontFamily;
+  
   AppThemeMode _currentThemeMode = AppThemeMode.light;
   AppThemeMode get currentThemeMode => _currentThemeMode;
   
@@ -220,6 +223,19 @@ class PdfViewerProvider with ChangeNotifier {
   void setEpubLineHeight(double height) {
     _epubLineHeight = height;
     notifyListeners();
+  }
+
+  void setEpubFontFamily(String fontFamily) {
+    if (_epubFontFamily != fontFamily) {
+      _isChangingFont = true;
+      notifyListeners();
+      
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _epubFontFamily = fontFamily;
+        _isChangingFont = false;
+        notifyListeners();
+      });
+    }
   }
 
   void setThemeMode(AppThemeMode mode) {
@@ -616,6 +632,7 @@ class PdfViewerProvider with ChangeNotifier {
     _currentEpubContent = "";
     _epubFontSize = 16.0;
     _epubLineHeight = 1.6;
+    _epubFontFamily = 'SF Pro Display';
     _currentThemeMode = AppThemeMode.light;
     _isChangingChapter = false;
     _isFullScreen = false;

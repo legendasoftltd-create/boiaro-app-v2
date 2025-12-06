@@ -173,6 +173,18 @@ flutter:
       fonts:
         - asset: assets/fonts/HomeBottomAiBookFill.ttf
 
+    - family: AdorshoLipi
+      fonts:
+        - asset: assets/fonts/adorsho_lipi.ttf
+
+    - family: LikhanNormal
+      fonts:
+        - asset: assets/fonts/likhan_normal.ttf
+
+    - family: Nikosh
+      fonts:
+        - asset: assets/fonts/nikosh.ttf
+
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.

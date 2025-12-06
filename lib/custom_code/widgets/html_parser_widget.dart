@@ -17,6 +17,7 @@ class HtmlParserWidget extends StatelessWidget {
   final double lineHeight;
   final AppThemeMode themeMode;
   final epubx.EpubBook? epubBook;
+  final String fontFamily;
 
   const HtmlParserWidget({
     Key? key,
@@ -25,6 +26,7 @@ class HtmlParserWidget extends StatelessWidget {
     required this.lineHeight,
     required this.themeMode,
     this.epubBook,
+    this.fontFamily = 'SF Pro Display',
   }) : super(key: key);
 
   @override
@@ -273,7 +275,7 @@ class HtmlParserWidget extends StatelessWidget {
         backgroundColor: bgColor,
       ),
       "body": Style(
-        fontFamily: 'SF Pro Display',
+        fontFamily: fontFamily,
         fontSize: FontSize(fontSize),
         letterSpacing: 0.3,
         lineHeight: LineHeight.em(lineHeight),

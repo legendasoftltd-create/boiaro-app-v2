@@ -319,13 +319,14 @@ class EpubReaderWidget {
                             child: child,
                           );
                         },
-                        child: Selector<PdfViewerProvider, (double, double, AppThemeMode)>(
+                        child: Selector<PdfViewerProvider, (double, double, AppThemeMode, String)>(
                           key: ValueKey<String>(content),
-                          selector: (_, p) => (p.epubFontSize, p.epubLineHeight, p.currentThemeMode),
+                          selector: (_, p) => (p.epubFontSize, p.epubLineHeight, p.currentThemeMode, p.epubFontFamily),
                           builder: (context, settings, child) {
                             final fontSize = settings.$1;
                             final lineHeight = settings.$2;
                             final themeMode = settings.$3;
+                            final fontFamily = settings.$4;
 
                             return HtmlParserWidget(
                               htmlContent: content,
@@ -333,6 +334,7 @@ class EpubReaderWidget {
                               lineHeight: lineHeight,
                               themeMode: themeMode,
                               epubBook: epubBook,
+                              fontFamily: fontFamily,
                             );
                           },
                           child: child,

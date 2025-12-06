@@ -625,11 +625,18 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           searchText,
         );
         
+        // Apply highlights to current chapter if it's already loaded
+        // This ensures search terms are visible even if we don't navigate
+        final currentIndex = PdfViewerEpubSearch.getCurrentResultIndex();
+        _applyEpubSearchHighlights(provider, currentResultIndex: currentIndex);
+        
         // Navigate to first result
         final firstResult = results[0];
         _navigateToEpubSearchResult(provider, firstResult);
       } else {
         provider.setEpubSearchResults(0, -1, searchText);
+        // Clear highlights if no results found
+        _clearEpubSearchHighlights(provider);
       }
     } finally {
       // Loading state will be cleared in setEpubSearchResults
@@ -649,8 +656,11 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         _epubScrollController,
         onOriginalContentReady: (originalHtml) {
           _originalChapterHtml = originalHtml;
-          // Apply search highlights after chapter loads
-          _applyEpubSearchHighlights(provider);
+          // Apply search highlights after chapter loads with current result index
+          final currentIndex = PdfViewerEpubSearch.getCurrentResultIndex();
+          _applyEpubSearchHighlights(provider, currentResultIndex: currentIndex);
+          // Scroll to the search result position
+          _scrollToSearchResult(result);
           // Clear navigating state after a delay to allow UI to update
           Future.delayed(const Duration(milliseconds: 300), () {
             provider.setNavigatingSearchResult(false);
@@ -658,8 +668,10 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         },
       );
     } else {
-      // Chapter already loaded, just apply highlights
-      _applyEpubSearchHighlights(provider);
+      // Chapter already loaded, just apply highlights with current result index and scroll to result
+      final currentIndex = PdfViewerEpubSearch.getCurrentResultIndex();
+      _applyEpubSearchHighlights(provider, currentResultIndex: currentIndex);
+      _scrollToSearchResult(result);
       // Clear navigating state after a delay
       Future.delayed(const Duration(milliseconds: 300), () {
         provider.setNavigatingSearchResult(false);
@@ -667,7 +679,170 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     }
   }
 
-  void _applyEpubSearchHighlights(PdfViewerProvider provider) {
+  void _scrollToSearchResult(EpubSearchResult result) {
+    if (!_epubScrollController.hasClients || !mounted) return;
+    
+    // Wait for layout to complete after content update
+    // Use multiple post-frame callbacks to ensure layout is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!_epubScrollController.hasClients || !mounted) return;
+        
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (!_epubScrollController.hasClients || !mounted) return;
+            
+            try {
+              final scrollPosition = _epubScrollController.position;
+              final maxScroll = scrollPosition.maxScrollExtent;
+              final viewportHeight = scrollPosition.viewportDimension;
+              
+              if (maxScroll <= 0) return;
+              
+              final currentContent = _currentEpubContentNotifier.value;
+              if (currentContent.isEmpty) return;
+              
+              // Method 1: Try to find the current-search-result element position
+              // Calculate position based on plain text ratio (more accurate)
+              final plainTextContent = _extractPlainTextForScroll(currentContent);
+              final plainTextLength = plainTextContent.length;
+              
+              if (plainTextLength > 0) {
+                // Find the position of current search result in plain text
+                final searchText = context.read<PdfViewerProvider>().epubSearchText ?? '';
+                if (searchText.isNotEmpty) {
+                  // Find all occurrences and get the one matching our result
+                  final searchLower = searchText.toLowerCase();
+                  final plainTextLower = plainTextContent.toLowerCase();
+                  
+                  int occurrenceCount = 0;
+                  int targetPosition = -1;
+                  int searchIndex = 0;
+                  
+                  while (searchIndex < plainTextLower.length) {
+                    final index = plainTextLower.indexOf(searchLower, searchIndex);
+                    if (index == -1) break;
+                    
+                    if (occurrenceCount == result.matchIndex) {
+                      targetPosition = index;
+                      break;
+                    }
+                    
+                    occurrenceCount++;
+                    searchIndex = index + 1;
+                  }
+                  
+                  if (targetPosition >= 0) {
+                    // Calculate scroll position based on plain text ratio
+                    final contentRatio = targetPosition / plainTextLength;
+                    double targetScrollPosition = contentRatio * maxScroll;
+                    
+                    // Adjust to position text in upper-middle of viewport (20% from top)
+                    final viewportOffset = viewportHeight * 0.2;
+                    targetScrollPosition = (targetScrollPosition - viewportOffset).clamp(0.0, maxScroll);
+                    
+                    // Get current scroll position
+                    final currentScroll = scrollPosition.pixels;
+                    final scrollDifference = (targetScrollPosition - currentScroll).abs();
+                    
+                    if (scrollDifference > 50) {
+                      _epubScrollController.animateTo(
+                        targetScrollPosition,
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeInOut,
+                      );
+                      return;
+                    }
+                  }
+                }
+              }
+              
+              // Method 2: Fallback to HTML position ratio (less accurate but works)
+              final contentLength = currentContent.length;
+              if (contentLength > 0 && result.position < contentLength) {
+                // Count plain text characters up to result.position
+                final plainTextPos = _countPlainTextUpToPosition(currentContent, result.position);
+                final plainTextTotal = _extractPlainTextForScroll(currentContent).length;
+                
+                if (plainTextTotal > 0) {
+                  final contentRatio = plainTextPos / plainTextTotal;
+                  double targetScrollPosition = contentRatio * maxScroll;
+                  
+                  // Adjust for viewport
+                  final viewportOffset = viewportHeight * 0.2;
+                  targetScrollPosition = (targetScrollPosition - viewportOffset).clamp(0.0, maxScroll);
+                  
+                  _epubScrollController.animateTo(
+                    targetScrollPosition,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              }
+            } catch (e) {
+              // Fallback: simple ratio-based scroll
+              try {
+                if (!_epubScrollController.hasClients || !mounted) return;
+                final currentContent = _currentEpubContentNotifier.value;
+                final maxScroll = _epubScrollController.position.maxScrollExtent;
+                
+                if (maxScroll > 0 && currentContent.isNotEmpty) {
+                  final plainTextTotal = _extractPlainTextForScroll(currentContent).length;
+                  if (plainTextTotal > 0) {
+                    final plainTextPos = _countPlainTextUpToPosition(currentContent, result.position);
+                    final contentRatio = plainTextPos / plainTextTotal;
+                    final targetScroll = (contentRatio * maxScroll).clamp(0.0, maxScroll);
+                    
+                    _epubScrollController.animateTo(
+                      targetScroll,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                }
+              } catch (_) {
+                // Ignore scroll errors
+              }
+            }
+          });
+        });
+      });
+    });
+  }
+
+  /// Extract plain text from HTML for accurate position calculation
+  String _extractPlainTextForScroll(String html) {
+    // Remove HTML tags and decode entities
+    String text = html.replaceAll(RegExp(r'<[^>]*>'), '');
+    // Decode common HTML entities
+    text = text.replaceAll('&nbsp;', ' ');
+    text = text.replaceAll('&amp;', '&');
+    text = text.replaceAll('&lt;', '<');
+    text = text.replaceAll('&gt;', '>');
+    text = text.replaceAll('&quot;', '"');
+    text = text.replaceAll('&#39;', "'");
+    return text;
+  }
+
+  /// Count plain text characters up to a given HTML position
+  int _countPlainTextUpToPosition(String html, int htmlPosition) {
+    int count = 0;
+    bool insideTag = false;
+    
+    for (int i = 0; i < htmlPosition && i < html.length; i++) {
+      if (html[i] == '<') {
+        insideTag = true;
+      } else if (html[i] == '>') {
+        insideTag = false;
+      } else if (!insideTag && html[i] != '\n' && html[i] != '\r') {
+        count++;
+      }
+    }
+    
+    return count;
+  }
+
+  void _applyEpubSearchHighlights(PdfViewerProvider provider, {int? currentResultIndex}) {
     if (provider.epubSearchText == null || provider.epubSearchText!.isEmpty) {
       return;
     }
@@ -675,10 +850,11 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     final currentContent = _currentEpubContentNotifier.value;
     // Clear previous search highlights
     final cleanContent = PdfViewerEpubSearch.clearSearchHighlights(currentContent);
-    // Apply new search highlights
-    final highlightedContent = PdfViewerEpubSearch.highlightSearchResults(
+    // Apply new search highlights with current result index
+    final (highlightedContent, _) = PdfViewerEpubSearch.highlightSearchResults(
       cleanContent,
       provider.epubSearchText!,
+      currentResultIndex: currentResultIndex,
     );
     
     provider.setCurrentEpubContent(highlightedContent);
@@ -688,12 +864,17 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   void _clearEpubSearch(PdfViewerProvider provider) {
     PdfViewerEpubSearch.clearResults();
     provider.clearEpubSearch();
-    
+    _clearEpubSearchHighlights(provider);
+  }
+
+  void _clearEpubSearchHighlights(PdfViewerProvider provider) {
     // Remove search highlights from current content
     final currentContent = _currentEpubContentNotifier.value;
-    final cleanContent = PdfViewerEpubSearch.clearSearchHighlights(currentContent);
-    provider.setCurrentEpubContent(cleanContent);
-    _currentEpubContentNotifier.value = cleanContent;
+    if (currentContent.isNotEmpty) {
+      final cleanContent = PdfViewerEpubSearch.clearSearchHighlights(currentContent);
+      provider.setCurrentEpubContent(cleanContent);
+      _currentEpubContentNotifier.value = cleanContent;
+    }
   }
 
   void _clearSearch(PdfViewerProvider provider) {

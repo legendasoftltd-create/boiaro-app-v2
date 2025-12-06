@@ -310,14 +310,20 @@ class PdfViewerEpubSearch {
   }
 
   /// Highlight search results in HTML content
-  static String highlightSearchResults(String htmlContent, String searchText) {
+  /// Returns highlighted content and the position of the current result (if specified)
+  static (String, int?) highlightSearchResults(
+    String htmlContent, 
+    String searchText, {
+    int? currentResultIndex,
+  }) {
     if (searchText.trim().isEmpty) {
-      return htmlContent;
+      return (htmlContent, null);
     }
 
     final normalizedSearch = searchText.trim();
     final searchLower = normalizedSearch.toLowerCase();
     String result = htmlContent;
+    int? currentResultPosition;
 
     // Find all matches
     final matches = _findAllMatches(htmlContent, normalizedSearch, searchLower);
@@ -332,13 +338,41 @@ class PdfViewerEpubSearch {
         final matchedText = result.substring(match.start, match.end);
         final after = result.substring(match.end);
         
+        // Add unique ID to current result for accurate scrolling
+        final isCurrentResult = currentResultIndex != null && i == currentResultIndex;
+        final idAttr = isCurrentResult ? ' id="current-search-result"' : '';
+        
         result = before +
-            '<mark class="search-result" style="background-color: #FFEB3B; padding: 2px 0; margin: 0; display: inline; vertical-align: baseline;">$matchedText</mark>' +
+            '<mark class="search-result"$idAttr style="background-color: #FFEB3B; padding: 2px 0; margin: 0; display: inline; vertical-align: baseline;">$matchedText</mark>' +
             after;
+        
+        // Store position of current result (in plain text, not HTML)
+        if (isCurrentResult) {
+          // Calculate plain text position by counting characters before this match
+          currentResultPosition = _getPlainTextPosition(htmlContent, match.start);
+        }
       }
     }
 
-    return result;
+    return (result, currentResultPosition);
+  }
+
+  /// Get plain text position (excluding HTML tags) for a given HTML position
+  static int _getPlainTextPosition(String htmlContent, int htmlPosition) {
+    int plainTextPos = 0;
+    bool insideTag = false;
+    
+    for (int i = 0; i < htmlPosition && i < htmlContent.length; i++) {
+      if (htmlContent[i] == '<') {
+        insideTag = true;
+      } else if (htmlContent[i] == '>') {
+        insideTag = false;
+      } else if (!insideTag) {
+        plainTextPos++;
+      }
+    }
+    
+    return plainTextPos;
   }
 
   /// Check if position is inside a search highlight
