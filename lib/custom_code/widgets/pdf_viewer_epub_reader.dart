@@ -13,6 +13,7 @@ import '/providers/pdf_viewer_provider.dart';
 import '/models/highlight_model.dart';
 import 'package:a_i_ebook_app/custom_code/extensions/custom_text_selection_controls.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/html_parser_widget.dart';
+import 'package:a_i_ebook_app/custom_code/widgets/pdf_viewer_helpers.dart';
 
 /// EPUB Reader Widget and related methods
 class EpubReaderWidget {
@@ -173,6 +174,10 @@ class EpubReaderWidget {
     required Function stopSpeaking,
     required Function loadEpubChapter,
   }) {
+    // Track scroll state to distinguish taps from scrolls
+    final isScrollingNotifier = ValueNotifier<bool>(false);
+    DateTime? lastScrollEndTime;
+    
     // Don't include EpubBook in selector - it has problematic equality comparison
     // Access it via context.read inside the builder instead
     return Selector<PdfViewerProvider, (bool, String, AppThemeMode)>(
@@ -245,51 +250,74 @@ class EpubReaderWidget {
         return Container(
           color: backgroundColor,
           child: SelectionArea(
-            selectionControls: CustomTextSelectionControls(
-              onHighlight: () => addHighlight(),
-              onListen: () {
-                final p = context.read<PdfViewerProvider>();
-                p.isSpeaking ? stopSpeaking() : speakSelected();
-              },
-            ),
-            onSelectionChanged: (SelectedContent? selection) {
-              // Update local ValueNotifier - this does NOT trigger provider rebuilds
-              final newSelectedText = selection?.plainText ?? '';
-              localSelectedTextNotifier.value = newSelectedText;
+              selectionControls: CustomTextSelectionControls(
+                onHighlight: () => addHighlight(),
+                onListen: () {
+                  final p = context.read<PdfViewerProvider>();
+                  p.isSpeaking ? stopSpeaking() : speakSelected();
+                },
+              ),
+              onSelectionChanged: (SelectedContent? selection) {
+                // Update local ValueNotifier - this does NOT trigger provider rebuilds
+                final newSelectedText = selection?.plainText ?? '';
+                localSelectedTextNotifier.value = newSelectedText;
 
-              // Only sync to provider when selection is cleared (for UI state)
-              // For Listen button, we'll sync when Listen is clicked
-              if (newSelectedText.isEmpty) {
-                final p = context.read<PdfViewerProvider>();
-                p.clearSelectedText();
-              }
-              // Don't update provider during active selection to prevent rebuilds
-            },
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (ScrollNotification notification) {
-                final p = context.read<PdfViewerProvider>();
-
-                // Skip if already changing chapter
-                if (p.isChangingChapter) return true;
-
-                final metrics = notification.metrics;
-                
-                // Validate scroll metrics
-                if (!metrics.hasContentDimensions || 
-                    metrics.maxScrollExtent <= 0 ||
-                    !epubScrollController.hasClients) {
-                  return false;
+                // Only sync to provider when selection is cleared (for UI state)
+                // For Listen button, we'll sync when Listen is clicked
+                if (newSelectedText.isEmpty) {
+                  final p = context.read<PdfViewerProvider>();
+                  p.clearSelectedText();
                 }
-
-                // Update last scroll position for tracking
-                final currentPos = metrics.pixels;
-                p.setLastScrollPosition(currentPos);
-
-                // Automatic chapter loading on scroll disabled
-                // Users can manually navigate chapters using navigation controls
-                return false;
+                // Don't update provider during active selection to prevent rebuilds
               },
-              child: ScrollbarTheme(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (ScrollNotification notification) {
+                  final p = context.read<PdfViewerProvider>();
+
+                  // Track scroll state
+                  if (notification is ScrollStartNotification) {
+                    isScrollingNotifier.value = true;
+                  } else if (notification is ScrollEndNotification) {
+                    isScrollingNotifier.value = false;
+                    lastScrollEndTime = DateTime.now();
+                  }
+
+                  // Skip if already changing chapter
+                  if (p.isChangingChapter) return true;
+
+                  final metrics = notification.metrics;
+                  
+                  // Validate scroll metrics
+                  if (!metrics.hasContentDimensions || 
+                      metrics.maxScrollExtent <= 0 ||
+                      !epubScrollController.hasClients) {
+                    return false;
+                  }
+
+                  // Update last scroll position for tracking
+                  final currentPos = metrics.pixels;
+                  p.setLastScrollPosition(currentPos);
+
+                  // Automatic chapter loading on scroll disabled
+                  // Users can manually navigate chapters using navigation controls
+                  return false;
+                },
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    // Only toggle if not scrolling and no text selected
+                    if (!isScrollingNotifier.value && 
+                        localSelectedTextNotifier.value.isEmpty) {
+                      // Also check if scroll just ended (wait a bit after scroll)
+                      final now = DateTime.now();
+                      if (lastScrollEndTime == null || 
+                          now.difference(lastScrollEndTime!).inMilliseconds > 200) {
+                        final p = context.read<PdfViewerProvider>();
+                        PdfViewerHelpers.toggleFullScreen(p, context);
+                      }
+                    }
+                  },
+                  child: ScrollbarTheme(
                 data: ScrollbarThemeData(
                   thumbColor: WidgetStateProperty.all(scrollbarColor),
                   thickness: WidgetStateProperty.all(8.0),
@@ -319,14 +347,15 @@ class EpubReaderWidget {
                             child: child,
                           );
                         },
-                        child: Selector<PdfViewerProvider, (double, double, AppThemeMode, String)>(
+                        child: Selector<PdfViewerProvider, (double, double, AppThemeMode, String, bool)>(
                           key: ValueKey<String>(content),
-                          selector: (_, p) => (p.epubFontSize, p.epubLineHeight, p.currentThemeMode, p.epubFontFamily),
+                          selector: (_, p) => (p.epubFontSize, p.epubLineHeight, p.currentThemeMode, p.epubFontFamily, p.isJustified),
                           builder: (context, settings, child) {
                             final fontSize = settings.$1;
                             final lineHeight = settings.$2;
                             final themeMode = settings.$3;
                             final fontFamily = settings.$4;
+                            final isJustified = settings.$5;
 
                             return HtmlParserWidget(
                               htmlContent: content,
@@ -335,6 +364,7 @@ class EpubReaderWidget {
                               themeMode: themeMode,
                               epubBook: epubBook,
                               fontFamily: fontFamily,
+                              isJustified: isJustified,
                             );
                           },
                           child: child,
@@ -347,7 +377,8 @@ class EpubReaderWidget {
             ),
           ),
         ),
-      );
+          ),
+        );
       },
     );
   }

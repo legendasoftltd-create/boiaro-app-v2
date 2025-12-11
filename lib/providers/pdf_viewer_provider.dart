@@ -43,6 +43,30 @@ class PdfViewerProvider with ChangeNotifier {
   String _epubFontFamily = 'SF Pro Display';
   String get epubFontFamily => _epubFontFamily;
   
+  bool _isJustified = true;
+  bool get isJustified => _isJustified;
+  
+  double _autoScrollInterval = 5.0; // seconds
+  double get autoScrollInterval => _autoScrollInterval;
+  
+  double _autoScrollSpeed = 50.0; // percentage
+  double get autoScrollSpeed => _autoScrollSpeed;
+  
+  bool _useVolumeButtons = false;
+  bool get useVolumeButtons => _useVolumeButtons;
+  
+  bool _enableSwipeBrightness = false;
+  bool get enableSwipeBrightness => _enableSwipeBrightness;
+  
+  double _blueLightFilter = 0.0; // percentage
+  double get blueLightFilter => _blueLightFilter;
+  
+  int _screenLightTime = 5; // minutes
+  int get screenLightTime => _screenLightTime;
+  
+  bool _hyphenation = false;
+  bool get hyphenation => _hyphenation;
+  
   AppThemeMode _currentThemeMode = AppThemeMode.light;
   AppThemeMode get currentThemeMode => _currentThemeMode;
   
@@ -235,6 +259,62 @@ class PdfViewerProvider with ChangeNotifier {
         _isChangingFont = false;
         notifyListeners();
       });
+    }
+  }
+
+  void setIsJustified(bool justified) {
+    if (_isJustified != justified) {
+      _isJustified = justified;
+      notifyListeners();
+    }
+  }
+
+  void setAutoScrollInterval(double interval) {
+    if ((_autoScrollInterval - interval).abs() > 0.1) {
+      _autoScrollInterval = interval;
+      notifyListeners();
+    }
+  }
+
+  void setAutoScrollSpeed(double speed) {
+    if ((_autoScrollSpeed - speed).abs() > 0.1) {
+      _autoScrollSpeed = speed;
+      notifyListeners();
+    }
+  }
+
+  void setUseVolumeButtons(bool use) {
+    if (_useVolumeButtons != use) {
+      _useVolumeButtons = use;
+      notifyListeners();
+    }
+  }
+
+  void setEnableSwipeBrightness(bool enable) {
+    if (_enableSwipeBrightness != enable) {
+      _enableSwipeBrightness = enable;
+      notifyListeners();
+    }
+  }
+
+  void setBlueLightFilter(double filter) {
+    if ((_blueLightFilter - filter).abs() > 0.1) {
+      _blueLightFilter = filter;
+      notifyListeners();
+    }
+  }
+
+  void setScreenLightTime(int minutes) {
+    if (_screenLightTime != minutes) {
+      _screenLightTime = minutes;
+      notifyListeners();
+    }
+  }
+
+  void setHyphenation(bool enable) {
+    if (_hyphenation != enable) {
+      _hyphenation = enable;
+      notifyListeners();
     }
   }
 
@@ -633,6 +713,14 @@ class PdfViewerProvider with ChangeNotifier {
     _epubFontSize = 16.0;
     _epubLineHeight = 1.6;
     _epubFontFamily = 'SF Pro Display';
+    _isJustified = true;
+    _autoScrollInterval = 5.0;
+    _autoScrollSpeed = 50.0;
+    _useVolumeButtons = false;
+    _enableSwipeBrightness = false;
+    _blueLightFilter = 0.0;
+    _screenLightTime = 5;
+    _hyphenation = false;
     _currentThemeMode = AppThemeMode.light;
     _isChangingChapter = false;
     _isFullScreen = false;
