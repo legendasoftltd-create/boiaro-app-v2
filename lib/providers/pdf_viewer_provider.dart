@@ -14,75 +14,75 @@ class PdfViewerProvider with ChangeNotifier {
   // Reader State
   ReaderType _readerType = ReaderType.epub;
   ReaderType get readerType => _readerType;
-  
+
   int _currentPage = 1;
   int get currentPage => _currentPage;
-  
+
   bool _isLoadingEpub = false;
   bool get isLoadingEpub => _isLoadingEpub;
 
   // EPUB State
   epubx.EpubBook? _epubBook;
   epubx.EpubBook? get epubBook => _epubBook;
-  
+
   List<epubx.EpubChapter> _epubChapters = [];
   List<epubx.EpubChapter> get epubChapters => _epubChapters;
-  
+
   int _currentEpubChapterIndex = 0;
   int get currentEpubChapterIndex => _currentEpubChapterIndex;
-  
+
   String _currentEpubContent = "";
   String get currentEpubContent => _currentEpubContent;
-  
+
   double _epubFontSize = 16.0;
   double get epubFontSize => _epubFontSize;
-  
+
   double _epubLineHeight = 1.6;
   double get epubLineHeight => _epubLineHeight;
-  
+
   String _epubFontFamily = 'SF Pro Display';
   String get epubFontFamily => _epubFontFamily;
-  
+
   bool _isJustified = true;
   bool get isJustified => _isJustified;
-  
+
   double _autoScrollInterval = 5.0; // seconds
   double get autoScrollInterval => _autoScrollInterval;
-  
+
   double _autoScrollSpeed = 50.0; // percentage
   double get autoScrollSpeed => _autoScrollSpeed;
-  
+
   bool _useVolumeButtons = false;
   bool get useVolumeButtons => _useVolumeButtons;
-  
+
   bool _enableSwipeBrightness = false;
   bool get enableSwipeBrightness => _enableSwipeBrightness;
-  
+
   double _blueLightFilter = 0.0; // percentage
   double get blueLightFilter => _blueLightFilter;
-  
+
   int _screenLightTime = 5; // minutes
   int get screenLightTime => _screenLightTime;
-  
+
   bool _hyphenation = false;
   bool get hyphenation => _hyphenation;
-  
+
   AppThemeMode _currentThemeMode = AppThemeMode.light;
   AppThemeMode get currentThemeMode => _currentThemeMode;
-  
+
   bool _isChangingChapter = false;
   bool get isChangingChapter => _isChangingChapter;
 
   // UI State
   bool _isFullScreen = false;
   bool get isFullScreen => _isFullScreen;
-  
+
   bool _isAutoRotateEnabled = true;
   bool get isAutoRotateEnabled => _isAutoRotateEnabled;
-  
+
   double _currentBrightness = 0.5;
   double get currentBrightness => _currentBrightness;
-  
+
   double _originalBrightness = 0.5;
   double get originalBrightness => _originalBrightness;
 
@@ -101,63 +101,67 @@ class PdfViewerProvider with ChangeNotifier {
   // Loading States
   bool _isChangingFont = false;
   bool get isChangingFont => _isChangingFont;
-  
+
   bool _isChangingBrightness = false;
   bool get isChangingBrightness => _isChangingBrightness;
-  
+
   bool _isChangingTheme = false;
   bool get isChangingTheme => _isChangingTheme;
 
   // Interactions
   String _selectedText = "";
   String get selectedText => _selectedText;
-  
+
   bool _isSpeaking = false;
   bool get isSpeaking => _isSpeaking;
-  
+
   double _speechRate = 0.6;
   double get speechRate => _speechRate;
-  
+
   double _pitch = 1.0;
   double get pitch => _pitch;
-  
+
   String _searchText = "";
   String get searchText => _searchText;
-  
+
   PdfTextSearchResult _searchResult = PdfTextSearchResult();
   PdfTextSearchResult get searchResult => _searchResult;
-  
+
+  // Store details for each search result (page number, text snippet)
+  List<Map<String, dynamic>> _searchResultDetails = [];
+  List<Map<String, dynamic>> get searchResultDetails => _searchResultDetails;
+
   // EPUB Search state
   int _epubSearchResultCount = 0;
   int get epubSearchResultCount => _epubSearchResultCount;
-  
+
   int _epubCurrentSearchIndex = -1;
   int get epubCurrentSearchIndex => _epubCurrentSearchIndex;
-  
+
   String? _epubSearchText;
   String? get epubSearchText => _epubSearchText;
-  
+
   // Search loading state
   bool _isSearching = false;
   bool get isSearching => _isSearching;
-  
+
   bool _isNavigatingSearchResult = false;
   bool get isNavigatingSearchResult => _isNavigatingSearchResult;
-  
+
   List<BookmarkModel> _bookmarks = [];
   List<BookmarkModel> get bookmarks => List.unmodifiable(_bookmarks);
-  
+
   // Legacy getter for backward compatibility (returns page numbers)
   List<int> get bookmarkedPages {
     return _bookmarks.map((b) => b.pageNumber).toList();
   }
-  
+
   List<HighlightModel> _highlights = [];
   List<HighlightModel> get highlights => List.unmodifiable(_highlights);
-  
+
   String? _currentBookId; // Track current book ID
   String? get currentBookId => _currentBookId;
-  
+
   double _lastScrollPosition = 0;
   double get lastScrollPosition => _lastScrollPosition;
 
@@ -235,7 +239,7 @@ class PdfViewerProvider with ChangeNotifier {
     if (_epubFontSize != size) {
       _isChangingFont = true;
       notifyListeners();
-      
+
       Future.delayed(const Duration(milliseconds: 300), () {
         _epubFontSize = size;
         _isChangingFont = false;
@@ -253,7 +257,7 @@ class PdfViewerProvider with ChangeNotifier {
     if (_epubFontFamily != fontFamily) {
       _isChangingFont = true;
       notifyListeners();
-      
+
       Future.delayed(const Duration(milliseconds: 300), () {
         _epubFontFamily = fontFamily;
         _isChangingFont = false;
@@ -322,7 +326,7 @@ class PdfViewerProvider with ChangeNotifier {
     if (_currentThemeMode != mode) {
       _isChangingTheme = true;
       notifyListeners();
-      
+
       Future.delayed(const Duration(milliseconds: 300), () {
         _currentThemeMode = mode;
         _isChangingTheme = false;
@@ -356,7 +360,7 @@ class PdfViewerProvider with ChangeNotifier {
     if ((_currentBrightness - brightness).abs() > 0.01) {
       _isChangingBrightness = true;
       notifyListeners();
-      
+
       Future.delayed(const Duration(milliseconds: 200), () {
         _currentBrightness = brightness;
         _isChangingBrightness = false;
@@ -396,12 +400,12 @@ class PdfViewerProvider with ChangeNotifier {
     if (_selectedText == text) {
       return; // No change, don't notify
     }
-    
+
     final wasEmpty = _selectedText.isEmpty;
     final willBeEmpty = text.isEmpty;
-    
+
     _selectedText = text;
-    
+
     // Only notify if the visibility state of selection UI changes
     // (empty -> non-empty or non-empty -> empty)
     if (wasEmpty != willBeEmpty) {
@@ -409,7 +413,7 @@ class PdfViewerProvider with ChangeNotifier {
     }
     // Otherwise, don't notify to avoid interrupting active text selection
   }
-  
+
   void setSelectedTextSilent(String text) {
     // Update without notifying - used when we don't want to trigger rebuilds
     _selectedText = text;
@@ -448,11 +452,31 @@ class PdfViewerProvider with ChangeNotifier {
 
   void setSearchResult(PdfTextSearchResult result) {
     _searchResult = result;
+    // Initialize empty details list for all results
+    if (result.hasResult) {
+      _searchResultDetails = List.generate(
+        result.totalInstanceCount,
+        (index) => {'page': null, 'snippet': null},
+      );
+    } else {
+      _searchResultDetails = [];
+    }
     notifyListeners();
   }
 
+  void updateSearchResultDetail(int index, int pageNumber, String? snippet) {
+    if (index >= 0 && index < _searchResultDetails.length) {
+      _searchResultDetails[index] = {
+        'page': pageNumber,
+        'snippet': snippet,
+      };
+      notifyListeners();
+    }
+  }
+
   // EPUB Search Methods
-  void setEpubSearchResults(int totalCount, int currentIndex, String searchText) {
+  void setEpubSearchResults(
+      int totalCount, int currentIndex, String searchText) {
     _epubSearchResultCount = totalCount;
     _epubCurrentSearchIndex = currentIndex;
     _epubSearchText = searchText;
@@ -510,12 +534,13 @@ class PdfViewerProvider with ChangeNotifier {
   }
 
   /// Toggle bookmark (add or remove)
-  Future<void> toggleBookmark(int page, {String? bookId, String? chapterId, String? chapterName}) async {
+  Future<void> toggleBookmark(int page,
+      {String? bookId, String? chapterId, String? chapterName}) async {
     if (bookId == null) {
       // If no bookId provided, try to use current book
       bookId = _currentBookId;
     }
-    
+
     if (bookId == null) {
       print('Cannot toggle bookmark: bookId is null');
       return;
@@ -563,7 +588,7 @@ class PdfViewerProvider with ChangeNotifier {
     if (bookId == null) {
       bookId = _currentBookId;
     }
-    
+
     if (bookId == null) {
       print('Cannot remove bookmark: bookId is null');
       return;
@@ -571,7 +596,7 @@ class PdfViewerProvider with ChangeNotifier {
 
     final chapterId = page.toString();
     final bookmarkId = BookmarkModel.generateId(bookId, chapterId);
-    
+
     final bookmark = _bookmarks.firstWhere(
       (b) => b.id == bookmarkId,
       orElse: () => BookmarkModel(
@@ -595,7 +620,7 @@ class PdfViewerProvider with ChangeNotifier {
     if (bookId == null) {
       bookId = _currentBookId;
     }
-    
+
     if (bookId == null) {
       return false;
     }
@@ -614,7 +639,8 @@ class PdfViewerProvider with ChangeNotifier {
   /// Load highlights for current book
   Future<void> loadHighlights(String bookId) async {
     _currentBookId = bookId;
-    final highlights = await HighlightStorageService.getHighlightsForBook(bookId);
+    final highlights =
+        await HighlightStorageService.getHighlightsForBook(bookId);
     _highlights = highlights;
     notifyListeners();
   }
@@ -639,7 +665,8 @@ class PdfViewerProvider with ChangeNotifier {
   }
 
   /// Check if a position is highlighted
-  bool isPositionHighlighted(String chapterId, int startPosition, int endPosition) {
+  bool isPositionHighlighted(
+      String chapterId, int startPosition, int endPosition) {
     return _highlights.any((h) =>
         h.chapterId == chapterId &&
         h.startPosition == startPosition &&
@@ -741,4 +768,3 @@ class PdfViewerProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
