@@ -75,6 +75,8 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
         FlutterFlowDynamicModels(() => CategoryComponentModel());
     listMainContainerComponentModels =
         FlutterFlowDynamicModels(() => ListMainContainerComponentModel());
+    featuredBooksComponentModels =
+        FlutterFlowDynamicModels(() => ListMainContainerComponentModel());
   }
 
   @override
@@ -83,6 +85,7 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
     mainBookComponentModels.dispose();
     categoryComponentModels2.dispose();
     listMainContainerComponentModels.dispose();
+    featuredBooksComponentModels.dispose();
   }
 
   /// Additional helper methods.
@@ -185,6 +188,26 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
       await Future.delayed(Duration(milliseconds: 50));
       final timeElapsed = stopwatch.elapsedMilliseconds;
       final requestComplete = apiRequestCompleted7;
+      if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
+        break;
+      }
+    }
+  }
+
+  bool apiRequestCompleted8 = false;
+  String? apiRequestLastUniqueKey8;
+  late FlutterFlowDynamicModels<ListMainContainerComponentModel>
+      featuredBooksComponentModels;
+
+  Future waitForApiRequestCompleted8({
+    double minWait = 0,
+    double maxWait = double.infinity,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    while (true) {
+      await Future.delayed(Duration(milliseconds: 50));
+      final timeElapsed = stopwatch.elapsedMilliseconds;
+      final requestComplete = apiRequestCompleted8;
       if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
         break;
       }

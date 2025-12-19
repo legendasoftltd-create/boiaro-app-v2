@@ -93,6 +93,8 @@ class EbookGroup {
   static UserBookPurchaseRecordsApiCall userBookPurchaseRecordsApiCall =
       UserBookPurchaseRecordsApiCall();
   static SocialLoginCall socialLoginCall = SocialLoginCall();
+  static GetFeaturedBooksByCategoryApiCall getFeaturedBooksByCategoryApiCall =
+      GetFeaturedBooksByCategoryApiCall();
 }
 
 class SocialLoginCall {
@@ -1570,7 +1572,8 @@ class GetbookdetailsApiCall {
         response,
         r'''$.data.bookDetails[:].discount_amount''',
       ));
-  dynamic discountPercentage(dynamic response) => castToType<dynamic>(getJsonField(
+  dynamic discountPercentage(dynamic response) =>
+      castToType<dynamic>(getJsonField(
         response,
         r'''$.data.bookDetails[:].discount_percentage''',
       ));
@@ -3034,6 +3037,47 @@ class PaymentGatewayApiCall {
         response,
         r'''$.data.paymentMethod[:].paypal.paypal_private_key''',
       ));
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GetFeaturedBooksByCategoryApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetFeaturedBooksByCategoryApi',
+      apiUrl: '${baseUrl}getfeaturedbooksbycategory',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? categoryBooks(dynamic response) => getJsonField(
+        response,
+        r'''$.data.categoryBooks''',
+        true,
+      ) as List?;
   int? success(dynamic response) => castToType<int>(getJsonField(
         response,
         r'''$.data.success''',

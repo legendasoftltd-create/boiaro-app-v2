@@ -21,7 +21,7 @@ class FFAppState extends ChangeNotifier {
   initilizePrefs() async {
     prefs = await SharedPreferences.getInstance();
   }
-  
+
   Future initializePersistedState() async {
     prefs = await SharedPreferences.getInstance();
     _safeInit(() {
@@ -633,6 +633,23 @@ class FFAppState extends ChangeNotifier {
   void clearGetNewBooksCacheCache() => _getNewBooksCacheManager.clear();
   void clearGetNewBooksCacheCacheKey(String? uniqueKey) =>
       _getNewBooksCacheManager.clearRequest(uniqueKey);
+
+  final _getFeaturedBooksByCategoryCacheManager =
+      FutureRequestManager<ApiCallResponse>();
+  Future<ApiCallResponse> getFeaturedBooksByCategoryCache({
+    String? uniqueQueryKey,
+    bool? overrideCache,
+    required Future<ApiCallResponse> Function() requestFn,
+  }) =>
+      _getFeaturedBooksByCategoryCacheManager.performRequest(
+        uniqueQueryKey: uniqueQueryKey,
+        overrideCache: overrideCache,
+        requestFn: requestFn,
+      );
+  void clearGetFeaturedBooksByCategoryCacheCache() =>
+      _getFeaturedBooksByCategoryCacheManager.clear();
+  void clearGetFeaturedBooksByCategoryCacheCacheKey(String? uniqueKey) =>
+      _getFeaturedBooksByCategoryCacheManager.clearRequest(uniqueKey);
 }
 
 void _safeInit(Function() initializeField) {
