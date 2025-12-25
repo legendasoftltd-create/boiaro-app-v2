@@ -178,6 +178,10 @@ class PdfViewerProvider with ChangeNotifier {
   List<String> _chapterSentences = [];
   List<String> get chapterSentences => List.unmodifiable(_chapterSentences);
 
+  // PDF View Mode State
+  bool _isPdfVerticalScroll = true;
+  bool get isPdfVerticalScroll => _isPdfVerticalScroll;
+
   // Reader Type Methods
   void setReaderType(ReaderType type) {
     _readerType = type;
@@ -332,6 +336,19 @@ class PdfViewerProvider with ChangeNotifier {
         _isChangingTheme = false;
         notifyListeners();
       });
+    }
+  }
+
+  // PDF View Mode Methods
+  void togglePdfScrollDirection() {
+    _isPdfVerticalScroll = !_isPdfVerticalScroll;
+    notifyListeners();
+  }
+
+  void setPdfVerticalScroll(bool vertical) {
+    if (_isPdfVerticalScroll != vertical) {
+      _isPdfVerticalScroll = vertical;
+      notifyListeners();
     }
   }
 
@@ -728,6 +745,15 @@ class PdfViewerProvider with ChangeNotifier {
     }
   }
 
+  // PDF Table of Contents
+  List<PdfTocItem> _pdfToc = [];
+  List<PdfTocItem> get pdfToc => _pdfToc;
+
+  void setPdfToc(List<PdfTocItem> toc) {
+    _pdfToc = toc;
+    notifyListeners();
+  }
+
   // Reset method for cleanup
   void reset() {
     _readerType = ReaderType.epub;
@@ -765,6 +791,20 @@ class PdfViewerProvider with ChangeNotifier {
     _highlights = [];
     _currentBookId = null;
     _lastScrollPosition = 0;
+    _pdfToc = [];
+    _isPdfVerticalScroll = true;
     notifyListeners();
   }
+}
+
+class PdfTocItem {
+  final String title;
+  final int pageNumber; // 1-based page number
+  final List<PdfTocItem> children;
+
+  PdfTocItem({
+    required this.title,
+    required this.pageNumber,
+    this.children = const [],
+  });
 }

@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:screen_protector/screen_protector.dart';
 import '/providers/pdf_viewer_provider.dart';
@@ -95,10 +96,14 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   final ValueNotifier<bool> _isAtBottomNotifier = ValueNotifier<bool>(false);
   String? _currentBookId;
   String? _originalChapterHtml; // Store original HTML before highlights
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    if (widget.filePath == null) {
+      _isLoading = false;
+    }
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
 
     // Add scroll listener to detect top/bottom position
@@ -144,6 +149,47 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       }
       ScreenProtector.protectDataLeakageOn();
     });
+  }
+
+  List<PdfTocItem> _processBookmarks(
+      PdfBookmarkBase bookmarks, PdfDocument document) {
+    List<PdfTocItem> items = [];
+    for (int i = 0; i < bookmarks.count; i++) {
+      try {
+        final bookmark = bookmarks[i];
+        int pageNumber = -1;
+
+        // Try standard destination
+        if (bookmark.destination != null) {
+          final page = bookmark.destination!.page;
+          final index = document.pages.indexOf(page);
+          if (index >= 0) {
+            pageNumber = index + 1;
+          }
+        }
+        // Try named destination if standard failed
+        else if (bookmark.namedDestination != null) {
+          final namedDest = bookmark.namedDestination!;
+          if (namedDest.destination != null) {
+            final page = namedDest.destination!.page;
+            final index = document.pages.indexOf(page);
+            if (index >= 0) {
+              pageNumber = index + 1;
+            }
+          }
+        }
+
+        // Add item with recursive call
+        items.add(PdfTocItem(
+          title: bookmark.title,
+          pageNumber: pageNumber > 0 ? pageNumber : 1, // Fallback to 1
+          children: _processBookmarks(bookmark, document),
+        ));
+      } catch (e) {
+        log("Error processing bookmark index $i: $e");
+      }
+    }
+    return items;
   }
 
   void _onContentChanged() {
@@ -1016,12 +1062,18 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     context.watch<FFAppState>();
     // Use Selector instead of Consumer to only listen to colors-related state
     // This prevents rebuilds when isSpeaking or other unrelated state changes
-    return Selector<PdfViewerProvider, (ReaderType, AppThemeMode, bool)>(
-      selector: (_, p) => (p.readerType, p.currentThemeMode, p.isFullScreen),
+    return Selector<PdfViewerProvider, (ReaderType, AppThemeMode, bool, bool)>(
+      selector: (_, p) => (
+        p.readerType,
+        p.currentThemeMode,
+        p.isFullScreen,
+        p.isPdfVerticalScroll
+      ),
       builder: (context, data, child) {
         final readerType = data.$1;
         final themeMode = data.$2;
         final isFullScreen = data.$3;
+        final isPdfVerticalScroll = data.$4;
         final provider = context.read<PdfViewerProvider>();
 
         log("_currentEpubContent: ${provider.currentEpubContent}");
@@ -1099,6 +1151,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                 );
               } else if (openDrawer == 'toc') {
                 return TableOfContentsDrawer(
+                  pdfController: pdfViewerController,
                   loadEpubChapter: (index) => EpubReaderWidget.loadEpubChapter(
                     provider,
                     index,
@@ -1181,6 +1234,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                               return pdfContent;
                             },
                             child: Container(
+                              padding:  EdgeInsets.only(top: 50),
                               color: Colors.white,
                               child: (widget.filePath != null &&
                                       (widget.filePath!.startsWith('http') ||
@@ -1189,11 +1243,18 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                       widget.filePath!,
                                       key: _pdfViewerKey,
                                       controller: pdfViewerController,
-                                      scrollDirection:
-                                          PdfScrollDirection.vertical,
+                                      scrollDirection: isPdfVerticalScroll
+                                          ? PdfScrollDirection.vertical
+                                          : PdfScrollDirection.horizontal,
+                                      pageLayoutMode: isPdfVerticalScroll
+                                          ? PdfPageLayoutMode.continuous
+                                          : PdfPageLayoutMode.single,
                                       canShowTextSelectionMenu: true,
                                       onDocumentLoaded:
                                           (PdfDocumentLoadedDetails details) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
                                         int totalPages =
                                             details.document.pages.count;
                                         FFAppState().totalPages = totalPages;
@@ -1202,8 +1263,28 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                                   .homePageTotalPdfPageIndex =
                                               FFAppState().totalPages;
                                         });
+
+                                        // Extract TOC
+                                        if (details.document.bookmarks.count >
+                                            0) {
+                                          final toc = _processBookmarks(
+                                              details.document.bookmarks,
+                                              details.document);
+                                          provider.setPdfToc(toc);
+                                        } else {
+                                          provider.setPdfToc([]);
+                                        }
+
                                         pdfViewerController
                                             .jumpToPage(provider.currentPage);
+                                      },
+                                      onDocumentLoadFailed:
+                                          (PdfDocumentLoadFailedDetails
+                                              details) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                        log("PDF Load Failed: ${details.error}");
                                       },
                                       onPageChanged: (details) {
                                         SchedulerBinding.instance
@@ -1233,11 +1314,18 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                       File(widget.filePath ?? ''),
                                       key: _pdfViewerKey,
                                       controller: pdfViewerController,
-                                      scrollDirection:
-                                          PdfScrollDirection.vertical,
+                                      scrollDirection: isPdfVerticalScroll
+                                          ? PdfScrollDirection.vertical
+                                          : PdfScrollDirection.horizontal,
+                                      pageLayoutMode: isPdfVerticalScroll
+                                          ? PdfPageLayoutMode.continuous
+                                          : PdfPageLayoutMode.single,
                                       canShowTextSelectionMenu: true,
                                       onDocumentLoaded:
                                           (PdfDocumentLoadedDetails details) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
                                         int totalPages =
                                             details.document.pages.count;
                                         FFAppState().totalPages = totalPages;
@@ -1246,8 +1334,28 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                                   .homePageTotalPdfPageIndex =
                                               FFAppState().totalPages;
                                         });
+
+                                        // Extract TOC
+                                        if (details.document.bookmarks.count >
+                                            0) {
+                                          final toc = _processBookmarks(
+                                              details.document.bookmarks,
+                                              details.document);
+                                          provider.setPdfToc(toc);
+                                        } else {
+                                          provider.setPdfToc([]);
+                                        }
+
                                         pdfViewerController
                                             .jumpToPage(provider.currentPage);
+                                      },
+                                      onDocumentLoadFailed:
+                                          (PdfDocumentLoadFailedDetails
+                                              details) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                        log("PDF Load Failed: ${details.error}");
                                       },
                                       onPageChanged: (details) {
                                         SchedulerBinding.instance
@@ -1277,6 +1385,14 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                           )
                         else
                           _buildEpubReader(),
+
+                        /// Loading Indicator
+                        if (readerType == ReaderType.pdf && _isLoading)
+                          Center(
+                            child: CircularProgressIndicator(
+                              color: FlutterFlowTheme.of(context).primaryColor,
+                            ),
+                          ),
 
                         /// Full Screen Exit Button (only visible in full screen)
                         if (isFullScreen)
@@ -1962,37 +2078,51 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                             },
                                           ),
                                           const SizedBox(height: 8),
-                                          // if (FFAppState().totalPages > 1)
-                                          //   SliderTheme(
-                                          //     data: SliderThemeData(
-                                          //       activeTrackColor: const Color(0xFFFFD700),
-                                          //       inactiveTrackColor:
-                                          //           FlutterFlowTheme.of(context).alternate,
-                                          //       thumbColor: const Color(0xFFFFD700),
-                                          //       overlayColor: const Color(0xFFFFD700).withOpacity(0.2),
-                                          //       thumbShape: const RoundSliderThumbShape(
-                                          //           enabledThumbRadius: 8),
-                                          //       trackHeight: 4,
-                                          //     ),
-                                          //     child: Slider(
-                                          //       value: provider.currentPage.toDouble(),
-                                          //       min: 1,
-                                          //       max: FFAppState().totalPages.toDouble(),
-                                          //       onChanged: (value) {
-                                          //         provider.setCurrentPage(value.toInt());
-                                          //         if (provider.readerType == ReaderType.pdf) {
-                                          //           pdfViewerController.jumpToPage(provider.currentPage);
-                                          //         } else {
-                                          //           EpubReaderWidget.loadEpubChapter(
-                                          //             provider,
-                                          //             provider.currentPage - 1,
-                                          //             _currentEpubContentNotifier,
-                                          //             _epubScrollController,
-                                          //           );
-                                          //         }
-                                          //       },
-                                          //     ),
-                                          //   ),
+                                          if (FFAppState().totalPages > 1)
+                                            SliderTheme(
+                                              data: SliderThemeData(
+                                                activeTrackColor:
+                                                    const Color(0xFFFFD700),
+                                                inactiveTrackColor:
+                                                    FlutterFlowTheme.of(context)
+                                                        .alternate,
+                                                thumbColor:
+                                                    const Color(0xFFFFD700),
+                                                overlayColor:
+                                                    const Color(0xFFFFD700)
+                                                        .withOpacity(0.2),
+                                                thumbShape:
+                                                    const RoundSliderThumbShape(
+                                                        enabledThumbRadius: 8),
+                                                trackHeight: 4,
+                                              ),
+                                              child: Slider(
+                                                value: provider.currentPage
+                                                    .toDouble(),
+                                                min: 1,
+                                                max: FFAppState()
+                                                    .totalPages
+                                                    .toDouble(),
+                                                onChanged: (value) {
+                                                  provider.setCurrentPage(
+                                                      value.toInt());
+                                                  if (provider.readerType ==
+                                                      ReaderType.pdf) {
+                                                    pdfViewerController
+                                                        .jumpToPage(provider
+                                                            .currentPage);
+                                                  } else {
+                                                    EpubReaderWidget
+                                                        .loadEpubChapter(
+                                                      provider,
+                                                      provider.currentPage - 1,
+                                                      _currentEpubContentNotifier,
+                                                      _epubScrollController,
+                                                    );
+                                                  }
+                                                },
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     );
@@ -2042,32 +2172,22 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                         MainAxisAlignment.spaceEvenly,
                                     children: [
                                       if (provider.readerType ==
-                                          ReaderType.epub)
+                                              ReaderType.epub ||
+                                          (provider.readerType ==
+                                                  ReaderType.pdf &&
+                                              provider.pdfToc.isNotEmpty))
                                         _buildBottomIcon(
                                           Icons.list,
                                           'Table of Contents',
-                                          provider.readerType == ReaderType.epub
-                                              ? () {
-                                                  provider.setOpenDrawer('toc');
-                                                  // Open drawer immediately
-                                                  if (_scaffoldKey
-                                                          .currentState !=
-                                                      null) {
-                                                    _scaffoldKey.currentState!
-                                                        .openDrawer();
-                                                  }
-                                                }
-                                              : () {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                          'PDF Table of Contents not available'),
-                                                      duration:
-                                                          Duration(seconds: 2),
-                                                    ),
-                                                  );
-                                                },
+                                          () {
+                                            provider.setOpenDrawer('toc');
+                                            // Open drawer immediately
+                                            if (_scaffoldKey.currentState !=
+                                                null) {
+                                              _scaffoldKey.currentState!
+                                                  .openDrawer();
+                                            }
+                                          },
                                           bottomNavIconColor,
                                         ),
                                       _buildBottomIcon(
@@ -2084,6 +2204,18 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                         },
                                         bottomNavIconColor,
                                       ),
+                                      if (provider.readerType == ReaderType.pdf)
+                                        _buildBottomIcon(
+                                          provider.isPdfVerticalScroll
+                                              ? Icons.auto_stories
+                                              : Icons.view_day,
+                                          provider.isPdfVerticalScroll
+                                              ? 'Switch to Flip Mode'
+                                              : 'Switch to Scroll Mode',
+                                          () => provider
+                                              .togglePdfScrollDirection(),
+                                          bottomNavIconColor,
+                                        ),
                                       _buildBottomIcon(
                                         provider.isFullScreen
                                             ? Icons.fullscreen_exit_outlined

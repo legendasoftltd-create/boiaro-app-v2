@@ -320,6 +320,7 @@ class EpubReaderWidget {
         }
 
         return Container(
+          padding: EdgeInsets.only(top: 50),
           color: backgroundColor,
           child: SelectionArea(
             selectionControls: CustomTextSelectionControls(
