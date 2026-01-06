@@ -1,3 +1,4 @@
+import 'package:a_i_ebook_app/custom_code/widgets/app_update.dart';
 import 'package:a_i_ebook_app/pages/publisher_screens/best_publisher_page/best_publisher_page_widget.dart';
 
 import '/custom_code/actions/index.dart' as actions;
@@ -33,6 +34,8 @@ void main() async {
   // End initial custom actions code
 
   await appState.initializePersistedState();
+  AppUpdateUtils.checkForUpdate();
+
 
   runApp(
     DevicePreview(
