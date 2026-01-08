@@ -47,7 +47,7 @@ class EpubReaderWidget {
 
       final epubBook = await epubx.EpubReader.readBook(bytes);
       provider.setEpubBook(epubBook);
-      final chapters = getAllChapters(epubBook.Chapters ?? []);
+      final chapters = getChaptersFromSpine(epubBook);
       provider.setEpubChapters(chapters);
 
       if (chapters.isNotEmpty) {
@@ -68,6 +68,124 @@ class EpubReaderWidget {
     }
   }
 
+  /// Get all chapters from Spine (Reading Order)
+  /// This ensures we include all split files (e.g. index_split_000.html, index_split_001.html)
+  static List<epubx.EpubChapter> getChaptersFromSpine(epubx.EpubBook epubBook) {
+    // If schema is missing, fallback to TOC
+    if (epubBook.Schema?.Package?.Spine?.Items == null ||
+        epubBook.Schema?.Package?.Manifest?.Items == null) {
+      return getAllChapters(epubBook.Chapters ?? []);
+    }
+
+    try {
+      List<epubx.EpubChapter> spineChapters = [];
+      final tocTitles = <String, String>{};
+
+      // Map TOC titles to file names for display
+      if (epubBook.Chapters != null) {
+        _mapTocTitles(epubBook.Chapters!, tocTitles);
+      }
+
+      final manifestItems = epubBook.Schema!.Package!.Manifest!.Items!;
+      final spineItems = epubBook.Schema!.Package!.Spine!.Items!;
+
+      // Map manifest ID to Item for quick lookup
+      Map<String, epubx.EpubManifestItem> idToManifest = {};
+      for (var item in manifestItems) {
+        if (item.Id != null) {
+          idToManifest[item.Id!] = item;
+        }
+      }
+
+      String lastTitle = "";
+      // Sometimes the title is for the first split file, we want to persist it
+      // unless a new title comes up.
+
+      for (var spineItem in spineItems) {
+        final idRef = spineItem.IdRef;
+        if (idRef == null || !idToManifest.containsKey(idRef)) continue;
+
+        final manifestItem = idToManifest[idRef]!;
+        final href = manifestItem.Href;
+
+        if (href == null) continue;
+
+        // Find content in the book
+        // Note: keys in Content.Html usually match the href (decoded)
+        String? content;
+        if (epubBook.Content?.Html != null) {
+          if (epubBook.Content!.Html!.containsKey(href)) {
+            content = epubBook.Content!.Html![href]?.Content;
+          } else {
+            // Try to find key that roughly matches if exact match fails
+            // (e.g. OEBPS prefix issues)
+            try {
+              final key = epubBook.Content!.Html!.keys.firstWhere(
+                  (k) => k.endsWith(href) || href.endsWith(k),
+                  orElse: () => "");
+              if (key.isNotEmpty) {
+                content = epubBook.Content!.Html![key]?.Content;
+              }
+            } catch (e) {
+              log('Error finding content for $href: $e');
+            }
+          }
+        }
+
+        if (content == null) continue;
+
+        // Determine Title
+        String title = tocTitles[href] ?? "";
+        if (title.isNotEmpty) {
+          lastTitle = title;
+        } else {
+          // If this section has no title in TOC, it's likely a continuation
+          // We can use the last known title
+          if (lastTitle.isNotEmpty) {
+            title = lastTitle;
+            // Optional: Add indicator like " (cont.)" if you want
+            // title = "$lastTitle";
+          }
+        }
+
+        // Create EpubChapter
+        final chapter = epubx.EpubChapter();
+        chapter.Title = title;
+        chapter.ContentFileName = href;
+        chapter.HtmlContent = content;
+        chapter.SubChapters = [];
+
+        spineChapters.add(chapter);
+      }
+
+      if (spineChapters.isEmpty) {
+        return getAllChapters(epubBook.Chapters ?? []);
+      }
+
+      return spineChapters;
+    } catch (e) {
+      log('Error parsing spine chapters: $e');
+      return getAllChapters(epubBook.Chapters ?? []);
+    }
+  }
+
+  /// Helper to map TOC titles to filenames
+  static void _mapTocTitles(
+      List<epubx.EpubChapter> chapters, Map<String, String> map) {
+    for (var chapter in chapters) {
+      if (chapter.ContentFileName != null) {
+        // Clean up filename (sometimes has anchors)
+        String filename = chapter.ContentFileName!;
+        if (filename.contains('#')) {
+          filename = filename.split('#')[0];
+        }
+        map[filename] = chapter.Title ?? "";
+      }
+      if (chapter.SubChapters != null && chapter.SubChapters!.isNotEmpty) {
+        _mapTocTitles(chapter.SubChapters!, map);
+      }
+    }
+  }
   /// Get all chapters recursively
   static List<epubx.EpubChapter> getAllChapters(
       List<epubx.EpubChapter> chapters) {
