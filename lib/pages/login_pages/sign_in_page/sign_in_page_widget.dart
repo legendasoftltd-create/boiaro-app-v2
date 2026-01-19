@@ -61,6 +61,165 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
+  Future<String?> _showEmailInputDialog(BuildContext context) async {
+    final emailController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          title: Text(
+            'Email Required',
+            style: FlutterFlowTheme.of(context).headlineSmall.override(
+                  fontFamily: 'SF Pro Display',
+                  fontSize: 20.0,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.0,
+                ),
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Facebook didn\'t provide your email address. Please enter it to continue.',
+                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 15.0,
+                          letterSpacing: 0.0,
+                          lineHeight: 1.4,
+                        ),
+                  ),
+                  SizedBox(height: 16.0),
+                  TextFormField(
+                    controller: emailController,
+                    autofocus: true,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email address',
+                      hintText: 'Enter your email address',
+                      labelStyle:
+                          FlutterFlowTheme.of(context).labelMedium.override(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 14.0,
+                                letterSpacing: 0.0,
+                              ),
+                      hintStyle:
+                          FlutterFlowTheme.of(context).labelMedium.override(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 15.0,
+                                letterSpacing: 0.0,
+                              ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: FlutterFlowTheme.of(context).black30,
+                          width: 1.0,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: FlutterFlowTheme.of(context).primary,
+                          width: 1.0,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: FlutterFlowTheme.of(context).error,
+                          width: 1.0,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: FlutterFlowTheme.of(context).error,
+                          width: 1.0,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      contentPadding: EdgeInsetsDirectional.fromSTEB(
+                          16.0, 13.0, 16.0, 12.0),
+                    ),
+                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 15.0,
+                          letterSpacing: 0.0,
+                        ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your email address';
+                      }
+                      // Basic email validation
+                      final emailRegex = RegExp(
+                        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                      );
+                      if (!emailRegex.hasMatch(value)) {
+                        return 'Please enter a valid email address';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(null);
+              },
+              child: Text(
+                'Cancel',
+                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'SF Pro Display',
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                      fontSize: 16.0,
+                      letterSpacing: 0.0,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.of(dialogContext).pop(emailController.text.trim());
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: FlutterFlowTheme.of(context).primary,
+                foregroundColor: Colors.white,
+                padding: EdgeInsetsDirectional.fromSTEB(24.0, 12.0, 24.0, 12.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                elevation: 0.0,
+              ),
+              child: Text(
+                'Continue',
+                style: FlutterFlowTheme.of(context).titleSmall.override(
+                      fontFamily: 'SF Pro Display',
+                      color: Colors.white,
+                      fontSize: 16.0,
+                      letterSpacing: 0.0,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _model.dispose();
@@ -505,200 +664,272 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                         ),
-                       // Social Login Section
-                      Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
-                            child: Row(
+                        // Social Login Section
+                        Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16.0, horizontal: 32.0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      thickness: 1,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
+                                    child: Text(
+                                      "OR",
+                                      style: FlutterFlowTheme.of(context)
+                                          .titleSmall
+                                          .override(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      thickness: 1,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Social Buttons
+                            Column(
                               children: [
-                                Expanded(
-                                  child: Divider(
-                                    thickness: 1,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                  child: Text(
-                                    "OR",
-                                    style: FlutterFlowTheme.of(context).titleSmall.override(
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.w600,
+                                GestureDetector(
+                                  onTap: () async {
+                                    final socialLoginRepository =
+                                        SocialLoginRepository();
+                                    final response = await socialLoginRepository
+                                        .signInWithGoogle();
+                                    if (response != null &&
+                                        EbookGroup.socialLoginCall.success(
+                                              (response.jsonBody ?? ''),
+                                            ) ==
+                                            1) {
+                                      FFAppState().isLogin = true;
+                                      FFAppState().token =
+                                          EbookGroup.socialLoginCall.token(
+                                                (response.jsonBody ?? ''),
+                                              ) ??
+                                              '';
+                                      FFAppState().userId =
+                                          EbookGroup.socialLoginCall.userId(
+                                                (response.jsonBody ?? ''),
+                                              ) ??
+                                              '';
+                                      FFAppState().userDetail = EbookGroup
+                                              .socialLoginCall
+                                              .userDetails(
+                                            (response.jsonBody ?? ''),
+                                          ) ??
+                                          '';
+                                      FFAppState().update(() {});
+                                      context.safePop();
+                                    } else {
+                                      await actions.showCustomToastBottom(
+                                        EbookGroup.socialLoginCall.message(
+                                          (response?.jsonBody ?? ''),
+                                        )!,
+                                      );
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.all(12),
+                                    width: 300,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16.0),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        )
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          "assets/images/google_ic.png",
+                                          height: 30,
+                                          width: 30,
                                         ),
+                                        SizedBox(width: 10),
+                                        Text(
+                                          "Continue with Google",
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodyMedium
+                                              .override(
+                                                fontFamily: 'SF Pro Display',
+                                                fontSize: 16.0,
+                                                letterSpacing: 0.0,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                                Expanded(
-                                  child: Divider(
-                                    thickness: 1,
-                                    color: Colors.grey[400],
+                                SizedBox(height: 16),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final socialLoginRepository =
+                                        SocialLoginRepository();
+                                    final result = await socialLoginRepository
+                                        .signInWithFacebook();
+
+                                    if (result.needsEmail) {
+                                      // Show email input dialog
+                                      final email =
+                                          await _showEmailInputDialog(context);
+
+                                      if (email != null && email.isNotEmpty) {
+                                        // Complete login with provided email
+                                        final completeResult =
+                                            await socialLoginRepository
+                                                .completeFacebookLoginWithEmail(
+                                          result.userData!,
+                                          email,
+                                        );
+
+                                        if (completeResult.success &&
+                                            completeResult.response != null &&
+                                            EbookGroup.socialLoginCall.success(
+                                                  (completeResult
+                                                          .response!.jsonBody ??
+                                                      ''),
+                                                ) ==
+                                                1) {
+                                          FFAppState().isLogin = true;
+                                          FFAppState().token =
+                                              EbookGroup.socialLoginCall.token(
+                                                    (completeResult.response!
+                                                            .jsonBody ??
+                                                        ''),
+                                                  ) ??
+                                                  '';
+                                          FFAppState().userId =
+                                              EbookGroup.socialLoginCall.userId(
+                                                    (completeResult.response!
+                                                            .jsonBody ??
+                                                        ''),
+                                                  ) ??
+                                                  '';
+                                          FFAppState().userDetail = EbookGroup
+                                                  .socialLoginCall
+                                                  .userDetails(
+                                                (completeResult
+                                                        .response!.jsonBody ??
+                                                    ''),
+                                              ) ??
+                                              '';
+                                          FFAppState().update(() {});
+                                          context.safePop();
+                                        } else {
+                                          await actions.showCustomToastBottom(
+                                            completeResult.errorMessage ??
+                                                EbookGroup.socialLoginCall
+                                                    .message(
+                                                  (completeResult
+                                                          .response?.jsonBody ??
+                                                      ''),
+                                                ) ??
+                                                'Login failed',
+                                          );
+                                        }
+                                      }
+                                    } else if (result.success &&
+                                        result.response != null &&
+                                        EbookGroup.socialLoginCall.success(
+                                              (result.response!.jsonBody ?? ''),
+                                            ) ==
+                                            1) {
+                                      FFAppState().isLogin = true;
+                                      FFAppState().token =
+                                          EbookGroup.socialLoginCall.token(
+                                                (result.response!.jsonBody ??
+                                                    ''),
+                                              ) ??
+                                              '';
+                                      FFAppState().userId =
+                                          EbookGroup.socialLoginCall.userId(
+                                                (result.response!.jsonBody ??
+                                                    ''),
+                                              ) ??
+                                              '';
+                                      FFAppState().userDetail = EbookGroup
+                                              .socialLoginCall
+                                              .userDetails(
+                                            (result.response!.jsonBody ?? ''),
+                                          ) ??
+                                          '';
+                                      FFAppState().update(() {});
+                                      context.safePop();
+                                    } else {
+                                      await actions.showCustomToastBottom(
+                                        result.errorMessage ??
+                                            EbookGroup.socialLoginCall.message(
+                                              (result.response?.jsonBody ?? ''),
+                                            ) ??
+                                            'Login failed',
+                                      );
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.all(12),
+                                    width: 300,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16.0),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        )
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          "assets/images/facebook_ic.png",
+                                          height: 30,
+                                          width: 30,
+                                        ),
+                                        SizedBox(width: 10),
+                                        Text(
+                                          "Continue with Facebook",
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodyMedium
+                                              .override(
+                                                fontFamily: 'SF Pro Display',
+                                                fontSize: 16.0,
+                                                letterSpacing: 0.0,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                      
-                          // Social Buttons
-                          Column(
-                            children: [
-                              GestureDetector(
-                                onTap: () async {
-                                  final socialLoginRepository =
-                                      SocialLoginRepository();
-                                  final response = await socialLoginRepository
-                                      .signInWithGoogle();
-                                  if (response != null &&
-                                      EbookGroup.socialLoginCall.success(
-                                            (response.jsonBody ?? ''),
-                                          ) ==
-                                          1) {
-                                    FFAppState().isLogin = true;
-                                    FFAppState().token =
-                                        EbookGroup.socialLoginCall.token(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().userId =
-                                        EbookGroup.socialLoginCall.userId(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().userDetail =
-                                        EbookGroup.socialLoginCall.userDetails(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().update(() {});
-                                    context.safePop();
-                                  } else {
-                                    await actions.showCustomToastBottom(
-                                      EbookGroup.socialLoginCall.message(
-                                        (response?.jsonBody ?? ''),
-                                      )!,
-                                    );
-                                  }
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.all(12),
-                                  width: 300,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16.0),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      )
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        "assets/images/google_ic.png",
-                                        height: 30,
-                                        width: 30,
-                                      ),
-                                      SizedBox(width: 10),
-                                      Text(
-                                        "Continue with Google",
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 16.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 16),
-                              GestureDetector(
-                                onTap: () async {
-                                  final socialLoginRepository =
-                                      SocialLoginRepository();
-                                  final response = await socialLoginRepository
-                                      .signInWithFacebook();
-                                  if (response != null &&
-                                      EbookGroup.socialLoginCall.success(
-                                            (response.jsonBody ?? ''),
-                                          ) ==
-                                          1) {
-                                    FFAppState().isLogin = true;
-                                    FFAppState().token =
-                                        EbookGroup.socialLoginCall.token(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().userId =
-                                        EbookGroup.socialLoginCall.userId(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().userDetail =
-                                        EbookGroup.socialLoginCall.userDetails(
-                                              (response.jsonBody ?? ''),
-                                            ) ??
-                                            '';
-                                    FFAppState().update(() {});
-                                    context.safePop();
-                                  } else {
-                                    await actions.showCustomToastBottom(
-                                      EbookGroup.socialLoginCall.message(
-                                        (response?.jsonBody ?? ''),
-                                      ) ??
-                                          '',
-                                    );
-                                  }
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.all(12),
-                                  width: 300,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16.0),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      )
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        "assets/images/facebook_ic.png",
-                                        height: 30,
-                                        width: 30,
-                                      ),
-                                      SizedBox(width: 10),
-                                      Text(
-                                        "Continue with Facebook",
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 16.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 16),
-                        ],
-                      )
-
+                            SizedBox(height: 16),
+                          ],
+                        )
                       ],
                     ),
                   ),

@@ -43,10 +43,31 @@
         <string>aiebookapp</string>
         </array>
         </dict>
+
+        <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+        <string>fb893488806736240</string>
+        </array>
+        </dict>
     </array>
     <key>FlutterDeepLinkingEnabled</key>
     <true/>
 
+	<key>FacebookAppID</key>
+	<string>893488806736240</string>
+	<key>FacebookClientToken</key>
+	<string>20166a09915e3e4c03bb6c4632931c25</string>
+	<key>FacebookDisplayName</key>
+	<string>Boi Aro</string>
+
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
 
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
