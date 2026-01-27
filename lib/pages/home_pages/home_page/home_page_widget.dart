@@ -193,8 +193,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                         EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 16.0),
                     child: Row(
                       mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
+                      Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.max,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +240,79 @@ class _HomePageWidgetState extends State<HomePageWidget>
                           ).animateOnPageLoad(
                               animationsMap['columnOnPageLoadAnimation']!),
                         ),
-                        InkWell(
+                      SizedBox(width: 16),
+                      SizedBox(
+                        width: 180,
+                        height: 36,
+                        child: InkWell(
+                          splashColor: Colors.transparent,
+                          focusColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          onTap: () async {
+                            context.pushNamed(SearchPageWidget.routeName);
+                          },
+                        child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color:
+                              FlutterFlowTheme.of(context).secondaryBackground,
+                          border: Border.all(color: FlutterFlowTheme.of(context).shadowColor),
+                          // boxShadow: [
+                          //   BoxShadow(
+                          //     blurRadius: 16.0,
+                          //     color: FlutterFlowTheme.of(context).shadowColor,
+                          //     offset: Offset(
+                          //       0.0,
+                          //       4.0,
+                          //     ),
+                          //   )
+                          // ],
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(0.0),
+                                child: SvgPicture.asset(
+                                  'assets/images/search.svg',
+                                  width: 24.0,
+                                  height: 24.0,
+                                  fit: BoxFit.cover,
+                                  color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                ),
+                              ),
+                              Padding(
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    16.0, 0.0, 0.0, 0.0),
+                                child: Text(
+                                  'Search',
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .override(
+                                        fontFamily: 'SF Pro Display',
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        fontSize: 16.0,
+                                        letterSpacing: 0.0,
+                                        lineHeight: 1.5,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                                                ),
+                                          ),
+                      ),
+                      SizedBox(
+                          width: 8,
+                        ),
+                      InkWell(
                           splashColor: Colors.transparent,
                           focusColor: Colors.transparent,
                           hoverColor: Colors.transparent,
@@ -364,72 +437,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                       ],
                     ),
                   ),
-                  Padding(
-                    padding:
-                        EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 12.0),
-                    child: InkWell(
-                      splashColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      onTap: () async {
-                        context.pushNamed(SearchPageWidget.routeName);
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                          boxShadow: [
-                            BoxShadow(
-                              blurRadius: 16.0,
-                              color: FlutterFlowTheme.of(context).shadowColor,
-                              offset: Offset(
-                                0.0,
-                                4.0,
-                              ),
-                            )
-                          ],
-                          borderRadius: BorderRadius.circular(12.0),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                              16.0, 15.0, 16.0, 15.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(0.0),
-                                child: SvgPicture.asset(
-                                  'assets/images/search.svg',
-                                  width: 24.0,
-                                  height: 24.0,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(
-                                    16.0, 0.0, 0.0, 0.0),
-                                child: Text(
-                                  'Search here',
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondaryText,
-                                        fontSize: 16.0,
-                                        letterSpacing: 0.0,
-                                        lineHeight: 1.5,
-                                      ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  
                   Expanded(
                     child: FutureBuilder<ApiCallResponse>(
                       future: FFAppState()
@@ -2208,15 +2216,59 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                           children: [
                                                                             Padding(
                                                                               padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 8.0),
-                                                                              child: Text(
-                                                                                getJsonField(categoryItem, r'''$.name''').toString(),
-                                                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                                      fontFamily: 'SF Pro Display',
-                                                                                      fontSize: 20.0,
-                                                                                      letterSpacing: 0.0,
-                                                                                      fontWeight: FontWeight.bold,
-                                                                                      lineHeight: 1.5,
+                                                                              child: Row(
+                                                                                mainAxisSize: MainAxisSize.max,
+                                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                                children: [
+                                                                                  Text(
+                                                                                    getJsonField(categoryItem, r'''$.name''').toString(),
+                                                                                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                          fontFamily: 'SF Pro Display',
+                                                                                          fontSize: 20.0,
+                                                                                          letterSpacing: 0.0,
+                                                                                          fontWeight: FontWeight.bold,
+                                                                                          lineHeight: 1.5,
+                                                                                        ),
+                                                                                  ),
+                                                                                  InkWell(
+                                                                                    splashColor: Colors.transparent,
+                                                                                    focusColor: Colors.transparent,
+                                                                                    hoverColor: Colors.transparent,
+                                                                                    highlightColor: Colors.transparent,
+                                                                                    onTap: () async {
+                                                                                      context.pushNamed(
+                                                                                        GetBookByCategoryPageWidget.routeName,
+                                                                                        queryParameters: {
+                                                                                          'name': serializeParam(
+                                                                                            getJsonField(categoryItem, r'''$.name''').toString(),
+                                                                                            ParamType.String,
+                                                                                          ),
+                                                                                          'id': serializeParam(
+                                                                                            getJsonField(categoryItem, r'''$._id''').toString(),
+                                                                                            ParamType.String,
+                                                                                          ),
+                                                                                        }.withoutNulls,
+                                                                                      );
+                                                                                    },
+                                                                                    child: Container(
+                                                                                      padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                                                                      decoration: BoxDecoration(
+                                                                                        color: FlutterFlowTheme.of(context).primary,
+                                                                                        borderRadius: BorderRadius.circular(12),
+                                                                                      ),
+                                                                                      child: Text(
+                                                                                        'View all',
+                                                                                        style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                              fontFamily: 'SF Pro Display',
+                                                                                              fontSize: 17.0,
+                                                                                              letterSpacing: 0.0,
+                                                                                              lineHeight: 1.5,
+                                                                                              color: Colors.white,
+                                                                                            ),
+                                                                                      ),
                                                                                     ),
+                                                                                  ),
+                                                                                ],
                                                                               ),
                                                                             ),
                                                                             SingleChildScrollView(

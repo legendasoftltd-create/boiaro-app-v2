@@ -129,6 +129,7 @@ class _CustomCenterAppbarWidgetState extends State<CustomCenterAppbarWidget> {
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
                               fontFamily: 'SF Pro Display',
                               fontSize: 24.0,

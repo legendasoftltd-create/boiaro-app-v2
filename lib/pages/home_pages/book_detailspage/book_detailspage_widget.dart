@@ -764,6 +764,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   child: Row(
                                                     mainAxisAlignment: MainAxisAlignment.center,
                                                     children: [
+                                                      Icon(
+                                                        Icons.menu_book_rounded,
+                                                        color: Colors.white,
+                                                      ),
+                                                      SizedBox(width: 8),
                                                       Text(
                                                         'Read Now',
                                                         style: FlutterFlowTheme.of(context)
@@ -776,6 +781,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               fontWeight: FontWeight.w600,
                                                               lineHeight: 1.2,
                                                             ),
+                                                      ),
+                                                      SizedBox(width: 8),
+                                                      Icon(
+                                                        Icons.arrow_forward_ios,
+                                                        color: Colors.white,
+                                                        size: 12,
                                                       ),
                                                     ],
                                                   ),
@@ -1700,92 +1711,157 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     );
                                                   },
                                                 ),
-                                              ],
-                                            );
-                                          } else {
-                                            return Padding(
-                                              padding: EdgeInsetsDirectional
-                                                  .fromSTEB(
-                                                      16.0, 16.0, 16.0, 0.0),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.max,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      'Reviews',
-                                                      textAlign:
-                                                          TextAlign.start,
-                                                      maxLines: 1,
-                                                      style: FlutterFlowTheme
-                                                              .of(context)
-                                                          .bodyMedium
-                                                          .override(
-                                                            fontFamily:
-                                                                'SF Pro Display',
-                                                            fontSize: 20.0,
-                                                            letterSpacing: 0.0,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            lineHeight: 1.5,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
+                                                Padding(
+                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 12.0, 16.0, 0.0),
+                                                  child: FFButtonWidget(
+                                                    onPressed: () async {
                                                       await showModalBottomSheet(
-                                                        isScrollControlled:
-                                                            true,
-                                                        backgroundColor:
-                                                            Colors.transparent,
+                                                        isScrollControlled: true,
+                                                        backgroundColor: Colors.transparent,
                                                         enableDrag: false,
                                                         context: context,
                                                         builder: (context) {
                                                           return Padding(
-                                                            padding: MediaQuery
-                                                                .viewInsetsOf(
-                                                                    context),
+                                                            padding: MediaQuery.viewInsetsOf(context),
                                                             child: Container(
                                                               height: 489.0,
-                                                              child:
-                                                                  BookReviewBottomSheetWidget(
-                                                                bookId:
-                                                                    widget.id!,
+                                                              child: BookReviewBottomSheetWidget(
+                                                                bookId: widget.id!,
                                                               ),
                                                             ),
                                                           );
                                                         },
-                                                      ).then((value) =>
-                                                          safeSetState(() {}));
+                                                      ).then((value) => safeSetState(() {}));
                                                     },
-                                                    child: Text(
-                                                      'Write review',
-                                                      textAlign: TextAlign.end,
-                                                      maxLines: 1,
-                                                      style: FlutterFlowTheme
-                                                              .of(context)
-                                                          .bodyMedium
-                                                          .override(
-                                                            fontFamily:
-                                                                'SF Pro Display',
-                                                            fontSize: 17.0,
-                                                            letterSpacing: 0.0,
-                                                            lineHeight: 1.5,
+                                                    text: 'Write a Review',
+                                                    icon: Icon(
+                                                      Icons.rate_review_rounded,
+                                                      color: Colors.white,
+                                                    ),
+                                                    options: FFButtonOptions(
+                                                      width: double.infinity,
+                                                      height: 50.0,
+                                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                                                      iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                                                      color: FlutterFlowTheme.of(context).primary,
+                                                      textStyle: FlutterFlowTheme.of(context).titleSmall.override(
+                                                            fontFamily: 'SF Pro Display',
+                                                            color: Colors.white,
+                                                            fontSize: 16.0,
+                                                            fontWeight: FontWeight.bold,
                                                           ),
+                                                      elevation: 2.0,
+                                                      borderSide: BorderSide(
+                                                        color: Colors.transparent,
+                                                        width: 1.0,
+                                                      ),
+                                                      borderRadius: BorderRadius.circular(12.0),
                                                     ),
                                                   ),
-                                                ].divide(SizedBox(width: 8.0)),
-                                              ),
+                                                ),
+                                              ],
+                                            );
+                                          } else {
+                                            return Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Padding(
+                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 0.0),
+                                                  child: Text(
+                                                    'Reviews',
+                                                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                          fontFamily: 'SF Pro Display',
+                                                          fontSize: 20.0,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                  ),
+                                                ),
+                                                Padding(
+                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 12.0, 16.0, 0.0),
+                                                  child: Container(
+                                                    width: double.infinity,
+                                                    decoration: BoxDecoration(
+                                                      color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                      borderRadius: BorderRadius.circular(12.0),
+                                                      border: Border.all(
+                                                        color: FlutterFlowTheme.of(context).secondaryText.withOpacity(0.2),
+                                                        width: 1.0,
+                                                      ),
+                                                    ),
+                                                    child: Padding(
+                                                      padding: EdgeInsets.all(24.0),
+                                                      child: Column(
+                                                        mainAxisSize: MainAxisSize.max,
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          Icon(
+                                                            Icons.rate_review_outlined,
+                                                            color: FlutterFlowTheme.of(context).secondaryText,
+                                                            size: 48.0,
+                                                          ),
+                                                          Padding(
+                                                            padding: EdgeInsetsDirectional.fromSTEB(0.0, 12.0, 0.0, 4.0),
+                                                            child: Text(
+                                                              'No reviews yet',
+                                                              style: FlutterFlowTheme.of(context).bodyLarge.override(
+                                                                    fontFamily: 'SF Pro Display',
+                                                                    fontWeight: FontWeight.w600,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                          Padding(
+                                                            padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 24.0),
+                                                            child: Text(
+                                                              'Be the first to share your thoughts!',
+                                                              style: FlutterFlowTheme.of(context).labelMedium,
+                                                            ),
+                                                          ),
+                                                          FFButtonWidget(
+                                                            onPressed: () async {
+                                                              await showModalBottomSheet(
+                                                                isScrollControlled: true,
+                                                                backgroundColor: Colors.transparent,
+                                                                enableDrag: false,
+                                                                context: context,
+                                                                builder: (context) {
+                                                                  return Padding(
+                                                                    padding: MediaQuery.viewInsetsOf(context),
+                                                                    child: Container(
+                                                                      height: 489.0,
+                                                                      child: BookReviewBottomSheetWidget(
+                                                                        bookId: widget.id!,
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                },
+                                                              ).then((value) => safeSetState(() {}));
+                                                            },
+                                                            text: 'Write a Review',
+                                                            options: FFButtonOptions(
+                                                              width: 200.0,
+                                                              height: 45.0,
+                                                              padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                                                              iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                                                              color: FlutterFlowTheme.of(context).primary,
+                                                              textStyle: FlutterFlowTheme.of(context).titleSmall.override(
+                                                                    fontFamily: 'SF Pro Display',
+                                                                    color: Colors.white,
+                                                                    fontWeight: FontWeight.w600,
+                                                                  ),
+                                                              elevation: 2.0,
+                                                              borderSide: BorderSide(
+                                                                color: Colors.transparent,
+                                                                width: 1.0,
+                                                              ),
+                                                              borderRadius: BorderRadius.circular(12.0),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             );
                                           }
                                         },
