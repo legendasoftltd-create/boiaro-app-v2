@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.boiaro.app",
+      "sha256_cert_fingerprints": [
+        "68:B6:31:40:7F:9F:8F:3A:40:D3:60:14:C4:AC:48:5A:66:8D:42:1A:5D:5F:CA:50:C8:1A:F3:BA:8B:0B:C4:A9",
+        "7B:CD:A7:03:B3:F2:1E:46:FD:66:84:0C:11:70:B1:50:B7:AD:06:C8:29:6E:71:CA:A1:1F:4B:F0:8C:9E:4F:6C"
+      ]
+    }
+  }
+]

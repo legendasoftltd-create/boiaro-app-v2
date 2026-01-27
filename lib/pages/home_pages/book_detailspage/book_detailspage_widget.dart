@@ -118,6 +118,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         String discountAmount = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.discountAmount(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
         String discountPercentage = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.discountPercentage(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
         String bookId=valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.id(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"", "");
+        String bookName = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.name(bookDetailspageGetbookdetailsApiResponse.jsonBody,), widget.name ?? "Book");
+        String? apiRawImage = EbookGroup.getbookdetailsApiCall.image(bookDetailspageGetbookdetailsApiResponse.jsonBody);
+        String bookImage = (apiRawImage != null && apiRawImage.isNotEmpty) 
+            ? "${FFAppConstants.bookImagesUrl}$apiRawImage" 
+            : (widget.image ?? "");
 
         return Scaffold(
           key: scaffoldKey,
@@ -244,7 +249,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           Expanded(
                                             child: Text(
                                               valueOrDefault<String>(
-                                                widget.name,
+                                                bookName,
                                                 'Book',
                                               ),
                                               textAlign: TextAlign.center,
@@ -346,7 +351,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   image: CachedNetworkImage(
                                                     fadeInDuration: Duration(milliseconds: 200),
                                                     fadeOutDuration: Duration(milliseconds: 200),
-                                                    imageUrl: widget.image!,
+                                                    imageUrl: bookImage,
                                                     fit: BoxFit.contain,
                                                     alignment: Alignment(0.0, 0.0),
                                                     errorWidget: (context, error, stackTrace) => Image.asset(
@@ -381,7 +386,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   child: CachedNetworkImage(
                                                     fadeInDuration: Duration(milliseconds: 200),
                                                     fadeOutDuration: Duration(milliseconds: 200),
-                                                    imageUrl: widget.image!,
+                                                    imageUrl: bookImage,
                                                     width: 120.0,
                                                     height: 160.0,
                                                     fit: BoxFit.cover,
@@ -428,7 +433,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                             children: [
                                               Text(
                                                 valueOrDefault<String>(
-                                                  widget.name,
+                                                  bookName,
                                                   'Book',
                                                 ),
                                                 style: FlutterFlowTheme.of(context)
@@ -746,7 +751,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           ParamType.String,
                                                         ),
                                                         'name': serializeParam(
-                                                          widget.name,
+                                                          bookName,
                                                           ParamType.String,
                                                         ),
                                                         'image': serializeParam(
@@ -811,7 +816,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           ParamType.String,
                                                         ),
                                                         'name': serializeParam(
-                                                          widget.name,
+                                                          bookName,
                                                           ParamType.String,
                                                         ),
                                                         'image': serializeParam(
@@ -2289,11 +2294,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         //                                   ParamType.String,
                         //                                 ),
                         //                                 'name': serializeParam(
-                        //                                   widget.name,
+                        //                                   bookName,
                         //                                   ParamType.String,
                         //                                 ),
                         //                                 'image': serializeParam(
-                        //                                   widget.image,
+                        //                                   bookImage,
                         //                                   ParamType.String,
                         //                                 ),
                                                        

@@ -58,6 +58,17 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="aiebookapp" android:host="aiebookapp.com" />
             </intent-filter>
+
+            <!-- Deep Link for boiaro.com -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="boiaro.com" />
+                <data android:host="www.boiaro.com" />
+            </intent-filter>
         </activity>
 
         <!-- Facebook Login Activity -->
