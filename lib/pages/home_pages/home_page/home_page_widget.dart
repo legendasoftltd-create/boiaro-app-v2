@@ -348,6 +348,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                 width: 22.0,
                                 height: 22.0,
                                 fit: BoxFit.cover,
+                                colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                               ),
                             ),
                           ),

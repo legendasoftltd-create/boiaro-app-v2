@@ -5,7 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 abstract class FlutterFlowTheme {
   static FlutterFlowTheme of(BuildContext context) {
-    return LightModeTheme();
+    return Theme.of(context).brightness == Brightness.dark
+        ? DarkModeTheme()
+        : LightModeTheme();
   }
 
   @Deprecated('Use primary instead')
@@ -154,6 +156,42 @@ class LightModeTheme extends FlutterFlowTheme {
   late Color shadowColor = const Color(0x14000000);
   late Color black20 = const Color(0xFFDCDCDC);
   late Color lightGrey = const Color(0xFFF8F8F8);
+}
+
+class DarkModeTheme extends FlutterFlowTheme {
+  @Deprecated('Use primary instead')
+  Color get primaryColor => primary;
+  @Deprecated('Use secondary instead')
+  Color get secondaryColor => secondary;
+  @Deprecated('Use tertiary instead')
+  Color get tertiaryColor => tertiary;
+
+  late Color primary = const Color(0xFFF68B1F);
+  late Color secondary = const Color(0xFF1A1F24);
+  late Color tertiary = const Color(0xFF101213);
+  late Color alternate = const Color(0xFF262D34);
+  late Color primaryText = const Color(0xFFFFFFFF);
+  late Color secondaryText = const Color(0xFF95A1AC);
+  late Color primaryBackground = const Color(0xFF1A1F24);
+  late Color secondaryBackground = const Color(0xFF101213);
+  late Color accent1 = const Color(0xFFA8C9EE);
+  late Color accent2 = const Color(0x4D39D2C0);
+  late Color accent3 = const Color(0x4DEE8B60);
+  late Color accent4 = const Color(0xCCFFFFFF);
+  late Color success = const Color(0xFF04B155);
+  late Color warning = const Color(0xFFF1A80F);
+  late Color error = const Color(0xFFFF3E3E);
+  late Color info = const Color(0xFFFFFFFF);
+
+  late Color gray400 = const Color(0xFF808080);
+  late Color gray300 = const Color(0xFF57636C);
+  late Color gray200 = const Color(0xFF262D34);
+  late Color gray100 = const Color(0xFF1D2428);
+  late Color black40 = const Color(0xFF95A1AC);
+  late Color black30 = const Color(0xFF57636C);
+  late Color shadowColor = const Color(0x14000000);
+  late Color black20 = const Color(0xFF1D2428);
+  late Color lightGrey = const Color(0xFF262D34);
 }
 
 abstract class Typography {

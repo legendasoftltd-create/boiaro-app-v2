@@ -67,7 +67,11 @@ class PdfViewerProvider with ChangeNotifier {
   bool _hyphenation = false;
   bool get hyphenation => _hyphenation;
 
-  AppThemeMode _currentThemeMode = AppThemeMode.light;
+  AppThemeMode _currentThemeMode =
+      WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+              Brightness.dark
+          ? AppThemeMode.dark
+          : AppThemeMode.light;
   AppThemeMode get currentThemeMode => _currentThemeMode;
 
   bool _isChangingChapter = false;
@@ -774,7 +778,11 @@ class PdfViewerProvider with ChangeNotifier {
     _blueLightFilter = 0.0;
     _screenLightTime = 5;
     _hyphenation = false;
-    _currentThemeMode = AppThemeMode.light;
+    _currentThemeMode =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark
+            ? AppThemeMode.dark
+            : AppThemeMode.light;
     _isChangingChapter = false;
     _isFullScreen = false;
     _isAutoRotateEnabled = true;

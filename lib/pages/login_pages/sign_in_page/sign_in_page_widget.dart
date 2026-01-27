@@ -744,13 +744,15 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                   },
                                   child: Container(
                                     padding: EdgeInsets.all(12),
-                                    width: 300,
+                                    width: double.infinity,
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryBackground,
                                       borderRadius: BorderRadius.circular(16.0),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black12,
+                                          color: FlutterFlowTheme.of(context)
+                                              .shadowColor,
                                           blurRadius: 4,
                                           offset: Offset(0, 2),
                                         )
@@ -888,13 +890,15 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                   },
                                   child: Container(
                                     padding: EdgeInsets.all(12),
-                                    width: 300,
+                                    width: double.infinity,
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryBackground,
                                       borderRadius: BorderRadius.circular(16.0),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black12,
+                                          color: FlutterFlowTheme.of(context)
+                                              .shadowColor,
                                           blurRadius: 4,
                                           offset: Offset(0, 2),
                                         )

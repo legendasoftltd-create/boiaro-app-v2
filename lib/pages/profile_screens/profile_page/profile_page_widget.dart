@@ -1,4 +1,5 @@
 import 'dart:developer';
+import '/main.dart';
 
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
@@ -332,6 +333,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 BorderRadius.circular(0.0),
                                             child: SvgPicture.asset(
                                               'assets/images/pmp_ic.svg',
+                                              colorFilter: ColorFilter.mode(
+                                                FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                                BlendMode.srcIn,
+                                              ),
                                               fit: BoxFit.contain,
                                               alignment: Alignment(0.0, 0.0),
                                             ),
@@ -364,7 +370,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             'assets/images/arrow_right_ic.svg',
                                             width: 20.0,
                                             height: 20.0,
-                                            fit: BoxFit.contain,
+                                            colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                             alignment: Alignment(0.0, 0.0),
                                           ),
                                         ),
@@ -427,6 +433,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 BorderRadius.circular(0.0),
                                             child: SvgPicture.asset(
                                               'assets/images/pmf.svg',
+                                              colorFilter: ColorFilter.mode(
+                                                FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                                BlendMode.srcIn,
+                                              ),
                                               fit: BoxFit.contain,
                                               alignment: Alignment(0.0, 0.0),
                                             ),
@@ -459,6 +470,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             'assets/images/arrow_right_ic.svg',
                                             width: 20.0,
                                             height: 20.0,
+                                            colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                             fit: BoxFit.contain,
                                             alignment: Alignment(0.0, 0.0),
                                           ),
@@ -553,6 +565,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             'assets/images/arrow_right_ic.svg',
                                             width: 20.0,
                                             height: 20.0,
+                                            colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                             fit: BoxFit.contain,
                                             alignment: Alignment(0.0, 0.0),
                                           ),
@@ -616,6 +629,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 BorderRadius.circular(0.0),
                                             child: SvgPicture.asset(
                                               'assets/images/download.svg',
+                                              colorFilter: ColorFilter.mode(
+                                                FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                                BlendMode.srcIn,
+                                              ),
                                               fit: BoxFit.contain,
                                               alignment: Alignment(0.0, 0.0),
                                             ),
@@ -648,6 +666,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             'assets/images/arrow_right_ic.svg',
                                             width: 20.0,
                                             height: 20.0,
+                                            colorFilter: ColorFilter.mode(
+                                              FlutterFlowTheme.of(context)
+                                                  .primaryText,
+                                              BlendMode.srcIn,
+                                            ),
                                             fit: BoxFit.contain,
                                             alignment: Alignment(0.0, 0.0),
                                           ),
@@ -712,6 +735,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 BorderRadius.circular(0.0),
                                             child: SvgPicture.asset(
                                               'assets/images/premium.svg',
+                                              colorFilter: ColorFilter.mode(
+                                                FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                                BlendMode.srcIn,
+                                              ),
                                               fit: BoxFit.contain,
                                               alignment: Alignment(0.0, 0.0),
                                             ),
@@ -744,6 +772,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             'assets/images/arrow_right_ic.svg',
                                             width: 20.0,
                                             height: 20.0,
+                                            colorFilter: ColorFilter.mode(
+                                              FlutterFlowTheme.of(context)
+                                                  .primaryText,
+                                              BlendMode.srcIn,
+                                            ),
                                             fit: BoxFit.contain,
                                             alignment: Alignment(0.0, 0.0),
                                           ),
@@ -755,6 +788,98 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                               ).animateOnPageLoad(animationsMap[
                                   'containerOnPageLoadAnimation4']!),
                             ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context)
+                                    .secondaryBackground,
+                                boxShadow: [
+                                  BoxShadow(
+                                    blurRadius: 16.0,
+                                    color: FlutterFlowTheme.of(context)
+                                        .shadowColor,
+                                    offset: Offset(
+                                      0.0,
+                                      4.0,
+                                    ),
+                                  )
+                                ],
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    8.0, 8.0, 16.0, 8.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: [
+                                    Container(
+                                      width: 48.0,
+                                      height: 48.0,
+                                      decoration: BoxDecoration(
+                                        color: FlutterFlowTheme.of(context)
+                                            .lightGrey,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment:
+                                          AlignmentDirectional(0.0, 0.0),
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(0.0),
+                                        child: Icon(
+                                          Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Icons.dark_mode
+                                              : Icons.light_mode,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryText,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding:
+                                            EdgeInsetsDirectional.fromSTEB(
+                                                16.0, 0.0, 0.0, 0.0),
+                                        child: Text(
+                                          'Dark Mode',
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodyMedium
+                                              .override(
+                                                fontFamily:
+                                                    'SF Pro Display',
+                                                fontSize: 17.0,
+                                                letterSpacing: 0.0,
+                                                lineHeight: 1.5,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    Switch.adaptive(
+                                      value: Theme.of(context).brightness ==
+                                          Brightness.dark,
+                                      onChanged: (value) {
+                                        final mode = value
+                                            ? ThemeMode.dark
+                                            : ThemeMode.light;
+                                        MyApp.of(context)
+                                            .setThemeMode(mode);
+                                      },
+                                      activeColor: FlutterFlowTheme.of(context)
+                                          .primary,
+                                      activeTrackColor:
+                                          FlutterFlowTheme.of(context)
+                                              .accent1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ).animateOnPageLoad(animationsMap[
+                                'containerOnPageLoadAnimation5']!),
+                          ),
                           Padding(
                             padding: EdgeInsetsDirectional.fromSTEB(
                                 16.0, 0.0, 16.0, 16.0),
@@ -805,6 +930,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                               BorderRadius.circular(0.0),
                                           child: SvgPicture.asset(
                                             'assets/images/pSetting.svg',
+                                            colorFilter: ColorFilter.mode(
+                                              FlutterFlowTheme.of(context)
+                                                  .primaryText,
+                                              BlendMode.srcIn,
+                                            ),
                                             fit: BoxFit.contain,
                                             alignment: Alignment(0.0, 0.0),
                                           ),
@@ -835,6 +965,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                           'assets/images/arrow_right_ic.svg',
                                           width: 20.0,
                                           height: 20.0,
+                                          colorFilter: ColorFilter.mode(
+                                            FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                            BlendMode.srcIn,
+                                          ),
                                           fit: BoxFit.contain,
                                           alignment: Alignment(0.0, 0.0),
                                         ),
@@ -1002,6 +1137,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 BorderRadius.circular(0.0),
                                             child: SvgPicture.asset(
                                               'assets/images/pLogout.svg',
+                                              colorFilter: ColorFilter.mode(
+                                                FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                                BlendMode.srcIn,
+                                              ),
                                               fit: BoxFit.contain,
                                               alignment: Alignment(0.0, 0.0),
                                             ),
@@ -1036,6 +1176,11 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             'assets/images/arrow_right_ic.svg',
                                             width: 20.0,
                                             height: 20.0,
+                                            colorFilter: ColorFilter.mode(
+                                              FlutterFlowTheme.of(context)
+                                                  .primaryText,
+                                              BlendMode.srcIn,
+                                            ),
                                             fit: BoxFit.contain,
                                             alignment: Alignment(0.0, 0.0),
                                           ),
