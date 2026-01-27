@@ -16,6 +16,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'profile_page_model.dart';
+import '/flutter_flow/internationalization.dart';
 export 'profile_page_model.dart';
 
 class ProfilePageWidget extends StatefulWidget {
@@ -183,7 +184,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                 model: _model.singleAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: SingleAppbarWidget(
-                  title: 'Profile',
+                  title: FFLocalizations.of(context).getText('profile_title'),
                 ),
               ),
               Expanded(
@@ -241,9 +242,9 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                       ).toString()} ${getJsonField(
                                         FFAppState().userDetail,
                                         r'''$.lastname''',
-                                      ).toString()}',
-                                      'Name',
-                                    ),
+                                        ).toString()}',
+                                        FFLocalizations.of(context).getText('name_default'),
+                                      ),
                                     style: FlutterFlowTheme.of(context)
                                         .bodyMedium
                                         .override(
@@ -349,7 +350,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'My profile',
+                                              FFLocalizations.of(context).getText('my_profile'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -449,7 +450,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'Favourite',
+                                              FFLocalizations.of(context).getText('favourite'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -544,7 +545,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'My Books',
+                                              FFLocalizations.of(context).getText('my_books'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -645,7 +646,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'Download',
+                                              FFLocalizations.of(context).getText('download'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -692,7 +693,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                 hoverColor: Colors.transparent,
                                 highlightColor: Colors.transparent,
                                 onTap: () async {
-                                  await actions.showCustomToastBottom('Comming soon!');
+                                  await actions.showCustomToastBottom(FFLocalizations.of(context).getText('coming_soon'));
                                   // context.pushNamed(
                                   //     SubscriptionPageWidget.routeName);
                                 },
@@ -751,7 +752,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'Subscription',
+                                              FFLocalizations.of(context).getText('subscription'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -845,7 +846,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             EdgeInsetsDirectional.fromSTEB(
                                                 16.0, 0.0, 0.0, 0.0),
                                         child: Text(
-                                          'Dark Mode',
+                                          FFLocalizations.of(context).getText('dark_mode'),
                                           style: FlutterFlowTheme.of(context)
                                               .bodyMedium
                                               .override(
@@ -946,7 +947,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                               EdgeInsetsDirectional.fromSTEB(
                                                   16.0, 0.0, 0.0, 0.0),
                                           child: Text(
-                                            'Settings',
+                                            FFLocalizations.of(context).getText('settings'),
                                             style: FlutterFlowTheme.of(context)
                                                 .bodyMedium
                                                 .override(
@@ -1154,8 +1155,8 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
                                               FFAppState().isLogin == true
-                                                  ? 'Log out'
-                                                  : 'Sign in',
+                                                  ? FFLocalizations.of(context).getText('log_out')
+                                                  : FFLocalizations.of(context).getText('sign_in'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium

@@ -13,6 +13,7 @@ import 'package:device_preview/device_preview.dart';
 import 'backend/firebase/firebase_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
+import 'flutter_flow/internationalization.dart';
 import 'index.dart';
 import '/providers/cart_provider.dart';
 import '/providers/pdf_viewer_provider.dart';
@@ -70,6 +71,7 @@ class MyAppScrollBehavior extends MaterialScrollBehavior {
 }
 
 class _MyAppState extends State<MyApp> {
+  Locale? _locale;
   ThemeMode _themeMode = ThemeMode.system;
 
   late AppStateNotifier _appStateNotifier;
@@ -100,21 +102,29 @@ class _MyAppState extends State<MyApp> {
         _themeMode = mode;
       });
 
+  void setLocale(String language) {
+    safeSetState(() => _locale = createLocale(language));
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       // Use DevicePreview's locale and builder in debug mode
-      locale: DevicePreview.locale(context),
+      locale: DevicePreview.locale(context) ?? _locale,
       builder: DevicePreview.appBuilder,
       debugShowCheckedModeBanner: false,
       title: 'Boi Aro',
       scrollBehavior: MyAppScrollBehavior(),
       localizationsDelegates: [
+        FFLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('en', '')],
+      supportedLocales: const [
+        Locale('en', ''),
+        Locale('bn', ''),
+      ],
       theme: ThemeData(
         brightness: Brightness.light,
       ),
@@ -192,7 +202,7 @@ class _NavBarPageState extends State<NavBarPage> {
               FFIcons.kicon7,
               size: 24.0,
             ),
-            label: 'Home',
+            label: FFLocalizations.of(context).getText('nav_home'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -204,7 +214,7 @@ class _NavBarPageState extends State<NavBarPage> {
               FFIcons.kicon5,
               size: 24.0,
             ),
-            label: 'Categories',
+            label: FFLocalizations.of(context).getText('nav_categories'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -216,7 +226,7 @@ class _NavBarPageState extends State<NavBarPage> {
               FFIcons.kicon8,
               size: 24.0,
             ),
-            label: 'Latest',
+            label: FFLocalizations.of(context).getText('nav_latest'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -228,7 +238,7 @@ class _NavBarPageState extends State<NavBarPage> {
               FFIcons.kwriter11,
               size: 24.0,
             ),
-            label: 'Author',
+            label: FFLocalizations.of(context).getText('nav_author'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -240,7 +250,7 @@ class _NavBarPageState extends State<NavBarPage> {
               Icons.account_balance,
               size: 24.0,
             ),
-            label: 'Publisher',
+            label: FFLocalizations.of(context).getText('nav_publisher'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -252,7 +262,7 @@ class _NavBarPageState extends State<NavBarPage> {
               FFIcons.kicon9,
               size: 24.0,
             ),
-            label: 'Profile',
+            label: FFLocalizations.of(context).getText('nav_profile'),
             tooltip: '',
           )
         ],

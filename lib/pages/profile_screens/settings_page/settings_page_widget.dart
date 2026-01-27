@@ -2,6 +2,8 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
+import '/main.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -128,7 +130,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Settings',
+                  title: FFLocalizations.of(context).getText('settings'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -176,7 +178,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                   EbookGroup.getpagesApiCall.message(
                                     containerGetpagesApiResponse.jsonBody,
                                   ),
-                                  'Message',
+                                  FFLocalizations.of(context).getText('message'),
                                 ),
                                 textAlign: TextAlign.center,
                                 style: FlutterFlowTheme.of(context)
@@ -210,6 +212,146 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                 ),
                                 scrollDirection: Axis.vertical,
                                 children: [
+                                    Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          16.0, 0.0, 16.0, 0.0),
+                                      child: InkWell(
+                                        splashColor: Colors.transparent,
+                                        focusColor: Colors.transparent,
+                                        hoverColor: Colors.transparent,
+                                        highlightColor: Colors.transparent,
+                                        onTap: () async {
+                                          await showModalBottomSheet(
+                                            isScrollControlled: true,
+                                            backgroundColor: Colors.transparent,
+                                            context: context,
+                                            builder: (context) {
+                                              return Padding(
+                                                padding: MediaQuery.viewInsetsOf(context),
+                                                child: Container(
+                                                  height: 200,
+                                                  decoration: BoxDecoration(
+                                                    color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                    borderRadius: BorderRadius.only(
+                                                      topLeft: Radius.circular(16.0),
+                                                      topRight: Radius.circular(16.0),
+                                                    ),
+                                                  ),
+                                                  child: Column(
+                                                    children: [
+                                                      ListTile(
+                                                        title: Text('English', style: FlutterFlowTheme.of(context).bodyMedium),
+                                                        onTap: () {
+                                                          MyApp.of(context).setLocale('en');
+                                                          Navigator.pop(context);
+                                                        },
+                                                      ),
+                                                      ListTile(
+                                                        title: Text('Bangla', style: FlutterFlowTheme.of(context).bodyMedium),
+                                                        onTap: () {
+                                                          MyApp.of(context).setLocale('bn');
+                                                          Navigator.pop(context);
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                        child: Container(
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context)
+                                                .secondaryBackground,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                blurRadius: 16.0,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .shadowColor,
+                                                offset: Offset(
+                                                  0.0,
+                                                  4.0,
+                                                ),
+                                              )
+                                            ],
+                                            borderRadius:
+                                                BorderRadius.circular(12.0),
+                                          ),
+                                          child: Padding(
+                                            padding:
+                                                EdgeInsetsDirectional.fromSTEB(
+                                                    8.0, 8.0, 16.0, 8.0),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.max,
+                                              children: [
+                                                Container(
+                                                  width: 48.0,
+                                                  height: 48.0,
+                                                  decoration: BoxDecoration(
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .lightGrey,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  alignment:
+                                                      AlignmentDirectional(
+                                                          0.0, 0.0),
+                                                  child: ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            0.0),
+                                                    child: Icon(
+                                                      Icons.language,
+                                                      size: 24,
+                                                      color: FlutterFlowTheme.of(context).primaryText,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        EdgeInsetsDirectional
+                                                            .fromSTEB(16.0, 0.0,
+                                                                0.0, 0.0),
+                                                    child: Text(
+                                                      FFLocalizations.of(context).getText('language'),
+                                                      style: FlutterFlowTheme
+                                                              .of(context)
+                                                          .bodyMedium
+                                                          .override(
+                                                            fontFamily:
+                                                                'SF Pro Display',
+                                                            fontSize: 17.0,
+                                                            letterSpacing: 0.0,
+                                                            lineHeight: 1.5,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          0.0),
+                                                  child: SvgPicture.asset(
+                                                    'assets/images/arrow_right_ic.svg',
+                                                    width: 20.0,
+                                                    height: 20.0,
+                                                    colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
+                                                    fit: BoxFit.contain,
+                                                    alignment:
+                                                        Alignment(0.0, 0.0),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ).animateOnPageLoad(animationsMap[
+                                          'containerOnPageLoadAnimation1']!),
+                                    ),
                                   if (FFAppState().isLogin == true)
                                     Padding(
                                       padding: EdgeInsetsDirectional.fromSTEB(
@@ -270,6 +412,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     child: SvgPicture.asset(
                                                       'assets/images/s_lock.svg',
                                                       fit: BoxFit.contain,
+                                                      colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                       alignment:
                                                           Alignment(0.0, 0.0),
                                                     ),
@@ -282,7 +425,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                             .fromSTEB(16.0, 0.0,
                                                                 0.0, 0.0),
                                                     child: Text(
-                                                      'Change password',
+                                                      FFLocalizations.of(context).getText('change_password'),
                                                       style: FlutterFlowTheme
                                                               .of(context)
                                                           .bodyMedium
@@ -304,6 +447,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     'assets/images/arrow_right_ic.svg',
                                                     width: 20.0,
                                                     height: 20.0,
+                                                    colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                     fit: BoxFit.contain,
                                                     alignment:
                                                         Alignment(0.0, 0.0),
@@ -385,6 +529,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     child: SvgPicture.asset(
                                                       'assets/images/s_privacy.svg',
                                                       fit: BoxFit.contain,
+                                                      colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                       alignment:
                                                           Alignment(0.0, 0.0),
                                                     ),
@@ -397,7 +542,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                             .fromSTEB(16.0, 0.0,
                                                                 0.0, 0.0),
                                                     child: Text(
-                                                      'Privacy policy',
+                                                      FFLocalizations.of(context).getText('privacy_policy'),
                                                       style: FlutterFlowTheme
                                                               .of(context)
                                                           .bodyMedium
@@ -419,6 +564,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     'assets/images/arrow_right_ic.svg',
                                                     width: 20.0,
                                                     height: 20.0,
+                                                    colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                     fit: BoxFit.contain,
                                                     alignment:
                                                         Alignment(0.0, 0.0),
@@ -500,6 +646,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     child: SvgPicture.asset(
                                                       'assets/images/s_terms.svg',
                                                       fit: BoxFit.contain,
+                                                      colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                       alignment:
                                                           Alignment(0.0, 0.0),
                                                     ),
@@ -512,7 +659,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                             .fromSTEB(16.0, 0.0,
                                                                 0.0, 0.0),
                                                     child: Text(
-                                                      'Terms & condition',
+                                                      FFLocalizations.of(context).getText('terms_condition'),
                                                       style: FlutterFlowTheme
                                                               .of(context)
                                                           .bodyMedium
@@ -534,6 +681,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     'assets/images/arrow_right_ic.svg',
                                                     width: 20.0,
                                                     height: 20.0,
+                                                    colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                     fit: BoxFit.contain,
                                                     alignment:
                                                         Alignment(0.0, 0.0),
@@ -614,6 +762,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     child: SvgPicture.asset(
                                                       'assets/images/s_about.svg',
                                                       fit: BoxFit.contain,
+                                                      colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                       alignment:
                                                           Alignment(0.0, 0.0),
                                                     ),
@@ -626,7 +775,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                             .fromSTEB(16.0, 0.0,
                                                                 0.0, 0.0),
                                                     child: Text(
-                                                      'About us',
+                                                      FFLocalizations.of(context).getText('about_us'),
                                                       style: FlutterFlowTheme
                                                               .of(context)
                                                           .bodyMedium
@@ -648,6 +797,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     'assets/images/arrow_right_ic.svg',
                                                     width: 20.0,
                                                     height: 20.0,
+                                                    colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                     fit: BoxFit.contain,
                                                     alignment:
                                                         Alignment(0.0, 0.0),
@@ -731,6 +881,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     child: SvgPicture.asset(
                                                       'assets/images/s_delete.svg',
                                                       fit: BoxFit.contain,
+                                                      colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                       alignment:
                                                           Alignment(0.0, 0.0),
                                                     ),
@@ -743,7 +894,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                             .fromSTEB(16.0, 0.0,
                                                                 0.0, 0.0),
                                                     child: Text(
-                                                      'Delete account',
+                                                      FFLocalizations.of(context).getText('delete_account'),
                                                       style: FlutterFlowTheme
                                                               .of(context)
                                                           .bodyMedium
@@ -765,6 +916,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                     'assets/images/arrow_right_ic.svg',
                                                     width: 20.0,
                                                     height: 20.0,
+                                                    colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                                     fit: BoxFit.contain,
                                                     alignment:
                                                         Alignment(0.0, 0.0),

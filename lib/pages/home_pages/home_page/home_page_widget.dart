@@ -4,6 +4,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/category_component/category_component_widget.dart';
 import '/pages/components/list_main_container_component/list_main_container_component_widget.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
@@ -18,7 +19,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
-import 'package:percent_indicator/percent_indicator.dart';
 import 'package:provider/provider.dart';
 import 'home_page_model.dart';
 export 'home_page_model.dart';
@@ -290,7 +290,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                 padding: EdgeInsetsDirectional.fromSTEB(
                                     16.0, 0.0, 0.0, 0.0),
                                 child: Text(
-                                  'Search',
+                                  FFLocalizations.of(context).getText('search_hint'),
                                   style: FlutterFlowTheme.of(context)
                                       .bodyMedium
                                       .override(
@@ -838,7 +838,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                                                   children: [
                                                                                     Text(
-                                                                                      'Continue reading',
+                                                                                      FFLocalizations.of(context).getText('continue_reading'),
                                                                                       textAlign: TextAlign.start,
                                                                                       maxLines: 1,
                                                                                       style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -852,7 +852,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                     Padding(
                                                                                       padding: EdgeInsetsDirectional.fromSTEB(0.0, 8.0, 0.0, 24.0),
                                                                                       child: Text(
-                                                                                        'Let’s continue what you’re started!',
+                                                                                        FFLocalizations.of(context).getText('continue_reading_desc'),
                                                                                         textAlign: TextAlign.start,
                                                                                         maxLines: 1,
                                                                                         style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -871,7 +871,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                                                         children: [
                                                                                           Text(
-                                                                                            'Page ${FFAppState().homePageCurrentPdfIndex.toString()} of ${FFAppState().homePageTotalPdfPageIndex.toString()}',
+                                                                                            '${FFLocalizations.of(context).getText('page')} ${FFAppState().homePageCurrentPdfIndex.toString()} ${FFLocalizations.of(context).getText('of')} ${FFAppState().homePageTotalPdfPageIndex.toString()}',
                                                                                             textAlign: TextAlign.start,
                                                                                             maxLines: 1,
                                                                                             style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -992,7 +992,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                           children:
                                                                               [
                                                                             Text(
-                                                                              'Categories',
+                                                                              FFLocalizations.of(context).getText('categories_title'),
                                                                               maxLines: 1,
                                                                               style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                     fontFamily: 'SF Pro Display',
@@ -1014,7 +1014,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                 padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
                                                                                 decoration: BoxDecoration(color: FlutterFlowTheme.of(context).primary, borderRadius: BorderRadius.circular(12)),
                                                                                 child: Text(
-                                                                                  'View all',
+                                                                                  FFLocalizations.of(context).getText('view_all'),
                                                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                         fontFamily: 'SF Pro Display',
                                                                                         fontSize: 17.0,
@@ -1167,7 +1167,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                                               children: [
                                                                                 Text(
-                                                                                  'New books',
+                                                                                  FFLocalizations.of(context).getText('new_books_title'),
                                                                                   maxLines: 1,
                                                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                         fontFamily: 'SF Pro Display',
@@ -1189,7 +1189,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                     padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
                                                                                     decoration: BoxDecoration(color: FlutterFlowTheme.of(context).primary, borderRadius: BorderRadius.circular(12)),
                                                                                     child: Text(
-                                                                                      'View all',
+                                                                                      FFLocalizations.of(context).getText('view_all'),
                                                                                       style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                             fontFamily: 'SF Pro Display',
                                                                                             fontSize: 17.0,
@@ -1448,7 +1448,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                               MainAxisAlignment.spaceBetween,
                                                                           children: [
                                                                             Text(
-                                                                              'Trending books',
+                                                                              FFLocalizations.of(context).getText('trending_books_title'),
                                                                               maxLines: 1,
                                                                               style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                     fontFamily: 'SF Pro Display',
@@ -1470,7 +1470,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                 padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
                                                                                 decoration: BoxDecoration(color: FlutterFlowTheme.of(context).primary, borderRadius: BorderRadius.circular(12)),
                                                                                 child: Text(
-                                                                                  'View all',
+                                                                                  FFLocalizations.of(context).getText('view_all'),
                                                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                         fontFamily: 'SF Pro Display',
                                                                                         fontSize: 17.0,
@@ -1729,7 +1729,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                           children:
                                                                               [
                                                                             Text(
-                                                                              'Best authors',
+                                                                              FFLocalizations.of(context).getText('best_authors_title'),
                                                                               maxLines: 1,
                                                                               style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                     fontFamily: 'SF Pro Display',
@@ -1751,7 +1751,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                 padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
                                                                                 decoration: BoxDecoration(color: FlutterFlowTheme.of(context).primary, borderRadius: BorderRadius.circular(12)),
                                                                                 child: Text(
-                                                                                  'View all',
+                                                                                  FFLocalizations.of(context).getText('view_all'),
                                                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                         fontFamily: 'SF Pro Display',
                                                                                         fontSize: 17.0,
@@ -1900,7 +1900,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                           children:
                                                                               [
                                                                             Text(
-                                                                              'Popular books',
+                                                                              FFLocalizations.of(context).getText('popular_books_title'),
                                                                               maxLines: 1,
                                                                               style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                     fontFamily: 'SF Pro Display',
@@ -1922,7 +1922,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                 padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
                                                                                 decoration: BoxDecoration(color: FlutterFlowTheme.of(context).primary, borderRadius: BorderRadius.circular(12)),
                                                                                 child: Text(
-                                                                                  'View all',
+                                                                                  FFLocalizations.of(context).getText('view_all'),
                                                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                         fontFamily: 'SF Pro Display',
                                                                                         fontSize: 17.0,
@@ -2258,7 +2258,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                         borderRadius: BorderRadius.circular(12),
                                                                                       ),
                                                                                       child: Text(
-                                                                                        'View all',
+                                                                                        FFLocalizations.of(context).getText('view_all'),
                                                                                         style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                               fontFamily: 'SF Pro Display',
                                                                                               fontSize: 17.0,

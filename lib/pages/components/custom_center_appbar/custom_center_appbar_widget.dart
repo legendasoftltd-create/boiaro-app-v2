@@ -98,6 +98,7 @@ class _CustomCenterAppbarWidgetState extends State<CustomCenterAppbarWidget> {
                                 child: SvgPicture.asset(
                                   'assets/images/arrow_back_appbar_ic.svg',
                                   fit: BoxFit.contain,
+                                  colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                                   alignment: Alignment(0.0, 0.0),
                                 ),
                               ),
