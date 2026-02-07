@@ -40,7 +40,7 @@ void main() async {
 
   runApp(
     DevicePreview(
-      enabled: false,
+      enabled: kDebugMode,
       builder: (context) => MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (context) => appState),

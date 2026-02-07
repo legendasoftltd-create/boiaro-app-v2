@@ -4,5 +4,8 @@ Fix split book loading issue and identifying and try with webview fix external c
 Date 14-01-26  (Total 8 Hours) 
 Facebook setup configure  in developer account
 
-Date 27-01-26  (Total 3.5 Hours) 
+Date 27-01-26  (Total 7.5 Hours) 
 DeepLink setup
+internationalization added
+dark mode implemanted
+show view all button in home category books, update searchbar position, update write review ui
