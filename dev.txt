@@ -12,4 +12,6 @@ show view all button in home category books, update searchbar position, update w
 
 Date 09-02-26  (Total 6 Hours) 
 Admob integration and ad reward dialog
-Social 
+Social Linking added
+blue light filter fix
+auto scroll added in ebook, audiobook design complete
