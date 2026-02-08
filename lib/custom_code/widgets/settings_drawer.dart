@@ -203,6 +203,8 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       onChanged: (val) {
                         _isDraggingBlueLightFilter = true;
                         _localBlueLightFilter!.value = val;
+                        // Update provider for immediate visual feedback
+                        context.read<PdfViewerProvider>().setBlueLightFilter(val);
                       },
                       onChangeEnd: (val) {
                         _isDraggingBlueLightFilter = false;

@@ -2407,12 +2407,31 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
               ),
               // Lightweight drawer opener widget - doesn't rebuild body content
               _DrawerOpener(scaffoldKey: _scaffoldKey),
+              _buildBlueLightFilter(),
             ],
           ),
         );
       },
     );
   }
+
+  Widget _buildBlueLightFilter() {
+    return Selector<PdfViewerProvider, double>(
+      selector: (_, p) => p.blueLightFilter,
+      builder: (context, blueLightFilter, child) {
+        if (blueLightFilter <= 0) return const SizedBox.shrink();
+
+        return IgnorePointer(
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.orangeAccent.withOpacity((blueLightFilter / 100.0) * 0.3),
+          ),
+        );
+      },
+    );
+  }
+
 
   Widget _buildBottomIcon(
       IconData icon, String tooltip, VoidCallback onTap, Color iconColor) {
