@@ -15,6 +15,8 @@ import '/custom_code/actions/index.dart' as actions;
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
+import '/custom_code/ad_manager.dart';
+import '/custom_code/widgets/ad_reward_dialog.dart';
 import '/providers/cart_provider.dart';
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -736,30 +738,71 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 ),
                                                 child: InkWell(
                                                   onTap: () async {
-                                                    // Read Now action for free books
-                                                    context.pushNamed(
-                                                      ReadBookCustomPageWidget.routeName,
-                                                      queryParameters: {
-                                                        'pdf': serializeParam(
-                                                          '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                            bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                                          )}',
-                                                          ParamType.String,
+                                                    // Action for free books: Show Ad Dialog
+                                                    if (isFree && !_model.isPurchased) {
+                                                      showDialog(
+                                                        context: context,
+                                                        barrierDismissible: false,
+                                                        builder: (dialogContext) => AdRewardDialog(
+                                                          onWatchAd: () {
+                                                            AdManager.showRewardedAd(
+                                                              context: context,
+                                                              onRewardEarned: () {
+                                                                // Proceed to read the book after watching ad
+                                                                context.pushNamed(
+                                                                  ReadBookCustomPageWidget.routeName,
+                                                                  queryParameters: {
+                                                                    'pdf': serializeParam(
+                                                                      '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                                        bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                                      )}',
+                                                                      ParamType.String,
+                                                                    ),
+                                                                    'id': serializeParam(
+                                                                      widget.id,
+                                                                      ParamType.String,
+                                                                    ),
+                                                                    'name': serializeParam(
+                                                                      bookName,
+                                                                      ParamType.String,
+                                                                    ),
+                                                                    'image': serializeParam(
+                                                                      widget.image,
+                                                                      ParamType.String,
+                                                                    ),
+                                                                  }.withoutNulls,
+                                                                );
+                                                              },
+                                                            );
+                                                          },
                                                         ),
-                                                        'id': serializeParam(
-                                                          widget.id,
-                                                          ParamType.String,
-                                                        ),
-                                                        'name': serializeParam(
-                                                          bookName,
-                                                          ParamType.String,
-                                                        ),
-                                                        'image': serializeParam(
-                                                          widget.image,
-                                                          ParamType.String,
-                                                        ),
-                                                      }.withoutNulls,
-                                                    );
+                                                      );
+                                                    } else {
+                                                      // Direct entry for purchased books
+                                                      context.pushNamed(
+                                                        ReadBookCustomPageWidget.routeName,
+                                                        queryParameters: {
+                                                          'pdf': serializeParam(
+                                                            '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                              bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                            )}',
+                                                            ParamType.String,
+                                                          ),
+                                                          'id': serializeParam(
+                                                            widget.id,
+                                                            ParamType.String,
+                                                          ),
+                                                          'name': serializeParam(
+                                                            bookName,
+                                                            ParamType.String,
+                                                          ),
+                                                          'image': serializeParam(
+                                                            widget.image,
+                                                            ParamType.String,
+                                                          ),
+                                                        }.withoutNulls,
+                                                      );
+                                                    }
                                                   },
                                                   child: Row(
                                                     mainAxisAlignment: MainAxisAlignment.center,

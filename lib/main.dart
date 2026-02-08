@@ -17,12 +17,14 @@ import 'flutter_flow/internationalization.dart';
 import 'index.dart';
 import '/providers/cart_provider.dart';
 import '/providers/pdf_viewer_provider.dart';
+import 'custom_code/ad_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   GoRouter.optionURLReflectsImperativeAPIs = true;
   final appState = FFAppState(); // Initialize FFAppState
   await appState.initilizePrefs();
+  await AdManager.initialize();
   usePathUrlStrategy();
 
   await initFirebase();

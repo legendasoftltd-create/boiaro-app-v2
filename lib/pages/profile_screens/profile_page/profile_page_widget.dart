@@ -982,6 +982,8 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                             ).animateOnPageLoad(animationsMap[
                                 'containerOnPageLoadAnimation5']!),
                           ),
+                          
+                          SizedBox(height: 16),
                           Builder(
                             builder: (context) => Padding(
                               padding: EdgeInsetsDirectional.fromSTEB(
@@ -1194,6 +1196,46 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                   'containerOnPageLoadAnimation6']!),
                             ),
                           ),
+                         
+                         Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                20.0, 16.0, 20.0, 12.0),
+                            child: Text(
+                              'We\'re on social media',
+                              style: FlutterFlowTheme.of(context)
+                                  .bodyMedium
+                                  .override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontSize: 18.0,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ).animateOnPageLoad(animationsMap[
+                                'textOnPageLoadAnimation1']!),
+                          ),
+                          _buildSocialItem(
+                            context,
+                            'Like Facebook Page',
+                            'assets/images/facebook_ic.png',
+                            'https://www.facebook.com/boiarobd',
+                            isImage: true,
+                          ).animateOnPageLoad(animationsMap[
+                              'containerOnPageLoadAnimation5']!),
+                          _buildSocialItem(
+                            context,
+                            'Join Facebook Community',
+                            Icons.groups_rounded,
+                            'https://www.facebook.com/groups/boiaro.pathok.adda',
+                            iconColor: Color(0xFF1877F2),
+                          ).animateOnPageLoad(animationsMap[
+                              'containerOnPageLoadAnimation5']!),
+                          _buildSocialItem(
+                            context,
+                            'Subscribe Youtube Channel',
+                            'assets/images/youtube.svg',
+                            'https://www.youtube.com/@boiaro',
+                          ).animateOnPageLoad(animationsMap[
+                              'containerOnPageLoadAnimation5']!),
                         ],
                       );
                     } else {
@@ -1212,6 +1254,80 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialItem(
+    BuildContext context,
+    String label,
+    dynamic icon,
+    String url, {
+    bool isImage = false,
+    Color? iconColor,
+  }) {
+    return Padding(
+      padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 12.0),
+      child: InkWell(
+        onTap: () async {
+          await launchURL(url);
+        },
+        child: Container(
+          width: double.infinity,
+          height: 60.0,
+          decoration: BoxDecoration(
+            color: FlutterFlowTheme.of(context).secondaryBackground,
+            boxShadow: [
+              BoxShadow(
+                blurRadius: 12.0,
+                color: FlutterFlowTheme.of(context).shadowColor,
+                offset: Offset(0.0, 4.0),
+              )
+            ],
+            borderRadius: BorderRadius.circular(30.0),
+          ),
+          child: Padding(
+            padding: EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Container(
+                  width: 44.0,
+                  height: 44.0,
+                  decoration: BoxDecoration(
+                    color: FlutterFlowTheme.of(context).lightGrey,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: AlignmentDirectional(0.0, 0.0),
+                  child: icon is IconData
+                      ? Icon(icon, color: iconColor ?? FlutterFlowTheme.of(context).primary, size: 24.0)
+                      : (isImage
+                          ? Image.asset(icon, width: 28.0, height: 28.0, fit: BoxFit.contain)
+                          : SvgPicture.asset(icon, width: 28.0, height: 28.0, fit: BoxFit.contain)),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 0.0, 0.0),
+                    child: Text(
+                      label,
+                      style: FlutterFlowTheme.of(context).bodyMedium.override(
+                            fontFamily: 'SF Pro Display',
+                            color: FlutterFlowTheme.of(context).primaryText,
+                            letterSpacing: 0.0,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: FlutterFlowTheme.of(context).primaryText,
+                  size: 24.0,
+                ),
+              ],
+            ),
           ),
         ),
       ),

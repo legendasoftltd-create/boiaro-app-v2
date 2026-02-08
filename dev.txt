@@ -9,3 +9,7 @@ DeepLink setup
 internationalization added
 dark mode implemanted
 show view all button in home category books, update searchbar position, update write review ui
+
+Date 09-02-26  (Total 6 Hours) 
+Admob integration and ad reward dialog
+Social 
