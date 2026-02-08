@@ -4,7 +4,12 @@ import 'package:provider/provider.dart';
 import '/providers/pdf_viewer_provider.dart';
 
 class SettingsDrawer extends StatefulWidget {
-  const SettingsDrawer({Key? key}) : super(key: key);
+  const SettingsDrawer({
+    Key? key,
+    this.onAutoScrollSettingsChanged,
+  }) : super(key: key);
+
+  final VoidCallback? onAutoScrollSettingsChanged;
 
   @override
   State<SettingsDrawer> createState() => _SettingsDrawerState();
@@ -92,7 +97,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                     return _buildSlider(
                       label: 'নির্দিষ্ট সময় পর পর অটো স্ক্রল করুন',
                       valueNotifier: _localAutoScrollInterval!,
-                      min: 1.0,
+                      min: 0.0,
                       max: 60.0,
                       unit: 's',
                       onChanged: (val) {
@@ -102,6 +107,14 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       onChangeEnd: (val) {
                         _isDraggingAutoScrollInterval = false;
                         context.read<PdfViewerProvider>().setAutoScrollInterval(val);
+                        
+                        // If interval is set > 0, disable continuous scroll
+                        if (val > 0) {
+                          context.read<PdfViewerProvider>().setAutoScrollSpeed(0.0);
+                        }
+                        
+                        // Notify parent to restart auto-scroll
+                        widget.onAutoScrollSettingsChanged?.call();
                       },
                     );
                   },
@@ -129,6 +142,14 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       onChangeEnd: (val) {
                         _isDraggingAutoScrollSpeed = false;
                         context.read<PdfViewerProvider>().setAutoScrollSpeed(val);
+                        
+                        // If speed is set > 0, disable interval scroll
+                        if (val > 0) {
+                          context.read<PdfViewerProvider>().setAutoScrollInterval(0.0);
+                        }
+                        
+                        // Notify parent to restart auto-scroll
+                        widget.onAutoScrollSettingsChanged?.call();
                       },
                     );
                   },

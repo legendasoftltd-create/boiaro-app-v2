@@ -1,5 +1,5 @@
 import 'package:a_i_ebook_app/custom_code/widgets/app_update.dart';
-import 'package:a_i_ebook_app/pages/publisher_screens/best_publisher_page/best_publisher_page_widget.dart';
+import 'package:a_i_ebook_app/pages/audiobook_pages/audiobook_page/audiobook_page_widget.dart';
 
 import '/custom_code/actions/index.dart' as actions;
 import 'package:provider/provider.dart';
@@ -172,7 +172,7 @@ class _NavBarPageState extends State<NavBarPage> {
       'CategoriesScreen': CategoriesScreenWidget(),
       'LatestPage': LatestPageWidget(),
       'BestAuthorPage': BestAuthorPageWidget(),
-      'BestPublisherPage': BestPublisherPageWidget(),
+      'AudiobookPage': AudiobookPageWidget(),
       'ProfilePage': ProfilePageWidget(),
     };
     final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
@@ -243,14 +243,14 @@ class _NavBarPageState extends State<NavBarPage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              Icons.account_balance,
+              Icons.headphones_outlined,
               size: 24.0,
             ),
             activeIcon: Icon(
-              Icons.account_balance,
+              Icons.headphones_rounded,
               size: 24.0,
             ),
-            label: FFLocalizations.of(context).getText('nav_publisher'),
+            label: 'Audiobooks',
             tooltip: '',
           ),
           BottomNavigationBarItem(

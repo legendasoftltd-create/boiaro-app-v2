@@ -46,10 +46,10 @@ class PdfViewerProvider with ChangeNotifier {
   bool _isJustified = true;
   bool get isJustified => _isJustified;
 
-  double _autoScrollInterval = 5.0; // seconds
+  double _autoScrollInterval = 0.0; // seconds
   double get autoScrollInterval => _autoScrollInterval;
 
-  double _autoScrollSpeed = 50.0; // percentage
+  double _autoScrollSpeed = 0.0; // percentage
   double get autoScrollSpeed => _autoScrollSpeed;
 
   bool _useVolumeButtons = false;
@@ -771,8 +771,8 @@ class PdfViewerProvider with ChangeNotifier {
     _epubLineHeight = 1.6;
     _epubFontFamily = 'SF Pro Display';
     _isJustified = true;
-    _autoScrollInterval = 5.0;
-    _autoScrollSpeed = 50.0;
+    _autoScrollInterval = 0.0;
+    _autoScrollSpeed = 0.0;
     _useVolumeButtons = false;
     _enableSwipeBrightness = false;
     _blueLightFilter = 0.0;

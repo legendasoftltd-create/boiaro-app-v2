@@ -1,4 +1,5 @@
 // Automatic FlutterFlow imports
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:a_i_ebook_app/custom_code/widgets/theme_selection_widget.dart';
@@ -97,6 +98,11 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   String? _currentBookId;
   String? _originalChapterHtml; // Store original HTML before highlights
   bool _isLoading = true;
+  
+  // Auto-scroll timers
+  Timer? _autoScrollTimer; // For interval-based auto-scroll
+  Timer? _continuousScrollTimer; // For continuous auto-scroll
+
 
   @override
   void initState() {
@@ -148,6 +154,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         );
       }
       ScreenProtector.protectDataLeakageOn();
+      
+      // Initialize auto-scroll after a delay to ensure content is loaded
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted && provider.readerType == ReaderType.epub) {
+          _startAutoScroll(provider);
+        }
+      });
     });
   }
 
@@ -264,6 +277,87 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     }
   }
 
+  // Auto-scroll methods
+  void _startAutoScroll(PdfViewerProvider provider) {
+    _stopAutoScroll(); // Stop any existing timers
+    
+    final intervalSeconds = provider.autoScrollInterval;
+    final speedPercent = provider.autoScrollSpeed;
+    
+    // If both are 0 or very small, don't start auto-scroll
+    if (intervalSeconds <= 0 && speedPercent <= 0) {
+      return;
+    }
+    
+    // Interval-based auto-scroll (jumps at intervals)
+    if (intervalSeconds > 0) {
+      _autoScrollTimer = Timer.periodic(
+        Duration(seconds: intervalSeconds.round()),
+        (_) => _performAutoScroll(provider, isInterval: true),
+      );
+    }
+    
+    // Continuous auto-scroll (smooth scrolling)
+    if (speedPercent > 0) {
+      // Use fixed 20ms update rate (50fps) for smooth scrolling
+      _continuousScrollTimer = Timer.periodic(
+        const Duration(milliseconds: 20),
+        (_) => _performAutoScroll(provider, isInterval: false),
+      );
+    }
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+    _continuousScrollTimer?.cancel();
+    _continuousScrollTimer = null;
+  }
+
+  void _performAutoScroll(PdfViewerProvider provider, {required bool isInterval}) {
+    if (!mounted || !_epubScrollController.hasClients) return;
+    
+    try {
+      final position = _epubScrollController.position;
+      if (!position.hasContentDimensions || !position.hasPixels) return;
+      
+      final maxScroll = position.maxScrollExtent;
+      final currentPixels = position.pixels;
+      
+      // If already at bottom, optionally go to next chapter or stop
+      if (currentPixels >= maxScroll - 10) {
+        // At bottom, try to go to next chapter
+        if (provider.readerType == ReaderType.epub &&
+            provider.currentEpubChapterIndex < provider.epubChapters.length - 1) {
+          setCurrentPage(provider);
+        }
+        return;
+      }
+      
+      if (isInterval) {
+        // Interval-based: scroll by a fixed amount (e.g., one viewport height)
+        final viewportHeight = position.viewportDimension;
+        final targetScroll = (currentPixels + viewportHeight * 0.8).clamp(0.0, maxScroll);
+        
+        _epubScrollController.animateTo(
+          targetScroll,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        // Continuous: scroll by small increments based on speed
+        // Speed 100% -> ~5px per 20ms (~250px/s)
+        final speedPercent = provider.autoScrollSpeed;
+        final scrollDelta = (speedPercent / 20.0);
+        
+        final targetScroll = (currentPixels + scrollDelta).clamp(0.0, maxScroll);
+        _epubScrollController.jumpTo(targetScroll);
+      }
+    } catch (e) {
+      // Ignore scroll errors
+    }
+  }
+
   @override
   void dispose() {
     final provider = context.read<PdfViewerProvider>();
@@ -278,6 +372,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     _localSelectedTextNotifier.dispose();
     _isAtTopNotifier.dispose();
     _isAtBottomNotifier.dispose();
+    _stopAutoScroll(); // Cancel auto-scroll timers
     flutterTts.stop();
     ScreenProtector.protectDataLeakageOff();
     super.dispose();
@@ -293,6 +388,10 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           _epubScrollController,
           onOriginalContentReady: (originalHtml) {
             _originalChapterHtml = originalHtml;
+            // Restart auto-scroll after chapter loads
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) _startAutoScroll(provider);
+            });
           },
         );
       }
@@ -314,6 +413,10 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           _epubScrollController,
           onOriginalContentReady: (originalHtml) {
             _originalChapterHtml = originalHtml;
+            // Restart auto-scroll after chapter loads
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) _startAutoScroll(provider);
+            });
           },
         );
       }
@@ -1188,7 +1291,12 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                   onClearSearch: () => _clearSearch(provider),
                 );
               } else if (openDrawer == 'settings') {
-                return const SettingsDrawer();
+                return SettingsDrawer(
+                  onAutoScrollSettingsChanged: () {
+                    // Restart auto-scroll with new settings
+                    _startAutoScroll(provider);
+                  },
+                );
               }
               return const SizedBox.shrink();
             },

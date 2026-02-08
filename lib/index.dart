@@ -20,6 +20,14 @@ export '/pages/home_pages/filter_page/filter_page_widget.dart'
     show FilterPageWidget;
 export '/pages/author_screens/best_author_page/best_author_page_widget.dart'
     show BestAuthorPageWidget;
+export '/pages/audiobook_pages/audiobook_page/audiobook_page_widget.dart'
+    show AudiobookPageWidget;
+export '/pages/audiobook_pages/audiobook_view_all_page/audiobook_view_all_page_widget.dart'
+    show AudiobookViewAllPageWidget;
+export '/pages/audiobook_pages/audiobook_details_page/audiobook_details_page_widget.dart'
+    show AudiobookDetailsPageWidget;
+export '/pages/audiobook_pages/audio_player_page/audio_player_page_widget.dart'
+    show AudioPlayerPageWidget;
 export '/pages/home_pages/popular_books_page/popular_books_page_widget.dart'
     show PopularBooksPageWidget;
 export '/pages/home_pages/recent_reviews_page/recent_reviews_page_widget.dart'
