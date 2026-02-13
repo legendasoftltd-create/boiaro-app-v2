@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -5,6 +6,18 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 class AdManager {
   static RewardedAd? _rewardedAd;
   static bool _isAdLoaded = false;
+  static bool _isAdLoading = false;
+  static Completer<void>? _adCompleter;
+
+  static bool get isAdLoaded => _isAdLoaded;
+
+  static Future<void> waitForAd() async {
+    if (_isAdLoaded) return;
+    if (_adCompleter == null || _adCompleter!.isCompleted) {
+      _adCompleter = Completer<void>();
+    }
+    return _adCompleter!.future;
+  }
 
   // Replace these with your actual Ad Unit IDs
   static String get rewardedAdUnitId {
@@ -19,10 +32,14 @@ class AdManager {
 
   static Future<void> initialize() async {
     await MobileAds.instance.initialize();
-    loadRewardedAd();
+    // Don't load ad immediately to save requests
   }
 
   static void loadRewardedAd() {
+    if (_isAdLoaded || _isAdLoading) return;
+
+    _isAdLoading = true;
+    print('Ad loading started...');
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
       request: const AdRequest(),
@@ -30,14 +47,20 @@ class AdManager {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isAdLoaded = true;
+          _isAdLoading = false;
           print('Rewarded Ad Loaded');
+          if (_adCompleter != null && !_adCompleter!.isCompleted) {
+            _adCompleter!.complete();
+          }
         },
         onAdFailedToLoad: (error) {
           _rewardedAd = null;
           _isAdLoaded = false;
+          _isAdLoading = false;
           print('Rewarded Ad Failed to Load: $error');
-          // Retry loading after 10 seconds
-          Future.delayed(Duration(seconds: 10), () => loadRewardedAd());
+          if (_adCompleter != null && !_adCompleter!.isCompleted) {
+            _adCompleter!.completeError(error);
+          }
         },
       ),
     );
@@ -46,18 +69,19 @@ class AdManager {
   static void showRewardedAd({
     required Function onRewardEarned,
     required BuildContext context,
+    Function? onAdFailed,
   }) {
     if (_isAdLoaded && _rewardedAd != null) {
       _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
           _isAdLoaded = false;
-          loadRewardedAd();
+          // Don't auto-reload here, wait for next request
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
           ad.dispose();
           _isAdLoaded = false;
-          loadRewardedAd();
+          if (onAdFailed != null) onAdFailed();
         },
       );
 
@@ -67,9 +91,7 @@ class AdManager {
         },
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ad is loading, please try again in a moment.')),
-      );
+      if (onAdFailed != null) onAdFailed();
       loadRewardedAd();
     }
   }

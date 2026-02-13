@@ -772,7 +772,41 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           context: context,
                                                           barrierDismissible: false,
                                                           builder: (dialogContext) => AdRewardDialog(
-                                                            onWatchAd: () {
+                                                            bookImage: bookImage,
+                                                            onWatchAd: () async {
+                                                              if (!AdManager.isAdLoaded) {
+                                                                // Show loading dialog on screens
+                                                                showDialog(
+                                                                  context: context,
+                                                                  barrierDismissible: false,
+                                                                  builder: (loadingContext) => AlertDialog(
+                                                                    backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                    content: Column(
+                                                                      mainAxisSize: MainAxisSize.min,
+                                                                      children: [
+                                                                        CircularProgressIndicator(
+                                                                          color: FlutterFlowTheme.of(context).primary,
+                                                                        ),
+                                                                        SizedBox(height: 16),
+                                                                        Text(
+                                                                          'Ad is loading...',
+                                                                          style: FlutterFlowTheme.of(context).bodyMedium,
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                );
+                                                                
+                                                                try {
+                                                                  await AdManager.waitForAd();
+                                                                } catch (e) {
+                                                                  print('Error waiting for ad: $e');
+                                                                } finally {
+                                                                  // Close loading dialog
+                                                                  Navigator.pop(context);
+                                                                }
+                                                              }
+
                                                               AdManager.showRewardedAd(
                                                                 context: context,
                                                                 onRewardEarned: () {

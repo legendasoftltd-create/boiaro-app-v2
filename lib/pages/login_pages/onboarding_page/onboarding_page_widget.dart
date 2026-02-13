@@ -43,6 +43,8 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
+    final ffTheme = LightModeTheme();
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -50,7 +52,7 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
       },
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+        backgroundColor: ffTheme.primaryBackground,
         body: SafeArea(
           top: true,
           child: Stack(
@@ -96,15 +98,13 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                         'Unleash your inner reader dive into a world of books',
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 28.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.bold,
-                                              lineHeight: 1.5,
-                                            ),
+                                        style: ffTheme.bodyMedium.override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 28.0,
+                                          letterSpacing: 0.0,
+                                          fontWeight: FontWeight.bold,
+                                          lineHeight: 1.5,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -117,14 +117,12 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                         'the app that helps you reach your reading goals with read more, achieve more ',
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 17.0,
-                                              letterSpacing: 0.0,
-                                              lineHeight: 1.5,
-                                            ),
+                                        style: ffTheme.bodyMedium.override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 17.0,
+                                          letterSpacing: 0.0,
+                                          lineHeight: 1.5,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -162,15 +160,13 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                         'Boost your brain power with read book smarter',
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 28.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.bold,
-                                              lineHeight: 1.5,
-                                            ),
+                                        style: ffTheme.bodyMedium.override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 28.0,
+                                          letterSpacing: 0.0,
+                                          fontWeight: FontWeight.bold,
+                                          lineHeight: 1.5,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -183,14 +179,12 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                         'Boost your brain power with read book smarter\nand enhance your knowledge.',
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 17.0,
-                                              letterSpacing: 0.0,
-                                              lineHeight: 1.5,
-                                            ),
+                                        style: ffTheme.bodyMedium.override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 17.0,
+                                          letterSpacing: 0.0,
+                                          lineHeight: 1.5,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -228,15 +222,13 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                         'Knowledge is a making master key of your mind empower',
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 28.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.bold,
-                                              lineHeight: 1.5,
-                                            ),
+                                        style: ffTheme.bodyMedium.override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 28.0,
+                                          letterSpacing: 0.0,
+                                          fontWeight: FontWeight.bold,
+                                          lineHeight: 1.5,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -249,14 +241,12 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                         'Write the book you\'ve always dreamed of start your story today!',
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 17.0,
-                                              letterSpacing: 0.0,
-                                              lineHeight: 1.5,
-                                            ),
+                                        style: ffTheme.bodyMedium.override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 17.0,
+                                          letterSpacing: 0.0,
+                                          lineHeight: 1.5,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -290,9 +280,8 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                             radius: 16.0,
                             dotWidth: 32.0,
                             dotHeight: 7.0,
-                            dotColor: FlutterFlowTheme.of(context).secondary,
-                            activeDotColor:
-                                FlutterFlowTheme.of(context).primary,
+                            dotColor: ffTheme.secondary,
+                            activeDotColor: ffTheme.primary,
                             paintStyle: PaintingStyle.fill,
                           ),
                         ),
@@ -325,15 +314,15 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                         EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
                     iconPadding:
                         EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                    color: FlutterFlowTheme.of(context).primary,
-                    textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                          fontFamily: 'SF Pro Display',
-                          color: FlutterFlowTheme.of(context).primaryBackground,
-                          fontSize: 16.0,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.bold,
-                          lineHeight: 1.2,
-                        ),
+                    color: ffTheme.primary,
+                    textStyle: ffTheme.titleSmall.override(
+                      fontFamily: 'SF Pro Display',
+                      color: ffTheme.primaryBackground,
+                      fontSize: 16.0,
+                      letterSpacing: 0.0,
+                      fontWeight: FontWeight.bold,
+                      lineHeight: 1.2,
+                    ),
                     elevation: 0.0,
                     borderSide: BorderSide(
                       color: Colors.transparent,
@@ -360,12 +349,12 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                     },
                     child: Text(
                       'Skip',
-                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            fontFamily: 'SF Pro Display',
-                            fontSize: 17.0,
-                            letterSpacing: 0.0,
-                            lineHeight: 1.5,
-                          ),
+                      style: ffTheme.bodyMedium.override(
+                        fontFamily: 'SF Pro Display',
+                        fontSize: 17.0,
+                        letterSpacing: 0.0,
+                        lineHeight: 1.5,
+                      ),
                     ),
                   ),
                 ),
