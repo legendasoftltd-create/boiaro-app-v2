@@ -738,45 +738,77 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 ),
                                                 child: InkWell(
                                                   onTap: () async {
-                                                    // Action for free books: Show Ad Dialog
+                                                    // Action for free books: Show Ad Dialog only if not watched before
                                                     if (isFree && !_model.isPurchased) {
-                                                      showDialog(
-                                                        context: context,
-                                                        barrierDismissible: false,
-                                                        builder: (dialogContext) => AdRewardDialog(
-                                                          onWatchAd: () {
-                                                            AdManager.showRewardedAd(
-                                                              context: context,
-                                                              onRewardEarned: () {
-                                                                // Proceed to read the book after watching ad
-                                                                context.pushNamed(
-                                                                  ReadBookCustomPageWidget.routeName,
-                                                                  queryParameters: {
-                                                                    'pdf': serializeParam(
-                                                                      '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                                        bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                                                      )}',
-                                                                      ParamType.String,
-                                                                    ),
-                                                                    'id': serializeParam(
-                                                                      widget.id,
-                                                                      ParamType.String,
-                                                                    ),
-                                                                    'name': serializeParam(
-                                                                      bookName,
-                                                                      ParamType.String,
-                                                                    ),
-                                                                    'image': serializeParam(
-                                                                      widget.image,
-                                                                      ParamType.String,
-                                                                    ),
-                                                                  }.withoutNulls,
-                                                                );
-                                                              },
-                                                            );
-                                                          },
-                                                        ),
-                                                      );
+                                                      // Check if user has already watched ad for this book
+                                                      if (FFAppState().hasWatchedAdForBook(widget.id!)) {
+                                                        // User has already watched ad, allow direct access
+                                                        context.pushNamed(
+                                                          ReadBookCustomPageWidget.routeName,
+                                                          queryParameters: {
+                                                            'pdf': serializeParam(
+                                                              '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                                bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                              )}',
+                                                              ParamType.String,
+                                                            ),
+                                                            'id': serializeParam(
+                                                              widget.id,
+                                                              ParamType.String,
+                                                            ),
+                                                            'name': serializeParam(
+                                                              bookName,
+                                                              ParamType.String,
+                                                            ),
+                                                            'image': serializeParam(
+                                                              widget.image,
+                                                              ParamType.String,
+                                                            ),
+                                                          }.withoutNulls,
+                                                        );
+                                                      } else {
+                                                        // User hasn't watched ad yet, show ad dialog
+                                                        showDialog(
+                                                          context: context,
+                                                          barrierDismissible: false,
+                                                          builder: (dialogContext) => AdRewardDialog(
+                                                            onWatchAd: () {
+                                                              AdManager.showRewardedAd(
+                                                                context: context,
+                                                                onRewardEarned: () {
+                                                                  // Mark this book as having watched ad
+                                                                  FFAppState().addToWatchedAdBooks(widget.id!);
+                                                                  
+                                                                  // Proceed to read the book after watching ad
+                                                                  context.pushNamed(
+                                                                    ReadBookCustomPageWidget.routeName,
+                                                                    queryParameters: {
+                                                                      'pdf': serializeParam(
+                                                                        '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
+                                                                          bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                                        )}',
+                                                                        ParamType.String,
+                                                                      ),
+                                                                      'id': serializeParam(
+                                                                        widget.id,
+                                                                        ParamType.String,
+                                                                      ),
+                                                                      'name': serializeParam(
+                                                                        bookName,
+                                                                        ParamType.String,
+                                                                      ),
+                                                                      'image': serializeParam(
+                                                                        widget.image,
+                                                                        ParamType.String,
+                                                                      ),
+                                                                    }.withoutNulls,
+                                                                  );
+                                                                },
+                                                              );
+                                                            },
+                                                          ),
+                                                        );
+                                                      }
                                                     } else {
                                                       // Direct entry for purchased books
                                                       context.pushNamed(

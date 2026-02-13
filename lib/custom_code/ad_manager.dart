@@ -9,7 +9,7 @@ class AdManager {
   // Replace these with your actual Ad Unit IDs
   static String get rewardedAdUnitId {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/5224354917'; // Test ID
+      return 'ca-app-pub-1401510952827121/1716336801'; // Test ID
     } else if (Platform.isIOS) {
       return 'ca-app-pub-3940256099942544/1712485313'; // Test ID
     } else {

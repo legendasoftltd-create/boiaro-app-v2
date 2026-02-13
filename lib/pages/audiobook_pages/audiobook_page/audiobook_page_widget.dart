@@ -4,6 +4,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui';
 import '/index.dart';
 import 'audiobook_page_model.dart';
 export 'audiobook_page_model.dart';
@@ -411,358 +412,361 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-      body: SafeArea(
-        top: true,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-            // Header
-            Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 16.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Audiobooks',
-                        style: FlutterFlowTheme.of(context).headlineLarge.override(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 32.0,
-                              letterSpacing: 0.0,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        'Listen to your favorite stories',
-                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              fontFamily: 'SF Pro Display',
-                              color: FlutterFlowTheme.of(context).secondaryText,
-                              fontSize: 14.0,
-                              letterSpacing: 0.0,
-                            ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Search Icon
-                      Container(
-                        width: 48.0,
-                        height: 48.0,
-                        decoration: BoxDecoration(
-                          color: FlutterFlowTheme.of(context).secondaryBackground,
-                          borderRadius: BorderRadius.circular(12.0),
-                          border: Border.all(
-                            color: FlutterFlowTheme.of(context).alternate,
-                            width: 1.0,
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.search_rounded,
-                          color: FlutterFlowTheme.of(context).primaryText,
-                          size: 24.0,
-                        ),
-                      ),
-                      SizedBox(width: 12.0),
-                      // Headphones Icon
-                      Container(
-                        width: 48.0,
-                        height: 48.0,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                            stops: [0.0, 1.0],
-                            begin: AlignmentDirectional(-1.0, -1.0),
-                            end: AlignmentDirectional(1.0, 1.0),
-                          ),
-                          borderRadius: BorderRadius.circular(12.0),
-                          boxShadow: [
-                            BoxShadow(
-                              blurRadius: 12.0,
-                              color: Color(0x406366F1),
-                              offset: Offset(0.0, 4.0),
-                            )
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.headphones_rounded,
-                          color: Colors.white,
-                          size: 24.0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Banner Carousel Section
-            Container(
-              width: double.infinity,
-              height: 180.0,
-              child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                scrollDirection: Axis.horizontal,
-                itemCount: banners.length,
-                itemBuilder: (context, index) {
-                  final banner = banners[index];
-                  return Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(
-                      0.0,
-                      0.0,
-                      index == banners.length - 1 ? 0.0 : 16.0,
-                      0.0,
-                    ),
-                    child: Container(
-                      width: MediaQuery.of(context).size.width - 32,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            banner['color'],
-                            banner['color'].withOpacity(0.7),
-                          ],
-                          stops: [0.0, 1.0],
-                          begin: AlignmentDirectional(-1.0, -1.0),
-                          end: AlignmentDirectional(1.0, 1.0),
-                        ),
-                        borderRadius: BorderRadius.circular(20.0),
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: 20.0,
-                            color: banner['color'].withOpacity(0.3),
-                            offset: Offset(0.0, 8.0),
-                          )
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          // Background pattern/image
-                          Positioned.fill(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20.0),
-                              child: Opacity(
-                                opacity: 0.2,
-                                child: Image.network(
-                                  banner['image'],
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Content
-                          Padding(
-                            padding: EdgeInsets.all(24.0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.max,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  banner['title'],
-                                  style: FlutterFlowTheme.of(context)
-                                      .headlineMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        color: Colors.white,
-                                        fontSize: 28.0,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                SizedBox(height: 8.0),
-                                Text(
-                                  banner['subtitle'],
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyLarge
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        color: Colors.white.withOpacity(0.9),
-                                        fontSize: 16.0,
-                                        letterSpacing: 0.0,
-                                      ),
-                                ),
-                                SizedBox(height: 16.0),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 20.0,
-                                    vertical: 10.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(25.0),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Explore Now',
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              color: banner['color'],
-                                              fontSize: 14.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                      ),
-                                      SizedBox(width: 8.0),
-                                      Icon(
-                                        Icons.arrow_forward_rounded,
-                                        color: banner['color'],
-                                        size: 18.0,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ).animateOnPageLoad(
-                        animationsMap['containerOnPageLoadAnimation1']!),
-                  );
-                },
-              ),
-            ),
-
-            SizedBox(height: 24.0),
-
-            // Categories Section
-            Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+      body: Stack(
+        children: [
+          // Original content
+          SafeArea(
+            top: true,
+            child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
+                // Header
+                Padding(
+                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 16.0),
+                  child: Row(
                     mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Browse by Category',
-                        maxLines: 1,
-                        style: FlutterFlowTheme.of(context)
-                            .bodyMedium
-                            .override(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 20.0,
-                              letterSpacing: 0.0,
-                              fontWeight: FontWeight.bold,
-                              lineHeight: 1.5,
-                            ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Audiobooks',
+                            style: FlutterFlowTheme.of(context).headlineLarge.override(
+                                  fontFamily: 'SF Pro Display',
+                                  fontSize: 32.0,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          Text(
+                            'Listen to your favorite stories',
+                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                  fontFamily: 'SF Pro Display',
+                                  color: FlutterFlowTheme.of(context).secondaryText,
+                                  fontSize: 14.0,
+                                  letterSpacing: 0.0,
+                                ),
+                          ),
+                        ],
                       ),
-                      Container(
-                        padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                        decoration: BoxDecoration(
-                          color: FlutterFlowTheme.of(context).primary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'View All',
-                          style: FlutterFlowTheme.of(context)
-                              .bodyMedium
-                              .override(
-                                fontFamily: 'SF Pro Display',
-                                fontSize: 17.0,
-                                letterSpacing: 0.0,
-                                lineHeight: 1.5,
-                                color: Colors.white,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Search Icon
+                          Container(
+                            width: 48.0,
+                            height: 48.0,
+                            decoration: BoxDecoration(
+                              color: FlutterFlowTheme.of(context).secondaryBackground,
+                              borderRadius: BorderRadius.circular(12.0),
+                              border: Border.all(
+                                color: FlutterFlowTheme.of(context).alternate,
+                                width: 1.0,
                               ),
-                        ),
+                            ),
+                            child: Icon(
+                              Icons.search_rounded,
+                              color: FlutterFlowTheme.of(context).primaryText,
+                              size: 24.0,
+                            ),
+                          ),
+                          SizedBox(width: 12.0),
+                          // Headphones Icon
+                          Container(
+                            width: 48.0,
+                            height: 48.0,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                                stops: [0.0, 1.0],
+                                begin: AlignmentDirectional(-1.0, -1.0),
+                                end: AlignmentDirectional(1.0, 1.0),
+                              ),
+                              borderRadius: BorderRadius.circular(12.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  blurRadius: 12.0,
+                                  color: Color(0x406366F1),
+                                  offset: Offset(0.0, 4.0),
+                                )
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.headphones_rounded,
+                              color: Colors.white,
+                              size: 24.0,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ).animateOnPageLoad(
-                      animationsMap['rowOnPageLoadAnimation']!),
-                  SizedBox(height: 16.0),
-                  GridView.builder(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 12.0,
-                      mainAxisSpacing: 12.0,
-                      childAspectRatio: 1.0,
-                    ),
-                    itemCount: categories.length,
+                  ),
+                ),
+
+                // Banner Carousel Section
+                Container(
+                  width: double.infinity,
+                  height: 180.0,
+                  child: ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: banners.length,
                     itemBuilder: (context, index) {
-                      final category = categories[index];
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: category['color'].withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16.0),
-                          border: Border.all(
-                            color: category['color'].withOpacity(0.3),
-                            width: 1.0,
-                          ),
+                      final banner = banners[index];
+                      return Padding(
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          0.0,
+                          0.0,
+                          index == banners.length - 1 ? 0.0 : 16.0,
+                          0.0,
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 48.0,
-                              height: 48.0,
-                              decoration: BoxDecoration(
-                                color: category['color'],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                category['icon'],
-                                color: Colors.white,
-                                size: 24.0,
-                              ),
+                        child: Container(
+                          width: MediaQuery.of(context).size.width - 32,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                banner['color'],
+                                banner['color'].withOpacity(0.7),
+                              ],
+                              stops: [0.0, 1.0],
+                              begin: AlignmentDirectional(-1.0, -1.0),
+                              end: AlignmentDirectional(1.0, 1.0),
                             ),
-                            SizedBox(height: 8.0),
-                            Text(
-                              category['name'],
-                              textAlign: TextAlign.center,
+                            borderRadius: BorderRadius.circular(20.0),
+                            boxShadow: [
+                              BoxShadow(
+                                blurRadius: 20.0,
+                                color: banner['color'].withOpacity(0.3),
+                                offset: Offset(0.0, 8.0),
+                              )
+                            ],
+                          ),
+                          child: Stack(
+                            children: [
+                              // Background pattern/image
+                              Positioned.fill(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(20.0),
+                                  child: Opacity(
+                                    opacity: 0.2,
+                                    child: Image.network(
+                                      banner['image'],
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Content
+                              Padding(
+                                padding: EdgeInsets.all(24.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.max,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      banner['title'],
+                                      style: FlutterFlowTheme.of(context)
+                                          .headlineMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            color: Colors.white,
+                                            fontSize: 28.0,
+                                            letterSpacing: 0.0,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    SizedBox(height: 8.0),
+                                    Text(
+                                      banner['subtitle'],
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyLarge
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            color: Colors.white.withOpacity(0.9),
+                                            fontSize: 16.0,
+                                            letterSpacing: 0.0,
+                                          ),
+                                    ),
+                                    SizedBox(height: 16.0),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 20.0,
+                                        vertical: 10.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(25.0),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Explore Now',
+                                            style: FlutterFlowTheme.of(context)
+                                                .bodyMedium
+                                                .override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  color: banner['color'],
+                                                  fontSize: 14.0,
+                                                  letterSpacing: 0.0,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          SizedBox(width: 8.0),
+                                          Icon(
+                                            Icons.arrow_forward_rounded,
+                                            color: banner['color'],
+                                            size: 18.0,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ).animateOnPageLoad(
+                            animationsMap['containerOnPageLoadAnimation1']!),
+                      );
+                    },
+                  ),
+                ),
+
+                SizedBox(height: 24.0),
+
+                // Categories Section
+                Padding(
+                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Browse by Category',
+                            maxLines: 1,
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  fontFamily: 'SF Pro Display',
+                                  fontSize: 20.0,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.bold,
+                                  lineHeight: 1.5,
+                                ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                            decoration: BoxDecoration(
+                              color: FlutterFlowTheme.of(context).primary,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'View All',
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
                                     fontFamily: 'SF Pro Display',
-                                    fontSize: 13.0,
+                                    fontSize: 17.0,
                                     letterSpacing: 0.0,
-                                    fontWeight: FontWeight.w600,
+                                    lineHeight: 1.5,
+                                    color: Colors.white,
                                   ),
                             ),
-                            SizedBox(height: 2.0),
-                            Text(
-                              '${category['count']} books',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodySmall
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
-                                    fontSize: 11.0,
-                                    letterSpacing: 0.0,
-                                  ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ).animateOnPageLoad(
-                          animationsMap['containerOnPageLoadAnimation2']!);
-                    },
+                          animationsMap['rowOnPageLoadAnimation']!),
+                      SizedBox(height: 16.0),
+                      GridView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 12.0,
+                          mainAxisSpacing: 12.0,
+                          childAspectRatio: 1.0,
+                        ),
+                        itemCount: categories.length,
+                        itemBuilder: (context, index) {
+                          final category = categories[index];
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: category['color'].withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16.0),
+                              border: Border.all(
+                                color: category['color'].withOpacity(0.3),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 48.0,
+                                  height: 48.0,
+                                  decoration: BoxDecoration(
+                                    color: category['color'],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    category['icon'],
+                                    color: Colors.white,
+                                    size: 24.0,
+                                  ),
+                                ),
+                                SizedBox(height: 8.0),
+                                Text(
+                                  category['name'],
+                                  textAlign: TextAlign.center,
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .override(
+                                        fontFamily: 'SF Pro Display',
+                                        fontSize: 13.0,
+                                        letterSpacing: 0.0,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                                SizedBox(height: 2.0),
+                                Text(
+                                  '${category['count']} books',
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodySmall
+                                      .override(
+                                        fontFamily: 'SF Pro Display',
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        fontSize: 11.0,
+                                        letterSpacing: 0.0,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ).animateOnPageLoad(
+                              animationsMap['containerOnPageLoadAnimation2']!);
+                        },
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            SizedBox(height: 24.0),
+                SizedBox(height: 24.0),
 
-            // Content Sections
-            // Popular Audiobooks Section
-            Column(
-              mainAxisSize: MainAxisSize.max,
+                // Content Sections
+                // Popular Audiobooks Section
+                Column(
+                  mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
@@ -1329,6 +1333,63 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
             ],
           ),
         ),
+      ),
+          // Blur overlay with "Coming Soon"
+          Positioned.fill(
+            child: ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 80.0,
+                          height: 80.0,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.headphones_rounded,
+                            color: Colors.white,
+                            size: 40.0,
+                          ),
+                        ),
+                        SizedBox(height: 24.0),
+                        Text(
+                          'Coming Soon',
+                          style: TextStyle(
+                            fontFamily: 'SF Pro Display',
+                            fontSize: 36.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        SizedBox(height: 12.0),
+                        Text(
+                          'Audiobooks feature is under development',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'SF Pro Display',
+                            fontSize: 16.0,
+                            color: Colors.white.withOpacity(0.9),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

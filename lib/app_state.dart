@@ -108,6 +108,9 @@ class FFAppState extends ChangeNotifier {
       _countryCodeEdit =
           prefs.getString('ff_countryCodeEdit') ?? _countryCodeEdit;
     });
+    _safeInit(() {
+      _watchedAdBooks = prefs.getStringList('ff_watchedAdBooks') ?? _watchedAdBooks;
+    });
   }
 
   void update(VoidCallback callback) {
@@ -447,6 +450,24 @@ class FFAppState extends ChangeNotifier {
   set countryCodeEdit(String value) {
     _countryCodeEdit = value;
     prefs.setString('ff_countryCodeEdit', value);
+  }
+
+  List<String> _watchedAdBooks = [];
+  List<String> get watchedAdBooks => _watchedAdBooks;
+  set watchedAdBooks(List<String> value) {
+    _watchedAdBooks = value;
+    prefs.setStringList('ff_watchedAdBooks', value);
+  }
+
+  void addToWatchedAdBooks(String bookId) {
+    if (!_watchedAdBooks.contains(bookId)) {
+      _watchedAdBooks.add(bookId);
+      prefs.setStringList('ff_watchedAdBooks', _watchedAdBooks);
+    }
+  }
+
+  bool hasWatchedAdForBook(String bookId) {
+    return _watchedAdBooks.contains(bookId);
   }
 
   final _getCategoriesCacheManager = FutureRequestManager<ApiCallResponse>();
