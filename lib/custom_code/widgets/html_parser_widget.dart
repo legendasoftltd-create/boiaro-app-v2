@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_html_svg/flutter_html_svg.dart';
 import 'package:flutter_html_table/flutter_html_table.dart';
@@ -11,7 +13,7 @@ import 'package:a_i_ebook_app/custom_code/extensions/epub_text_indent_extension.
 
 /// Comprehensive HTML Parser Widget
 /// Handles all HTML tags with proper styling and rendering
-class HtmlParserWidget extends StatelessWidget {
+class HtmlParserWidget extends StatefulWidget {
   final String htmlContent;
   final double fontSize;
   final double lineHeight;
@@ -32,205 +34,265 @@ class HtmlParserWidget extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // Handle empty or null content
-    if (htmlContent.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    
-    // Preprocess HTML: Remove XML declaration and DOCTYPE, extract body with attributes
-    // This handles full HTML documents while preserving body styles like text-align
-    String htmlToProcess = htmlContent;
-    
-    // Check if this is a full HTML document
-    final hasXmlDeclaration = htmlContent.trim().startsWith('<?xml');
-    final hasDoctype = htmlContent.contains('<!DOCTYPE') || htmlContent.contains('<!doctype');
-    final hasHtmlStructure = htmlContent.contains('<html') && htmlContent.contains('<body');
-    
-    if (hasHtmlStructure) {
-      try {
-        // Remove XML declaration if present
-        if (hasXmlDeclaration) {
-          final xmlEnd = htmlContent.indexOf('?>');
-          if (xmlEnd != -1) {
-            htmlToProcess = htmlContent.substring(xmlEnd + 2).trim();
-          }
-        }
-        
-        // Remove DOCTYPE if present
-        if (hasDoctype) {
-          final doctypeEnd = htmlToProcess.indexOf('>', htmlToProcess.indexOf('<!DOCTYPE') == -1 
-              ? htmlToProcess.indexOf('<!doctype') 
-              : htmlToProcess.indexOf('<!DOCTYPE'));
-          if (doctypeEnd != -1) {
-            htmlToProcess = htmlToProcess.substring(doctypeEnd + 1).trim();
-          }
-        }
-        
-        // Parse and extract body content, wrap in div with body styles
-        // flutter_html doesn't handle standalone <body> tags well, so we use a div instead
-        try {
-          final document = html_parser.parse(htmlToProcess);
-          final body = document.querySelector('body');
-          if (body != null) {
-            final bodyContent = body.innerHtml;
-            
-            // Only extract if body has content
-            if (bodyContent.trim().isNotEmpty) {
-              // Extract body styles and apply to a wrapper div
-              final bodyStyle = body.attributes['style'] ?? '';
-              
-              // Add word-break CSS for Bengali and complex scripts
-              // This prevents words from breaking in the middle
-              final wordBreakStyle = 'word-break: normal; overflow-wrap: break-word;';
-              
-              if (bodyStyle.isNotEmpty) {
-                // Append word-break styles to existing body styles
-                final combinedStyle = bodyStyle.endsWith(';') 
-                    ? '$bodyStyle $wordBreakStyle'
-                    : '$bodyStyle; $wordBreakStyle';
-                // Wrap content in div with body's style
-                htmlToProcess = '<div style="$combinedStyle">$bodyContent</div>';
-              } else {
-                // No body styles, add word-break styles
-                htmlToProcess = '<div style="$wordBreakStyle">$bodyContent</div>';
-              }
-              
-              debugPrint('Body extracted successfully. Content length: ${bodyContent.length}, Final HTML length: ${htmlToProcess.length}');
-            } else {
-              debugPrint('Warning: Body content is empty');
-            }
-          } else {
-            debugPrint('Warning: Body tag not found in HTML');
-          }
-        } catch (e) {
-          debugPrint('Error extracting body: $e');
-          // Keep original htmlToProcess if extraction fails
-        }
-      } catch (e) {
-        debugPrint('Error preprocessing HTML: $e');
-        // If parsing fails, try to at least remove XML/DOCTYPE
-        if (hasXmlDeclaration) {
-          final xmlEnd = htmlContent.indexOf('?>');
-          if (xmlEnd != -1) {
-            htmlToProcess = htmlContent.substring(xmlEnd + 2).trim();
-          }
-        }
-        if (hasDoctype && htmlToProcess.contains('<!DOCTYPE')) {
-          final doctypeEnd = htmlToProcess.indexOf('>', htmlToProcess.indexOf('<!DOCTYPE'));
-          if (doctypeEnd != -1) {
-            htmlToProcess = htmlToProcess.substring(doctypeEnd + 1).trim();
-          }
-        }
+  State<HtmlParserWidget> createState() => _HtmlParserWidgetState();
+}
+
+class _HtmlParserWidgetState extends State<HtmlParserWidget> {
+  Future<String>? _processedHtmlFuture;
+  
+  // Cache for expensive style map to prevent rebuilding on every render
+  Map<String, Style>? _cachedStyles;
+  double? _cachedFontSize;
+  double? _cachedLineHeight;
+  AppThemeMode? _cachedThemeMode;
+  
+  // Debounce rendering to prevent ANR on large content
+  Timer? _renderDebounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _processHtml();
+  }
+
+  @override
+  void didUpdateWidget(HtmlParserWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reprocess if content or settings changed
+    if (oldWidget.htmlContent != widget.htmlContent ||
+        oldWidget.fontSize != widget.fontSize ||
+        oldWidget.lineHeight != widget.lineHeight) {
+      _processHtml();
+      
+      // Invalidate style cache if settings changed
+      if (oldWidget.fontSize != widget.fontSize ||
+          oldWidget.lineHeight != widget.lineHeight ||
+          oldWidget.themeMode != widget.themeMode) {
+        _cachedStyles = null;
+        _cachedFontSize = null;
+        _cachedLineHeight = null;
+        _cachedThemeMode = null;
       }
     }
-    
-    // Debug: Log what we're processing
-    if (htmlToProcess != htmlContent) {
-      debugPrint('Extracted body from full HTML document. Body length: ${htmlToProcess.length}');
-      debugPrint('Body preview: ${htmlToProcess.length > 200 ? htmlToProcess.substring(0, 200) : htmlToProcess}');
+  }
+
+  @override
+  void dispose() {
+    _renderDebounceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _processHtml() {
+    // Simplified HTML processing - minimal work to prevent ANR
+    // Let flutter_html do the heavy lifting as it's optimized for rendering
+    _processedHtmlFuture = Future(() async {
+      // Yield to allow UI updates
+      await Future.delayed(Duration.zero);
+      
+      // Handle empty or null content
+      if (widget.htmlContent.isEmpty) {
+        return '';
+      }
+
+      String htmlToProcess = widget.htmlContent;
+
+      // Only do minimal preprocessing - remove XML declaration and DOCTYPE
+      // These cause issues with flutter_html
+      if (htmlToProcess.trim().startsWith('<?xml')) {
+        final xmlEnd = htmlToProcess.indexOf('?>');
+        if (xmlEnd != -1) {
+          htmlToProcess = htmlToProcess.substring(xmlEnd + 2).trim();
+        }
+      }
+
+      if (htmlToProcess.contains('<!DOCTYPE') || htmlToProcess.contains('<!doctype')) {
+        final doctypeStart = htmlToProcess.indexOf('<!DOCTYPE') != -1 
+            ? htmlToProcess.indexOf('<!DOCTYPE')
+            : htmlToProcess.indexOf('<!doctype');
+        final doctypeEnd = htmlToProcess.indexOf('>', doctypeStart);
+        if (doctypeEnd != -1) {
+          htmlToProcess = htmlToProcess.substring(0, doctypeStart) + 
+                         htmlToProcess.substring(doctypeEnd + 1);
+        }
+      }
+
+      // Add word-break style to prevent text overflow
+      // Wrap in div if not already wrapped
+      if (!htmlToProcess.trim().startsWith('<html') && 
+          !htmlToProcess.trim().startsWith('<body')) {
+        htmlToProcess = '<div style="word-break: normal; overflow-wrap: break-word;">$htmlToProcess</div>';
+      }
+
+      return htmlToProcess;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.htmlContent.isEmpty) {
+      return const SizedBox.shrink();
     }
-    
+
     final (bgColor, txtColor) = _getThemeColors();
-    final cssStyles = _parseCssFromHtml(htmlToProcess);
-    
-    // Preprocess HTML to convert inline-block indentation spans to padding
-    final htmlWithIndentation = _convertInlineBlockIndentation(htmlToProcess, fontSize);
-    
-    // Preprocess HTML to apply CSS classes as inline styles
-    final processedHtml = _applyCssClassesToHtml(
-      htmlWithIndentation, 
-      cssStyles, 
-      fontSize,
-      baseLineHeight: lineHeight,
-    );
 
-    // Debug: Log processed HTML
-    debugPrint('Processed HTML length: ${processedHtml.length}');
-    if (processedHtml.length > 200) {
-      debugPrint('Processed HTML preview: ${processedHtml.substring(0, 200)}...');
-    } else {
-      debugPrint('Processed HTML: $processedHtml');
-    }
-
-    // Ensure processed HTML is not empty
-    if (processedHtml.isEmpty || processedHtml.trim().isEmpty) {
-      debugPrint('Warning: Processed HTML is empty after processing.');
-      debugPrint('Original length: ${htmlContent.length}, htmlToProcess length: ${htmlToProcess.length}');
-      debugPrint('htmlToProcess preview: ${htmlToProcess.length > 300 ? htmlToProcess.substring(0, 300) : htmlToProcess}');
-      // Return original HTML if processing removed everything
-      return Html(
-        data: htmlContent,
-        style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
-        extensions: _buildExtensions(context),
-      );
-    }
-
-    // Wrap in error boundary to catch rendering errors
-    return Builder(
-      builder: (context) {
-        try {
-          // Ensure we have valid HTML to render
-          final htmlToRender = processedHtml.trim().isNotEmpty ? processedHtml : htmlToProcess;
-          
-          if (htmlToRender.trim().isEmpty) {
-            debugPrint('Error: All HTML processing resulted in empty content');
-            return Center(
-              child: Text(
-                'No content to display',
-                style: TextStyle(color: txtColor),
+    return FutureBuilder<String>(
+      future: _processedHtmlFuture,
+      builder: (context, snapshot) {
+        // Show loading indicator while processing
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: CircularProgressIndicator(
+                color: FlutterFlowTheme.of(context).primary,
+                strokeWidth: 2.0,
               ),
-            );
-          }
-          
-          debugPrint('Rendering HTML widget with ${htmlToRender.length} characters');
-          debugPrint('HTML to render preview: ${htmlToRender.length > 300 ? htmlToRender.substring(0, 300) : htmlToRender}');
-          
-          return Html(
-            data: htmlToRender,
-            style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
-            extensions: _buildExtensions(context),
+            ),
           );
-        } catch (e, stackTrace) {
-          debugPrint('Error rendering HTML: $e');
-          debugPrint('Stack trace: $stackTrace');
-          debugPrint('Processed HTML length: ${processedHtml.length}');
-          debugPrint('htmlToProcess length: ${htmlToProcess.length}');
-          debugPrint('Original HTML length: ${htmlContent.length}');
-          debugPrint('Processed HTML preview: ${processedHtml.length > 200 ? processedHtml.substring(0, 200) : processedHtml}');
-          
-          // Fallback: try rendering htmlToProcess (before CSS processing)
-          try {
-            if (htmlToProcess.trim().isNotEmpty) {
-              return Html(
-                data: htmlToProcess,
-                style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
-                extensions: _buildExtensions(context),
-              );
-            }
-          } catch (e2) {
-            debugPrint('Error rendering htmlToProcess: $e2');
-          }
-          
-          // Final fallback: try rendering original HTML
-          try {
-            return Html(
-              data: htmlContent,
-              style: _buildHtmlStyles(context, fontSize, lineHeight, txtColor, bgColor, cssStyles),
-              extensions: _buildExtensions(context),
-            );
-          } catch (e3) {
-            debugPrint('Error rendering fallback HTML: $e3');
-            return Center(
-              child: Text(
-                'Error rendering content',
-                style: TextStyle(color: txtColor),
-              ),
-            );
-          }
+        }
+
+        // Handle errors
+        if (snapshot.hasError) {
+          debugPrint('Error processing HTML: ${snapshot.error}');
+          return Center(
+            child: Text(
+              'Error loading content',
+              style: TextStyle(color: txtColor),
+            ),
+          );
+        }
+
+        // Handle empty result
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Text(
+              'No content to display',
+              style: TextStyle(color: txtColor),
+            ),
+          );
+        }
+
+        final htmlToRender = snapshot.data!;
+
+        // Build or retrieve cached styles
+        Map<String, Style> styles;
+        if (_cachedStyles != null &&
+            _cachedFontSize == widget.fontSize &&
+            _cachedLineHeight == widget.lineHeight &&
+            _cachedThemeMode == widget.themeMode) {
+          // Use cached styles - FAST!
+          styles = _cachedStyles!;
+        } else {
+          // Build new styles and cache them
+          styles = _buildHtmlStyles(context, widget.fontSize, widget.lineHeight, 
+                                   txtColor, bgColor, {});
+          _cachedStyles = styles;
+          _cachedFontSize = widget.fontSize;
+          _cachedLineHeight = widget.lineHeight;
+          _cachedThemeMode = widget.themeMode;
+        }
+
+        // Check if content is large enough to require chunking
+        // Threshold: 50KB (50,000 characters)
+        const int chunkThreshold = 50000;
+        final bool needsChunking = htmlToRender.length > chunkThreshold;
+
+        if (needsChunking) {
+          // Use chunked rendering for large content
+          return _ChunkedHtmlRenderer(
+            htmlContent: htmlToRender,
+            styles: styles,
+            extensions: _buildExtensions(context),
+            textColor: txtColor,
+          );
+        } else {
+          // Use normal rendering for small content
+          return _buildNormalRenderer(htmlToRender, styles, txtColor, context);
         }
       },
     );
+  }
+
+  /// Build normal (non-chunked) renderer
+  Widget _buildNormalRenderer(
+    String htmlToRender,
+    Map<String, Style> styles,
+    Color txtColor,
+    BuildContext context,
+  ) {
+    return FutureBuilder<bool>(
+      future: _debouncedRender(),
+      builder: (context, renderSnapshot) {
+        if (renderSnapshot.connectionState == ConnectionState.waiting || 
+            renderSnapshot.data != true) {
+          // Show minimal loading indicator while debouncing
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: FlutterFlowTheme.of(context).primary,
+                  strokeWidth: 2.0,
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Render the processed HTML
+        return Builder(
+          builder: (context) {
+            try {
+              return Html(
+                data: htmlToRender,
+                style: styles,
+                extensions: _buildExtensions(context),
+              );
+            } catch (e, stackTrace) {
+              debugPrint('Error rendering HTML: $e');
+              debugPrint('Stack trace: $stackTrace');
+
+              // Fallback: try rendering original HTML
+              try {
+                return Html(
+                  data: widget.htmlContent,
+                  style: styles,
+                  extensions: _buildExtensions(context),
+                );
+              } catch (e2) {
+                debugPrint('Error rendering fallback HTML: $e2');
+                return Center(
+                  child: Text(
+                    'Error rendering content',
+                    style: TextStyle(color: txtColor),
+                  ),
+                );
+              }
+            }
+          },
+        );
+      },
+    );
+  }
+
+  /// Debounce rendering to prevent ANR
+  /// Returns a future that completes after a brief delay
+  Future<bool> _debouncedRender() async {
+    // Cancel any existing timer
+    _renderDebounceTimer?.cancel();
+    
+    // Create a completer to control when rendering happens
+    final completer = Completer<bool>();
+    
+    // Set a short delay to allow UI thread to breathe
+    // For large content, this prevents the UI from freezing
+    _renderDebounceTimer = Timer(const Duration(milliseconds: 50), () {
+      completer.complete(true);
+    });
+    
+    return completer.future;
   }
 
   /// Get theme colors based on theme mode
@@ -238,7 +300,7 @@ class HtmlParserWidget extends StatelessWidget {
     Color bgColor;
     Color txtColor;
     
-    switch (themeMode) {
+    switch (widget.themeMode) {
       case AppThemeMode.light:
         bgColor = Colors.white;
         txtColor = Colors.black;
@@ -277,11 +339,11 @@ class HtmlParserWidget extends StatelessWidget {
         backgroundColor: bgColor,
       ),
       "body": Style(
-        fontFamily: fontFamily,
+        fontFamily: widget.fontFamily,
         fontSize: FontSize(fontSize),
         letterSpacing: 0.3,
         lineHeight: LineHeight.em(lineHeight),
-        textAlign: isJustified ? TextAlign.justify : TextAlign.left,
+        textAlign: widget.isJustified ? TextAlign.justify : TextAlign.left,
         color: txtColor,
         backgroundColor: bgColor,
         margin: Margins.zero,
@@ -1483,12 +1545,210 @@ class HtmlParserWidget extends StatelessWidget {
       EpubTextIndentExtension(), // Add text-indent support
     ];
 
+
     // Add EPUB image extension if epubBook is provided
-    if (epubBook != null) {
-      extensions.add(EpubImageExtension(epubBook!));
+    if (widget.epubBook != null) {
+      extensions.add(EpubImageExtension(widget.epubBook!));
     }
 
     return extensions;
   }
 }
 
+/// Parameters for HTML processing in isolate
+class HtmlProcessingParams {
+  final String htmlContent;
+  final double fontSize;
+  final double lineHeight;
+
+  HtmlProcessingParams({
+    required this.htmlContent,
+    required this.fontSize,
+    required this.lineHeight,
+  });
+}
+
+/// Chunked HTML Renderer - Splits large HTML into smaller chunks
+/// to prevent ANR when rendering very large content
+class _ChunkedHtmlRenderer extends StatefulWidget {
+  final String htmlContent;
+  final Map<String, Style> styles;
+  final List<HtmlExtension> extensions;
+  final Color textColor;
+
+  const _ChunkedHtmlRenderer({
+    required this.htmlContent,
+    required this.styles,
+    required this.extensions,
+    required this.textColor,
+  });
+
+  @override
+  State<_ChunkedHtmlRenderer> createState() => _ChunkedHtmlRendererState();
+}
+
+class _ChunkedHtmlRendererState extends State<_ChunkedHtmlRenderer> {
+  List<String> _chunks = [];
+  int _renderedChunks = 0;
+  Timer? _chunkTimer;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeChunks();
+  }
+
+  @override
+  void dispose() {
+    _chunkTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Initialize chunks from HTML content
+  Future<void> _initializeChunks() async {
+    // Split HTML into chunks in a background isolate to avoid blocking UI
+    final chunks = await compute(_splitHtmlIntoChunks, widget.htmlContent);
+    
+    if (mounted) {
+      setState(() {
+        _chunks = chunks;
+        _isInitialized = true;
+        _renderedChunks = 1; // Start with first chunk
+      });
+
+      // Progressively render remaining chunks
+      _renderNextChunk();
+    }
+  }
+
+  /// Render next chunk with a delay
+  void _renderNextChunk() {
+    if (_renderedChunks >= _chunks.length) {
+      return; // All chunks rendered
+    }
+
+    // Render next chunk after a small delay
+    _chunkTimer = Timer(const Duration(milliseconds: 100), () {
+      if (mounted && _renderedChunks < _chunks.length) {
+        setState(() {
+          _renderedChunks++;
+        });
+        _renderNextChunk(); // Continue rendering
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized || _chunks.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                color: FlutterFlowTheme.of(context).primary,
+                strokeWidth: 2.0,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Loading large content...',
+                style: TextStyle(color: widget.textColor),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Render chunks progressively
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Render loaded chunks
+        for (int i = 0; i < _renderedChunks && i < _chunks.length; i++)
+          Html(
+            key: ValueKey('chunk_$i'),
+            data: _chunks[i],
+            style: widget.styles,
+            extensions: widget.extensions,
+          ),
+        
+        // Show loading indicator if more chunks to load
+        if (_renderedChunks < _chunks.length)
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: FlutterFlowTheme.of(context).primary,
+                  strokeWidth: 2.0,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Split HTML into chunks (runs in isolate)
+/// This splits at paragraph boundaries to avoid breaking content mid-element
+List<String> _splitHtmlIntoChunks(String html) {
+  const int chunkSize = 50000; // 50KB per chunk
+  
+  if (html.length <= chunkSize) {
+    return [html]; // No need to split
+  }
+
+  final List<String> chunks = [];
+  
+  // Try to split at paragraph boundaries
+  // Look for closing tags: </p>, </div>, </section>, </article>
+  final splitPatterns = ['</p>', '</div>', '</section>', '</article>', '</h1>', '</h2>', '</h3>', '</h4>', '</h5>', '</h6>'];
+  
+  int currentPos = 0;
+  
+  while (currentPos < html.length) {
+    int endPos = currentPos + chunkSize;
+    
+    if (endPos >= html.length) {
+      // Last chunk
+      chunks.add(html.substring(currentPos));
+      break;
+    }
+    
+    // Find the nearest closing tag before endPos
+    int bestSplitPos = endPos;
+    
+    for (final pattern in splitPatterns) {
+      int pos = html.lastIndexOf(pattern, endPos);
+      if (pos > currentPos && pos < endPos) {
+        // Found a good split point
+        bestSplitPos = pos + pattern.length;
+        break;
+      }
+    }
+    
+    // If no good split point found, just split at chunkSize
+    if (bestSplitPos == endPos && bestSplitPos < html.length) {
+      // Try to at least avoid splitting in the middle of a tag
+      while (bestSplitPos < html.length && html[bestSplitPos] != '<' && html[bestSplitPos] != '>') {
+        bestSplitPos++;
+        if (bestSplitPos - currentPos > chunkSize + 1000) {
+          // Don't search too far
+          break;
+        }
+      }
+    }
+    
+    chunks.add(html.substring(currentPos, bestSplitPos));
+    currentPos = bestSplitPos;
+  }
+  
+  return chunks;
+}

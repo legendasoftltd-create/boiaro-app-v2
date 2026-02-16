@@ -102,7 +102,21 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   // Auto-scroll timers
   Timer? _autoScrollTimer; // For interval-based auto-scroll
   Timer? _continuousScrollTimer; // For continuous auto-scroll
+  
+  // Button click debouncing to prevent rapid clicks from queuing operations
+  DateTime? _lastButtonClick;
+  static const _buttonDebounceMs = 300; // 300ms debounce
 
+  /// Check if enough time has passed since last button click
+  bool _canProcessClick() {
+    final now = DateTime.now();
+    if (_lastButtonClick != null &&
+        now.difference(_lastButtonClick!).inMilliseconds < _buttonDebounceMs) {
+      return false; // Too soon, ignore click
+    }
+    _lastButtonClick = now;
+    return true;
+  }
 
   @override
   void initState() {
@@ -379,6 +393,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   }
 
   void setCurrentPage(PdfViewerProvider provider) {
+    // Debounce rapid clicks to prevent queuing multiple operations
+    if (!_canProcessClick()) return;
+    
     if (provider.readerType == ReaderType.epub) {
       if (provider.currentEpubChapterIndex < provider.epubChapters.length - 1) {
         EpubReaderWidget.loadEpubChapter(
@@ -404,6 +421,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   }
 
   void setCurrentMinusPage(PdfViewerProvider provider) {
+    // Debounce rapid clicks to prevent queuing multiple operations
+    if (!_canProcessClick()) return;
+    
     if (provider.readerType == ReaderType.epub) {
       if (provider.currentEpubChapterIndex > 0) {
         EpubReaderWidget.loadEpubChapter(

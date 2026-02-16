@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -10,7 +11,6 @@ import '/backend/backend.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/providers/pdf_viewer_provider.dart';
-import '/models/highlight_model.dart';
 import 'package:a_i_ebook_app/custom_code/extensions/custom_text_selection_controls.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/html_parser_widget.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/pdf_viewer_helpers.dart';
@@ -32,8 +32,9 @@ class EpubReaderWidget {
 
     provider.setLoadingEpub(true);
     try {
+      // Step 1: Load file bytes on main thread (required for rootBundle/http)
       List<int> bytes;
-
+      
       if (filePath.startsWith('http')) {
         final response = await http.get(Uri.parse(filePath));
         bytes = response.bodyBytes;
@@ -45,9 +46,14 @@ class EpubReaderWidget {
         bytes = await file.readAsBytes();
       }
 
-      final epubBook = await epubx.EpubReader.readBook(bytes);
+      // Step 2: Parse EPUB in background isolate (this is the heavy CPU work)
+      // This prevents ANR when parsing large EPUB files
+      final epubBook = await compute(_parseEpubInIsolate, bytes);
+      
       provider.setEpubBook(epubBook);
-      final chapters = getChaptersFromSpine(epubBook);
+      
+      // Step 3: Extract chapters (also heavy, do in isolate)
+      final chapters = await compute(_getChaptersInIsolate, epubBook);
       provider.setEpubChapters(chapters);
 
       if (chapters.isNotEmpty) {
@@ -67,6 +73,124 @@ class EpubReaderWidget {
       if (context.mounted) provider.setLoadingEpub(false);
     }
   }
+
+  /// Parse EPUB bytes in background isolate (ANR protection)
+  /// This is the CPU-intensive operation that blocks the main thread
+  static Future<epubx.EpubBook> _parseEpubInIsolate(List<int> bytes) async {
+    return await epubx.EpubReader.readBook(bytes);
+  }
+
+  /// Extract chapters in background isolate (ANR protection)
+  static List<epubx.EpubChapter> _getChaptersInIsolate(epubx.EpubBook epubBook) {
+    return getChaptersFromSpine(epubBook);
+  }
+
+  /// Apply highlights in background isolate (ANR protection)
+  /// This prevents the UI thread from freezing during highlight processing
+  static String _applyHighlightsInIsolate(Map<String, dynamic> params) {
+    final content = params['content'] as String;
+    final highlightDataList = params['highlights'] as List<dynamic>;
+    
+    // Convert back to a simple format we can work with
+    final highlights = highlightDataList.map((data) {
+      final map = data as Map<String, dynamic>;
+      return {
+        'id': map['id'] as String,
+        'text': map['text'] as String,
+        'startPosition': map['startPosition'] as int,
+        'endPosition': map['endPosition'] as int,
+      };
+    }).toList();
+    
+    // Sort highlights by end position (descending) so we apply from end to start
+    // This ensures that applying earlier highlights doesn't affect positions of later ones
+    highlights.sort((a, b) => (b['endPosition'] as int).compareTo(a['endPosition'] as int));
+    
+    var processedContent = content;
+    
+    for (final highlight in highlights) {
+      processedContent = _applyHighlightAtPositionIsolate(
+        processedContent,
+        highlight['id'] as String,
+        highlight['text'] as String,
+        highlight['startPosition'] as int,
+        highlight['endPosition'] as int,
+      );
+    }
+    
+    return processedContent;
+  }
+
+  /// Apply single highlight at position (isolate-safe version)
+  static String _applyHighlightAtPositionIsolate(
+    String htmlContent,
+    String highlightId,
+    String text,
+    int startPos,
+    int endPos,
+  ) {
+    // Check if already highlighted
+    if (htmlContent.contains('data-highlight-id="$highlightId"')) {
+      return htmlContent; // Already highlighted
+    }
+
+    // Validate positions
+    if (startPos < 0 || endPos <= startPos || endPos > htmlContent.length) {
+      // Fallback to text search if positions are invalid
+      final normalizedText = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+      if (htmlContent.contains(normalizedText)) {
+        final index = htmlContent.indexOf(normalizedText);
+        if (index != -1 && !_isInsideMarkIsolate(index, htmlContent)) {
+          return htmlContent.replaceFirst(
+            normalizedText,
+            '<mark data-highlight-id="$highlightId" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedText</mark>',
+          );
+        }
+      }
+      return htmlContent;
+    }
+
+    // Check if position is already inside a mark tag
+    if (_isInsideMarkIsolate(startPos, htmlContent)) {
+      return htmlContent; // Already highlighted
+    }
+
+    // Extract the text at the position
+    final highlightedText = htmlContent.substring(startPos, endPos);
+
+    // Check if this text is already wrapped in a mark tag
+    if (highlightedText.contains('<mark') ||
+        highlightedText.contains('</mark>')) {
+      return htmlContent; // Already highlighted
+    }
+
+    // Apply highlight at the exact position
+    final beforeText = htmlContent.substring(0, startPos);
+    final afterText = htmlContent.substring(endPos);
+
+    return beforeText +
+        '<mark data-highlight-id="$highlightId" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$highlightedText</mark>' +
+        afterText;
+  }
+
+  /// Check if position is inside a mark tag (isolate-safe version)
+  static bool _isInsideMarkIsolate(int position, String content) {
+    int start = position;
+    while (start > 0 && start > position - 100) {
+      if (start + 5 <= content.length &&
+          content.substring(start, start + 5) == '<mark') {
+        return true;
+      }
+      if (start + 6 <= content.length &&
+          content.substring(start, start + 6) == '</mark') {
+        return false;
+      }
+      start--;
+    }
+    return false;
+  }
+
 
   /// Get all chapters from Spine (Reading Order)
   /// This ensures we include all split files (e.g. index_split_000.html, index_split_001.html)
@@ -220,7 +344,7 @@ class EpubReaderWidget {
       provider.setChangingChapter(true);
 
       // Add a small delay to show loading indicator
-      Future.delayed(const Duration(milliseconds: 100), () {
+      Future.delayed(const Duration(milliseconds: 100), () async {
         provider.setCurrentEpubChapterIndex(index);
 
         final chapter = chapters[index];
@@ -232,18 +356,27 @@ class EpubReaderWidget {
           onOriginalContentReady(originalContent);
         }
 
-        // Apply highlights for this chapter only (from saved highlights)
-        var content = originalContent;
+        // Apply highlights in background isolate to prevent blocking main thread and ANR
         final chapterHighlights = provider.getHighlightsForChapter(chapterId);
-
-        // Sort highlights by end position (descending) so we apply from end to start
-        // This ensures that applying earlier highlights doesn't affect positions of later ones
-        final sortedHighlights = List<HighlightModel>.from(chapterHighlights)
-          ..sort((a, b) => b.endPosition.compareTo(a.endPosition));
-
-        for (final highlight in sortedHighlights) {
-          // Apply highlight at specific position
-          content = _applyHighlightAtPosition(content, highlight);
+        
+        String content;
+        if (chapterHighlights.isEmpty) {
+          // No highlights, use original content
+          content = originalContent;
+        } else {
+          // Process highlights in background isolate (prevents ANR)
+          // Convert highlights to serializable format for isolate
+          final highlightData = chapterHighlights.map((h) => {
+            'id': h.id,
+            'text': h.text,
+            'startPosition': h.startPosition,
+            'endPosition': h.endPosition,
+          }).toList();
+          
+          content = await compute(_applyHighlightsInIsolate, {
+            'content': originalContent,
+            'highlights': highlightData,
+          });
         }
 
         // Apply search highlights if there's an active search
@@ -584,75 +717,6 @@ class EpubReaderWidget {
     );
   }
 
-  /// Apply highlight at specific position in HTML content
-  static String _applyHighlightAtPosition(
-      String htmlContent, HighlightModel highlight) {
-    // Check if already highlighted
-    if (htmlContent.contains('data-highlight-id="${highlight.id}"')) {
-      return htmlContent; // Already highlighted
-    }
-
-    // Use the saved position to apply highlight accurately
-    final startPos = highlight.startPosition;
-    final endPos = highlight.endPosition;
-
-    // Validate positions
-    if (startPos < 0 || endPos <= startPos || endPos > htmlContent.length) {
-      // Fallback to text search if positions are invalid
-      final text = highlight.text;
-      final normalizedText = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-
-      if (htmlContent.contains(normalizedText)) {
-        final index = htmlContent.indexOf(normalizedText);
-        if (index != -1 && !_isInsideMark(index, htmlContent)) {
-          return htmlContent.replaceFirst(
-            normalizedText,
-            '<mark data-highlight-id="${highlight.id}" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedText</mark>',
-          );
-        }
-      }
-      return htmlContent;
-    }
-
-    // Check if position is already inside a mark tag
-    if (_isInsideMark(startPos, htmlContent)) {
-      return htmlContent; // Already highlighted
-    }
-
-    // Extract the text at the position
-    final highlightedText = htmlContent.substring(startPos, endPos);
-
-    // Check if this text is already wrapped in a mark tag
-    if (highlightedText.contains('<mark') ||
-        highlightedText.contains('</mark>')) {
-      return htmlContent; // Already highlighted
-    }
-
-    // Apply highlight at the exact position
-    final beforeText = htmlContent.substring(0, startPos);
-    final afterText = htmlContent.substring(endPos);
-
-    return beforeText +
-        '<mark data-highlight-id="${highlight.id}" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$highlightedText</mark>' +
-        afterText;
-  }
-
-  /// Check if position is inside a mark tag
-  static bool _isInsideMark(int position, String content) {
-    int start = position;
-    while (start > 0 && start > position - 100) {
-      if (start + 5 <= content.length &&
-          content.substring(start, start + 5) == '<mark') {
-        return true;
-      }
-      if (start + 6 <= content.length &&
-          content.substring(start, start + 6) == '</mark') {
-        return false;
-      }
-      start--;
-    }
-    return false;
-  }
 
   /// Find the index of an anchor in the content
   static int _findAnchorIndex(String content, String anchor) {

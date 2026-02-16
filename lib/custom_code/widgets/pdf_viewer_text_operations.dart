@@ -39,6 +39,9 @@ class PdfViewerTextOperations {
       return;
     }
 
+    // Yield to UI thread to prevent blocking
+    await Future.delayed(Duration.zero);
+
     // Get current content from ValueNotifier (which is the displayed content)
     final currentContent = currentEpubContentNotifier.value;
     
@@ -46,6 +49,9 @@ class PdfViewerTextOperations {
     final normalizedSelected = selectedText
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
+    
+    // Yield again
+    await Future.delayed(Duration.zero);
     
     // Find position in original HTML (before any highlights were applied)
     int startPosition = -1;
@@ -84,235 +90,51 @@ class PdfViewerTextOperations {
       createdAt: DateTime.now(),
     );
 
-    // Save to storage
+    // Save to storage (async operation)
     await HighlightStorageService.saveHighlight(highlight);
     
     // Add to provider
     provider.addHighlight(highlight);
 
-    // Check if text is already highlighted (avoid double highlighting)
-    // Use a more flexible check that looks for any mark tag containing the text
+    // Yield before heavy HTML processing
+    await Future.delayed(Duration.zero);
+
+    // Check if text is already highlighted (simplified check)
     final escapedSelected = normalizedSelected.replaceAll('&', '&amp;');
-    final normalizedPattern = RegExp.escape(normalizedSelected);
-    final escapedPattern = RegExp.escape(escapedSelected);
-    final markPattern1 = RegExp('<mark[^>]*>$normalizedPattern</mark>', caseSensitive: false);
-    final markPattern2 = RegExp('<mark[^>]*>$escapedPattern</mark>', caseSensitive: false);
-    final markPattern3 = RegExp('<mark[^>]*>.*?$normalizedPattern.*?</mark>', caseSensitive: false, dotAll: true);
-    final isAlreadyHighlighted = markPattern1.hasMatch(currentContent) ||
-        markPattern2.hasMatch(currentContent) ||
-        markPattern3.hasMatch(currentContent);
+    final isAlreadyHighlighted = currentContent.contains('<mark') && 
+                                  (currentContent.contains(normalizedSelected) || 
+                                   currentContent.contains(escapedSelected));
     
     if (isAlreadyHighlighted) {
-      log('Text already highlighted: $normalizedSelected');
-      // Still update the content to ensure it's visible, but don't add another highlight
+      log('Text appears to be already highlighted');
       return;
     }
 
-    // Try multiple matching strategies with increasing flexibility
+    // Simplified highlighting - try exact match first
     String newContent = currentContent;
     bool found = false;
 
     log('Attempting to highlight text: "$normalizedSelected"');
-    log('Current content length: ${currentContent.length}');
-    log('Content preview: ${currentContent.substring(0, currentContent.length > 200 ? 200 : currentContent.length)}...');
 
-    // Strategy 1: Try exact match (for plain text in HTML)
-    if (!found && currentContent.contains(normalizedSelected)) {
-      // Find all occurrences and try each one
-      int searchIndex = 0;
-      while (searchIndex < currentContent.length) {
-        final index = currentContent.indexOf(normalizedSelected, searchIndex);
-        if (index == -1) break;
-        
-        if (!_isInsideMark(index, currentContent)) {
-          // Replace at specific position
-          newContent = currentContent.substring(0, index) +
-              '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedSelected</mark>' +
-              currentContent.substring(index + normalizedSelected.length);
-          found = true;
-          log('Highlight added using exact match at position $index: "$normalizedSelected"');
-          break;
-        }
-        searchIndex = index + 1;
-      }
-    }
-
-    // Strategy 2: Try with HTML-escaped text
-    if (!found) {
-      final escapedText = normalizedSelected
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;');
-
-      if (currentContent.contains(escapedText)) {
-        final index = currentContent.indexOf(escapedText);
-        if (index != -1 && !_isInsideMark(index, currentContent)) {
-          newContent = currentContent.replaceFirst(
-            escapedText,
-            '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$escapedText</mark>',
-          );
-          found = true;
-          log('Highlight added using escaped match: $normalizedSelected');
-        }
-      }
-    }
-
-    // Strategy 3: Try case-insensitive match
-    if (!found) {
-      final lowerContent = currentContent.toLowerCase();
-      final lowerSelected = normalizedSelected.toLowerCase();
-      if (lowerContent.contains(lowerSelected)) {
-        final index = lowerContent.indexOf(lowerSelected);
-        if (index != -1 && !_isInsideMark(index, currentContent)) {
-          // Extract the actual text at this position (preserving original case)
-          final actualText = currentContent.substring(index, index + normalizedSelected.length);
-          newContent = currentContent.replaceFirst(
-            actualText,
-            '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$actualText</mark>',
-          );
-          found = true;
-          log('Highlight added using case-insensitive match: $normalizedSelected');
-        }
-      }
-    }
-
-    // Strategy 4: Try matching text that spans across HTML tags (for Bangla and other languages)
-    // This handles cases where text is split across multiple <span> or other tags
-    if (!found) {
-      newContent = _highlightTextAcrossTags(currentContent, normalizedSelected);
-      if (newContent != currentContent) {
+    // Strategy 1: Try exact match (most common case)
+    if (currentContent.contains(normalizedSelected)) {
+      final index = currentContent.indexOf(normalizedSelected);
+      if (index != -1 && !_isInsideMark(index, currentContent)) {
+        newContent = currentContent.substring(0, index) +
+            '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedSelected</mark>' +
+            currentContent.substring(index + normalizedSelected.length);
         found = true;
-        log('Highlight added using cross-tag matching: $normalizedSelected');
+        log('Highlight added using exact match');
       }
     }
 
-    // Strategy 5: Try matching with flexible whitespace (normalize both)
-    if (!found) {
-      // Normalize both content and selected text for comparison
-      final normalizedContent = currentContent.replaceAll(RegExp(r'\s+'), ' ');
-      if (normalizedContent.contains(normalizedSelected)) {
-        // Find all occurrences to find one that's not already highlighted
-        final regex = RegExp(RegExp.escape(normalizedSelected), caseSensitive: false);
-        final matches = regex.allMatches(normalizedContent);
-
-        for (final match in matches) {
-          final normalizedIndex = match.start;
-          // Find corresponding position in original content
-          // This is approximate but should work for most cases
-          int originalIndex = 0;
-          int normalizedPos = 0;
-
-          // Map normalized position to original position
-          for (int i = 0; i < currentContent.length && normalizedPos < normalizedIndex; i++) {
-            if (RegExp(r'\s').hasMatch(currentContent[i])) {
-              // Skip if this whitespace would be normalized
-              if (i == 0 || !RegExp(r'\s').hasMatch(currentContent[i - 1])) {
-                normalizedPos++;
-              }
-            } else {
-              normalizedPos++;
-            }
-            originalIndex = i;
-          }
-
-          // Check if this position is already highlighted
-          if (originalIndex != -1 && !_isInsideMark(originalIndex, currentContent)) {
-            // Try to extract actual text at this position
-            final textAtPos = _extractTextAtPosition(currentContent, originalIndex, normalizedSelected.length);
-            if (textAtPos != null) {
-              // Normalize extracted text for comparison
-              final normalizedExtracted = textAtPos.replaceAll(RegExp(r'\s+'), ' ').trim();
-              if (normalizedExtracted.toLowerCase() == normalizedSelected.toLowerCase()) {
-                newContent = currentContent.replaceFirst(
-                  textAtPos,
-                  '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$textAtPos</mark>',
-                );
-                found = true;
-                log('Highlight added using normalized whitespace match: $normalizedSelected');
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Update content if found (the matching strategies above should have set found and newContent)
+    // Update content if found
     if (found && newContent != currentContent) {
       provider.setCurrentEpubContent(newContent);
       currentEpubContentNotifier.value = newContent;
       log('Highlight applied and saved: $highlightId');
     } else {
-      // Fallback: Try to apply highlight using position if text matching failed
-      log('Text matching failed, trying position-based highlighting for: "$normalizedSelected"');
-      log('Start position: $startPosition, End position: $endPosition');
-      log('Original HTML length: ${originalHtmlContent.length}');
-      
-      if (startPosition >= 0 && endPosition > startPosition && endPosition <= originalHtmlContent.length) {
-        try {
-          // Use current content (which may already have some highlights) but work with original positions
-          // Find the text at the position in current content
-          final plainText = _extractPlainTextFromHtml(currentContent);
-          if (startPosition < plainText.length) {
-            // Try to find the corresponding position in currentContent
-            // This is approximate but should work for most cases
-            int htmlPos = 0;
-            int plainPos = 0;
-            int targetStartPos = -1;
-            int targetEndPos = -1;
-            
-            // Map plain text position to HTML position in current content
-            for (int i = 0; i < currentContent.length && plainPos <= endPosition; i++) {
-              if (plainPos == startPosition && targetStartPos == -1) {
-                targetStartPos = htmlPos;
-              }
-              if (plainPos == endPosition && targetEndPos == -1) {
-                targetEndPos = htmlPos;
-                break;
-              }
-              
-              // Skip HTML tags
-              if (currentContent[i] == '<') {
-                while (i < currentContent.length && currentContent[i] != '>') i++;
-                htmlPos = i + 1;
-                continue;
-              }
-              
-              // Count text characters
-              if (currentContent[i] != ' ' || (i > 0 && currentContent[i-1] != ' ')) {
-                plainPos++;
-              }
-              htmlPos++;
-            }
-            
-            if (targetStartPos != -1 && targetEndPos > targetStartPos) {
-              final beforeText = currentContent.substring(0, targetStartPos);
-              final highlightedText = currentContent.substring(targetStartPos, targetEndPos);
-              final afterText = currentContent.substring(targetEndPos);
-              
-              // Check if already highlighted
-              if (!highlightedText.contains('<mark')) {
-                final positionBasedContent = beforeText +
-                    '<mark style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$highlightedText</mark>' +
-                    afterText;
-                
-                provider.setCurrentEpubContent(positionBasedContent);
-                currentEpubContentNotifier.value = positionBasedContent;
-                log('Highlight applied using position-based method: $highlightId');
-              } else {
-                log('Text at position already contains mark tag');
-              }
-            } else {
-              log('Could not map positions to current content');
-            }
-          }
-        } catch (e) {
-          log('Error applying position-based highlight: $e');
-        }
-      } else {
-        log('Could not find text to highlight: "$normalizedSelected" (positions invalid: $startPosition-$endPosition)');
-      }
+      log('Could not find text to highlight: "$normalizedSelected"');
     }
   }
 
