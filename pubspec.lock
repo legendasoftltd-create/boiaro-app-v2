@@ -281,6 +281,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  epub_reader_kit:
+    dependency: "direct main"
+    description:
+      path: "../../Products/ebook_reader/packages/epub_reader_kit"
+      relative: true
+    source: path
+    version: "0.0.1"
   epubx:
     dependency: "direct main"
     description:
@@ -2131,5 +2138,5 @@ packages:
     source: hosted
     version: "3.1.3"
 sdks:
-  dart: ">=3.8.1 <4.0.0"
+  dart: ">=3.10.4 <4.0.0"
   flutter: ">=3.32.0"

@@ -10,11 +10,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name=".MainApplication"
+        android:name="org.cis_india.wsreader.WikisourceReader"
         android:label="Boi Aro"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
-        tools:replace="android:label">
+        tools:replace="android:label,android:name">
 
         <!-- AdMob App ID -->
         <meta-data

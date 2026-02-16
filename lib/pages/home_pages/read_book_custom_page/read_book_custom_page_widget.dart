@@ -1,9 +1,10 @@
-import 'package:a_i_ebook_app/pages/cart_pages/test.dart';
+import 'package:epub_reader_kit/epub_reader_kit.dart';
 
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'read_book_custom_page_model.dart';
@@ -35,6 +36,11 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget> {
   late ReadBookCustomPageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isOpeningEpub = false;
+  String? _epubError;
+
+  bool get _isEpub =>
+      (widget.pdf ?? '').toLowerCase().trim().contains('.epub');
 
   @override
   void initState() {
@@ -50,7 +56,39 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget> {
       FFAppState().update(() {});
     });
 
+    if (_isEpub && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      SchedulerBinding.instance.addPostFrameCallback((_) async {
+        await _openEpubWithPlugin();
+      });
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+  }
+
+  Future<void> _openEpubWithPlugin() async {
+    final path = widget.pdf?.trim();
+    if (path == null || path.isEmpty || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isOpeningEpub = true;
+      _epubError = null;
+    });
+
+    try {
+      final isRemote = path.startsWith('http://') || path.startsWith('https://');
+      await EpubReaderService.readBook(
+        epubUrl: isRemote ? path : null,
+        filePath: isRemote ? null : path,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _epubError = e.toString());
+    } finally {
+      if (!mounted) return;
+      setState(() => _isOpeningEpub = false);
+    }
   }
 
   @override
@@ -74,25 +112,44 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget> {
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         body: SafeArea(
           top: true,
-          child: custom_widgets.FlutterPdfViewWidget(
-            width: double.infinity,
-            height: double.infinity,
-            filePath: widget.pdf,
-            // filePath: "https://raw.githubusercontent.com/ai-rayhan/qdata/refs/heads/main/tes%20uno.epub",
-            // filePath: "assets/pdfs/test.epub",
-            namePage: widget.name,
-          ),
-        //   child:  EpubReaderWidget(
-        //    epubPath: "assets/pdfs/test.epub",
-        //    bookTitle: "Test Book",
-        //    themeColor: Colors.blue,
-        //    enableTts: true,
-        //    allowSharing: true,
-        //    onLocationChanged: (locator) {
-        //      print('Reading progress: ${locator.toJson()}');
-        //      // Save progress to database or shared preferences
-        //    },
-        //  ),
+          child: _isEpub &&
+                  !kIsWeb &&
+                  defaultTargetPlatform == TargetPlatform.android
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_isOpeningEpub) ...[
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Opening EPUB reader...',
+                            style: FlutterFlowTheme.of(context).bodyMedium,
+                          ),
+                        ] else ...[
+                          Text(
+                            _epubError ?? 'Open this EPUB in native reader',
+                            textAlign: TextAlign.center,
+                            style: FlutterFlowTheme.of(context).bodyMedium,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _openEpubWithPlugin,
+                            child: const Text('Open EPUB Reader'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                )
+              : custom_widgets.FlutterPdfViewWidget(
+                  width: double.infinity,
+                  height: double.infinity,
+                  filePath: widget.pdf,
+                  namePage: widget.name,
+                ),
         ),
       ),
     );
