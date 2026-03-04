@@ -95,6 +95,12 @@ class EbookGroup {
   static SocialLoginCall socialLoginCall = SocialLoginCall();
   static GetFeaturedBooksByCategoryApiCall getFeaturedBooksByCategoryApiCall =
       GetFeaturedBooksByCategoryApiCall();
+  static BookViewApiCall bookViewApiCall = BookViewApiCall();
+  static BookReadingStartApiCall bookReadingStartApiCall =
+      BookReadingStartApiCall();
+  static BookReadingEndApiCall bookReadingEndApiCall = BookReadingEndApiCall();
+  static BookReadingProgressApiCall bookReadingProgressApiCall =
+      BookReadingProgressApiCall();
 }
 
 class SocialLoginCall {
@@ -302,6 +308,202 @@ class UserBookPurchaseRecordsApiCall {
   String? message(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.message''',
+      ));
+  int? error(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.error''',
+      ));
+}
+
+class BookReadingStartApiCall {
+  Future<ApiCallResponse> call({
+    String? bookId = '',
+    String? userId = '',
+    String? sessionId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "bookId": "${bookId}",
+  "userId": "${userId}",
+  "sessionId": "${sessionId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'BookReadingStartApi',
+      apiUrl: '${baseUrl}book/reading/start',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+  int? error(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.error''',
+      ));
+}
+
+class BookViewApiCall {
+  Future<ApiCallResponse> call({
+    String? bookId = '',
+    String? userId = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final ffApiRequestBody = '''
+{
+  "bookId": "${bookId}",
+  "userId": "${userId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'BookViewApi',
+      apiUrl: '${baseUrl}book/view',
+      callType: ApiCallType.POST,
+      headers: {},
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+  int? error(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.error''',
+      ));
+}
+
+class BookReadingEndApiCall {
+  Future<ApiCallResponse> call({
+    String? sessionId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "sessionId": "${sessionId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'BookReadingEndApi',
+      apiUrl: '${baseUrl}book/reading/end',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+  int? duration(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.duration''',
+      ));
+  int? error(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.error''',
+      ));
+}
+
+class BookReadingProgressApiCall {
+  Future<ApiCallResponse> call({
+    String? bookId = '',
+    String? userId = '',
+    int? percentage = 0,
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "bookId": "${bookId}",
+  "userId": "${userId}",
+  "percentage": ${percentage}
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'BookReadingProgressApi',
+      apiUrl: '${baseUrl}book/reading/progress',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+  bool? completed(dynamic response) => castToType<bool>(getJsonField(
+        response,
+        r'''$.data.completed''',
       ));
   int? error(dynamic response) => castToType<int>(getJsonField(
         response,
@@ -1588,6 +1790,10 @@ class GetbookdetailsApiCall {
   int? download(dynamic response) => castToType<int>(getJsonField(
         response,
         r'''$.data.bookDetails[:].download''',
+      ));
+  int? viewCount(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].viewCount''',
       ));
   List? bookDetails(dynamic response) => getJsonField(
         response,

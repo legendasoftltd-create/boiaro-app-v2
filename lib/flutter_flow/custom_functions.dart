@@ -73,18 +73,22 @@ bool? checkFavOrNot(
   List<dynamic>? favList,
   String? bookId,
 ) {
-  bool value = false;
-  if (favList != null && favList.isNotEmpty) {
-    for (var element in favList) {
-      if (element["bookDetails"]["_id"].toString() == bookId!.toString()) {
-        value = true;
-        break;
+  if (bookId == null || bookId.isEmpty || favList == null || favList.isEmpty) {
+    return false;
+  }
+
+  for (final element in favList) {
+    if (element is Map) {
+      final bookDetails = element['bookDetails'];
+      if (bookDetails is Map) {
+        final favBookId = bookDetails['_id']?.toString();
+        if (favBookId != null && favBookId == bookId) {
+          return true;
+        }
       }
     }
-  } else {
-    value = false;
   }
-  return value;
+  return false;
 }
 
 String capitalizeFirst(String input) {

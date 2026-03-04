@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.0.14+14
+version: 1.0.17+17
 
 environment:
   sdk: ">=3.5.3 <4.0.0"
@@ -64,6 +64,7 @@ dependencies:
   mime_type: ^1.0.1
   page_transition: ^2.2.1
   path_provider: ^2.1.5
+  path: ^1.9.0
 
   pdfx: ^2.9.1
   percent_indicator: ^4.2.5
@@ -103,7 +104,7 @@ dependencies:
   in_app_update: ^4.2.5
   google_mobile_ads: ^5.2.0
   epub_reader_kit:
-    path: ../../Products/ebook_reader/packages/epub_reader_kit
+    path: D:/project/Products/packages/epub_reader_kit
   # vocsy_epub_viewer:
   #   git:
   #     url: https://github.com/ai-rayhan/vocsy_epub_viewer

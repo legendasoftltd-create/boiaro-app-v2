@@ -25,6 +25,12 @@
   public void onPayment*(...);
 }
 
+# Keep EPUB reader + Readium classes used by the native reader/TTS pipeline.
+# In release builds, these are used through indirect APIs and can be removed by R8.
+-keep class com.example.epub_reader_kit.** { *; }
+-keep class org.readium.** { *; }
+-dontwarn org.readium.**
+-dontwarn org.joda.**
 
 
 

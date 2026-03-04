@@ -15,3 +15,19 @@ Admob integration and ad reward dialog
 Social Linking added
 blue light filter fix
 auto scroll added in ebook, audiobook design complete
+
+Date 13-02-26  (Total 2 Hours) 
+Admob integration placement properly
+
+Date 15-02-26  (Total 8 Hours) 
+ANR and crash fix try different method
+wikisource code use in flutter package development
+
+Date 16-02-26 and 17-02-26  (Total 10 Hours) 
+Native ebook reader integration
+Revision and upload to playstore
+
+Date 20-02-26 (Total 7 Hours) 
+Reading session and progress tracking api integration
+Book view count api integration
+Partially Native epub reader design update 

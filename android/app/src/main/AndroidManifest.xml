@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name="org.cis_india.wsreader.WikisourceReader"
+        android:name="com.example.epub_reader_kit.reader.EpubReaderKitApp"
         android:label="Boi Aro"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
@@ -75,13 +75,6 @@
                 <data android:host="www.boiaro.com" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".readium.ReadiumReaderActivity"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:exported="false"
-            android:theme="@style/NormalTheme"
-            android:windowSoftInputMode="adjustResize" />
 
         <!-- Facebook Login Activity -->
         <activity

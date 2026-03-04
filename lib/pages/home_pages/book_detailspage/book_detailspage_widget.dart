@@ -10,7 +10,6 @@ import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/dialogs/book_review_bottom_sheet/book_review_bottom_sheet_widget.dart';
 import '/pages/empty_components/blank_component/blank_component_widget.dart';
 import '/pages/shimmers/book_detail_shimmer/book_detail_shimmer_widget.dart';
-import '/pages/shimmers/button_detail_page_shimmer/button_detail_page_shimmer_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/flutter_flow/custom_functions.dart' as functions;
@@ -18,8 +17,10 @@ import '/index.dart';
 import '/custom_code/ad_manager.dart';
 import '/custom_code/widgets/ad_reward_dialog.dart';
 import '/providers/cart_provider.dart';
+import '/services/local_download_service.dart';
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -51,6 +52,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   late BookDetailspageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isOpeningReader = false;
+  bool _isDownloadingBook = false;
+  double _downloadProgress = 0;
+  LocalDownloadedBook? _downloadedBook;
 
   @override
   void initState() {
@@ -61,6 +66,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       if (FFAppState().isLogin) {
         await _checkIfPurchased();
       }
+      await _refreshDownloadedBook();
       safeSetState(() {});
     });
   }
@@ -71,13 +77,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         userId: FFAppState().userId,
         token: FFAppState().token,
       );
-      
+
       if (EbookGroup.userBookPurchaseRecordsApiCall.success(
-            response?.jsonBody ?? '',
+            response.jsonBody,
           ) ==
           1) {
         final bookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
-          response?.jsonBody ?? '',
+          response.jsonBody,
         );
         _model.purchasedBookIds = bookIds ?? [];
         _model.isPurchased = _model.purchasedBookIds.contains(widget.id);
@@ -86,6 +92,160 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     } catch (e) {
       debugPrint('Error checking purchased status: $e');
     }
+  }
+
+  Future<void> _refreshDownloadedBook() async {
+    final bookId = (widget.id ?? '').trim();
+    if (bookId.isEmpty) return;
+    final item = await LocalDownloadService.getDownloadByBookId(bookId);
+    if (!mounted) return;
+    safeSetState(() {
+      _downloadedBook = (item != null && item.existsOnDisk) ? item : null;
+    });
+  }
+
+  Future<void> _openBook({
+    required String path,
+    required String bookName,
+    required String bookImage,
+  }) async {
+    if (_isOpeningReader || _isDownloadingBook) return;
+    safeSetState(() => _isOpeningReader = true);
+
+    try {
+      await context.pushNamed(
+        ReadBookCustomPageWidget.routeName,
+        queryParameters: {
+          'pdf': serializeParam(path, ParamType.String),
+          'id': serializeParam(widget.id, ParamType.String),
+          'name': serializeParam(bookName, ParamType.String),
+          'image': serializeParam(bookImage, ParamType.String),
+        }.withoutNulls,
+      );
+    } catch (e) {
+      debugPrint('Open book failed: $e');
+      await actions.showCustomToastBottom('Failed to open book');
+    } finally {
+      if (mounted) {
+        safeSetState(() => _isOpeningReader = false);
+      }
+    }
+  }
+
+  Future<void> _downloadBook({
+    required String remotePdfUrl,
+    required String bookName,
+    required String bookImage,
+    required String authorName,
+  }) async {
+    if (_isDownloadingBook || _isOpeningReader) return;
+    safeSetState(() {
+      _isDownloadingBook = true;
+      _downloadProgress = 0;
+    });
+
+    try {
+      final item = await LocalDownloadService.downloadBook(
+        bookId: widget.id ?? '',
+        name: bookName,
+        image: bookImage,
+        author: authorName,
+        remoteUrl: remotePdfUrl,
+        onProgress: (received, total) {
+          if (!mounted || total <= 0) return;
+          safeSetState(() {
+            _downloadProgress = received / total;
+          });
+        },
+      );
+      if (!mounted) return;
+      safeSetState(() {
+        _downloadedBook = item;
+      });
+      await actions.showCustomToastBottom('Downloaded: ${item.name}');
+    } catch (e) {
+      debugPrint('Download failed: $e');
+      await actions.showCustomToastBottom('Download failed');
+    } finally {
+      if (mounted) {
+        safeSetState(() {
+          _isDownloadingBook = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _runWithAdGate({
+    required BuildContext context,
+    required bool shouldGate,
+    required String bookImage,
+    required Future<void> Function() action,
+  }) async {
+    if (!shouldGate || !FFAppState().isAdIntervalPassed()) {
+      await action();
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AdRewardDialog(
+        bookImage: bookImage,
+        onWatchAd: () async {
+          if (!AdManager.isAdLoaded) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (loadingContext) => AlertDialog(
+                backgroundColor:
+                    FlutterFlowTheme.of(context).secondaryBackground,
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      color: FlutterFlowTheme.of(context).primary,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Ad is loading...',
+                      style: FlutterFlowTheme.of(context).bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            );
+            AdManager.loadRewardedAd();
+            try {
+              await AdManager.waitForAd();
+            } catch (e) {
+              debugPrint('Ad load failed: $e');
+            } finally {
+              if (mounted &&
+                  Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).canPop()) {
+                Navigator.of(
+                  context,
+                  rootNavigator: true,
+                ).pop();
+              }
+            }
+          }
+
+          AdManager.showRewardedAd(
+            context: context,
+            onRewardEarned: () {
+              FFAppState().markAdShownNow();
+              unawaited(action());
+            },
+            onAdFailed: () {
+              unawaited(action());
+            },
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -116,14 +276,47 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           );
         }
         final bookDetailspageGetbookdetailsApiResponse = snapshot.data!;
-        String price = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.price(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
-        String discountAmount = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.discountAmount(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
-        String discountPercentage = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.discountPercentage(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"0", "0");
-        String bookId=valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.id(bookDetailspageGetbookdetailsApiResponse.jsonBody,)?.toString()??"", "");
-        String bookName = valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.name(bookDetailspageGetbookdetailsApiResponse.jsonBody,), widget.name ?? "Book");
-        String? apiRawImage = EbookGroup.getbookdetailsApiCall.image(bookDetailspageGetbookdetailsApiResponse.jsonBody);
-        String bookImage = (apiRawImage != null && apiRawImage.isNotEmpty) 
-            ? "${FFAppConstants.bookImagesUrl}$apiRawImage" 
+        String price = valueOrDefault<String>(
+            EbookGroup.getbookdetailsApiCall
+                    .price(
+                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                    )
+                    ?.toString() ??
+                "0",
+            "0");
+        String discountAmount = valueOrDefault<String>(
+            EbookGroup.getbookdetailsApiCall
+                    .discountAmount(
+                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                    )
+                    ?.toString() ??
+                "0",
+            "0");
+        String discountPercentage = valueOrDefault<String>(
+            EbookGroup.getbookdetailsApiCall
+                    .discountPercentage(
+                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                    )
+                    ?.toString() ??
+                "0",
+            "0");
+        String bookId = valueOrDefault<String>(
+            EbookGroup.getbookdetailsApiCall
+                    .id(
+                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                    )
+                    ?.toString() ??
+                "",
+            "");
+        String bookName = valueOrDefault<String>(
+            EbookGroup.getbookdetailsApiCall.name(
+              bookDetailspageGetbookdetailsApiResponse.jsonBody,
+            ),
+            widget.name ?? "Book");
+        String? apiRawImage = EbookGroup.getbookdetailsApiCall
+            .image(bookDetailspageGetbookdetailsApiResponse.jsonBody);
+        String bookImage = (apiRawImage != null && apiRawImage.isNotEmpty)
+            ? "${FFAppConstants.bookImagesUrl}$apiRawImage"
             : (widget.image ?? "");
 
         return Scaffold(
@@ -179,9 +372,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
                     if (!_model.isFavoriteInitialized) {
                       _model.isFavorite = functions.checkFavOrNot(
-                        EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(
-                          columnGetFavouriteBookResponse.jsonBody,
-                        )?.toList(),
+                        EbookGroup.getFavouriteBookCall
+                            .favouriteBookDetailsList(
+                              columnGetFavouriteBookResponse.jsonBody,
+                            )
+                            ?.toList(),
                         widget.id!,
                       );
                       _model.isFavoriteInitialized = true;
@@ -216,14 +411,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 Container(
                                   width: double.infinity,
                                   decoration: BoxDecoration(
-                                    color: FlutterFlowTheme.of(context).primary, // Teal color
+                                    color: FlutterFlowTheme.of(context)
+                                        .primary, // Teal color
                                   ),
                                   child: SafeArea(
                                     child: Padding(
-                                      padding: EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          16.0, 8.0, 16.0, 8.0),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.max,
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           InkWell(
                                             splashColor: Colors.transparent,
@@ -237,10 +435,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               width: 40.0,
                                               height: 40.0,
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.2),
+                                                color: Colors.white
+                                                    .withOpacity(0.2),
                                                 shape: BoxShape.circle,
                                               ),
-                                              alignment: AlignmentDirectional(0.0, 0.0),
+                                              alignment: AlignmentDirectional(
+                                                  0.0, 0.0),
                                               child: Icon(
                                                 Icons.arrow_back,
                                                 color: Colors.white,
@@ -256,16 +456,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               ),
                                               textAlign: TextAlign.center,
                                               maxLines: 1,
-                                              style: FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .override(
-                                                    fontFamily: 'SF Pro Display',
-                                                    color: Colors.white,
-                                                    fontSize: 18.0,
-                                                    letterSpacing: 0.0,
-                                                    fontWeight: FontWeight.bold,
-                                                    lineHeight: 1.2,
-                                                  ),
+                                              style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        color: Colors.white,
+                                                        fontSize: 18.0,
+                                                        letterSpacing: 0.0,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        lineHeight: 1.2,
+                                                      ),
                                             ),
                                           ),
                                           // Row(
@@ -295,31 +498,34 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           //       ),
                                           //     ),
                                           //     SizedBox(width: 8.0),
-                                              InkWell(
-                                                splashColor: Colors.transparent,
-                                                focusColor: Colors.transparent,
-                                                hoverColor: Colors.transparent,
-                                                highlightColor: Colors.transparent,
-                                                onTap: () async {
-                                                 await SharePlus.instance.share(ShareParams(uri: Uri.parse(
-                                                  "${FFAppConstants.baseUrl}/product/${bookId}"
-                                                 )));
-                                                },
-                                                child: Container(
-                                                  width: 40.0,
-                                                  height: 40.0,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white.withOpacity(0.2),
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  alignment: AlignmentDirectional(0.0, 0.0),
-                                                  child: Icon(
-                                                    Icons.share,
-                                                    color: Colors.white,
-                                                    size: 20.0,
-                                                  ),
-                                                ),
+                                          InkWell(
+                                            splashColor: Colors.transparent,
+                                            focusColor: Colors.transparent,
+                                            hoverColor: Colors.transparent,
+                                            highlightColor: Colors.transparent,
+                                            onTap: () async {
+                                              await SharePlus.instance.share(
+                                                  ShareParams(
+                                                      uri: Uri.parse(
+                                                          "${FFAppConstants.baseUrl}/product/${bookId}")));
+                                            },
+                                            child: Container(
+                                              width: 40.0,
+                                              height: 40.0,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white
+                                                    .withOpacity(0.2),
+                                                shape: BoxShape.circle,
                                               ),
+                                              alignment: AlignmentDirectional(
+                                                  0.0, 0.0),
+                                              child: Icon(
+                                                Icons.share,
+                                                color: Colors.white,
+                                                size: 20.0,
+                                              ),
+                                            ),
+                                          ),
                                           //   ],
                                           // ),
                                         ],
@@ -331,12 +537,15 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 Container(
                                   width: double.infinity,
                                   decoration: BoxDecoration(
-                                    color: FlutterFlowTheme.of(context).primaryBackground,
+                                    color: FlutterFlowTheme.of(context)
+                                        .primaryBackground,
                                   ),
                                   child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(16.0, 20.0, 16.0, 20.0),
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                        16.0, 20.0, 16.0, 20.0),
                                     child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         // Book Cover
                                         InkWell(
@@ -349,17 +558,25 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               context,
                                               PageTransition(
                                                 type: PageTransitionType.fade,
-                                                child: FlutterFlowExpandedImageView(
+                                                child:
+                                                    FlutterFlowExpandedImageView(
                                                   image: CachedNetworkImage(
-                                                    fadeInDuration: Duration(milliseconds: 200),
-                                                    fadeOutDuration: Duration(milliseconds: 200),
+                                                    fadeInDuration: Duration(
+                                                        milliseconds: 200),
+                                                    fadeOutDuration: Duration(
+                                                        milliseconds: 200),
                                                     imageUrl: bookImage,
                                                     fit: BoxFit.contain,
-                                                    alignment: Alignment(0.0, 0.0),
-                                                    errorWidget: (context, error, stackTrace) => Image.asset(
+                                                    alignment:
+                                                        Alignment(0.0, 0.0),
+                                                    errorWidget: (context,
+                                                            error,
+                                                            stackTrace) =>
+                                                        Image.asset(
                                                       'assets/images/error_image.png',
                                                       fit: BoxFit.contain,
-                                                      alignment: Alignment(0.0, 0.0),
+                                                      alignment:
+                                                          Alignment(0.0, 0.0),
                                                     ),
                                                   ),
                                                   allowRotation: false,
@@ -374,31 +591,45 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 width: 120.0,
                                                 height: 160.0,
                                                 decoration: BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(8.0),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          8.0),
                                                   boxShadow: [
                                                     BoxShadow(
                                                       blurRadius: 8.0,
-                                                      color: FlutterFlowTheme.of(context).shadowColor,
+                                                      color:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .shadowColor,
                                                       offset: Offset(0.0, 2.0),
                                                     )
                                                   ],
                                                 ),
                                                 child: ClipRRect(
-                                                  borderRadius: BorderRadius.circular(8.0),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          8.0),
                                                   child: CachedNetworkImage(
-                                                    fadeInDuration: Duration(milliseconds: 200),
-                                                    fadeOutDuration: Duration(milliseconds: 200),
+                                                    fadeInDuration: Duration(
+                                                        milliseconds: 200),
+                                                    fadeOutDuration: Duration(
+                                                        milliseconds: 200),
                                                     imageUrl: bookImage,
                                                     width: 120.0,
                                                     height: 160.0,
                                                     fit: BoxFit.cover,
-                                                    alignment: Alignment(0.0, 0.0),
-                                                    errorWidget: (context, error, stackTrace) => Image.asset(
+                                                    alignment:
+                                                        Alignment(0.0, 0.0),
+                                                    errorWidget: (context,
+                                                            error,
+                                                            stackTrace) =>
+                                                        Image.asset(
                                                       'assets/images/error_image.png',
                                                       width: 120.0,
                                                       height: 160.0,
                                                       fit: BoxFit.cover,
-                                                      alignment: Alignment(0.0, 0.0),
+                                                      alignment:
+                                                          Alignment(0.0, 0.0),
                                                     ),
                                                   ),
                                                 ),
@@ -408,19 +639,36 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   top: 8.0,
                                                   right: 8.0,
                                                   child: Container(
-                                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 8.0,
+                                                            vertical: 4.0),
                                                     decoration: BoxDecoration(
-                                                      color: FlutterFlowTheme.of(context).primary,
-                                                      borderRadius: BorderRadius.circular(12.0),
+                                                      color:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .primary,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12.0),
                                                     ),
                                                     child: Text(
                                                       'Purchased',
-                                                      style: FlutterFlowTheme.of(context).bodySmall.override(
-                                                        fontFamily: 'SF Pro Display',
-                                                        fontSize: 10.0,
-                                                        fontWeight: FontWeight.w600,
-                                                        color: FlutterFlowTheme.of(context).primaryBackground,
-                                                      ),
+                                                      style:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .bodySmall
+                                                              .override(
+                                                                fontFamily:
+                                                                    'SF Pro Display',
+                                                                fontSize: 10.0,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color: FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .primaryBackground,
+                                                              ),
                                                     ),
                                                   ),
                                                 ),
@@ -431,56 +679,69 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                         // Book Details
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 valueOrDefault<String>(
                                                   bookName,
                                                   'Book',
                                                 ),
-                                                style: FlutterFlowTheme.of(context)
-                                                    .bodyMedium
-                                                    .override(
-                                                      fontFamily: 'SF Pro Display',
-                                                      fontSize: 20.0,
-                                                      letterSpacing: 0.0,
-                                                      fontWeight: FontWeight.bold,
-                                                      lineHeight: 1.3,
-                                                    ),
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          fontSize: 20.0,
+                                                          letterSpacing: 0.0,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          lineHeight: 1.3,
+                                                        ),
                                               ),
                                               SizedBox(height: 8.0),
                                               Row(
                                                 children: [
                                                   Icon(
                                                     Icons.thumb_up,
-                                                    color: FlutterFlowTheme.of(context).primary,
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .primary,
                                                     size: 16.0,
                                                   ),
                                                   SizedBox(width: 4.0),
                                                   Text(
                                                     'By ${EbookGroup.getbookdetailsApiCall.authorName(
-                                                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                      bookDetailspageGetbookdetailsApiResponse
+                                                          .jsonBody,
                                                     )}',
-                                                    style: FlutterFlowTheme.of(context)
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
                                                         .bodyMedium
                                                         .override(
-                                                          fontFamily: 'SF Pro Display',
-                                                          color: FlutterFlowTheme.of(context).secondaryText,
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .secondaryText,
                                                           fontSize: 14.0,
                                                           letterSpacing: 0.0,
-                                                          fontWeight: FontWeight.normal,
+                                                          fontWeight:
+                                                              FontWeight.normal,
                                                           lineHeight: 1.3,
                                                         ),
                                                   ),
                                                 ],
                                               ),
                                               SizedBox(height: 16.0),
-                                            
-                                              
+
                                               SizedBox(height: 16.0),
                                               // Stats Row
                                               Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceAround,
                                                 children: [
                                                   Column(
                                                     children: [
@@ -493,133 +754,265 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           ),
                                                           SizedBox(width: 4.0),
                                                           Text(
-                                                            valueOrDefault<String>(
-                                                              EbookGroup.getbookdetailsApiCall.averageRating(
-                                                                bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                                              )?.toString(),
+                                                            valueOrDefault<
+                                                                String>(
+                                                              EbookGroup
+                                                                  .getbookdetailsApiCall
+                                                                  .averageRating(
+                                                                    bookDetailspageGetbookdetailsApiResponse
+                                                                        .jsonBody,
+                                                                  )
+                                                                  ?.toString(),
                                                               '4.8',
                                                             ),
-                                                            style: FlutterFlowTheme.of(context)
+                                                            style: FlutterFlowTheme
+                                                                    .of(context)
                                                                 .bodyMedium
                                                                 .override(
-                                                                  fontFamily: 'SF Pro Display',
-                                                                  fontSize: 14.0,
-                                                                  letterSpacing: 0.0,
-                                                                  fontWeight: FontWeight.bold,
+                                                                  fontFamily:
+                                                                      'SF Pro Display',
+                                                                  fontSize:
+                                                                      14.0,
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
                                                                 ),
                                                           ),
                                                         ],
                                                       ),
                                                       Text(
                                                         'Rating',
-                                                        style: FlutterFlowTheme.of(context)
-                                                            .bodyMedium
-                                                            .override(
-                                                              fontFamily: 'SF Pro Display',
-                                                              color: FlutterFlowTheme.of(context).secondaryText,
-                                                              fontSize: 10.0,
-                                                              letterSpacing: 0.0,
-                                                              fontWeight: FontWeight.normal,
-                                                            ),
+                                                        style:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .bodyMedium
+                                                                .override(
+                                                                  fontFamily:
+                                                                      'SF Pro Display',
+                                                                  color: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .secondaryText,
+                                                                  fontSize:
+                                                                      10.0,
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .normal,
+                                                                ),
                                                       ),
                                                     ],
                                                   ),
                                                   Container(
                                                     width: 1.0,
                                                     height: 30.0,
-                                                    color: FlutterFlowTheme.of(context).secondaryText.withOpacity(0.3),
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .secondaryText
+                                                        .withOpacity(0.3),
                                                   ),
                                                   Column(
                                                     children: [
-                                                      Icon(
-                                                        Icons.menu_book,
-                                                        color: FlutterFlowTheme.of(context).primaryText,
-                                                        size: 16.0,
+                                                      Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.visibility,
+                                                            color: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .primaryText,
+                                                            size: 16.0,
+                                                          ),
+                                                          SizedBox(width: 4.0),
+                                                          Text(
+                                                            valueOrDefault<
+                                                                String>(
+                                                              EbookGroup
+                                                                  .getbookdetailsApiCall
+                                                                  .viewCount(
+                                                                    bookDetailspageGetbookdetailsApiResponse
+                                                                        .jsonBody,
+                                                                  )
+                                                                  ?.toString(),
+                                                              '0',
+                                                            ),
+                                                            style: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .bodyMedium
+                                                                .override(
+                                                                  fontFamily:
+                                                                      'SF Pro Display',
+                                                                  fontSize:
+                                                                      14.0,
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                          ),
+                                                        ],
                                                       ),
                                                       Text(
-                                                        'eBook',
-                                                        style: FlutterFlowTheme.of(context)
-                                                            .bodyMedium
-                                                            .override(
-                                                              fontFamily: 'SF Pro Display',
-                                                              color: FlutterFlowTheme.of(context).secondaryText,
-                                                              fontSize: 10.0,
-                                                              letterSpacing: 0.0,
-                                                              fontWeight: FontWeight.normal,
-                                                            ),
+                                                        'Views',
+                                                        style:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .bodyMedium
+                                                                .override(
+                                                                  fontFamily:
+                                                                      'SF Pro Display',
+                                                                  color: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .secondaryText,
+                                                                  fontSize:
+                                                                      10.0,
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .normal,
+                                                                ),
                                                       ),
                                                     ],
                                                   ),
                                                   Container(
                                                     width: 1.0,
                                                     height: 30.0,
-                                                    color: FlutterFlowTheme.of(context).secondaryText.withOpacity(0.3),
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .secondaryText
+                                                        .withOpacity(0.3),
                                                   ),
                                                   Column(
                                                     children: [
                                                       InkWell(
-                                                        splashColor: Colors.transparent,
-                                                        focusColor: Colors.transparent,
-                                                        hoverColor: Colors.transparent,
-                                                        highlightColor: Colors.transparent,
+                                                        splashColor:
+                                                            Colors.transparent,
+                                                        focusColor:
+                                                            Colors.transparent,
+                                                        hoverColor:
+                                                            Colors.transparent,
+                                                        highlightColor:
+                                                            Colors.transparent,
                                                         onTap: () async {
-                                                          if (FFAppState().isLogin == true) {
-                                                            _model.isFavoriteLoading = true;
+                                                          if (FFAppState()
+                                                                  .isLogin ==
+                                                              true) {
+                                                            _model.isFavoriteLoading =
+                                                                true;
                                                             safeSetState(() {});
-                                                            if (_model.isFavorite == true) {
-                                                              _model.getDetailBookDetete = await EbookGroup.removeFavouritebookCall.call(
-                                                                userId: FFAppState().userId,
-                                                                token: FFAppState().token,
-                                                                bookId: widget.id,
+                                                            if (_model
+                                                                    .isFavorite ==
+                                                                true) {
+                                                              _model.getDetailBookDetete =
+                                                                  await EbookGroup
+                                                                      .removeFavouritebookCall
+                                                                      .call(
+                                                                userId:
+                                                                    FFAppState()
+                                                                        .userId,
+                                                                token:
+                                                                    FFAppState()
+                                                                        .token,
+                                                                bookId:
+                                                                    widget.id,
                                                               );
-                                                              await actions.showCustomToastBottom(FFAppState().unFavText);
+                                                              await actions
+                                                                  .showCustomToastBottom(
+                                                                      FFAppState()
+                                                                          .unFavText);
                                                             } else {
-                                                              _model.getDetailBookAdd = await EbookGroup.addFavouriteBookApiCall.call(
-                                                                userId: FFAppState().userId,
-                                                                token: FFAppState().token,
-                                                                bookId: widget.id,
+                                                              _model.getDetailBookAdd =
+                                                                  await EbookGroup
+                                                                      .addFavouriteBookApiCall
+                                                                      .call(
+                                                                userId:
+                                                                    FFAppState()
+                                                                        .userId,
+                                                                token:
+                                                                    FFAppState()
+                                                                        .token,
+                                                                bookId:
+                                                                    widget.id,
                                                               );
-                                                              await actions.showCustomToastBottom(FFAppState().favText);
+                                                              await actions
+                                                                  .showCustomToastBottom(
+                                                                      FFAppState()
+                                                                          .favText);
                                                             }
-                                                            FFAppState().clearGetFavouriteBookCacheCache();
-                                                            _model.isFavorite = !_model.isFavorite!;
-                                                            _model.isFavoriteLoading = false;
+                                                            FFAppState()
+                                                                .clearGetFavouriteBookCacheCache();
+                                                            _model.isFavorite =
+                                                                !_model
+                                                                    .isFavorite!;
+                                                            _model.isFavoriteLoading =
+                                                                false;
                                                             safeSetState(() {});
                                                           } else {
-                                                            FFAppState().favChange = true;
-                                                            FFAppState().bookId = widget.id!;
-                                                            FFAppState().update(() {});
-                                                            context.pushNamed(SignInPageWidget.routeName);
+                                                            FFAppState()
+                                                                    .favChange =
+                                                                true;
+                                                            FFAppState()
+                                                                    .bookId =
+                                                                widget.id!;
+                                                            FFAppState()
+                                                                .update(() {});
+                                                            context.pushNamed(
+                                                                SignInPageWidget
+                                                                    .routeName);
                                                           }
                                                         },
                                                         child: Column(
                                                           children: [
-                                                            if (_model.isFavoriteLoading == true)
+                                                            if (_model
+                                                                    .isFavoriteLoading ==
+                                                                true)
                                                               SizedBox(
                                                                 width: 16.0,
                                                                 height: 16.0,
-                                                                child: CircularProgressIndicator(
-                                                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                                                    FlutterFlowTheme.of(context).primaryText,
+                                                                child:
+                                                                    CircularProgressIndicator(
+                                                                  valueColor:
+                                                                      AlwaysStoppedAnimation<
+                                                                          Color>(
+                                                                    FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .primaryText,
                                                                   ),
                                                                 ),
                                                               )
                                                             else
                                                               Icon(
-                                                                _model.isFavorite! ? Icons.favorite : Icons.favorite_border,
-                                                                color: FlutterFlowTheme.of(context).primaryText,
+                                                                _model.isFavorite!
+                                                                    ? Icons
+                                                                        .favorite
+                                                                    : Icons
+                                                                        .favorite_border,
+                                                                color: FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .primaryText,
                                                                 size: 16.0,
                                                               ),
                                                             Text(
                                                               'Wishlist',
-                                                              style: FlutterFlowTheme.of(context)
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
                                                                   .bodyMedium
                                                                   .override(
-                                                                    fontFamily: 'SF Pro Display',
-                                                                    color: FlutterFlowTheme.of(context).secondaryText,
-                                                                    fontSize: 10.0,
-                                                                    letterSpacing: 0.0,
-                                                                    fontWeight: FontWeight.normal,
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .secondaryText,
+                                                                    fontSize:
+                                                                        10.0,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .normal,
                                                                   ),
                                                             ),
                                                           ],
@@ -668,44 +1061,81 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   SizedBox(width: 5.0),
                                                   Text(
                                                     'Price: ',
-                                                    style: FlutterFlowTheme.of(context)
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
                                                         .bodyMedium
                                                         .override(
-                                                          fontFamily: 'SF Pro Display',
+                                                          fontFamily:
+                                                              'SF Pro Display',
                                                           fontSize: 14.0,
                                                           letterSpacing: 0.0,
-                                                          fontWeight: FontWeight.bold,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                         ),
                                                   ),
+                                                  Text(
+                                                    '৳${price}',
+                                                    style:
+                                                        FlutterFlowTheme.of(
+                                                                context)
+                                                            .bodyMedium
+                                                            .override(
+                                                              fontFamily:
+                                                                  'SF Pro Display',
+                                                              color: (discountAmount !=
+                                                                          '0' &&
+                                                                      discountPercentage !=
+                                                                          '0')
+                                                                  ? FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .secondaryText
+                                                                  : FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .primary,
+                                                              fontSize: 14.0,
+                                                              letterSpacing:
+                                                                  0.0,
+                                                              fontWeight: (discountAmount !=
+                                                                          '0' &&
+                                                                      discountPercentage !=
+                                                                          '0')
+                                                                  ? FontWeight
+                                                                      .normal
+                                                                  : FontWeight
+                                                                      .bold,
+                                                              decoration: (discountAmount !=
+                                                                          '0' &&
+                                                                      discountPercentage !=
+                                                                          '0')
+                                                                  ? TextDecoration
+                                                                      .lineThrough
+                                                                  : null,
+                                                            ),
+                                                  ),
+                                                  if (discountPercentage !=
+                                                          "0" &&
+                                                      discountPercentage != '0')
+                                                    SizedBox(width: 8.0),
+                                                  if (discountPercentage !=
+                                                          "0" &&
+                                                      discountPercentage != '0')
                                                     Text(
-                                                      '৳${price}',
-                                                      style: FlutterFlowTheme.of(context)
+                                                      '৳${(double.tryParse(price) ?? 0) - (double.tryParse(discountAmount) ?? 0)}',
+                                                      style: FlutterFlowTheme
+                                                              .of(context)
                                                           .bodyMedium
                                                           .override(
-                                                            fontFamily: 'SF Pro Display',
-                                                            color: (discountAmount != '0' && discountPercentage != '0') ? FlutterFlowTheme.of(context).secondaryText : FlutterFlowTheme.of(context).primary,
-                                                            fontSize: 14.0,
+                                                            fontFamily:
+                                                                'SF Pro Display',
+                                                            fontSize: 16.0,
                                                             letterSpacing: 0.0,
-                                                            fontWeight: (discountAmount != '0' && discountPercentage != '0') ? FontWeight.normal : FontWeight.bold,
-                                                            decoration: (discountAmount != '0' && discountPercentage != '0')?TextDecoration.lineThrough:null,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .primary,
                                                           ),
                                                     ),
-                                                  if (discountPercentage != "0" && discountPercentage != '0')
-                                                  SizedBox(width: 8.0),
-                                                  if (discountPercentage != "0" && discountPercentage != '0')
-                                                  Text(
-                                                    '৳${(double.tryParse(price)??0) - (double.tryParse(discountAmount)??0)}',
-                                                    style: FlutterFlowTheme.of(context)
-                                                        .bodyMedium
-                                                        .override(
-                                                          fontFamily: 'SF Pro Display',
-                                                          fontSize: 16.0,
-                                                          letterSpacing: 0.0,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: FlutterFlowTheme.of(context).primary,
-                                                        ),
-                                                  ),
-                                                 
                                                 ],
                                               )
                                             ],
@@ -717,14 +1147,42 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 ),
                                 // Action Buttons
                                 Padding(
-                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 20.0),
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      16.0, 0.0, 16.0, 20.0),
                                   child: Builder(
                                     builder: (context) {
-                                      final accessType = EbookGroup.getbookdetailsApiCall.accesstype(
-                                        bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                      final accessType = EbookGroup
+                                          .getbookdetailsApiCall
+                                          .accesstype(
+                                        bookDetailspageGetbookdetailsApiResponse
+                                            .jsonBody,
                                       );
-                                      final isFree = accessType == 'free' || accessType == 'Free';
-                                      
+                                      final isFree = accessType == 'free' ||
+                                          accessType == 'Free';
+                                      final rawPdfPath = valueOrDefault<String>(
+                                        EbookGroup.getbookdetailsApiCall.pdf(
+                                          bookDetailspageGetbookdetailsApiResponse
+                                              .jsonBody,
+                                        ),
+                                        '',
+                                      );
+                                      final remotePdfUrl = rawPdfPath
+                                              .startsWith('http')
+                                          ? rawPdfPath
+                                          : '${FFAppConstants.pdfUrl}$rawPdfPath';
+                                      final authorName = valueOrDefault<String>(
+                                        EbookGroup.getbookdetailsApiCall
+                                            .authorName(
+                                          bookDetailspageGetbookdetailsApiResponse
+                                              .jsonBody,
+                                        ),
+                                        '',
+                                      );
+                                      final downloadedBook = _downloadedBook;
+                                      final hasDownloadedBook =
+                                          downloadedBook != null &&
+                                              downloadedBook.existsOnDisk;
+
                                       if (isFree || _model.isPurchased) {
                                         // Show Read Now button for free books or purchased books
                                         return Row(
@@ -733,175 +1191,431 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               child: Container(
                                                 height: 48.0,
                                                 decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(context).primary,
-                                                  borderRadius: BorderRadius.circular(12.0),
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .primary,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12.0),
                                                 ),
                                                 child: InkWell(
-                                                  onTap: () async {
-                                                    // Action for free books: Show Ad Dialog only if not watched before
-                                                    if (isFree && !_model.isPurchased) {
-                                                      // Check if user has already watched ad for this book
-                                                      if (FFAppState().hasWatchedAdForBook(widget.id!)) {
-                                                        // User has already watched ad, allow direct access
-                                                        context.pushNamed(
-                                                          ReadBookCustomPageWidget.routeName,
-                                                          queryParameters: {
-                                                            'pdf': serializeParam(
-                                                              '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                                bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                                              )}',
-                                                              ParamType.String,
-                                                            ),
-                                                            'id': serializeParam(
-                                                              widget.id,
-                                                              ParamType.String,
-                                                            ),
-                                                            'name': serializeParam(
-                                                              bookName,
-                                                              ParamType.String,
-                                                            ),
-                                                            'image': serializeParam(
-                                                              widget.image,
-                                                              ParamType.String,
-                                                            ),
-                                                          }.withoutNulls,
-                                                        );
-                                                      } else {
-                                                        // User hasn't watched ad yet, show ad dialog
-                                                        showDialog(
-                                                          context: context,
-                                                          barrierDismissible: false,
-                                                          builder: (dialogContext) => AdRewardDialog(
-                                                            bookImage: bookImage,
-                                                            onWatchAd: () async {
-                                                              if (!AdManager.isAdLoaded) {
-                                                                // Show loading dialog on screens
-                                                                showDialog(
-                                                                  context: context,
-                                                                  barrierDismissible: false,
-                                                                  builder: (loadingContext) => AlertDialog(
-                                                                    backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-                                                                    content: Column(
-                                                                      mainAxisSize: MainAxisSize.min,
-                                                                      children: [
-                                                                        CircularProgressIndicator(
-                                                                          color: FlutterFlowTheme.of(context).primary,
-                                                                        ),
-                                                                        SizedBox(height: 16),
-                                                                        Text(
-                                                                          'Ad is loading...',
-                                                                          style: FlutterFlowTheme.of(context).bodyMedium,
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                  ),
+                                                  onTap:
+                                                      _isOpeningReader ||
+                                                              _isDownloadingBook
+                                                          ? null
+                                                          : () async {
+                                                              Future<void>
+                                                                  openReadBook() async {
+                                                                final targetPath =
+                                                                    hasDownloadedBook
+                                                                        ? downloadedBook
+                                                                            .localPath
+                                                                        : remotePdfUrl;
+                                                                await _openBook(
+                                                                  path:
+                                                                      targetPath,
+                                                                  bookName:
+                                                                      bookName,
+                                                                  bookImage:
+                                                                      bookImage,
                                                                 );
-                                                                
-                                                                try {
-                                                                  await AdManager.waitForAd();
-                                                                } catch (e) {
-                                                                  print('Error waiting for ad: $e');
-                                                                } finally {
-                                                                  // Close loading dialog
-                                                                  Navigator.pop(context);
-                                                                }
                                                               }
 
-                                                              AdManager.showRewardedAd(
-                                                                context: context,
-                                                                onRewardEarned: () {
-                                                                  // Mark this book as having watched ad
-                                                                  FFAppState().addToWatchedAdBooks(widget.id!);
-                                                                  
-                                                                  // Proceed to read the book after watching ad
-                                                                  context.pushNamed(
-                                                                    ReadBookCustomPageWidget.routeName,
-                                                                    queryParameters: {
-                                                                      'pdf': serializeParam(
-                                                                        '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                                          bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                                                        )}',
-                                                                        ParamType.String,
-                                                                      ),
-                                                                      'id': serializeParam(
-                                                                        widget.id,
-                                                                        ParamType.String,
-                                                                      ),
-                                                                      'name': serializeParam(
-                                                                        bookName,
-                                                                        ParamType.String,
-                                                                      ),
-                                                                      'image': serializeParam(
-                                                                        widget.image,
-                                                                        ParamType.String,
-                                                                      ),
-                                                                    }.withoutNulls,
+                                                              if (isFree &&
+                                                                  !_model
+                                                                      .isPurchased) {
+                                                                //if global 1-minute interval has passed.
+                                                                if (FFAppState()
+                                                                    .isAdIntervalPassed()) {
+                                                                  showDialog(
+                                                                    context:
+                                                                        context,
+                                                                    barrierDismissible:
+                                                                        false,
+                                                                    builder:
+                                                                        (dialogContext) =>
+                                                                            AdRewardDialog(
+                                                                      bookImage:
+                                                                          bookImage,
+                                                                      onWatchAd:
+                                                                          () async {
+                                                                        if (!AdManager
+                                                                            .isAdLoaded) {
+                                                                          showDialog(
+                                                                            context:
+                                                                                context,
+                                                                            barrierDismissible:
+                                                                                false,
+                                                                            builder: (loadingContext) =>
+                                                                                AlertDialog(
+                                                                              backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                              content: Column(
+                                                                                mainAxisSize: MainAxisSize.min,
+                                                                                children: [
+                                                                                  CircularProgressIndicator(
+                                                                                    color: FlutterFlowTheme.of(context).primary,
+                                                                                  ),
+                                                                                  SizedBox(height: 16),
+                                                                                  Text(
+                                                                                    'Ad is loading...',
+                                                                                    style: FlutterFlowTheme.of(context).bodyMedium,
+                                                                                  ),
+                                                                                ],
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                          AdManager
+                                                                              .loadRewardedAd();
+                                                                          try {
+                                                                            await AdManager.waitForAd();
+                                                                          } catch (e) {
+                                                                            debugPrint('Ad load failed: $e');
+                                                                          } finally {
+                                                                            if (mounted &&
+                                                                                Navigator.of(
+                                                                                  context,
+                                                                                  rootNavigator: true,
+                                                                                ).canPop()) {
+                                                                              Navigator.of(
+                                                                                context,
+                                                                                rootNavigator: true,
+                                                                              ).pop();
+                                                                            }
+                                                                          }
+                                                                        }
+
+                                                                        AdManager
+                                                                            .showRewardedAd(
+                                                                          context:
+                                                                              context,
+                                                                          onRewardEarned:
+                                                                              () {
+                                                                            FFAppState().markAdShownNow();
+                                                                            openReadBook();
+                                                                          },
+                                                                          onAdFailed:
+                                                                              () {
+                                                                            // Fail-open to avoid blocking reading.
+                                                                            openReadBook();
+                                                                          },
+                                                                        );
+                                                                      },
+                                                                    ),
                                                                   );
-                                                                },
-                                                              );
+                                                                } else {
+                                                                  openReadBook();
+                                                                }
+                                                              } else {
+                                                                // Direct entry for purchased books.
+                                                                openReadBook();
+                                                              }
                                                             },
-                                                          ),
-                                                        );
-                                                      }
-                                                    } else {
-                                                      // Direct entry for purchased books
-                                                      context.pushNamed(
-                                                        ReadBookCustomPageWidget.routeName,
-                                                        queryParameters: {
-                                                          'pdf': serializeParam(
-                                                            '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                                                              bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                                            )}',
-                                                            ParamType.String,
-                                                          ),
-                                                          'id': serializeParam(
-                                                            widget.id,
-                                                            ParamType.String,
-                                                          ),
-                                                          'name': serializeParam(
-                                                            bookName,
-                                                            ParamType.String,
-                                                          ),
-                                                          'image': serializeParam(
-                                                            widget.image,
-                                                            ParamType.String,
-                                                          ),
-                                                        }.withoutNulls,
-                                                      );
-                                                    }
-                                                  },
-                                                  child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.menu_book_rounded,
-                                                        color: Colors.white,
-                                                      ),
-                                                      SizedBox(width: 8),
-                                                      Text(
-                                                        'Read Now',
-                                                        style: FlutterFlowTheme.of(context)
-                                                            .bodyMedium
-                                                            .override(
-                                                              fontFamily: 'SF Pro Display',
-                                                              color: Colors.white,
-                                                              fontSize: 14.0,
-                                                              letterSpacing: 0.0,
-                                                              fontWeight: FontWeight.w600,
-                                                              lineHeight: 1.2,
+                                                  child: _isOpeningReader
+                                                      ? Center(
+                                                          child: SizedBox(
+                                                            width: 20,
+                                                            height: 20,
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                              strokeWidth: 2.5,
+                                                              color:
+                                                                  Colors.white,
                                                             ),
-                                                      ),
-                                                      SizedBox(width: 8),
-                                                      Icon(
-                                                        Icons.arrow_forward_ios,
-                                                        color: Colors.white,
-                                                        size: 12,
-                                                      ),
-                                                    ],
-                                                  ),
+                                                          ),
+                                                        )
+                                                      : Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .center,
+                                                          children: [
+                                                            Icon(
+                                                              Icons.menu_book,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                            SizedBox(width: 8),
+                                                            Text(
+                                                              hasDownloadedBook
+                                                                  ? 'Read Now'
+                                                                  : 'Stream',
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodyMedium
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontSize:
+                                                                        14.0,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    lineHeight:
+                                                                        1.2,
+                                                                  ),
+                                                            ),
+                                                            SizedBox(width: 8),
+                                                          ],
+                                                        ),
                                                 ),
                                               ),
                                             ),
+                                            if (!hasDownloadedBook)
+                                              SizedBox(width: 12.0),
+                                            if (!hasDownloadedBook)
+                                              Expanded(
+                                                child: Container(
+                                                  height: 48.0,
+                                                  decoration: BoxDecoration(
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .primary,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12.0),
+                                                  ),
+                                                  child: InkWell(
+                                                    onTap: _isOpeningReader ||
+                                                            _isDownloadingBook
+                                                        ? null
+                                                        : () async {
+                                                            await _runWithAdGate(
+                                                              context: context,
+                                                              shouldGate: isFree &&
+                                                                  !_model
+                                                                      .isPurchased,
+                                                              bookImage:
+                                                                  bookImage,
+                                                              action: () {
+                                                                return _downloadBook(
+                                                                  remotePdfUrl:
+                                                                      remotePdfUrl,
+                                                                  bookName:
+                                                                      bookName,
+                                                                  bookImage:
+                                                                      bookImage,
+                                                                  authorName:
+                                                                      authorName,
+                                                                );
+                                                              },
+                                                            );
+                                                          },
+                                                    child: _isDownloadingBook
+                                                        ? Center(
+                                                            child: Text(
+                                                              'Downloading ${(_downloadProgress * 100).toStringAsFixed(0)}%',
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodyMedium
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontSize:
+                                                                        13.0,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                            ),
+                                                          )
+                                                        : Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              Icon(
+                                                                Icons
+                                                                    .download_rounded,
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                              SizedBox(
+                                                                  width: 8),
+                                                              Text(
+                                                                'Download',
+                                                                style: FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .bodyMedium
+                                                                    .override(
+                                                                      fontFamily:
+                                                                          'SF Pro Display',
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontSize:
+                                                                          14.0,
+                                                                      letterSpacing:
+                                                                          0.0,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      lineHeight:
+                                                                          1.2,
+                                                                    ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                  ),
+                                                ),
+                                              ),
+                                            // SizedBox(width: 12.0),
+                                            // Expanded(
+                                            //   child: Container(
+                                            //     height: 48.0,
+                                            //     decoration: BoxDecoration(
+                                            //       color: FlutterFlowTheme.of(
+                                            //               context)
+                                            //           .secondaryBackground,
+                                            //       border: Border.all(
+                                            //         color: FlutterFlowTheme.of(
+                                            //                 context)
+                                            //             .primary,
+                                            //         width: 1.0,
+                                            //       ),
+                                            //       borderRadius:
+                                            //           BorderRadius.circular(
+                                            //               12.0),
+                                            //     ),
+                                            //     child: InkWell(
+                                            //       onTap: _isOpeningReader ||
+                                            //               _isDownloadingBook
+                                            //           ? null
+                                            //           : () async {
+                                            //               final remotePdfUrl =
+                                            //                   '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(bookDetailspageGetbookdetailsApiResponse.jsonBody)}';
+                                            //               final authorName =
+                                            //                   valueOrDefault<
+                                            //                       String>(
+                                            //                 EbookGroup
+                                            //                     .getbookdetailsApiCall
+                                            //                     .authorName(
+                                            //                   bookDetailspageGetbookdetailsApiResponse
+                                            //                       .jsonBody,
+                                            //                 ),
+                                            //                 '',
+                                            //               );
+                                            //               safeSetState(() {
+                                            //                 _isDownloadingBook =
+                                            //                     true;
+                                            //                 _downloadProgress =
+                                            //                     0;
+                                            //               });
+                                            //               try {
+                                            //                 final item =
+                                            //                     await LocalDownloadService
+                                            //                         .downloadBook(
+                                            //                   bookId:
+                                            //                       widget.id ??
+                                            //                           '',
+                                            //                   name: bookName,
+                                            //                   image: bookImage,
+                                            //                   author:
+                                            //                       authorName,
+                                            //                   remoteUrl:
+                                            //                       remotePdfUrl,
+                                            //                   onProgress:
+                                            //                       (received,
+                                            //                           total) {
+                                            //                     if (!mounted ||
+                                            //                         total <= 0)
+                                            //                       return;
+                                            //                     safeSetState(
+                                            //                         () {
+                                            //                       _downloadProgress =
+                                            //                           received /
+                                            //                               total;
+                                            //                     });
+                                            //                   },
+                                            //                 );
+                                            //                 await actions
+                                            //                     .showCustomToastBottom(
+                                            //                   'Downloaded: ${item.name}',
+                                            //                 );
+                                            //               } catch (e) {
+                                            //                 await actions
+                                            //                     .showCustomToastBottom(
+                                            //                   'Download failed',
+                                            //                 );
+                                            //                 debugPrint(
+                                            //                     'Download failed: $e');
+                                            //               } finally {
+                                            //                 if (mounted) {
+                                            //                   safeSetState(() {
+                                            //                     _isDownloadingBook =
+                                            //                         false;
+                                            //                   });
+                                            //                 }
+                                            //               }
+                                            //             },
+                                            //       child: _isDownloadingBook
+                                            //           ? Center(
+                                            //               child: Text(
+                                            //                 'Downloading ${(_downloadProgress * 100).toStringAsFixed(0)}%',
+                                            //                 style: FlutterFlowTheme
+                                            //                         .of(context)
+                                            //                     .bodyMedium
+                                            //                     .override(
+                                            //                       fontFamily:
+                                            //                           'SF Pro Display',
+                                            //                       color: FlutterFlowTheme.of(
+                                            //                               context)
+                                            //                           .primary,
+                                            //                       fontSize:
+                                            //                           13.0,
+                                            //                       letterSpacing:
+                                            //                           0.0,
+                                            //                       fontWeight:
+                                            //                           FontWeight
+                                            //                               .w600,
+                                            //                     ),
+                                            //               ),
+                                            //             )
+                                            //           : Row(
+                                            //               mainAxisAlignment:
+                                            //                   MainAxisAlignment
+                                            //                       .center,
+                                            //               children: [
+                                            //                 Icon(
+                                            //                   Icons
+                                            //                       .download_rounded,
+                                            //                   color: FlutterFlowTheme
+                                            //                           .of(context)
+                                            //                       .primary,
+                                            //                 ),
+                                            //                 SizedBox(width: 8),
+                                            //                 Text(
+                                            //                   'Download',
+                                            //                   style: FlutterFlowTheme
+                                            //                           .of(context)
+                                            //                       .bodyMedium
+                                            //                       .override(
+                                            //                         fontFamily:
+                                            //                             'SF Pro Display',
+                                            //                         color: FlutterFlowTheme.of(
+                                            //                                 context)
+                                            //                             .primary,
+                                            //                         fontSize:
+                                            //                             14.0,
+                                            //                         letterSpacing:
+                                            //                             0.0,
+                                            //                         fontWeight:
+                                            //                             FontWeight
+                                            //                                 .w600,
+                                            //                         lineHeight:
+                                            //                             1.2,
+                                            //                       ),
+                                            //                 ),
+                                            //               ],
+                                            //             ),
+                                            //     ),
+                                            //   ),
+                                            // ),
                                           ],
                                         );
                                       } else {
@@ -912,22 +1626,30 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               child: Container(
                                                 height: 48.0,
                                                 decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .secondaryBackground,
                                                   border: Border.all(
-                                                    color: FlutterFlowTheme.of(context).primary,
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .primary,
                                                     width: 1.0,
                                                   ),
-                                                  borderRadius: BorderRadius.circular(12.0),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12.0),
                                                 ),
                                                 child: InkWell(
                                                   onTap: () async {
                                                     // Preview action
                                                     context.pushNamed(
-                                                      ReadBookCustomPageWidget.routeName,
+                                                      ReadBookCustomPageWidget
+                                                          .routeName,
                                                       queryParameters: {
                                                         'pdf': serializeParam(
                                                           '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
-                                                            bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                            bookDetailspageGetbookdetailsApiResponse
+                                                                .jsonBody,
                                                           )}',
                                                           ParamType.String,
                                                         ),
@@ -947,24 +1669,36 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     );
                                                   },
                                                   child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: [
                                                       Icon(
                                                         Icons.menu_book,
-                                                        color: FlutterFlowTheme.of(context).primary,
+                                                        color:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .primary,
                                                         size: 16.0,
                                                       ),
                                                       SizedBox(width: 8.0),
                                                       Text(
                                                         'একটু পড়ে দেখুন',
-                                                        style: FlutterFlowTheme.of(context)
+                                                        style: FlutterFlowTheme
+                                                                .of(context)
                                                             .bodyMedium
                                                             .override(
-                                                              fontFamily: 'SF Pro Display',
-                                                              color: FlutterFlowTheme.of(context).primary,
+                                                              fontFamily:
+                                                                  'SF Pro Display',
+                                                              color: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .primary,
                                                               fontSize: 14.0,
-                                                              letterSpacing: 0.0,
-                                                              fontWeight: FontWeight.w600,
+                                                              letterSpacing:
+                                                                  0.0,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
                                                               lineHeight: 1.2,
                                                             ),
                                                       ),
@@ -978,35 +1712,57 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               child: Container(
                                                 height: 48.0,
                                                 decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(context).primary,
-                                                  borderRadius: BorderRadius.circular(12.0),
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .primary,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12.0),
                                                 ),
                                                 child: InkWell(
                                                   onTap: () async {
                                                     // Buy action
-                                                    if (FFAppState().isLogin == true) {
-                                                      final cart = Provider.of<CartProvider>(context, listen: false);
+                                                    if (FFAppState().isLogin ==
+                                                        true) {
+                                                      final cart = Provider.of<
+                                                              CartProvider>(
+                                                          context,
+                                                          listen: false);
                                                       cart.addItem(
                                                         widget.id!,
                                                         widget.name!,
                                                         widget.image!,
-                                                        double.tryParse(widget.price!) ?? 0.0,
+                                                        double.tryParse(widget
+                                                                .price!) ??
+                                                            0.0,
                                                         increment: false,
-                                                        discountAmount: double.tryParse(discountAmount) ?? 0.0,
-                                                        discountPercentage: double.tryParse(discountPercentage) ?? 0.0,
+                                                        discountAmount:
+                                                            double.tryParse(
+                                                                    discountAmount) ??
+                                                                0.0,
+                                                        discountPercentage:
+                                                            double.tryParse(
+                                                                    discountPercentage) ??
+                                                                0.0,
                                                       );
                                                       Navigator.push<void>(
                                                         context,
                                                         MaterialPageRoute<void>(
-                                                          builder: (BuildContext context) => CheckoutPageWidget(),
+                                                          builder: (BuildContext
+                                                                  context) =>
+                                                              CheckoutPageWidget(),
                                                         ),
                                                       );
                                                     } else {
-                                                      context.pushNamed(SignInPageWidget.routeName);
+                                                      context.pushNamed(
+                                                          SignInPageWidget
+                                                              .routeName);
                                                     }
                                                   },
                                                   child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: [
                                                       Icon(
                                                         Icons.shopping_bag,
@@ -1016,14 +1772,20 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       SizedBox(width: 8.0),
                                                       Text(
                                                         'এখনই কিনুন',
-                                                        style: FlutterFlowTheme.of(context)
+                                                        style: FlutterFlowTheme
+                                                                .of(context)
                                                             .bodyMedium
                                                             .override(
-                                                              fontFamily: 'SF Pro Display',
-                                                              color: Colors.white,
+                                                              fontFamily:
+                                                                  'SF Pro Display',
+                                                              color:
+                                                                  Colors.white,
                                                               fontSize: 14.0,
-                                                              letterSpacing: 0.0,
-                                                              fontWeight: FontWeight.w600,
+                                                              letterSpacing:
+                                                                  0.0,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
                                                               lineHeight: 1.2,
                                                             ),
                                                       ),
@@ -1040,9 +1802,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 ),
                                 // Book Description Section
                                 Padding(
-                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 20.0, 16.0, 16.0),
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      16.0, 20.0, 16.0, 16.0),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'About the book',
@@ -1459,7 +2223,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     ),
                                   ),
                                 ),
-                               
+
                                 FutureBuilder<ApiCallResponse>(
                                   future: FFAppState()
                                       .getReviewCache(
@@ -1821,26 +2585,35 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   },
                                                 ),
                                                 Padding(
-                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 12.0, 16.0, 0.0),
+                                                  padding: EdgeInsetsDirectional
+                                                      .fromSTEB(16.0, 12.0,
+                                                          16.0, 0.0),
                                                   child: FFButtonWidget(
                                                     onPressed: () async {
                                                       await showModalBottomSheet(
-                                                        isScrollControlled: true,
-                                                        backgroundColor: Colors.transparent,
+                                                        isScrollControlled:
+                                                            true,
+                                                        backgroundColor:
+                                                            Colors.transparent,
                                                         enableDrag: false,
                                                         context: context,
                                                         builder: (context) {
                                                           return Padding(
-                                                            padding: MediaQuery.viewInsetsOf(context),
+                                                            padding: MediaQuery
+                                                                .viewInsetsOf(
+                                                                    context),
                                                             child: Container(
                                                               height: 489.0,
-                                                              child: BookReviewBottomSheetWidget(
-                                                                bookId: widget.id!,
+                                                              child:
+                                                                  BookReviewBottomSheetWidget(
+                                                                bookId:
+                                                                    widget.id!,
                                                               ),
                                                             ),
                                                           );
                                                         },
-                                                      ).then((value) => safeSetState(() {}));
+                                                      ).then((value) =>
+                                                          safeSetState(() {}));
                                                     },
                                                     text: 'Write a Review',
                                                     icon: Icon(
@@ -1850,21 +2623,47 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     options: FFButtonOptions(
                                                       width: double.infinity,
                                                       height: 50.0,
-                                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                                                      iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                                                      color: FlutterFlowTheme.of(context).primary,
-                                                      textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                                                            fontFamily: 'SF Pro Display',
-                                                            color: Colors.white,
-                                                            fontSize: 16.0,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
+                                                      padding:
+                                                          EdgeInsetsDirectional
+                                                              .fromSTEB(
+                                                                  0.0,
+                                                                  0.0,
+                                                                  0.0,
+                                                                  0.0),
+                                                      iconPadding:
+                                                          EdgeInsetsDirectional
+                                                              .fromSTEB(
+                                                                  0.0,
+                                                                  0.0,
+                                                                  0.0,
+                                                                  0.0),
+                                                      color:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .primary,
+                                                      textStyle:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .titleSmall
+                                                              .override(
+                                                                fontFamily:
+                                                                    'SF Pro Display',
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 16.0,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
                                                       elevation: 2.0,
                                                       borderSide: BorderSide(
-                                                        color: Colors.transparent,
+                                                        color:
+                                                            Colors.transparent,
                                                         width: 1.0,
                                                       ),
-                                                      borderRadius: BorderRadius.circular(12.0),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12.0),
                                                     ),
                                                   ),
                                                 ),
@@ -1872,97 +2671,184 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                             );
                                           } else {
                                             return Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Padding(
-                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 0.0),
+                                                  padding: EdgeInsetsDirectional
+                                                      .fromSTEB(16.0, 16.0,
+                                                          16.0, 0.0),
                                                   child: Text(
                                                     'Reviews',
-                                                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                          fontFamily: 'SF Pro Display',
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
                                                           fontSize: 20.0,
-                                                          fontWeight: FontWeight.bold,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                         ),
                                                   ),
                                                 ),
                                                 Padding(
-                                                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 12.0, 16.0, 0.0),
+                                                  padding: EdgeInsetsDirectional
+                                                      .fromSTEB(16.0, 12.0,
+                                                          16.0, 0.0),
                                                   child: Container(
                                                     width: double.infinity,
                                                     decoration: BoxDecoration(
-                                                      color: FlutterFlowTheme.of(context).secondaryBackground,
-                                                      borderRadius: BorderRadius.circular(12.0),
+                                                      color: FlutterFlowTheme
+                                                              .of(context)
+                                                          .secondaryBackground,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12.0),
                                                       border: Border.all(
-                                                        color: FlutterFlowTheme.of(context).secondaryText.withOpacity(0.2),
+                                                        color: FlutterFlowTheme
+                                                                .of(context)
+                                                            .secondaryText
+                                                            .withOpacity(0.2),
                                                         width: 1.0,
                                                       ),
                                                     ),
                                                     child: Padding(
-                                                      padding: EdgeInsets.all(24.0),
+                                                      padding:
+                                                          EdgeInsets.all(24.0),
                                                       child: Column(
-                                                        mainAxisSize: MainAxisSize.max,
-                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        mainAxisSize:
+                                                            MainAxisSize.max,
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
                                                         children: [
                                                           Icon(
-                                                            Icons.rate_review_outlined,
-                                                            color: FlutterFlowTheme.of(context).secondaryText,
+                                                            Icons
+                                                                .rate_review_outlined,
+                                                            color: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .secondaryText,
                                                             size: 48.0,
                                                           ),
                                                           Padding(
-                                                            padding: EdgeInsetsDirectional.fromSTEB(0.0, 12.0, 0.0, 4.0),
+                                                            padding:
+                                                                EdgeInsetsDirectional
+                                                                    .fromSTEB(
+                                                                        0.0,
+                                                                        12.0,
+                                                                        0.0,
+                                                                        4.0),
                                                             child: Text(
                                                               'No reviews yet',
-                                                              style: FlutterFlowTheme.of(context).bodyLarge.override(
-                                                                    fontFamily: 'SF Pro Display',
-                                                                    fontWeight: FontWeight.w600,
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodyLarge
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
                                                                   ),
                                                             ),
                                                           ),
                                                           Padding(
-                                                            padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 24.0),
+                                                            padding:
+                                                                EdgeInsetsDirectional
+                                                                    .fromSTEB(
+                                                                        0.0,
+                                                                        0.0,
+                                                                        0.0,
+                                                                        24.0),
                                                             child: Text(
                                                               'Be the first to share your thoughts!',
-                                                              style: FlutterFlowTheme.of(context).labelMedium,
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .labelMedium,
                                                             ),
                                                           ),
                                                           FFButtonWidget(
-                                                            onPressed: () async {
+                                                            onPressed:
+                                                                () async {
                                                               await showModalBottomSheet(
-                                                                isScrollControlled: true,
-                                                                backgroundColor: Colors.transparent,
-                                                                enableDrag: false,
-                                                                context: context,
-                                                                builder: (context) {
+                                                                isScrollControlled:
+                                                                    true,
+                                                                backgroundColor:
+                                                                    Colors
+                                                                        .transparent,
+                                                                enableDrag:
+                                                                    false,
+                                                                context:
+                                                                    context,
+                                                                builder:
+                                                                    (context) {
                                                                   return Padding(
-                                                                    padding: MediaQuery.viewInsetsOf(context),
-                                                                    child: Container(
-                                                                      height: 489.0,
-                                                                      child: BookReviewBottomSheetWidget(
-                                                                        bookId: widget.id!,
+                                                                    padding: MediaQuery
+                                                                        .viewInsetsOf(
+                                                                            context),
+                                                                    child:
+                                                                        Container(
+                                                                      height:
+                                                                          489.0,
+                                                                      child:
+                                                                          BookReviewBottomSheetWidget(
+                                                                        bookId:
+                                                                            widget.id!,
                                                                       ),
                                                                     ),
                                                                   );
                                                                 },
-                                                              ).then((value) => safeSetState(() {}));
+                                                              ).then((value) =>
+                                                                  safeSetState(
+                                                                      () {}));
                                                             },
-                                                            text: 'Write a Review',
-                                                            options: FFButtonOptions(
+                                                            text:
+                                                                'Write a Review',
+                                                            options:
+                                                                FFButtonOptions(
                                                               width: 200.0,
                                                               height: 45.0,
-                                                              padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                                                              iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                                                              color: FlutterFlowTheme.of(context).primary,
-                                                              textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                                                                    fontFamily: 'SF Pro Display',
-                                                                    color: Colors.white,
-                                                                    fontWeight: FontWeight.w600,
-                                                                  ),
+                                                              padding:
+                                                                  EdgeInsetsDirectional
+                                                                      .fromSTEB(
+                                                                          0.0,
+                                                                          0.0,
+                                                                          0.0,
+                                                                          0.0),
+                                                              iconPadding:
+                                                                  EdgeInsetsDirectional
+                                                                      .fromSTEB(
+                                                                          0.0,
+                                                                          0.0,
+                                                                          0.0,
+                                                                          0.0),
+                                                              color: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .primary,
+                                                              textStyle:
+                                                                  FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .titleSmall
+                                                                      .override(
+                                                                        fontFamily:
+                                                                            'SF Pro Display',
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
+                                                                      ),
                                                               elevation: 2.0,
-                                                              borderSide: BorderSide(
-                                                                color: Colors.transparent,
+                                                              borderSide:
+                                                                  BorderSide(
+                                                                color: Colors
+                                                                    .transparent,
                                                                 width: 1.0,
                                                               ),
-                                                              borderRadius: BorderRadius.circular(12.0),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          12.0),
                                                             ),
                                                           ),
                                                         ],
@@ -2125,19 +3011,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             authorRelatedbookDetailslistItem,
                                                             r'''$.name''',
                                                           ).toString(),
-                                                          id:
-                                                              getJsonField(
+                                                          id: getJsonField(
                                                             authorRelatedbookDetailslistItem,
                                                             r'''$._id''',
                                                           ).toString(),
-                                                          isPurchased: _model.purchasedBookIds.contains(
+                                                          isPurchased: _model
+                                                              .purchasedBookIds
+                                                              .contains(
                                                             getJsonField(
                                                               authorRelatedbookDetailslistItem,
                                                               r'''$._id''',
                                                             ).toString(),
                                                           ),
-                                                          price:
-                                                              getJsonField(
+                                                          price: getJsonField(
                                                             authorRelatedbookDetailslistItem,
                                                             r'''$.price''',
                                                           ).toString(),
@@ -2464,7 +3350,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         //                         // Preview button
                         //                         FFButtonWidget(
                         //                           onPressed: () async {
-                                                    
+
                         //                             context.pushNamed(
                         //                               ReadBookCustomPageWidget.routeName,
                         //                               queryParameters: {
@@ -2486,7 +3372,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         //                                   bookImage,
                         //                                   ParamType.String,
                         //                                 ),
-                                                       
+
                         //                               }.withoutNulls,
                         //                             );
                         //                           },
@@ -2583,7 +3469,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         //                                                   widget.name!,
                         //                                                   widget.image!,
                         //                                                  double.tryParse(widget.price!)??0.0,
-                                                                          
+
                         //                                                 );
                         //                                                 await actions.showCustomToastBottom('Quantity increased!');
                         //                                               },
@@ -2684,7 +3570,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         //                                       SignInPageWidget
                         //                                           .routeName);
                         //                                     }
-                                                           
+
                         //                                   },
                         //                                   text: 'Buy Now',
                         //                                   options: FFButtonOptions(

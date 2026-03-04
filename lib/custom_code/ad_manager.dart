@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdManager {
-  static RewardedAd? _rewardedAd;
+  static RewardedInterstitialAd? _rewardedInterstitialAd;
   static bool _isAdLoaded = false;
   static bool _isAdLoading = false;
   static Completer<void>? _adCompleter;
@@ -19,12 +19,13 @@ class AdManager {
     return _adCompleter!.future;
   }
 
-  // Replace these with your actual Ad Unit IDs
+  // Rewarded Interstitial Ad Unit IDs
   static String get rewardedAdUnitId {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-1401510952827121/1716336801'; // Test ID
+      return 'ca-app-pub-1401510952827121/6858828755';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/1712485313'; // Test ID
+      // Replace with your iOS rewarded interstitial unit id when available.
+      return 'ca-app-pub-3940256099942544/6978759866';
     } else {
       throw UnsupportedError("Unsupported platform");
     }
@@ -39,25 +40,26 @@ class AdManager {
     if (_isAdLoaded || _isAdLoading) return;
 
     _isAdLoading = true;
-    print('Ad loading started...');
-    RewardedAd.load(
+    print('Rewarded interstitial loading started...');
+    RewardedInterstitialAd.load(
       adUnitId: rewardedAdUnitId,
       request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
+      rewardedInterstitialAdLoadCallback:
+          RewardedInterstitialAdLoadCallback(
         onAdLoaded: (ad) {
-          _rewardedAd = ad;
+          _rewardedInterstitialAd = ad;
           _isAdLoaded = true;
           _isAdLoading = false;
-          print('Rewarded Ad Loaded');
+          print('Rewarded interstitial loaded');
           if (_adCompleter != null && !_adCompleter!.isCompleted) {
             _adCompleter!.complete();
           }
         },
         onAdFailedToLoad: (error) {
-          _rewardedAd = null;
+          _rewardedInterstitialAd = null;
           _isAdLoaded = false;
           _isAdLoading = false;
-          print('Rewarded Ad Failed to Load: $error');
+          print('Rewarded interstitial failed to load: $error');
           if (_adCompleter != null && !_adCompleter!.isCompleted) {
             _adCompleter!.completeError(error);
           }
@@ -71,23 +73,30 @@ class AdManager {
     required BuildContext context,
     Function? onAdFailed,
   }) {
-    if (_isAdLoaded && _rewardedAd != null) {
-      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+    if (_isAdLoaded && _rewardedInterstitialAd != null) {
+      bool isRewardEarned = false;
+      _rewardedInterstitialAd!.fullScreenContentCallback =
+          FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
+          _rewardedInterstitialAd = null;
           _isAdLoaded = false;
+          if (isRewardEarned) {
+            onRewardEarned();
+          }
           // Don't auto-reload here, wait for next request
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
           ad.dispose();
+          _rewardedInterstitialAd = null;
           _isAdLoaded = false;
           if (onAdFailed != null) onAdFailed();
         },
       );
 
-      _rewardedAd!.show(
+      _rewardedInterstitialAd!.show(
         onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-          onRewardEarned();
+          isRewardEarned = true;
         },
       );
     } else {

@@ -1,15 +1,12 @@
-import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
-import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/empty_components/no_download_yet/no_download_yet_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
-import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
-import 'dart:async';
+import '/services/local_download_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'download_page_model.dart';
 export 'download_page_model.dart';
@@ -28,46 +25,48 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
   late DownloadPageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isLoading = true;
+  List<LocalDownloadedBook> _downloads = [];
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => DownloadPageModel());
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (FFAppState().isLogin) {
-        await _loadPurchasedBooks();
-      }
-      safeSetState(() {});
+      await _loadDownloads();
     });
   }
 
-  Future<void> _loadPurchasedBooks() async {
-    try {
-      final response = await EbookGroup.userBookPurchaseRecordsApiCall.call(
-        userId: FFAppState().userId,
-        token: FFAppState().token,
-      );
-      
-      if (EbookGroup.userBookPurchaseRecordsApiCall.success(
-            response.jsonBody ?? '',
-          ) ==
-          1) {
-        final bookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
-          response.jsonBody ?? '',
-        );
-        _model.purchasedBookIds = bookIds ?? [];
-        safeSetState(() {});
-      }
-    } catch (e) {
-      debugPrint('Error loading purchased books: $e');
+  Future<void> _loadDownloads() async {
+    final items = await LocalDownloadService.getAllDownloads();
+    if (!mounted) return;
+    safeSetState(() {
+      _downloads = items.where((e) => e.existsOnDisk).toList();
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _openDownloadedBook(LocalDownloadedBook item) async {
+    if (!item.existsOnDisk) {
+      await actions.showCustomToastBottom('File not found on device');
+      await _loadDownloads();
+      return;
     }
+
+    context.pushNamed(
+      ReadBookCustomPageWidget.routeName,
+      queryParameters: {
+        'pdf': serializeParam(item.localPath, ParamType.String),
+        'id': serializeParam(item.bookId, ParamType.String),
+        'name': serializeParam(item.name, ParamType.String),
+        'image': serializeParam(item.image, ParamType.String),
+      }.withoutNulls,
+    );
   }
 
   @override
   void dispose() {
     _model.dispose();
-
     super.dispose();
   }
 
@@ -86,7 +85,6 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
         body: SafeArea(
           top: true,
           child: Column(
-            mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               wrapWithModel(
@@ -100,476 +98,158 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                 ),
               ),
               Expanded(
-                child: Builder(
-                  builder: (context) {
-                    if (FFAppState().connected == true) {
-                      return FutureBuilder<ApiCallResponse>(
-                        future: FFAppState()
-                            .getFavouriteBookCache(
-                          requestFn: () => EbookGroup.getFavouriteBookCall.call(
-                            userId: FFAppState().userId,
-                            token: FFAppState().token,
+                child: _isLoading
+                    ? Center(
+                        child: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              FlutterFlowTheme.of(context).primary,
+                            ),
                           ),
-                        )
-                            .then((result) {
-                          _model.apiRequestCompleted2 = true;
-                          return result;
-                        }),
-                        builder: (context, snapshot) {
-                          // Customize what your widget looks like when it's loading.
-                          if (!snapshot.hasData) {
-                            return Center(
-                              child: SizedBox(
-                                width: 50.0,
-                                height: 50.0,
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    FlutterFlowTheme.of(context).primary,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                          final containerGetFavouriteBookResponse =
-                              snapshot.data!;
-
-                          return Container(
-                            decoration: BoxDecoration(),
-                            child: FutureBuilder<ApiCallResponse>(
-                              future: (_model.apiRequestCompleter1 ??=
-                                      Completer<ApiCallResponse>()
-                                        ..complete(EbookGroup
-                                            .downloadhistoryApiCall
-                                            .call(
-                                          userId: FFAppState().userId,
-                                          token: FFAppState().token,
-                                        )))
-                                  .future,
-                              builder: (context, snapshot) {
-                                // Customize what your widget looks like when it's loading.
-                                if (!snapshot.hasData) {
-                                  return Center(
-                                    child: SizedBox(
-                                      width: 50.0,
-                                      height: 50.0,
-                                      child: CircularProgressIndicator(
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          FlutterFlowTheme.of(context).primary,
+                        ),
+                      )
+                    : _downloads.isEmpty
+                        ? wrapWithModel(
+                            model: _model.noDownloadYetModel,
+                            updateCallback: () => safeSetState(() {}),
+                            child: NoDownloadYetWidget(),
+                          )
+                        : RefreshIndicator(
+                            color: FlutterFlowTheme.of(context).primary,
+                            onRefresh: _loadDownloads,
+                            child: ListView.separated(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                              itemBuilder: (context, index) {
+                                final item = _downloads[index];
+                                return InkWell(
+                                  onTap: () => _openDownloadedBook(item),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryBackground,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: FlutterFlowTheme.of(context)
+                                              .shadowColor,
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 3),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  );
-                                }
-                                final containerDownloadhistoryApiResponse =
-                                    snapshot.data!;
-
-                                return Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(),
-                                  child: Builder(
-                                    builder: (context) {
-                                      if (EbookGroup.downloadhistoryApiCall
-                                              .success(
-                                            containerDownloadhistoryApiResponse
-                                                .jsonBody,
-                                          ) ==
-                                          2) {
-                                        return Align(
-                                          alignment:
-                                              AlignmentDirectional(0.0, 0.0),
-                                          child: Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    16.0, 0.0, 16.0, 0.0),
-                                            child: Text(
-                                              valueOrDefault<String>(
-                                                EbookGroup
-                                                    .downloadhistoryApiCall
-                                                    .message(
-                                                  containerDownloadhistoryApiResponse
-                                                      .jsonBody,
-                                                ),
-                                                'Message',
-                                              ),
-                                              textAlign: TextAlign.center,
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        fontFamily:
-                                                            'SF Pro Display',
-                                                        fontSize: 18.0,
-                                                        letterSpacing: 0.0,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        lineHeight: 1.5,
-                                                      ),
+                                    child: Row(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: CachedNetworkImage(
+                                            imageUrl: item.image,
+                                            width: 64,
+                                            height: 92,
+                                            fit: BoxFit.cover,
+                                            errorWidget:
+                                                (context, error, stack) =>
+                                                    Image.asset(
+                                              'assets/images/error_image.png',
+                                              width: 64,
+                                              height: 92,
+                                              fit: BoxFit.cover,
                                             ),
                                           ),
-                                        );
-                                      } else {
-                                        return Builder(
-                                          builder: (context) {
-                                            if (EbookGroup
-                                                        .downloadhistoryApiCall
-                                                        .downloadDetailsList(
-                                                      containerDownloadhistoryApiResponse
-                                                          .jsonBody,
-                                                    ) !=
-                                                    null &&
-                                                (EbookGroup
-                                                        .downloadhistoryApiCall
-                                                        .downloadDetailsList(
-                                                  containerDownloadhistoryApiResponse
-                                                      .jsonBody,
-                                                ))!
-                                                    .isNotEmpty) {
-                                              return RefreshIndicator(
-                                                key: Key(
-                                                    'RefreshIndicator_2twh3rth'),
-                                                color:
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item.name,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style:
                                                     FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                item.author.isEmpty
+                                                    ? 'Unknown author'
+                                                    : item.author,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          fontSize: 13,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .secondaryText,
+                                                        ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.download_done_rounded,
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
                                                         .primary,
-                                                onRefresh: () async {
-                                                  safeSetState(() => _model
-                                                          .apiRequestCompleter1 =
-                                                      null);
-                                                  await _model
-                                                      .waitForApiRequestCompleted1();
-                                                },
-                                                child: ListView(
-                                                  padding: EdgeInsets.fromLTRB(
-                                                    0,
-                                                    16.0,
-                                                    0,
-                                                    16.0,
+                                                    size: 16,
                                                   ),
-                                                  scrollDirection:
-                                                      Axis.vertical,
-                                                  children: [
-                                                    Padding(
-                                                      padding:
-                                                          EdgeInsetsDirectional
-                                                              .fromSTEB(
-                                                                  16.0,
-                                                                  0.0,
-                                                                  16.0,
-                                                                  0.0),
-                                                      child: Builder(
-                                                        builder: (context) {
-                                                          final downloadDetailsList = EbookGroup
-                                                                  .downloadhistoryApiCall
-                                                                  .downloadDetailsList(
-                                                                    containerDownloadhistoryApiResponse
-                                                                        .jsonBody,
-                                                                  )
-                                                                  ?.toList() ??
-                                                              [];
-
-                                                          return Wrap(
-                                                            spacing: 16.0,
-                                                            runSpacing: 16.0,
-                                                            alignment:
-                                                                WrapAlignment
-                                                                    .start,
-                                                            crossAxisAlignment:
-                                                                WrapCrossAlignment
-                                                                    .start,
-                                                            direction:
-                                                                Axis.horizontal,
-                                                            runAlignment:
-                                                                WrapAlignment
-                                                                    .start,
-                                                            verticalDirection:
-                                                                VerticalDirection
-                                                                    .down,
-                                                            clipBehavior:
-                                                                Clip.none,
-                                                            children: List.generate(
-                                                                downloadDetailsList
-                                                                    .length,
-                                                                (downloadDetailsListIndex) {
-                                                              final downloadDetailsListItem =
-                                                                  downloadDetailsList[
-                                                                      downloadDetailsListIndex];
-                                                              return wrapWithModel(
-                                                                model: _model
-                                                                    .mainBookComponentModels
-                                                                    .getModel(
-                                                                  getJsonField(
-                                                                    downloadDetailsListItem,
-                                                                    r'''$.bookDetails.name''',
-                                                                  ).toString(),
-                                                                  downloadDetailsListIndex,
-                                                                ),
-                                                                updateCallback: () =>
-                                                                    safeSetState(
-                                                                        () {}),
-                                                                child:
-                                                                    MainBookComponentWidget(
-                                                                  key: Key(
-                                                                    'Keyoxg_${getJsonField(
-                                                                      downloadDetailsListItem,
-                                                                      r'''$.bookDetails.name''',
-                                                                    ).toString()}',
-                                                                  ),
-                                                                  image:
-                                                                      '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                                    downloadDetailsListItem,
-                                                                    r'''$.bookDetails.image''',
-                                                                  ).toString()}',
-                                                                  bookName:
-                                                                      getJsonField(
-                                                                    downloadDetailsListItem,
-                                                                    r'''$.bookDetails.name''',
-                                                                  ).toString(),
-                                                                  id:
-                                                                      getJsonField(
-                                                                    downloadDetailsListItem,
-                                                                    r'''$.bookDetails._id''',
-                                                                  ).toString(),
-                                                                  price:
-                                                                      (getJsonField(
-                                                                    downloadDetailsListItem,
-                                                                    r'''$.bookDetails.price''',
-                                                                  )?.toString() ?? '0'),
-                                                                  discountAmount: (getJsonField(
-                                                                    downloadDetailsListItem,
-                                                                    r'''$.bookDetails.discount_amount''',
-                                                                  )?.toString() ?? '0'),
-                                                                  discountPercentage:
-                                                                      (getJsonField(
-                                                                    downloadDetailsListItem,
-                                                                    r'''$.bookDetails.discount_percentage''',
-                                                                  )?.toString() ?? '0'),
-                                                                  authorsName:
-                                                                      getJsonField(
-                                                                    downloadDetailsListItem,
-                                                                    r'''$.bookDetails.author.name''',
-                                                                  ).toString(),
-                                                                  isFav: functions.checkFavOrNot(
-                                                                          EbookGroup.getFavouriteBookCall
-                                                                              .favouriteBookDetailsList(
-                                                                                containerGetFavouriteBookResponse.jsonBody,
-                                                                              )
-                                                                              ?.toList(),
-                                                                          getJsonField(
-                                                                            downloadDetailsListItem,
-                                                                            r'''$.bookDetails._id''',
-                                                                          ).toString()) ==
-                                                                      true,
-                                                                  indicator: (downloadDetailsListIndex ==
-                                                                          _model
-                                                                              .downloadIndex) &&
-                                                                      (_model.isDownload ==
-                                                                          true),
-                                                                  isFavAction:
-                                                                      () async {
-                                                                    _model.isDownload =
-                                                                        true;
-                                                                    _model.downloadIndex =
-                                                                        downloadDetailsListIndex;
-                                                                    safeSetState(
-                                                                        () {});
-                                                                    if (functions.checkFavOrNot(
-                                                                            EbookGroup.getFavouriteBookCall
-                                                                                .favouriteBookDetailsList(
-                                                                                  containerGetFavouriteBookResponse.jsonBody,
-                                                                                )
-                                                                                ?.toList(),
-                                                                            getJsonField(
-                                                                              downloadDetailsListItem,
-                                                                              r'''$.bookDetails._id''',
-                                                                            ).toString()) ==
-                                                                        true) {
-                                                                      _model.getPopularDetete = await EbookGroup
-                                                                          .removeFavouritebookCall
-                                                                          .call(
-                                                                        userId:
-                                                                            FFAppState().userId,
-                                                                        token: FFAppState()
-                                                                            .token,
-                                                                        bookId:
-                                                                            getJsonField(
-                                                                          downloadDetailsListItem,
-                                                                          r'''$.bookDetails._id''',
-                                                                        ).toString(),
-                                                                      );
-
-                                                                      safeSetState(
-                                                                          () {
-                                                                        FFAppState()
-                                                                            .clearGetFavouriteBookCacheCache();
-                                                                        _model.apiRequestCompleted2 =
-                                                                            false;
-                                                                      });
-                                                                      await _model
-                                                                          .waitForApiRequestCompleted2();
-                                                                      await actions
-                                                                          .showCustomToastBottom(
-                                                                        FFAppState()
-                                                                            .unFavText,
-                                                                      );
-                                                                    } else {
-                                                                      _model.getPopularAdd = await EbookGroup
-                                                                          .addFavouriteBookApiCall
-                                                                          .call(
-                                                                        userId:
-                                                                            FFAppState().userId,
-                                                                        token: FFAppState()
-                                                                            .token,
-                                                                        bookId:
-                                                                            getJsonField(
-                                                                          downloadDetailsListItem,
-                                                                          r'''$.bookDetails._id''',
-                                                                        ).toString(),
-                                                                      );
-
-                                                                      safeSetState(
-                                                                          () {
-                                                                        FFAppState()
-                                                                            .clearGetFavouriteBookCacheCache();
-                                                                        _model.apiRequestCompleted2 =
-                                                                            false;
-                                                                      });
-                                                                      await _model
-                                                                          .waitForApiRequestCompleted2();
-                                                                      await actions
-                                                                          .showCustomToastBottom(
-                                                                        FFAppState()
-                                                                            .favText,
-                                                                      );
-                                                                    }
-
-                                                                    FFAppState()
-                                                                        .clearGetFavouriteBookCacheCache();
-                                                                    _model.isDownload =
-                                                                        false;
-                                                                    safeSetState(
-                                                                        () {});
-
-                                                                    safeSetState(
-                                                                        () {});
-                                                                  },
-                                                                  isPurchased: _model.purchasedBookIds.contains(
-                                                                    getJsonField(
-                                                                      downloadDetailsListItem,
-                                                                      r'''$._id''',
-                                                                    ).toString(),
-                                                                  ),
-                                                                  isMainTap:
-                                                                      () async {
-                                                                    context
-                                                                        .pushNamed(
-                                                                      ReadBookCustomPageWidget
-                                                                          .routeName,
-                                                                      queryParameters:
-                                                                          {
-                                                                        'pdf':
-                                                                            serializeParam(
-                                                                          '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                                            downloadDetailsListItem,
-                                                                            r'''$.bookDetails.pdf''',
-                                                                          ).toString()}',
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'id':
-                                                                            serializeParam(
-                                                                          getJsonField(
-                                                                            downloadDetailsListItem,
-                                                                            r'''$.bookDetails._id''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'name':
-                                                                            serializeParam(
-                                                                          getJsonField(
-                                                                            downloadDetailsListItem,
-                                                                            r'''$.bookDetails.name''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'image':
-                                                                            serializeParam(
-                                                                          getJsonField(
-                                                                            downloadDetailsListItem,
-                                                                            r'''$.bookDetails.image''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                      }.withoutNulls,
-                                                                    );
-
-                                                                    if (getJsonField(
-                                                                          downloadDetailsListItem,
-                                                                          r'''$.bookDetails._id''',
-                                                                        ) ==
-                                                                        FFAppState()
-                                                                            .homePageBookId) {
-                                                                      FFAppState()
-                                                                          .totalPages = 1;
-                                                                      FFAppState()
-                                                                          .update(
-                                                                              () {});
-                                                                    } else {
-                                                                      FFAppState()
-                                                                          .totalPages = 1;
-                                                                      FFAppState()
-                                                                          .homePageCurrentPdfIndex = 1;
-                                                                      FFAppState()
-                                                                          .update(
-                                                                              () {});
-                                                                    }
-                                                                  },
-                                                                ),
-                                                              );
-                                                            }),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            } else {
-                                              return wrapWithModel(
-                                                model:
-                                                    _model.noDownloadYetModel,
-                                                updateCallback: () =>
-                                                    safeSetState(() {}),
-                                                child: NoDownloadYetWidget(),
-                                              );
-                                            }
-                                          },
-                                        );
-                                      }
-                                    },
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'Downloaded',
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .primary,
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          Icons.arrow_forward_ios,
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryText,
+                                          size: 14,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 12),
+                              itemCount: _downloads.length,
                             ),
-                          );
-                        },
-                      );
-                    } else {
-                      return Align(
-                        alignment: AlignmentDirectional(0.0, 0.0),
-                        child: Lottie.asset(
-                          'assets/jsons/No_Wifi.json',
-                          width: 150.0,
-                          height: 150.0,
-                          fit: BoxFit.contain,
-                          animate: true,
-                        ),
-                      );
-                    }
-                  },
-                ),
+                          ),
               ),
             ],
           ),

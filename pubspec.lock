@@ -284,8 +284,8 @@ packages:
   epub_reader_kit:
     dependency: "direct main"
     description:
-      path: "../../Products/ebook_reader/packages/epub_reader_kit"
-      relative: true
+      path: "D:/project/Products/packages/epub_reader_kit"
+      relative: false
     source: path
     version: "0.0.1"
   epubx:
@@ -1277,7 +1277,7 @@ packages:
     source: hosted
     version: "2.2.1"
   path:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: path
       sha256: "75cca69d1490965be98c73ceaea117e8a04dd21217b37b292c9ddbec0d955bc5"

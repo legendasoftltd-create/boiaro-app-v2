@@ -111,6 +111,10 @@ class FFAppState extends ChangeNotifier {
     _safeInit(() {
       _watchedAdBooks = prefs.getStringList('ff_watchedAdBooks') ?? _watchedAdBooks;
     });
+    _safeInit(() {
+      _lastAdShownAtMillis =
+          prefs.getInt('ff_lastAdShownAtMillis') ?? _lastAdShownAtMillis;
+    });
   }
 
   void update(VoidCallback callback) {
@@ -468,6 +472,25 @@ class FFAppState extends ChangeNotifier {
 
   bool hasWatchedAdForBook(String bookId) {
     return _watchedAdBooks.contains(bookId);
+  }
+
+  int _lastAdShownAtMillis = 0;
+  int get lastAdShownAtMillis => _lastAdShownAtMillis;
+  set lastAdShownAtMillis(int value) {
+    _lastAdShownAtMillis = value;
+    prefs.setInt('ff_lastAdShownAtMillis', value);
+  }
+
+  bool isAdIntervalPassed({Duration interval = const Duration(minutes: 10)}) {
+    if (_lastAdShownAtMillis <= 0) {
+      return true;
+    }
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return (now - _lastAdShownAtMillis) >= interval.inMilliseconds;
+  }
+
+  void markAdShownNow() {
+    lastAdShownAtMillis = DateTime.now().millisecondsSinceEpoch;
   }
 
   final _getCategoriesCacheManager = FutureRequestManager<ApiCallResponse>();

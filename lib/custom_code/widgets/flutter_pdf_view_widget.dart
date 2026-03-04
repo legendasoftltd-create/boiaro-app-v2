@@ -15,6 +15,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +32,7 @@ import 'pdf_viewer_epub_search.dart';
 import 'pdf_viewer_settings_dialogs.dart';
 import 'speech_player_bar.dart';
 import 'bijoy_converter.dart';
+import '/services/reading_report_service.dart';
 
 class FlutterPdfViewWidget extends StatefulWidget {
   const FlutterPdfViewWidget({
@@ -39,12 +41,14 @@ class FlutterPdfViewWidget extends StatefulWidget {
     this.height,
     this.filePath,
     this.namePage,
+    this.bookId,
   });
 
   final double? width;
   final double? height;
   final String? filePath;
   final String? namePage;
+  final String? bookId;
 
   @override
   State<FlutterPdfViewWidget> createState() => _FlutterPdfViewWidgetState();
@@ -82,7 +86,8 @@ class _DrawerOpener extends StatelessWidget {
   }
 }
 
-class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
+class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
+    with WidgetsBindingObserver {
   final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final PdfViewerController pdfViewerController = PdfViewerController();
@@ -98,11 +103,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   String? _currentBookId;
   String? _originalChapterHtml; // Store original HTML before highlights
   bool _isLoading = true;
-  
+  Timer? _progressHeartbeatTimer;
+  bool _hasEndedForBackground = false;
+
   // Auto-scroll timers
   Timer? _autoScrollTimer; // For interval-based auto-scroll
   Timer? _continuousScrollTimer; // For continuous auto-scroll
-  
+
   // Button click debouncing to prevent rapid clicks from queuing operations
   DateTime? _lastButtonClick;
   static const _buttonDebounceMs = 300; // 300ms debounce
@@ -118,9 +125,24 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     return true;
   }
 
+  void _onReadingDebug(String message) {
+    if (!mounted || !kDebugMode) return;
+    if (message.contains('PROGRESS SKIP')) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(milliseconds: 1200),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.filePath == null) {
       _isLoading = false;
     }
@@ -143,6 +165,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
       PdfViewerHelpers.determineReaderType(widget.filePath, provider);
       provider.setCurrentPage(1);
       PdfViewerHelpers.getInitialBrightness(provider);
+      ReadingReportService.instance.setDebugListener(_onReadingDebug);
+      unawaited(_startReadingSession());
+      _startProgressHeartbeat();
       if (provider.readerType == ReaderType.epub) {
         EpubReaderWidget.loadEpubBook(
           widget.filePath,
@@ -168,7 +193,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         );
       }
       ScreenProtector.protectDataLeakageOn();
-      
+
       // Initialize auto-scroll after a delay to ensure content is loaded
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted && provider.readerType == ReaderType.epub) {
@@ -294,15 +319,15 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   // Auto-scroll methods
   void _startAutoScroll(PdfViewerProvider provider) {
     _stopAutoScroll(); // Stop any existing timers
-    
+
     final intervalSeconds = provider.autoScrollInterval;
     final speedPercent = provider.autoScrollSpeed;
-    
+
     // If both are 0 or very small, don't start auto-scroll
     if (intervalSeconds <= 0 && speedPercent <= 0) {
       return;
     }
-    
+
     // Interval-based auto-scroll (jumps at intervals)
     if (intervalSeconds > 0) {
       _autoScrollTimer = Timer.periodic(
@@ -310,7 +335,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         (_) => _performAutoScroll(provider, isInterval: true),
       );
     }
-    
+
     // Continuous auto-scroll (smooth scrolling)
     if (speedPercent > 0) {
       // Use fixed 20ms update rate (50fps) for smooth scrolling
@@ -328,31 +353,34 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     _continuousScrollTimer = null;
   }
 
-  void _performAutoScroll(PdfViewerProvider provider, {required bool isInterval}) {
+  void _performAutoScroll(PdfViewerProvider provider,
+      {required bool isInterval}) {
     if (!mounted || !_epubScrollController.hasClients) return;
-    
+
     try {
       final position = _epubScrollController.position;
       if (!position.hasContentDimensions || !position.hasPixels) return;
-      
+
       final maxScroll = position.maxScrollExtent;
       final currentPixels = position.pixels;
-      
+
       // If already at bottom, optionally go to next chapter or stop
       if (currentPixels >= maxScroll - 10) {
         // At bottom, try to go to next chapter
         if (provider.readerType == ReaderType.epub &&
-            provider.currentEpubChapterIndex < provider.epubChapters.length - 1) {
+            provider.currentEpubChapterIndex <
+                provider.epubChapters.length - 1) {
           setCurrentPage(provider);
         }
         return;
       }
-      
+
       if (isInterval) {
         // Interval-based: scroll by a fixed amount (e.g., one viewport height)
         final viewportHeight = position.viewportDimension;
-        final targetScroll = (currentPixels + viewportHeight * 0.8).clamp(0.0, maxScroll);
-        
+        final targetScroll =
+            (currentPixels + viewportHeight * 0.8).clamp(0.0, maxScroll);
+
         _epubScrollController.animateTo(
           targetScroll,
           duration: const Duration(milliseconds: 500),
@@ -363,8 +391,9 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
         // Speed 100% -> ~5px per 20ms (~250px/s)
         final speedPercent = provider.autoScrollSpeed;
         final scrollDelta = (speedPercent / 20.0);
-        
-        final targetScroll = (currentPixels + scrollDelta).clamp(0.0, maxScroll);
+
+        final targetScroll =
+            (currentPixels + scrollDelta).clamp(0.0, maxScroll);
         _epubScrollController.jumpTo(targetScroll);
       }
     } catch (e) {
@@ -372,9 +401,86 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
     }
   }
 
+  Future<void> _startReadingSession() async {
+    final bookId = (widget.bookId ?? FFAppState().homePageBookId).trim();
+    if (bookId.isEmpty) return;
+    await ReadingReportService.instance.startSession(bookId: bookId);
+    _hasEndedForBackground = false;
+  }
+
+  void _startProgressHeartbeat() {
+    _stopProgressHeartbeat();
+    _progressHeartbeatTimer = Timer.periodic(const Duration(seconds: 45), (_) {
+      if (!mounted) return;
+      final provider = context.read<PdfViewerProvider>();
+      unawaited(_reportProgress(provider, force: true, fromHeartbeat: true));
+    });
+  }
+
+  void _stopProgressHeartbeat() {
+    _progressHeartbeatTimer?.cancel();
+    _progressHeartbeatTimer = null;
+  }
+
+  Future<void> _reportProgress(
+    PdfViewerProvider provider, {
+    bool force = false,
+    bool fromHeartbeat = false,
+  }) async {
+    if (fromHeartbeat && !ReadingReportService.instance.hasActiveSession) {
+      await _startReadingSession();
+    }
+    final percent = _calculateProgressPercent(provider);
+    await ReadingReportService.instance.updateProgress(
+      percentage: percent,
+      force: force,
+    );
+  }
+
+  int _calculateProgressPercent(PdfViewerProvider provider) {
+    if (provider.readerType == ReaderType.pdf) {
+      final total = FFAppState().totalPages <= 0 ? 1 : FFAppState().totalPages;
+      final current = provider.currentPage.clamp(1, total);
+      return ((current / total) * 100).round().clamp(0, 100);
+    }
+
+    final total =
+        provider.epubChapters.isEmpty ? 1 : provider.epubChapters.length;
+    final current = (provider.currentEpubChapterIndex + 1).clamp(1, total);
+    return ((current / total) * 100).round().clamp(0, 100);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
+
+    if (state == AppLifecycleState.resumed) {
+      if (_hasEndedForBackground) {
+        unawaited(_startReadingSession());
+        _startProgressHeartbeat();
+      }
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      final provider = context.read<PdfViewerProvider>();
+      unawaited(_reportProgress(provider, force: true));
+      unawaited(ReadingReportService.instance.endSession());
+      _stopProgressHeartbeat();
+      _hasEndedForBackground = true;
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopProgressHeartbeat();
+    ReadingReportService.instance.setDebugListener(null);
     final provider = context.read<PdfViewerProvider>();
+    unawaited(_reportProgress(provider, force: true));
+    unawaited(ReadingReportService.instance.endSession());
     PdfViewerHelpers.restoreOriginalBrightness(provider);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -395,7 +501,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   void setCurrentPage(PdfViewerProvider provider) {
     // Debounce rapid clicks to prevent queuing multiple operations
     if (!_canProcessClick()) return;
-    
+
     if (provider.readerType == ReaderType.epub) {
       if (provider.currentEpubChapterIndex < provider.epubChapters.length - 1) {
         EpubReaderWidget.loadEpubChapter(
@@ -411,11 +517,16 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
             });
           },
         );
+        Future.delayed(const Duration(milliseconds: 350), () {
+          if (!mounted) return;
+          unawaited(_reportProgress(provider, force: true));
+        });
       }
     } else {
       if (provider.currentPage != FFAppState().totalPages) {
         provider.incrementPage();
         pdfViewerController.jumpToPage(provider.currentPage);
+        unawaited(_reportProgress(provider, force: true));
       }
     }
   }
@@ -423,7 +534,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
   void setCurrentMinusPage(PdfViewerProvider provider) {
     // Debounce rapid clicks to prevent queuing multiple operations
     if (!_canProcessClick()) return;
-    
+
     if (provider.readerType == ReaderType.epub) {
       if (provider.currentEpubChapterIndex > 0) {
         EpubReaderWidget.loadEpubChapter(
@@ -439,11 +550,16 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
             });
           },
         );
+        Future.delayed(const Duration(milliseconds: 350), () {
+          if (!mounted) return;
+          unawaited(_reportProgress(provider, force: true));
+        });
       }
     } else {
       if (provider.currentPage > 1) {
         provider.decrementPage();
         pdfViewerController.jumpToPage(provider.currentPage);
+        unawaited(_reportProgress(provider, force: true));
       }
     }
   }
@@ -1362,7 +1478,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                               return pdfContent;
                             },
                             child: Container(
-                              padding:  EdgeInsets.only(top: 50),
+                              padding: EdgeInsets.only(top: 50),
                               color: Colors.white,
                               child: (widget.filePath != null &&
                                       (widget.filePath!.startsWith('http') ||
@@ -1424,6 +1540,10 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                                     .homePageCurrentPdfIndex =
                                                 provider.currentPage;
                                           });
+                                          unawaited(_reportProgress(
+                                            provider,
+                                            force: true,
+                                          ));
                                         });
                                       },
                                       onTextSelectionChanged:
@@ -1495,6 +1615,10 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
                                                     .homePageCurrentPdfIndex =
                                                 provider.currentPage;
                                           });
+                                          unawaited(_reportProgress(
+                                            provider,
+                                            force: true,
+                                          ));
                                         });
                                       },
                                       onTextSelectionChanged:
@@ -2445,13 +2569,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget> {
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            color: Colors.orangeAccent.withOpacity((blueLightFilter / 100.0) * 0.3),
+            color: Colors.orangeAccent
+                .withOpacity((blueLightFilter / 100.0) * 0.3),
           ),
         );
       },
     );
   }
-
 
   Widget _buildBottomIcon(
       IconData icon, String tooltip, VoidCallback onTap, Color iconColor) {
