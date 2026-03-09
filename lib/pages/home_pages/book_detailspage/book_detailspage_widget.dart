@@ -1160,11 +1160,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                       final isFree = accessType == 'free' ||
                                           accessType == 'Free';
                                       final rawPdfPath = valueOrDefault<String>(
-                                        EbookGroup.getbookdetailsApiCall.pdf(
-                                          bookDetailspageGetbookdetailsApiResponse
-                                              .jsonBody,
+                                        EbookGroup
+                                            .getbookdetailsApiCall
+                                            .chapterFirstFile(
+                                              bookDetailspageGetbookdetailsApiResponse
+                                                  .jsonBody,
+                                            ),
+                                        valueOrDefault<String>(
+                                          EbookGroup.getbookdetailsApiCall.pdf(
+                                            bookDetailspageGetbookdetailsApiResponse
+                                                .jsonBody,
+                                          ),
+                                          '',
                                         ),
-                                        '',
                                       );
                                       final remotePdfUrl = rawPdfPath
                                               .startsWith('http')

@@ -1,6 +1,5 @@
 import 'package:a_i_ebook_app/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import 'package:a_i_ebook_app/pages/home_pages/book_detailspage/book_detailspage_widget.dart';
-import 'package:a_i_ebook_app/pages/home_pages/read_book_custom_page/read_book_custom_page_widget.dart';
 
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -100,44 +99,19 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget> {
                         return GestureDetector(
                           onTap: () {
                             context.pushNamed(
-                                      ReadBookCustomPageWidget.routeName,
-                                                  queryParameters: {
-                                                    'pdf': serializeParam(
-                                                    '${FFAppConstants.pdfUrl}${EbookGroup.userBookPurchaseRecordsApiCall
-                                                       .pdf(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex]}',
-                                                      ParamType.String,
-                                                    ),
-                                                    'id': serializeParam(
-                                                      EbookGroup.userBookPurchaseRecordsApiCall
-                                                      .bookId(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
-                                                      ParamType.String,
-                                                    ),
-                                                    'name': serializeParam(
-                                                      EbookGroup.userBookPurchaseRecordsApiCall
-                                                      .bookName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
-                                                      ParamType.String,
-                                                    ),
-                                                    'image': serializeParam(
-                                                      EbookGroup.userBookPurchaseRecordsApiCall
-                                                      .bookImage(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
-                                                      ParamType.String,
-                                                    ),
-                                                  }.withoutNulls,
-                                                );
-                            // context.pushNamed(
-                            //   BookDetailspageWidget.routeName,
-                            //   queryParameters: {
-                            //     'name': EbookGroup.userBookPurchaseRecordsApiCall
-                            //         .bookName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
-                            //     'price': purchaseDetailsItem['price']?.toString(),
-                            //     'image': EbookGroup.userBookPurchaseRecordsApiCall
-                            //         .bookImage(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
-                            //     'id': EbookGroup.userBookPurchaseRecordsApiCall
-                            //         .bookId(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
-                            //     'authorName': EbookGroup.userBookPurchaseRecordsApiCall
-                            //         .authorName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
-                            //   }.withoutNulls,
-                            // );
+                              BookDetailspageWidget.routeName,
+                              queryParameters: {
+                                'name': EbookGroup.userBookPurchaseRecordsApiCall
+                                    .bookName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                                'price': purchaseDetailsItem['price']?.toString(),
+                                'image': EbookGroup.userBookPurchaseRecordsApiCall
+                                    .bookImage(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                                'id': EbookGroup.userBookPurchaseRecordsApiCall
+                                    .bookId(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                                'authorName': EbookGroup.userBookPurchaseRecordsApiCall
+                                    .authorName(purchaseHistoryPageUserBookPurchaseRecordsResponse.jsonBody)?[purchaseDetailsIndex],
+                              }.withoutNulls,
+                            );
                           },
                           child: Padding(
                             padding: const EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),

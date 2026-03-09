@@ -1758,6 +1758,10 @@ class GetbookdetailsApiCall {
         response,
         r'''$.data.bookDetails[:].author._id''',
       ));
+  String? chapterFirstFile(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].chapters[0].file''',
+      ));
   String? pdf(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.bookDetails[:].pdf''',
