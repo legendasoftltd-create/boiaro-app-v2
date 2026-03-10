@@ -1,10 +1,11 @@
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/backend/api_requests/api_calls.dart';
+import '/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import 'dart:ui';
 import '/index.dart';
 import 'audiobook_page_model.dart';
 export 'audiobook_page_model.dart';
@@ -26,8 +27,6 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final animationsMap = <String, AnimationInfo>{};
 
-  // Dummy audiobook data
-  
   // Banner carousel data
   final List<Map<String, dynamic>> banners = [
     {
@@ -90,253 +89,21 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
     },
   ];
 
-  final List<Map<String, dynamic>> featuredAudiobooks = [
-    {
-      'title': 'The Midnight Library',
-      'author': 'Matt Haig',
-      'duration': '8h 30m',
-      'rating': 4.8,
-      'image': 'https://picsum.photos/seed/audio1/400/600',
-      'color': Color(0xFF6366F1),
-    },
-    {
-      'title': 'Atomic Habits',
-      'author': 'James Clear',
-      'duration': '5h 35m',
-      'rating': 4.9,
-      'image': 'https://picsum.photos/seed/audio2/400/600',
-      'color': Color(0xFFEC4899),
-    },
-    {
-      'title': 'Project Hail Mary',
-      'author': 'Andy Weir',
-      'duration': '16h 10m',
-      'rating': 4.7,
-      'image': 'https://picsum.photos/seed/audio3/400/600',
-      'color': Color(0xFF8B5CF6),
-    },
-  ];
-
-  final List<Map<String, dynamic>> popularAudiobooks = [
-    {
-      'title': 'The Psychology of Money',
-      'author': 'Morgan Housel',
-      'duration': '5h 48m',
-      'rating': 4.6,
-      'image': 'https://picsum.photos/seed/audio4/400/600',
-      'views': '12.5k',
-      'price': 14.99,
-      'offerPrice': 9.99,
-    },
-    {
-      'title': 'Educated',
-      'author': 'Tara Westover',
-      'duration': '12h 10m',
-      'rating': 4.8,
-      'image': 'https://picsum.photos/seed/audio5/400/600',
-      'views': '8.3k',
-      'price': 16.99,
-      'offerPrice': 12.99,
-    },
-    {
-      'title': 'Sapiens',
-      'author': 'Yuval Noah Harari',
-      'duration': '15h 17m',
-      'rating': 4.7,
-      'image': 'https://picsum.photos/seed/audio6/400/600',
-      'views': '25.7k',
-      'price': 19.99,
-      'offerPrice': 14.99,
-    },
-    {
-      'title': 'The Alchemist',
-      'author': 'Paulo Coelho',
-      'duration': '4h 0m',
-      'rating': 4.5,
-      'image': 'https://picsum.photos/seed/audio7/400/600',
-      'views': '18.2k',
-      'price': 12.99,
-      'offerPrice': 7.99,
-    },
-  ];
-
-
-  final List<Map<String, dynamic>> newReleases = [
-    {
-      'title': 'Tomorrow, and Tomorrow',
-      'author': 'Gabrielle Zevin',
-      'duration': '14h 58m',
-      'rating': 4.6,
-      'image': 'https://picsum.photos/seed/audio8/400/600',
-      'views': '15.3k',
-      'price': 18.99,
-      'offerPrice': 13.99,
-    },
-    {
-      'title': 'Lessons in Chemistry',
-      'author': 'Bonnie Garmus',
-      'duration': '11h 22m',
-      'rating': 4.7,
-      'image': 'https://picsum.photos/seed/audio9/400/600',
-      'views': '22.1k',
-      'price': 15.99,
-      'offerPrice': 11.99,
-    },
-    {
-      'title': 'The Light We Carry',
-      'author': 'Michelle Obama',
-      'duration': '9h 18m',
-      'rating': 4.8,
-      'image': 'https://picsum.photos/seed/audio10/400/600',
-      'views': '19.8k',
-      'price': 17.99,
-      'offerPrice': 12.99,
-    },
-    {
-      'title': 'Spare',
-      'author': 'Prince Harry',
-      'duration': '15h 39m',
-      'rating': 4.4,
-      'image': 'https://picsum.photos/seed/audio11/400/600',
-      'views': '31.5k',
-      'price': 20.99,
-      'offerPrice': 15.99,
-    },
-  ];
-
-  final List<Map<String, dynamic>> bestSellers = [
-    {
-      'title': 'Becoming',
-      'author': 'Michelle Obama',
-      'duration': '19h 3m',
-      'rating': 4.9,
-      'image': 'https://picsum.photos/seed/audio12/400/600',
-      'views': '45.2k',
-      'price': 22.99,
-      'offerPrice': 16.99,
-    },
-    {
-      'title': 'The 7 Habits',
-      'author': 'Stephen Covey',
-      'duration': '15h 50m',
-      'rating': 4.8,
-      'image': 'https://picsum.photos/seed/audio13/400/600',
-      'views': '38.7k',
-      'price': 18.99,
-      'offerPrice': 13.99,
-    },
-    {
-      'title': 'Thinking, Fast and Slow',
-      'author': 'Daniel Kahneman',
-      'duration': '20h 2m',
-      'rating': 4.7,
-      'image': 'https://picsum.photos/seed/audio14/400/600',
-      'views': '29.3k',
-      'price': 21.99,
-      'offerPrice': 15.99,
-    },
-    {
-      'title': 'The Power of Now',
-      'author': 'Eckhart Tolle',
-      'duration': '7h 37m',
-      'rating': 4.6,
-      'image': 'https://picsum.photos/seed/audio15/400/600',
-      'views': '33.1k',
-      'price': 14.99,
-      'offerPrice': 9.99,
-    },
-  ];
-
-  final List<Map<String, dynamic>> recommendedForYou = [
-    {
-      'title': 'The Subtle Art',
-      'author': 'Mark Manson',
-      'duration': '5h 17m',
-      'rating': 4.5,
-      'image': 'https://picsum.photos/seed/audio16/400/600',
-      'views': '27.6k',
-      'price': 13.99,
-      'offerPrice': 8.99,
-    },
-    {
-      'title': 'Dune',
-      'author': 'Frank Herbert',
-      'duration': '21h 2m',
-      'rating': 4.8,
-      'image': 'https://picsum.photos/seed/audio17/400/600',
-      'views': '41.2k',
-      'price': 24.99,
-      'offerPrice': 18.99,
-    },
-    {
-      'title': 'The Four Agreements',
-      'author': 'Don Miguel Ruiz',
-      'duration': '2h 31m',
-      'rating': 4.7,
-      'image': 'https://picsum.photos/seed/audio18/400/600',
-      'views': '16.8k',
-      'price': 11.99,
-      'offerPrice': 7.99,
-    },
-    {
-      'title': 'Can\'t Hurt Me',
-      'author': 'David Goggins',
-      'duration': '13h 37m',
-      'rating': 4.9,
-      'image': 'https://picsum.photos/seed/audio19/400/600',
-      'views': '52.3k',
-      'price': 19.99,
-      'offerPrice': 14.99,
-    },
-  ];
-
-  final List<Map<String, dynamic>> recentlyAdded = [
-    {
-      'title': 'The Midnight Library',
-      'author': 'Matt Haig',
-      'duration': '8h 30m',
-      'rating': 4.8,
-      'image': 'https://picsum.photos/seed/audio20/400/600',
-      'views': '34.5k',
-      'price': 15.99,
-      'offerPrice': 11.99,
-    },
-    {
-      'title': 'Where the Crawdads Sing',
-      'author': 'Delia Owens',
-      'duration': '12h 12m',
-      'rating': 4.7,
-      'image': 'https://picsum.photos/seed/audio21/400/600',
-      'views': '48.9k',
-      'price': 17.99,
-      'offerPrice': 12.99,
-    },
-    {
-      'title': 'The Silent Patient',
-      'author': 'Alex Michaelides',
-      'duration': '8h 43m',
-      'rating': 4.6,
-      'image': 'https://picsum.photos/seed/audio22/400/600',
-      'views': '39.7k',
-      'price': 14.99,
-      'offerPrice': 10.99,
-    },
-    {
-      'title': 'Greenlights',
-      'author': 'Matthew McConaughey',
-      'duration': '6h 42m',
-      'rating': 4.5,
-      'image': 'https://picsum.photos/seed/audio23/400/600',
-      'views': '28.4k',
-      'price': 13.99,
-      'offerPrice': 9.99,
-    },
-  ];
+  late Future<ApiCallResponse> _popularFuture;
+  late Future<ApiCallResponse> _newFuture;
+  late Future<ApiCallResponse> _trendingFuture;
+  late Future<ApiCallResponse> _allFuture;
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => AudiobookPageModel());
+    _popularFuture =
+        EbookGroup.getPopularBooksApiCall.call(type: 'audiobook');
+    _newFuture = EbookGroup.getNewBooksApiCall.call(type: 'audiobook');
+    _trendingFuture =
+        EbookGroup.getTrendingBooksApiCall.call(type: 'audiobook');
+    _allFuture = EbookGroup.latestAllBookApiCall.call(type: 'audiobook');
 
     animationsMap.addAll({
       'containerOnPageLoadAnimation1': AnimationInfo(
@@ -403,6 +170,120 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
   void dispose() {
     _model.dispose();
     super.dispose();
+  }
+
+  num? _toNum(dynamic value) {
+    if (value is num) {
+      return value;
+    }
+    if (value is String) {
+      return num.tryParse(value);
+    }
+    return null;
+  }
+
+  num? _calculateOfferPrice(dynamic price, dynamic discountAmount,
+      dynamic discountPercentage) {
+    final priceNum = _toNum(price);
+    if (priceNum == null) {
+      return null;
+    }
+    final discountAmountNum = _toNum(discountAmount);
+    if (discountAmountNum != null && discountAmountNum > 0) {
+      return (priceNum - discountAmountNum).clamp(0, priceNum);
+    }
+    final discountPercentageNum = _toNum(discountPercentage);
+    if (discountPercentageNum != null && discountPercentageNum > 0) {
+      return (priceNum - (priceNum * discountPercentageNum / 100))
+          .clamp(0, priceNum);
+    }
+    return null;
+  }
+
+  String _resolveBookImage(String? imagePath) {
+    final trimmed = (imagePath ?? '').trim();
+    if (trimmed.isEmpty) {
+      return 'https://picsum.photos/seed/audiobook/400/600';
+    }
+    if (trimmed.startsWith('http')) {
+      return trimmed;
+    }
+    return '${FFAppConstants.bookImagesUrl}$trimmed';
+  }
+
+  List<Map<String, dynamic>> _normalizeBooksFromResponse(
+      ApiCallResponse? response) {
+    if (response == null) {
+      return [];
+    }
+    final rawList = (getJsonField(
+              response.jsonBody,
+              r'''$.data.bookDetails''',
+              true,
+            ) ??
+            [])
+        .toList();
+    return rawList.map<Map<String, dynamic>>(_normalizeBook).toList();
+  }
+
+  Map<String, dynamic> _normalizeBook(dynamic book) {
+    final image = _resolveBookImage(
+      getJsonField(book, r'''$.image''')?.toString(),
+    );
+    final price = getJsonField(book, r'''$.price''');
+    final discountAmount = getJsonField(book, r'''$.discount_amount''');
+    final discountPercentage = getJsonField(book, r'''$.discount_percentage''');
+    final offerPrice =
+        _calculateOfferPrice(price, discountAmount, discountPercentage);
+    return {
+      'id': getJsonField(book, r'''$._id''')?.toString() ?? '',
+      'title': getJsonField(book, r'''$.name''')?.toString() ?? 'Untitled',
+      'author': getJsonField(book, r'''$.author.name''')?.toString() ?? '',
+      'duration': getJsonField(book, r'''$.duration''')?.toString() ??
+          getJsonField(book, r'''$.totalDuration''')?.toString() ??
+          '',
+      'rating': _toNum(getJsonField(book, r'''$.averageRating''')) ?? 0,
+      'image': image,
+      'views': getJsonField(book, r'''$.viewCount''')?.toString() ?? '0',
+      'price': _toNum(price),
+      'offerPrice': offerPrice,
+      'category': getJsonField(book, r'''$.category.name''')?.toString() ?? '',
+      'chapters': getJsonField(book, r'''$.chapters''', true),
+      'raw': book,
+    };
+  }
+
+  Widget _buildLoadingList(double height) {
+    return SizedBox(
+      height: height,
+      child: Center(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              FlutterFlowTheme.of(context).primary,
+            ),
+            strokeWidth: 3,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyList(String message, double height) {
+    return SizedBox(
+      height: height,
+      child: Center(
+        child: Text(
+          message,
+          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                fontFamily: 'SF Pro Display',
+                color: FlutterFlowTheme.of(context).secondaryText,
+              ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -764,628 +645,699 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
                 SizedBox(height: 24.0),
 
                 // Content Sections
-                // Popular Audiobooks Section
-                Column(
-                  mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 16.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Popular Audiobooks',
-                              maxLines: 1,
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontSize: 20.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.bold,
-                                    lineHeight: 1.5,
-                                  ),
-                            ),
-                            InkWell(
-                              onTap: () async {
-                                context.pushNamed(
-                                  AudiobookViewAllPageWidget.routeName,
-                                  queryParameters: {
-                                    'title': serializeParam(
-                                      'Popular Audiobooks',
-                                      ParamType.String,
-                                    ),
-                                  }.withoutNulls,
-                                  extra: <String, dynamic>{
-                                    'audiobooks': popularAudiobooks,
-                                  },
-                                );
-                              },
-                              child: Container(
-                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'View All',
+                  // Popular Audiobooks Section
+                  FutureBuilder<ApiCallResponse>(
+                    future: _popularFuture,
+                    builder: (context, snapshot) {
+                      final books = snapshot.hasData
+                          ? _normalizeBooksFromResponse(snapshot.data)
+                          : <Map<String, dynamic>>[];
+                      return Column(
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Popular Audiobooks',
+                                  maxLines: 1,
                                   style: FlutterFlowTheme.of(context)
                                       .bodyMedium
                                       .override(
                                         fontFamily: 'SF Pro Display',
-                                        fontSize: 17.0,
+                                        fontSize: 20.0,
                                         letterSpacing: 0.0,
+                                        fontWeight: FontWeight.bold,
                                         lineHeight: 1.5,
-                                        color: Colors.white,
                                       ),
                                 ),
+                                InkWell(
+                                  onTap: books.isEmpty
+                                      ? null
+                                      : () async {
+                                          context.pushNamed(
+                                            AudiobookViewAllPageWidget.routeName,
+                                            queryParameters: {
+                                              'title': serializeParam(
+                                                'Popular Audiobooks',
+                                                ParamType.String,
+                                              ),
+                                            }.withoutNulls,
+                                            extra: <String, dynamic>{
+                                              'audiobooks': books,
+                                            },
+                                          );
+                                        },
+                                  child: Container(
+                                    padding:
+                                        EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'View All',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 17.0,
+                                            letterSpacing: 0.0,
+                                            lineHeight: 1.5,
+                                            color: Colors.white,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ).animateOnPageLoad(
+                                animationsMap['rowOnPageLoadAnimation']!),
+                          ),
+                          if (!snapshot.hasData)
+                            _buildLoadingList(280.0)
+                          else if (books.isEmpty)
+                            _buildEmptyList('No audiobooks found', 280.0)
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: 280.0,
+                              child: ListView.builder(
+                                padding:
+                                    EdgeInsets.symmetric(horizontal: 16.0),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: books.length,
+                                itemBuilder: (context, index) {
+                                  final audiobook = books[index];
+                                  return Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                      0.0,
+                                      0.0,
+                                      index == books.length - 1 ? 0.0 : 16.0,
+                                      0.0,
+                                    ),
+                                    child: _buildAudiobookCard(audiobook),
+                                  );
+                                },
                               ),
                             ),
-                          ],
-                        ).animateOnPageLoad(
-                            animationsMap['rowOnPageLoadAnimation']!),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        height: 280.0,
-                        child: ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: popularAudiobooks.length,
-                          itemBuilder: (context, index) {
-                            final audiobook = popularAudiobooks[index];
-                            return Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                0.0,
-                                0.0,
-                                index == popularAudiobooks.length - 1
-                                    ? 0.0
-                                    : 16.0,
-                                0.0,
-                              ),
-                              child: _buildAudiobookCard(audiobook),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
 
                   SizedBox(height: 24.0),
 
                   // New Releases Section
-                  Column(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 16.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'New Releases',
-                              maxLines: 1,
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontSize: 20.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.bold,
-                                    lineHeight: 1.5,
-                                  ),
-                            ),
-                            InkWell(
-                              onTap: () async {
-                                context.pushNamed(
-                                  AudiobookViewAllPageWidget.routeName,
-                                  queryParameters: {
-                                    'title': serializeParam(
-                                      'New Releases',
-                                      ParamType.String,
-                                    ),
-                                  }.withoutNulls,
-                                  extra: <String, dynamic>{
-                                    'audiobooks': newReleases,
-                                  },
-                                );
-                              },
-                              child: Container(
-                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'View All',
+                  FutureBuilder<ApiCallResponse>(
+                    future: _newFuture,
+                    builder: (context, snapshot) {
+                      final books = snapshot.hasData
+                          ? _normalizeBooksFromResponse(snapshot.data)
+                          : <Map<String, dynamic>>[];
+                      return Column(
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'New Releases',
+                                  maxLines: 1,
                                   style: FlutterFlowTheme.of(context)
                                       .bodyMedium
                                       .override(
                                         fontFamily: 'SF Pro Display',
-                                        fontSize: 17.0,
+                                        fontSize: 20.0,
                                         letterSpacing: 0.0,
+                                        fontWeight: FontWeight.bold,
                                         lineHeight: 1.5,
-                                        color: Colors.white,
                                       ),
                                 ),
+                                InkWell(
+                                  onTap: books.isEmpty
+                                      ? null
+                                      : () async {
+                                          context.pushNamed(
+                                            AudiobookViewAllPageWidget
+                                                .routeName,
+                                            queryParameters: {
+                                              'title': serializeParam(
+                                                'New Releases',
+                                                ParamType.String,
+                                              ),
+                                            }.withoutNulls,
+                                            extra: <String, dynamic>{
+                                              'audiobooks': books,
+                                            },
+                                          );
+                                        },
+                                  child: Container(
+                                    padding:
+                                        EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'View All',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 17.0,
+                                            letterSpacing: 0.0,
+                                            lineHeight: 1.5,
+                                            color: Colors.white,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ).animateOnPageLoad(
+                                animationsMap['rowOnPageLoadAnimation']!),
+                          ),
+                          if (!snapshot.hasData)
+                            _buildLoadingList(280.0)
+                          else if (books.isEmpty)
+                            _buildEmptyList('No audiobooks found', 280.0)
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: 280.0,
+                              child: ListView.builder(
+                                padding:
+                                    EdgeInsets.symmetric(horizontal: 16.0),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: books.length,
+                                itemBuilder: (context, index) {
+                                  final audiobook = books[index];
+                                  return Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                      0.0,
+                                      0.0,
+                                      index == books.length - 1 ? 0.0 : 16.0,
+                                      0.0,
+                                    ),
+                                    child: _buildAudiobookCard(audiobook),
+                                  );
+                                },
                               ),
                             ),
-                          ],
-                        ).animateOnPageLoad(
-                            animationsMap['rowOnPageLoadAnimation']!),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        height: 280.0,
-                        child: ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: newReleases.length,
-                          itemBuilder: (context, index) {
-                            final audiobook = newReleases[index];
-                            return Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                0.0,
-                                0.0,
-                                index == newReleases.length - 1 ? 0.0 : 16.0,
-                                0.0,
-                              ),
-                              child: _buildAudiobookCard(audiobook),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
 
                   SizedBox(height: 24.0),
 
                   // Trending Section
-                  Column(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 16.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Trending Now',
-                              maxLines: 1,
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontSize: 20.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.bold,
-                                    lineHeight: 1.5,
-                                  ),
-                            ),
-                            InkWell(
-                              onTap: () async {
-                                context.pushNamed(
-                                  AudiobookViewAllPageWidget.routeName,
-                                  queryParameters: {
-                                    'title': serializeParam(
-                                      'Trending Now',
-                                      ParamType.String,
-                                    ),
-                                  }.withoutNulls,
-                                  extra: <String, dynamic>{
-                                    'audiobooks': popularAudiobooks.reversed.toList(),
-                                  },
-                                );
-                              },
-                              child: Container(
-                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'View All',
+                  FutureBuilder<ApiCallResponse>(
+                    future: _trendingFuture,
+                    builder: (context, snapshot) {
+                      final books = snapshot.hasData
+                          ? _normalizeBooksFromResponse(snapshot.data)
+                          : <Map<String, dynamic>>[];
+                      return Column(
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Trending Now',
+                                  maxLines: 1,
                                   style: FlutterFlowTheme.of(context)
                                       .bodyMedium
                                       .override(
                                         fontFamily: 'SF Pro Display',
-                                        fontSize: 17.0,
+                                        fontSize: 20.0,
                                         letterSpacing: 0.0,
+                                        fontWeight: FontWeight.bold,
                                         lineHeight: 1.5,
-                                        color: Colors.white,
                                       ),
                                 ),
+                                InkWell(
+                                  onTap: books.isEmpty
+                                      ? null
+                                      : () async {
+                                          context.pushNamed(
+                                            AudiobookViewAllPageWidget
+                                                .routeName,
+                                            queryParameters: {
+                                              'title': serializeParam(
+                                                'Trending Now',
+                                                ParamType.String,
+                                              ),
+                                            }.withoutNulls,
+                                            extra: <String, dynamic>{
+                                              'audiobooks': books,
+                                            },
+                                          );
+                                        },
+                                  child: Container(
+                                    padding:
+                                        EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'View All',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 17.0,
+                                            letterSpacing: 0.0,
+                                            lineHeight: 1.5,
+                                            color: Colors.white,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ).animateOnPageLoad(
+                                animationsMap['rowOnPageLoadAnimation']!),
+                          ),
+                          if (!snapshot.hasData)
+                            _buildLoadingList(280.0)
+                          else if (books.isEmpty)
+                            _buildEmptyList('No audiobooks found', 280.0)
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: 280.0,
+                              child: ListView.builder(
+                                padding:
+                                    EdgeInsets.symmetric(horizontal: 16.0),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: books.length,
+                                itemBuilder: (context, index) {
+                                  final audiobook = books[index];
+                                  return Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                      0.0,
+                                      0.0,
+                                      index == books.length - 1 ? 0.0 : 16.0,
+                                      0.0,
+                                    ),
+                                    child: _buildAudiobookCard(audiobook),
+                                  );
+                                },
                               ),
                             ),
-                          ],
-                        ).animateOnPageLoad(
-                            animationsMap['rowOnPageLoadAnimation']!),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        height: 280.0,
-                        child: ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: popularAudiobooks.length,
-                          itemBuilder: (context, index) {
-                            final audiobook = popularAudiobooks.reversed
-                                .toList()[index];
-                            return Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                0.0,
-                                0.0,
-                                index == popularAudiobooks.length - 1
-                                    ? 0.0
-                                    : 16.0,
-                                0.0,
-                              ),
-                              child: _buildAudiobookCard(audiobook),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
 
                   SizedBox(height: 24.0),
 
                   // Best Sellers Section
-                  Column(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 16.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Best Sellers',
-                              maxLines: 1,
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontSize: 20.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.bold,
-                                    lineHeight: 1.5,
-                                  ),
-                            ),
-                            InkWell(
-                              onTap: () async {
-                                context.pushNamed(
-                                  AudiobookViewAllPageWidget.routeName,
-                                  queryParameters: {
-                                    'title': serializeParam(
-                                      'Best Sellers',
-                                      ParamType.String,
-                                    ),
-                                  }.withoutNulls,
-                                  extra: <String, dynamic>{
-                                    'audiobooks': bestSellers,
-                                  },
-                                );
-                              },
-                              child: Container(
-                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'View All',
+                  FutureBuilder<ApiCallResponse>(
+                    future: _allFuture,
+                    builder: (context, snapshot) {
+                      final books = snapshot.hasData
+                          ? _normalizeBooksFromResponse(snapshot.data)
+                          : <Map<String, dynamic>>[];
+                      final displayBooks =
+                          books.isNotEmpty ? books.take(10).toList() : books;
+                      return Column(
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Best Sellers',
+                                  maxLines: 1,
                                   style: FlutterFlowTheme.of(context)
                                       .bodyMedium
                                       .override(
                                         fontFamily: 'SF Pro Display',
-                                        fontSize: 17.0,
+                                        fontSize: 20.0,
                                         letterSpacing: 0.0,
+                                        fontWeight: FontWeight.bold,
                                         lineHeight: 1.5,
-                                        color: Colors.white,
                                       ),
                                 ),
+                                InkWell(
+                                  onTap: displayBooks.isEmpty
+                                      ? null
+                                      : () async {
+                                          context.pushNamed(
+                                            AudiobookViewAllPageWidget
+                                                .routeName,
+                                            queryParameters: {
+                                              'title': serializeParam(
+                                                'Best Sellers',
+                                                ParamType.String,
+                                              ),
+                                            }.withoutNulls,
+                                            extra: <String, dynamic>{
+                                              'audiobooks': displayBooks,
+                                            },
+                                          );
+                                        },
+                                  child: Container(
+                                    padding:
+                                        EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'View All',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 17.0,
+                                            letterSpacing: 0.0,
+                                            lineHeight: 1.5,
+                                            color: Colors.white,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ).animateOnPageLoad(
+                                animationsMap['rowOnPageLoadAnimation']!),
+                          ),
+                          if (!snapshot.hasData)
+                            _buildLoadingList(280.0)
+                          else if (displayBooks.isEmpty)
+                            _buildEmptyList('No audiobooks found', 280.0)
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: 280.0,
+                              child: ListView.builder(
+                                padding:
+                                    EdgeInsets.symmetric(horizontal: 16.0),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: displayBooks.length,
+                                itemBuilder: (context, index) {
+                                  final audiobook = displayBooks[index];
+                                  return Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                      0.0,
+                                      0.0,
+                                      index == displayBooks.length - 1
+                                          ? 0.0
+                                          : 16.0,
+                                      0.0,
+                                    ),
+                                    child: _buildAudiobookCard(audiobook),
+                                  );
+                                },
                               ),
                             ),
-                          ],
-                        ).animateOnPageLoad(
-                            animationsMap['rowOnPageLoadAnimation']!),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        height: 280.0,
-                        child: ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: bestSellers.length,
-                          itemBuilder: (context, index) {
-                            final audiobook = bestSellers[index];
-                            return Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                0.0,
-                                0.0,
-                                index == bestSellers.length - 1 ? 0.0 : 16.0,
-                                0.0,
-                              ),
-                              child: _buildAudiobookCard(audiobook),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
 
                   SizedBox(height: 24.0),
 
                   // Recommended for You Section
-                  Column(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 16.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
+                  FutureBuilder<ApiCallResponse>(
+                    future: _allFuture,
+                    builder: (context, snapshot) {
+                      final books = snapshot.hasData
+                          ? _normalizeBooksFromResponse(snapshot.data)
+                          : <Map<String, dynamic>>[];
+                      final displayBooks =
+                          books.isNotEmpty ? books.take(10).toList() : books;
+                      return Column(
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
-                                Icon(
-                                  Icons.recommend_rounded,
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  size: 24.0,
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.recommend_rounded,
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      size: 24.0,
+                                    ),
+                                    SizedBox(width: 8.0),
+                                    Text(
+                                      'Recommended for You',
+                                      maxLines: 1,
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 20.0,
+                                            letterSpacing: 0.0,
+                                            fontWeight: FontWeight.bold,
+                                            lineHeight: 1.5,
+                                          ),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(width: 8.0),
-                                Text(
-                                  'Recommended for You',
-                                  maxLines: 1,
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        fontSize: 20.0,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FontWeight.bold,
-                                        lineHeight: 1.5,
-                                      ),
+                                InkWell(
+                                  onTap: displayBooks.isEmpty
+                                      ? null
+                                      : () async {
+                                          context.pushNamed(
+                                            AudiobookViewAllPageWidget
+                                                .routeName,
+                                            queryParameters: {
+                                              'title': serializeParam(
+                                                'Recommended for You',
+                                                ParamType.String,
+                                              ),
+                                            }.withoutNulls,
+                                            extra: <String, dynamic>{
+                                              'audiobooks': displayBooks,
+                                            },
+                                          );
+                                        },
+                                  child: Container(
+                                    padding:
+                                        EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'View All',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 17.0,
+                                            letterSpacing: 0.0,
+                                            lineHeight: 1.5,
+                                            color: Colors.white,
+                                          ),
+                                    ),
+                                  ),
                                 ),
                               ],
-                            ),
-                            InkWell(
-                              onTap: () async {
-                                context.pushNamed(
-                                  AudiobookViewAllPageWidget.routeName,
-                                  queryParameters: {
-                                    'title': serializeParam(
-                                      'Recommended for You',
-                                      ParamType.String,
+                            ).animateOnPageLoad(
+                                animationsMap['rowOnPageLoadAnimation']!),
+                          ),
+                          if (!snapshot.hasData)
+                            _buildLoadingList(280.0)
+                          else if (displayBooks.isEmpty)
+                            _buildEmptyList('No audiobooks found', 280.0)
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: 280.0,
+                              child: ListView.builder(
+                                padding:
+                                    EdgeInsets.symmetric(horizontal: 16.0),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: displayBooks.length,
+                                itemBuilder: (context, index) {
+                                  final audiobook = displayBooks[index];
+                                  return Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                      0.0,
+                                      0.0,
+                                      index == displayBooks.length - 1
+                                          ? 0.0
+                                          : 16.0,
+                                      0.0,
                                     ),
-                                  }.withoutNulls,
-                                  extra: <String, dynamic>{
-                                    'audiobooks': recommendedForYou,
-                                  },
-                                );
-                              },
-                              child: Container(
-                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'View All',
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        fontSize: 17.0,
-                                        letterSpacing: 0.0,
-                                        lineHeight: 1.5,
-                                        color: Colors.white,
-                                      ),
-                                ),
+                                    child: _buildAudiobookCard(audiobook),
+                                  );
+                                },
                               ),
                             ),
-                          ],
-                        ).animateOnPageLoad(
-                            animationsMap['rowOnPageLoadAnimation']!),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        height: 280.0,
-                        child: ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: recommendedForYou.length,
-                          itemBuilder: (context, index) {
-                            final audiobook = recommendedForYou[index];
-                            return Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                0.0,
-                                0.0,
-                                index == recommendedForYou.length - 1
-                                    ? 0.0
-                                    : 16.0,
-                                0.0,
-                              ),
-                              child: _buildAudiobookCard(audiobook),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
 
                   SizedBox(height: 24.0),
 
                   // Recently Added Section
-                  Column(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 16.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
+                  FutureBuilder<ApiCallResponse>(
+                    future: _allFuture,
+                    builder: (context, snapshot) {
+                      final books = snapshot.hasData
+                          ? _normalizeBooksFromResponse(snapshot.data)
+                          : <Map<String, dynamic>>[];
+                      final displayBooks =
+                          books.isNotEmpty ? books.take(10).toList() : books;
+                      return Column(
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
-                                Icon(
-                                  Icons.new_releases_rounded,
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  size: 24.0,
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.new_releases_rounded,
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      size: 24.0,
+                                    ),
+                                    SizedBox(width: 8.0),
+                                    Text(
+                                      'Recently Added',
+                                      maxLines: 1,
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 20.0,
+                                            letterSpacing: 0.0,
+                                            fontWeight: FontWeight.bold,
+                                            lineHeight: 1.5,
+                                          ),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(width: 8.0),
-                                Text(
-                                  'Recently Added',
-                                  maxLines: 1,
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        fontSize: 20.0,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FontWeight.bold,
-                                        lineHeight: 1.5,
-                                      ),
+                                InkWell(
+                                  onTap: displayBooks.isEmpty
+                                      ? null
+                                      : () async {
+                                          context.pushNamed(
+                                            AudiobookViewAllPageWidget
+                                                .routeName,
+                                            queryParameters: {
+                                              'title': serializeParam(
+                                                'Recently Added',
+                                                ParamType.String,
+                                              ),
+                                            }.withoutNulls,
+                                            extra: <String, dynamic>{
+                                              'audiobooks': displayBooks,
+                                            },
+                                          );
+                                        },
+                                  child: Container(
+                                    padding:
+                                        EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'View All',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 17.0,
+                                            letterSpacing: 0.0,
+                                            lineHeight: 1.5,
+                                            color: Colors.white,
+                                          ),
+                                    ),
+                                  ),
                                 ),
                               ],
-                            ),
-                            InkWell(
-                              onTap: () async {
-                                context.pushNamed(
-                                  AudiobookViewAllPageWidget.routeName,
-                                  queryParameters: {
-                                    'title': serializeParam(
-                                      'Recently Added',
-                                      ParamType.String,
+                            ).animateOnPageLoad(
+                                animationsMap['rowOnPageLoadAnimation']!),
+                          ),
+                          if (!snapshot.hasData)
+                            _buildLoadingList(280.0)
+                          else if (displayBooks.isEmpty)
+                            _buildEmptyList('No audiobooks found', 280.0)
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: 280.0,
+                              child: ListView.builder(
+                                padding:
+                                    EdgeInsets.symmetric(horizontal: 16.0),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: displayBooks.length,
+                                itemBuilder: (context, index) {
+                                  final audiobook = displayBooks[index];
+                                  return Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                      0.0,
+                                      0.0,
+                                      index == displayBooks.length - 1
+                                          ? 0.0
+                                          : 16.0,
+                                      0.0,
                                     ),
-                                  }.withoutNulls,
-                                  extra: <String, dynamic>{
-                                    'audiobooks': recentlyAdded,
-                                  },
-                                );
-                              },
-                              child: Container(
-                                padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'View All',
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        fontSize: 17.0,
-                                        letterSpacing: 0.0,
-                                        lineHeight: 1.5,
-                                        color: Colors.white,
-                                      ),
-                                ),
+                                    child: _buildAudiobookCard(audiobook),
+                                  );
+                                },
                               ),
                             ),
-                          ],
-                        ).animateOnPageLoad(
-                            animationsMap['rowOnPageLoadAnimation']!),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        height: 280.0,
-                        child: ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: recentlyAdded.length,
-                          itemBuilder: (context, index) {
-                            final audiobook = recentlyAdded[index];
-                            return Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                0.0,
-                                0.0,
-                                index == recentlyAdded.length - 1 ? 0.0 : 16.0,
-                                0.0,
-                              ),
-                              child: _buildAudiobookCard(audiobook),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
 
-                  SizedBox(height: 16.0),
-            ],
-          ),
-        ),
-      ),
-          // Blur overlay with "Coming Soon"
-          Positioned.fill(
-            child: ClipRRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 80.0,
-                          height: 80.0,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.headphones_rounded,
-                            color: Colors.white,
-                            size: 40.0,
-                          ),
-                        ),
-                        SizedBox(height: 24.0),
-                        Text(
-                          'Coming Soon',
-                          style: TextStyle(
-                            fontFamily: 'SF Pro Display',
-                            fontSize: 36.0,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                        SizedBox(height: 12.0),
-                        Text(
-                          'Audiobooks feature is under development',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'SF Pro Display',
-                            fontSize: 16.0,
-                            color: Colors.white.withOpacity(0.9),
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                  SizedBox(height: 24.0),
+                ],
               ),
             ),
           ),
@@ -1696,7 +1648,7 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
             ),
           ),
         ],
-      ),)
-    );
+      ),
+    ));
   }
 }

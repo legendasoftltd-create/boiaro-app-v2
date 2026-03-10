@@ -56,6 +56,8 @@ class EbookGroup {
       GetbookbycategoryApiCall();
   static GetbookbysubcategoryApiCall getbookbysubcategoryApiCall =
       GetbookbysubcategoryApiCall();
+  static GetRelatedBooksApiCall getRelatedBooksApiCall =
+      GetRelatedBooksApiCall();
   static GetsubscriptionplanApiCall getsubscriptionplanApiCall =
       GetsubscriptionplanApiCall();
   static GetpagesApiCall getpagesApiCall = GetpagesApiCall();
@@ -1495,6 +1497,7 @@ class GetpublisherdetailsApiCall {
 class GetbookbypublisherApiCall {
   Future<ApiCallResponse> call({
     String? publisherId = '',
+    String? type = '',
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
@@ -1503,7 +1506,8 @@ class GetbookbypublisherApiCall {
 
     final ffApiRequestBody = '''
 {
-  "publisherId": "${publisherId}"
+  "publisherId": "${publisherId}",
+  "type": "${type}"
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'GetbookbypublisherApi',
@@ -1618,6 +1622,7 @@ class GetLatestbooksApiCall {
   Future<ApiCallResponse> call({
     List<String>? authorIdList,
     List<String>? categoryIdList,
+    String? type = '',
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
@@ -1627,11 +1632,12 @@ class GetLatestbooksApiCall {
     final categoryId = _serializeList(categoryIdList);
 
     final ffApiRequestBody = '''
-{
- 
-  "authorId": ${authorId},
-  "categoryId": ${categoryId}
-}''';
+  {
+   
+    "authorId": ${authorId},
+    "categoryId": ${categoryId},
+    "type": "${type}"
+  }''';
     return ApiManager.instance.makeApiCall(
       callName: 'GetLatestbooksApi',
       apiUrl: '${baseUrl}getbooks',
@@ -1705,6 +1711,7 @@ class GetLatestbooksApiCall {
 class GetbookdetailsApiCall {
   Future<ApiCallResponse> call({
     String? bookId = '',
+    String? type = '',
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
@@ -1713,7 +1720,8 @@ class GetbookdetailsApiCall {
 
     final ffApiRequestBody = '''
 {
-  "bookId": "${bookId}"
+  "bookId": "${bookId}",
+  "type": "${type}"
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'GetbookdetailsApi',
@@ -1838,6 +1846,7 @@ class GetbookdetailsApiCall {
 class GetbookbyauthorApiCall {
   Future<ApiCallResponse> call({
     String? authorId = '',
+    String? type = '',
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
@@ -1846,7 +1855,8 @@ class GetbookbyauthorApiCall {
 
     final ffApiRequestBody = '''
 {
-  "authorId": "${authorId}"
+  "authorId": "${authorId}",
+  "type": "${type}"
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'GetbookbyauthorApi',
@@ -1881,6 +1891,7 @@ class GetbookbyauthorApiCall {
 class GetbookbycategoryApiCall {
   Future<ApiCallResponse> call({
     String? categoryId = '',
+    String? type = '',
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
@@ -1889,7 +1900,8 @@ class GetbookbycategoryApiCall {
 
     final ffApiRequestBody = '''
 {
-  "categoryId": "${categoryId}"
+  "categoryId": "${categoryId}",
+  "type": "${type}"
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'GetbookbycategoryApi',
@@ -1928,6 +1940,7 @@ class GetbookbycategoryApiCall {
 class GetbookbysubcategoryApiCall {
   Future<ApiCallResponse> call({
     String? subcategoryId = '',
+    String? type = '',
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
@@ -1936,11 +1949,61 @@ class GetbookbysubcategoryApiCall {
 
     final ffApiRequestBody = '''
 {
-  "subcategoryId": "${subcategoryId}"
+  "subcategoryId": "${subcategoryId}",
+  "type": "${type}"
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'GetbookbysubcategoryApi',
       apiUrl: '${baseUrl}getbookbysubcategory',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? bookDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.bookDetails''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GetRelatedBooksApiCall {
+  Future<ApiCallResponse> call({
+    String? bookId = '',
+    String? type = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "bookId": "${bookId}",
+  "type": "${type}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetRelatedBooksApi',
+      apiUrl: '${baseUrl}getrelatedbooks',
       callType: ApiCallType.POST,
       headers: {
         'Authorization': 'Bearer ${token}',
@@ -2516,10 +2579,18 @@ class GetreviewApiCall {
 class GetTrendingBooksApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
+    String? type = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
       token: token,
     );
+    final hasType = (type ?? '').trim().isNotEmpty;
+    final ffApiRequestBody = hasType
+        ? '''
+{
+  "type": "${type}"
+}'''
+        : null;
 
     return ApiManager.instance.makeApiCall(
       callName: 'GetTrendingBooksApi',
@@ -2529,7 +2600,8 @@ class GetTrendingBooksApiCall {
         'Authorization': 'Bearer ${token}',
       },
       params: {},
-      bodyType: BodyType.NONE,
+      body: ffApiRequestBody,
+      bodyType: hasType ? BodyType.JSON : BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
@@ -2566,10 +2638,18 @@ class GetTrendingBooksApiCall {
 class GetNewBooksApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
+    String? type = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
       token: token,
     );
+    final hasType = (type ?? '').trim().isNotEmpty;
+    final ffApiRequestBody = hasType
+        ? '''
+{
+  "type": "${type}"
+}'''
+        : null;
 
     return ApiManager.instance.makeApiCall(
       callName: 'GetNewBooksApi',
@@ -2579,7 +2659,8 @@ class GetNewBooksApiCall {
         'Authorization': 'Bearer ${token}',
       },
       params: {},
-      bodyType: BodyType.NONE,
+      body: ffApiRequestBody,
+      bodyType: hasType ? BodyType.JSON : BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
@@ -2616,10 +2697,12 @@ class GetNewBooksApiCall {
 class GetPopularBooksApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
+    String? type = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
       token: token,
     );
+    final hasType = (type ?? '').trim().isNotEmpty;
 
     return ApiManager.instance.makeApiCall(
       callName: 'GetPopularBooksApi',
@@ -2628,7 +2711,7 @@ class GetPopularBooksApiCall {
       headers: {
         'Authorization': 'Bearer ${token}',
       },
-      params: {},
+      params: hasType ? {'type': type} : {},
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -2945,10 +3028,12 @@ class SearchApiCall {
 class LatestAllBookApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
+    String? type = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl(
       token: token,
     );
+    final hasType = (type ?? '').trim().isNotEmpty;
 
     return ApiManager.instance.makeApiCall(
       callName: 'LatestAllBookApi',
@@ -2957,7 +3042,7 @@ class LatestAllBookApiCall {
       headers: {
         'Authorization': 'Bearer ${token}',
       },
-      params: {},
+      params: hasType ? {'type': type} : {},
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
