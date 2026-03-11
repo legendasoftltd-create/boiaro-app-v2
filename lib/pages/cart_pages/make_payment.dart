@@ -11,6 +11,10 @@ class MakeCheckOutScreen extends StatefulWidget {
   final String jwtToken;
   final String userId;
   final String? couponCode;
+  final String? shippingMethodId;
+  final String? shippingAddressId;
+  final Map<String, dynamic>? shippingAddress;
+  final double? cartTotal;
 
   const MakeCheckOutScreen({
     Key? key,
@@ -18,6 +22,10 @@ class MakeCheckOutScreen extends StatefulWidget {
     required this.jwtToken,
     required this.userId,
     this.couponCode,
+    this.shippingMethodId,
+    this.shippingAddressId,
+    this.shippingAddress,
+    this.cartTotal,
   }) : super(key: key);
 
   @override
@@ -47,6 +55,10 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
       final response = await _checkoutController.initiatePayment(
         widget.bookIds,
         couponCode: widget.couponCode,
+        shippingMethodId: widget.shippingMethodId,
+        shippingAddressId: widget.shippingAddressId,
+        shippingAddress: widget.shippingAddress,
+        cartTotal: widget.cartTotal,
       );
       print('Payment initiation response: $response');
       if (response['success'] == 1) {
@@ -108,6 +120,10 @@ class CheckoutController {
   final String baseUrl = 'https://api.boiaro.com/api';
   final String jwtToken;
   final String userId;
+  String? _shippingMethodId;
+  String? _shippingAddressId;
+  Map<String, dynamic>? _shippingAddress;
+  double? _cartTotal;
   
   CheckoutController({
     required this.jwtToken,
@@ -118,8 +134,17 @@ class CheckoutController {
   Future<Map<String, dynamic>> initiatePayment(
     List<String> bookIds, {
     String? couponCode,
+    String? shippingMethodId,
+    String? shippingAddressId,
+    Map<String, dynamic>? shippingAddress,
+    double? cartTotal,
   }) async {
     try {
+      _shippingMethodId = shippingMethodId;
+      _shippingAddressId = shippingAddressId;
+      _shippingAddress = shippingAddress;
+      _cartTotal = cartTotal;
+
       final response = await http.post(
         Uri.parse('$baseUrl/purchasebooks'),
         headers: {
@@ -130,6 +155,10 @@ class CheckoutController {
           'userId': userId,
           'books': bookIds,
           'paymentmode': 'SSLCOMMERZ',
+          if (shippingMethodId != null) 'shippingMethodId': shippingMethodId,
+          if (shippingAddressId != null) 'addressId': shippingAddressId,
+          if (shippingAddress != null) 'shippingAddress': shippingAddress,
+          if (cartTotal != null) 'cartTotal': cartTotal,
           if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
         }),
       );
@@ -189,7 +218,11 @@ class CheckoutController {
           'books': bookIds,
           'paymentmode': 'SSLCOMMERZ',
           'tran_id': tranId,
-          'status': 'FAILED'
+          'status': 'FAILED',
+          if (_shippingMethodId != null) 'shippingMethodId': _shippingMethodId,
+          if (_shippingAddressId != null) 'addressId': _shippingAddressId,
+          if (_shippingAddress != null) 'shippingAddress': _shippingAddress,
+          if (_cartTotal != null) 'cartTotal': _cartTotal,
         }),
       );
 
@@ -222,7 +255,11 @@ class CheckoutController {
           'books': bookIds,
           'paymentmode': 'SSLCOMMERZ',
           'tran_id': tranId,
-          'status': 'CANCELLED'
+          'status': 'CANCELLED',
+          if (_shippingMethodId != null) 'shippingMethodId': _shippingMethodId,
+          if (_shippingAddressId != null) 'addressId': _shippingAddressId,
+          if (_shippingAddress != null) 'shippingAddress': _shippingAddress,
+          if (_cartTotal != null) 'cartTotal': _cartTotal,
         }),
       );
 

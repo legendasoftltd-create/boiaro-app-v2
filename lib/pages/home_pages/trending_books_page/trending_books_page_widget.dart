@@ -422,6 +422,11 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                                                     trendingBooksListItem,
                                                                     r'''$.price''',
                                                                   ).toString(),
+                                                                  bookType:
+                                                                      getJsonField(
+                                                                    trendingBooksListItem,
+                                                                    r'''$.type''',
+                                                                  )?.toString(),
                                                                   discountAmount:
                                                                       getJsonField(
                                                                     trendingBooksListItem,

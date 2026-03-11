@@ -18,6 +18,7 @@ class MainBookComponentWidget extends StatefulWidget {
     required this.bookName,
     required this.id,
     required this.authorsName,
+    this.bookType,
     bool? isFav,
     required this.isFavAction,
     required this.isMainTap,
@@ -34,6 +35,7 @@ class MainBookComponentWidget extends StatefulWidget {
   final String? id;
   final String? price;
   final String? authorsName;
+  final String? bookType;
   final bool isFav;
   final Future Function()? isFavAction;
   final Future Function()? isMainTap;
@@ -307,6 +309,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                                   double.tryParse(widget.price ?? "0") ?? 0,
                                                   discountAmount: double.tryParse(widget.discountAmount ?? '0'),
                                                   discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
+                                                  type: widget.bookType,
                                                 );
                                                 await actions.showCustomToastBottom('Quantity increased!');
                                               },
@@ -341,6 +344,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                               double.tryParse(widget.price ?? "0") ?? 0,
                                               discountAmount: double.tryParse(widget.discountAmount ?? '0'),
                                               discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
+                                              type: widget.bookType,
                                             );
                                             await actions.showCustomToastBottom('Added to cart!');
                                           },

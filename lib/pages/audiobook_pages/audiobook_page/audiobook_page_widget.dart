@@ -10,6 +10,14 @@ import '/index.dart';
 import 'audiobook_page_model.dart';
 export 'audiobook_page_model.dart';
 
+// Components
+import '/pages/components/category_component/category_component_widget.dart';
+import '/pages/components/main_book_component/main_book_component_widget.dart';
+
+// Custom actions for favorites
+import '/custom_code/actions/index.dart' as actions;
+import '/flutter_flow/custom_functions.dart' as functions;
+
 class AudiobookPageWidget extends StatefulWidget {
   const AudiobookPageWidget({super.key});
 
@@ -520,126 +528,123 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
 
                 SizedBox(height: 24.0),
 
-                // Categories Section
-                Padding(
-                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                // Categories Section (Dynamic from API)
+                FutureBuilder<ApiCallResponse>(
+                  future: EbookGroup.getcategoriesApiCall.call(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return SizedBox(height: 200.0, child: Center(child: CircularProgressIndicator()));
+                    }
+                    final categoryDetailsList = EbookGroup.getcategoriesApiCall
+                            .categoryDetailsList(snapshot.data!.jsonBody)
+                            ?.toList() ??
+                        [];
+                    if (categoryDetailsList.isEmpty) {
+                      return SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                      child: Column(
                         mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Browse by Category',
-                            maxLines: 1,
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  fontFamily: 'SF Pro Display',
-                                  fontSize: 20.0,
-                                  letterSpacing: 0.0,
-                                  fontWeight: FontWeight.bold,
-                                  lineHeight: 1.5,
-                                ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context).primary,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'View All',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontSize: 17.0,
-                                    letterSpacing: 0.0,
-                                    lineHeight: 1.5,
-                                    color: Colors.white,
+                          Row(
+                            mainAxisSize: MainAxisSize.max,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Browse by Category',
+                                maxLines: 1,
+                                style: FlutterFlowTheme.of(context)
+                                    .bodyMedium
+                                    .override(
+                                      fontFamily: 'SF Pro Display',
+                                      fontSize: 20.0,
+                                      letterSpacing: 0.0,
+                                      fontWeight: FontWeight.bold,
+                                      lineHeight: 1.5,
+                                    ),
+                              ),
+                              InkWell(
+                                splashColor: Colors.transparent,
+                                focusColor: Colors.transparent,
+                                hoverColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
+                                onTap: () async {
+                                  context.pushNamed(CategoriesScreenWidget.routeName);
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context).primary,
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
+                                  child: Text(
+                                    'View All',
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodyMedium
+                                        .override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 17.0,
+                                          letterSpacing: 0.0,
+                                          lineHeight: 1.5,
+                                          color: Colors.white,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ).animateOnPageLoad(
+                              animationsMap['rowOnPageLoadAnimation']!),
+                          SizedBox(height: 16.0),
+                          Wrap(
+                            spacing: 16.0,
+                            runSpacing: 16.0,
+                            alignment: WrapAlignment.start,
+                            crossAxisAlignment: WrapCrossAlignment.start,
+                            direction: Axis.horizontal,
+                            runAlignment: WrapAlignment.start,
+                            verticalDirection: VerticalDirection.down,
+                            clipBehavior: Clip.none,
+                            children: List.generate(
+                              categoryDetailsList.take(4).length,
+                              (index) {
+                                final categoryItem = categoryDetailsList[index];
+                                return CategoryComponentWidget(
+                                  key: Key(
+                                    'AudiobookCategory_${getJsonField(categoryItem, r'''$.name''').toString()}',
+                                  ),
+                                  image:
+                                      '${FFAppConstants.imageUrl}${getJsonField(categoryItem, r'''$.image''').toString()}',
+                                  name: getJsonField(
+                                          categoryItem, r'''$.name''')
+                                      .toString(),
+                                  isSmall: true,
+                                  onMainTap: () async {
+                                    context.pushNamed(
+                                      SubCategoriesScreenWidget.routeName,
+                                      queryParameters: {
+                                        'id': serializeParam(
+                                          getJsonField(categoryItem, r'''$._id''')
+                                              .toString(),
+                                          ParamType.String,
+                                        ),
+                                        'name': serializeParam(
+                                          getJsonField(categoryItem, r'''$.name''')
+                                              .toString(),
+                                          ParamType.String,
+                                        ),
+                                      }.withoutNulls,
+                                    );
+                                  },
+                                );
+                              },
                             ),
                           ),
                         ],
-                      ).animateOnPageLoad(
-                          animationsMap['rowOnPageLoadAnimation']!),
-                      SizedBox(height: 16.0),
-                      GridView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 12.0,
-                          mainAxisSpacing: 12.0,
-                          childAspectRatio: 1.0,
-                        ),
-                        itemCount: categories.length,
-                        itemBuilder: (context, index) {
-                          final category = categories[index];
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: category['color'].withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16.0),
-                              border: Border.all(
-                                color: category['color'].withOpacity(0.3),
-                                width: 1.0,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.max,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 48.0,
-                                  height: 48.0,
-                                  decoration: BoxDecoration(
-                                    color: category['color'],
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    category['icon'],
-                                    color: Colors.white,
-                                    size: 24.0,
-                                  ),
-                                ),
-                                SizedBox(height: 8.0),
-                                Text(
-                                  category['name'],
-                                  textAlign: TextAlign.center,
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        fontSize: 13.0,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                                SizedBox(height: 2.0),
-                                Text(
-                                  '${category['count']} books',
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodySmall
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondaryText,
-                                        fontSize: 11.0,
-                                        letterSpacing: 0.0,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ).animateOnPageLoad(
-                              animationsMap['containerOnPageLoadAnimation2']!);
-                        },
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
 
                 SizedBox(height: 24.0),
@@ -996,7 +1001,7 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
                                   MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Best Sellers',
+                                  'Latest Audiobooks',
                                   maxLines: 1,
                                   style: FlutterFlowTheme.of(context)
                                       .bodyMedium
@@ -1088,250 +1093,185 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
 
                   SizedBox(height: 24.0),
 
-                  // Recommended for You Section
+                  // Audiobooks by Category Section
                   FutureBuilder<ApiCallResponse>(
-                    future: _allFuture,
+                    future: EbookGroup.getFeaturedBooksByCategoryApiCall.call(
+                      token: FFAppState().token,
+                    ),
                     builder: (context, snapshot) {
-                      final books = snapshot.hasData
-                          ? _normalizeBooksFromResponse(snapshot.data)
-                          : <Map<String, dynamic>>[];
-                      final displayBooks =
-                          books.isNotEmpty ? books.take(10).toList() : books;
+                      if (!snapshot.hasData) {
+                        return SizedBox.shrink();
+                      }
+                      final categoryBooksList = EbookGroup
+                          .getFeaturedBooksByCategoryApiCall
+                          .categoryBooks(snapshot.data!.jsonBody);
+
+                      if (categoryBooksList == null ||
+                          categoryBooksList.isEmpty) {
+                        return SizedBox.shrink();
+                      }
+
                       return Column(
-                        mainAxisSize: MainAxisSize.max,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsetsDirectional.fromSTEB(
-                                16.0, 0.0, 16.0, 16.0),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.max,
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                        children: List.generate(
+                          categoryBooksList.length,
+                          (catIndex) {
+                            final categoryItem = categoryBooksList[catIndex];
+                            final featuredBooks = getJsonField(
+                                categoryItem, r'''$.featuredBooks''');
+
+                            if (featuredBooks == null ||
+                                (featuredBooks as List).isEmpty) {
+                              return SizedBox.shrink();
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.recommend_rounded,
-                                      color:
-                                          FlutterFlowTheme.of(context).primary,
-                                      size: 24.0,
-                                    ),
-                                    SizedBox(width: 8.0),
-                                    Text(
-                                      'Recommended for You',
-                                      maxLines: 1,
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            fontSize: 20.0,
-                                            letterSpacing: 0.0,
-                                            fontWeight: FontWeight.bold,
-                                            lineHeight: 1.5,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                InkWell(
-                                  onTap: displayBooks.isEmpty
-                                      ? null
-                                      : () async {
+                                Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      16.0, 16.0, 16.0, 8.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        getJsonField(categoryItem,
+                                                r'''$.name''')
+                                            .toString(),
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              fontSize: 20.0,
+                                              letterSpacing: 0.0,
+                                              fontWeight: FontWeight.bold,
+                                              lineHeight: 1.5,
+                                            ),
+                                      ),
+                                      InkWell(
+                                        splashColor: Colors.transparent,
+                                        focusColor: Colors.transparent,
+                                        hoverColor: Colors.transparent,
+                                        highlightColor: Colors.transparent,
+                                        onTap: () async {
                                           context.pushNamed(
-                                            AudiobookViewAllPageWidget
+                                            GetBookByCategoryPageWidget
                                                 .routeName,
                                             queryParameters: {
-                                              'title': serializeParam(
-                                                'Recommended for You',
+                                              'name': serializeParam(
+                                                getJsonField(categoryItem,
+                                                        r'''$.name''')
+                                                    .toString(),
+                                                ParamType.String,
+                                              ),
+                                              'id': serializeParam(
+                                                getJsonField(categoryItem,
+                                                        r'''$._id''')
+                                                    .toString(),
                                                 ParamType.String,
                                               ),
                                             }.withoutNulls,
-                                            extra: <String, dynamic>{
-                                              'audiobooks': displayBooks,
-                                            },
                                           );
                                         },
-                                  child: Container(
-                                    padding:
-                                        EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          FlutterFlowTheme.of(context).primary,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      'View All',
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            fontSize: 17.0,
-                                            letterSpacing: 0.0,
-                                            lineHeight: 1.5,
-                                            color: Colors.white,
+                                        child: Container(
+                                          padding: EdgeInsets.fromLTRB(
+                                              10, 0.0, 10, 0),
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context)
+                                                .primary,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                           ),
+                                          child: Text(
+                                            'View All',
+                                            style: FlutterFlowTheme.of(context)
+                                                .bodyMedium
+                                                .override(
+                                                  fontFamily:
+                                                      'SF Pro Display',
+                                                  fontSize: 17.0,
+                                                  letterSpacing: 0.0,
+                                                  lineHeight: 1.5,
+                                                  color: Colors.white,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: List.generate(
+                                      featuredBooks.length,
+                                      (bookIndex) {
+                                        final bookItem =
+                                            featuredBooks[bookIndex];
+                                        final bookId = getJsonField(
+                                                bookItem, r'''$._id''')
+                                            .toString();
+                                        return Padding(
+                                          padding: EdgeInsetsDirectional
+                                              .fromSTEB(
+                                                  bookIndex == 0 ? 16.0 : 0.0,
+                                                  0.0,
+                                                  16.0,
+                                                  0.0),
+                                        child: MainBookComponentWidget(
+                                          key: Key(
+                                              'AudiobookByCat_${catIndex}_$bookIndex'),
+                                          id: bookId,
+                                          image:
+                                              '${FFAppConstants.bookImagesUrl}${getJsonField(bookItem, r'''$.image''').toString()}',
+                                          bookName: getJsonField(
+                                                  bookItem, r'''$.name''')
+                                              .toString(),
+                                          authorsName: getJsonField(
+                                                  bookItem,
+                                                  r'''$.author.name''')
+                                              .toString(),
+                                          price: getJsonField(
+                                                  bookItem, r'''$.price''')
+                                              .toString(),
+                                          bookType: getJsonField(
+                                                  bookItem, r'''$.type''')
+                                              ?.toString(),
+                                          discountPercentage: getJsonField(
+                                                  bookItem,
+                                                  r'''$.discount_percentage''')
+                                              .toString(),
+                                          discountAmount: getJsonField(
+                                                  bookItem,
+                                                    r'''$.discount_amount''')
+                                                .toString(),
+                                            isFav: false,
+                                            isFavAction: () async {
+                                              // Handle favorite action
+                                            },
+                                            isMainTap: () async {
+                                              context.pushNamed(
+                                                AudiobookDetailsPageWidget
+                                                    .routeName,
+                                                extra: <String, dynamic>{
+                                                  'audiobook': _normalizeBook(bookItem),
+                                                },
+                                              );
+                                            },
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 ),
+                                SizedBox(height: 16.0),
                               ],
-                            ).animateOnPageLoad(
-                                animationsMap['rowOnPageLoadAnimation']!),
-                          ),
-                          if (!snapshot.hasData)
-                            _buildLoadingList(280.0)
-                          else if (displayBooks.isEmpty)
-                            _buildEmptyList('No audiobooks found', 280.0)
-                          else
-                            Container(
-                              width: double.infinity,
-                              height: 280.0,
-                              child: ListView.builder(
-                                padding:
-                                    EdgeInsets.symmetric(horizontal: 16.0),
-                                scrollDirection: Axis.horizontal,
-                                itemCount: displayBooks.length,
-                                itemBuilder: (context, index) {
-                                  final audiobook = displayBooks[index];
-                                  return Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                      0.0,
-                                      0.0,
-                                      index == displayBooks.length - 1
-                                          ? 0.0
-                                          : 16.0,
-                                      0.0,
-                                    ),
-                                    child: _buildAudiobookCard(audiobook),
-                                  );
-                                },
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-
-                  SizedBox(height: 24.0),
-
-                  // Recently Added Section
-                  FutureBuilder<ApiCallResponse>(
-                    future: _allFuture,
-                    builder: (context, snapshot) {
-                      final books = snapshot.hasData
-                          ? _normalizeBooksFromResponse(snapshot.data)
-                          : <Map<String, dynamic>>[];
-                      final displayBooks =
-                          books.isNotEmpty ? books.take(10).toList() : books;
-                      return Column(
-                        mainAxisSize: MainAxisSize.max,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsetsDirectional.fromSTEB(
-                                16.0, 0.0, 16.0, 16.0),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.max,
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.new_releases_rounded,
-                                      color:
-                                          FlutterFlowTheme.of(context).primary,
-                                      size: 24.0,
-                                    ),
-                                    SizedBox(width: 8.0),
-                                    Text(
-                                      'Recently Added',
-                                      maxLines: 1,
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            fontSize: 20.0,
-                                            letterSpacing: 0.0,
-                                            fontWeight: FontWeight.bold,
-                                            lineHeight: 1.5,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                InkWell(
-                                  onTap: displayBooks.isEmpty
-                                      ? null
-                                      : () async {
-                                          context.pushNamed(
-                                            AudiobookViewAllPageWidget
-                                                .routeName,
-                                            queryParameters: {
-                                              'title': serializeParam(
-                                                'Recently Added',
-                                                ParamType.String,
-                                              ),
-                                            }.withoutNulls,
-                                            extra: <String, dynamic>{
-                                              'audiobooks': displayBooks,
-                                            },
-                                          );
-                                        },
-                                  child: Container(
-                                    padding:
-                                        EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          FlutterFlowTheme.of(context).primary,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      'View All',
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            fontSize: 17.0,
-                                            letterSpacing: 0.0,
-                                            lineHeight: 1.5,
-                                            color: Colors.white,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ).animateOnPageLoad(
-                                animationsMap['rowOnPageLoadAnimation']!),
-                          ),
-                          if (!snapshot.hasData)
-                            _buildLoadingList(280.0)
-                          else if (displayBooks.isEmpty)
-                            _buildEmptyList('No audiobooks found', 280.0)
-                          else
-                            Container(
-                              width: double.infinity,
-                              height: 280.0,
-                              child: ListView.builder(
-                                padding:
-                                    EdgeInsets.symmetric(horizontal: 16.0),
-                                scrollDirection: Axis.horizontal,
-                                itemCount: displayBooks.length,
-                                itemBuilder: (context, index) {
-                                  final audiobook = displayBooks[index];
-                                  return Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                      0.0,
-                                      0.0,
-                                      index == displayBooks.length - 1
-                                          ? 0.0
-                                          : 16.0,
-                                      0.0,
-                                    ),
-                                    child: _buildAudiobookCard(audiobook),
-                                  );
-                                },
-                              ),
-                            ),
-                        ],
+                            );
+                          },
+                        ),
                       );
                     },
                   ),
@@ -1543,8 +1483,8 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
                         size: 12.0,
                       ),
                       SizedBox(width: 4.0),
-                      Text(
-                        audiobook['duration'],
+                      Text("02:12",
+                        // audiobook['duration'],
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
                               fontFamily: 'SF Pro Display',
                               color: FlutterFlowTheme.of(context).secondaryText,
@@ -1556,7 +1496,7 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
                   ),
                   SizedBox(height: 8.0),
                   // Pricing
-                  if (audiobook['price'] == null)
+                  if (audiobook['price'] == null || audiobook['price'] == 0)
                   Text(
                     'Free',
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -1564,9 +1504,10 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
                           color: FlutterFlowTheme.of(context).primary,
                           fontSize: 14.0,
                           letterSpacing: 0.0,
+                          fontWeight: FontWeight.bold,
                         ),
                   ),
-                  if (audiobook['price'] != null)
+                  if (audiobook['price'] != null && audiobook['price'] != 0)
                     Row(
                       mainAxisSize: MainAxisSize.max,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

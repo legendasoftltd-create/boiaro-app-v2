@@ -88,7 +88,7 @@ class _CartPageWidgetState extends State<CartPageWidget> {
                               ),
                               title: Text(cartItem.name),
                               subtitle: Text(
-                                  'Total: \৳${(cartItem.price * cartItem.quantity).toStringAsFixed(2)}'),
+                                  '${_formatCartType(cartItem.type)} • Total: \৳${(cartItem.price * cartItem.quantity).toStringAsFixed(2)}'),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -109,6 +109,7 @@ class _CartPageWidgetState extends State<CartPageWidget> {
                                         cartItem.price,
                                         discountAmount: cartItem.discountAmount,
                                         discountPercentage: cartItem.discountPercentage,
+                                        type: cartItem.type,
                                       );
                                     },
                                   ),
@@ -179,5 +180,16 @@ class _CartPageWidgetState extends State<CartPageWidget> {
         ),
       ),
     );
+  }
+
+  String _formatCartType(String? type) {
+    switch ((type ?? '').toLowerCase()) {
+      case 'audiobook':
+        return 'Audiobook';
+      case 'hardcopy':
+        return 'Hardcopy';
+      default:
+        return 'Ebook';
+    }
   }
 }

@@ -341,6 +341,11 @@ class _HistoryDetailsPageWidgetState extends State<HistoryDetailsPageWidget> {
                                                                     bookDetailsListItem,
                                                                     r'''$.price''',
                                                                   ).toString()}',
+                                                                  bookType:
+                                                                      getJsonField(
+                                                                    bookDetailsListItem,
+                                                                    r'''$.type''',
+                                                                  )?.toString(),
                                                                   discountAmount: getJsonField(
                                                                     bookDetailsListItem,
                                                                     r'''$.discount_amount''',

@@ -7,6 +7,7 @@ class CartItem {
   final double price;
   final double? discountAmount;
   final double? discountPercentage;
+  final String type;
   int quantity;
 
   CartItem({
@@ -16,6 +17,7 @@ class CartItem {
     required this.price,
     this.discountAmount,
     this.discountPercentage,
+    this.type = 'ebook',
     this.quantity = 1,
   });
 
@@ -51,6 +53,7 @@ class CartItem {
       'price': price,
       'discountAmount': discountAmount,
       'discountPercentage': discountPercentage,
+      'type': type,
       'quantity': quantity,
     };
   }
@@ -59,7 +62,7 @@ class CartItem {
   // each dog when using the print statement.
   @override
   String toString() {
-    return 'CartItem{id: $id, name: $name, imageUrl: $imageUrl, price: $price, discountAmount: $discountAmount, discountPercentage: $discountPercentage, quantity: $quantity}';
+    return 'CartItem{id: $id, name: $name, imageUrl: $imageUrl, price: $price, discountAmount: $discountAmount, discountPercentage: $discountPercentage, type: $type, quantity: $quantity}';
   }
 }
 
@@ -109,6 +112,7 @@ class CartProvider with ChangeNotifier {
     bool increment = true,
     double? discountAmount,
     double? discountPercentage,
+    String? type,
   }) {
     if (_items.containsKey(productId)) {
       // change quantity
@@ -121,6 +125,7 @@ class CartProvider with ChangeNotifier {
           price: existingCartItem.price,
           discountAmount: existingCartItem.discountAmount,
           discountPercentage: existingCartItem.discountPercentage,
+          type: existingCartItem.type,
           quantity: increment ? existingCartItem.quantity + 1 : 1,
         ),
       );
@@ -134,6 +139,7 @@ class CartProvider with ChangeNotifier {
           price: price,
           discountAmount: discountAmount,
           discountPercentage: discountPercentage,
+          type: (type ?? 'ebook').toLowerCase(),
         ),
       );
     }

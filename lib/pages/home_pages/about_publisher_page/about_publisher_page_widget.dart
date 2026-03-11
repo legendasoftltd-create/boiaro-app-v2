@@ -809,6 +809,11 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                           bookDetailsListItem,
                                                                           r'''$.price''',
                                                                         ).toString(),
+                                                                        bookType:
+                                                                            getJsonField(
+                                                                          bookDetailsListItem,
+                                                                          r'''$.type''',
+                                                                        )?.toString(),
                                                                         discountAmount:
                                                                             getJsonField(
                                                                           bookDetailsListItem,

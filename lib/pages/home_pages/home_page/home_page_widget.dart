@@ -1260,6 +1260,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                           newbookDetailsListItem,
                                                                                           r'''$.price''',
                                                                                         ).toString(),
+                                                                                        bookType: getJsonField(
+                                                                                          newbookDetailsListItem,
+                                                                                          r'''$.type''',
+                                                                                        )?.toString(),
                                                                                         discountAmount: getJsonField(
                                                                                           newbookDetailsListItem,
                                                                                           r'''$.discount_amount''',
@@ -1542,6 +1546,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$.price''',
                                                                                     ).toString(),
+                                                                                    bookType: getJsonField(
+                                                                                      trendbookDetailsListItem,
+                                                                                      r'''$.type''',
+                                                                                    )?.toString(),
                                                                                     discountAmount: getJsonField(
                                                                                       trendbookDetailsListItem,
                                                                                       r'''$.discount_amount''',
@@ -1992,6 +2000,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                             popularbookDetailsListItem,
                                                                                             r'''$.price''',
                                                                                           ).toString(),
+                                                                                          bookType: getJsonField(
+                                                                                            popularbookDetailsListItem,
+                                                                                            r'''$.type''',
+                                                                                          )?.toString(),
                                                                                           discountAmount: getJsonField(
                                                                                             popularbookDetailsListItem,
                                                                                             r'''$.discount_amount''',
@@ -2292,6 +2304,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                       bookName: getJsonField(bookItem, r'''$.name''').toString(),
                                                                                       authorsName: getJsonField(bookItem, r'''$.author.name''').toString(),
                                                                                       price: getJsonField(bookItem, r'''$.price''').toString(),
+                                                                                      bookType: getJsonField(bookItem, r'''$.type''')?.toString(),
                                                                                       discountPercentage: getJsonField(bookItem, r'''$.discount_percentage''').toString(),
                                                                                       isFav: functions.checkFavOrNot(
                                                                                         EbookGroup.getFavouriteBookCall

@@ -313,6 +313,20 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               bookDetailspageGetbookdetailsApiResponse.jsonBody,
             ),
             widget.name ?? "Book");
+        String bookType = valueOrDefault<String>(
+            getJsonField(
+                  bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                  r'''$.data.bookDetails[0].type''',
+                ) ??
+                getJsonField(
+                  bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                  r'''$.data.bookDetails[:].type''',
+                ) ??
+                getJsonField(
+                  bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                  r'''$.data.bookDetails.type''',
+                ),
+            '');
         String? apiRawImage = EbookGroup.getbookdetailsApiCall
             .image(bookDetailspageGetbookdetailsApiResponse.jsonBody);
         String bookImage = (apiRawImage != null && apiRawImage.isNotEmpty)
@@ -1752,6 +1766,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             double.tryParse(
                                                                     discountPercentage) ??
                                                                 0.0,
+                                                        type: bookType,
                                                       );
                                                       Navigator.push<void>(
                                                         context,
@@ -3035,6 +3050,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             authorRelatedbookDetailslistItem,
                                                             r'''$.price''',
                                                           ).toString(),
+                                                          bookType: getJsonField(
+                                                            authorRelatedbookDetailslistItem,
+                                                            r'''$.type''',
+                                                          )?.toString(),
                                                           discountAmount:
                                                               getJsonField(
                                                             authorRelatedbookDetailslistItem,

@@ -26,6 +26,7 @@ class ListMainContainerComponentWidget extends StatefulWidget {
      this.price="",
     this.discountAmount,
     this.discountPercentage,
+    this.bookType,
     bool? isPurchased,
     // this.addToCartAction,
   })  : this.isFav = isFav ?? false,
@@ -45,6 +46,7 @@ class ListMainContainerComponentWidget extends StatefulWidget {
   final String? price;
   final String? discountAmount;
   final String? discountPercentage;
+  final String? bookType;
   final bool isPurchased;
   // final Future Function()? addToCartAction;
 
@@ -370,6 +372,7 @@ class _ListMainContainerComponentWidgetState
                                                   double.parse(widget.price ?? "0"),
                                                   discountAmount: double.tryParse(widget.discountAmount ?? "0") ?? 0,
                                                   discountPercentage: double.tryParse(widget.discountPercentage ?? "0") ?? 0,
+                                                  type: widget.bookType,
                                                 );
                                                 await actions.showCustomToastBottom('Quantity increased!');
                                               },
@@ -404,6 +407,7 @@ class _ListMainContainerComponentWidgetState
                                               double.parse(widget.price ?? "0"),
                                               discountAmount:double.tryParse(widget.discountAmount ?? "0") ?? 0,
                                               discountPercentage: double.tryParse(widget.discountPercentage ?? "0") ?? 0,
+                                              type: widget.bookType,
                                             );
                                             await actions.showCustomToastBottom('Added to cart!');
                                           },
