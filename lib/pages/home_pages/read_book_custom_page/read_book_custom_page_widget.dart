@@ -4,6 +4,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/services/reading_report_service.dart';
+import '/services/reading_progress_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -19,12 +20,14 @@ class ReadBookCustomPageWidget extends StatefulWidget {
     required this.id,
     required this.name,
     required this.image,
+    this.author,
   });
 
   final String? pdf;
   final String? id;
   final String? name;
   final String? image;
+  final String? author;
 
   static String routeName = 'ReadBookCustomPage';
   static String routePath = '/readBookCustomPage';
@@ -86,6 +89,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       FFAppState().homePageBookId = widget.id!;
       FFAppState().homePageBookName = widget.name!;
       FFAppState().homePageBookPdf = widget.pdf!;
+      FFAppState().homePageBookAuthor = widget.author ?? '';
       FFAppState().update(() {});
     });
 
@@ -150,6 +154,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
           percentage: 0,
           force: true,
         );
+        await ReadingProgressService.upsertProgress(
+          bookId: bookId,
+          percent: 0,
+          name: widget.name ?? '',
+          imageUrl: widget.image ?? '',
+          contentType: 'ebook',
+        );
         _nativeEpubPageSub?.cancel();
         _lastNativeProgressSent = 0;
         _nativeEpubPageSub = EpubReaderService.onPageChanged.listen((percent) {
@@ -158,6 +169,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
           ReadingReportService.instance.updateProgress(
             percentage: percent,
             force: true,
+          );
+          ReadingProgressService.upsertProgress(
+            bookId: bookId,
+            percent: percent.toDouble(),
+            name: widget.name ?? '',
+            imageUrl: widget.image ?? '',
+            contentType: 'ebook',
           );
           _showDebugSnack('READING NATIVE EPUB PROGRESS: $percent%');
         });

@@ -59,6 +59,7 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
         'pdf': serializeParam(item.localPath, ParamType.String),
         'id': serializeParam(item.bookId, ParamType.String),
         'name': serializeParam(item.name, ParamType.String),
+        'author': serializeParam(item.author, ParamType.String),
         'image': serializeParam(item.image, ParamType.String),
       }.withoutNulls,
     );

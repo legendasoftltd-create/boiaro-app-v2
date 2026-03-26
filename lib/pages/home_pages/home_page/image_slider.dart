@@ -19,12 +19,13 @@ class _BannerSliderState extends State<BannerSlider> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 160,
-      child: Column(
+      // height: 130,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
         children: [
           CarouselSlider(
             options: CarouselOptions(
-              height: 140,
+              height: 110,
               autoPlay: true,
               enlargeCenterPage: true,
               viewportFraction: 0.95,
@@ -49,29 +50,31 @@ class _BannerSliderState extends State<BannerSlider> {
                   borderRadius: BorderRadius.circular(15),
                   child: Image.network(
                     url,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.fill,
                     width: double.infinity,
                   ),
                 ),
               );
             }).toList(),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(widget.imageUrls.length, (index) {
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 8,
-                width: _currentIndex == index ? 16 : 8,
-                decoration: BoxDecoration(
-                  color: _currentIndex == index ? FlutterFlowTheme.of(context).primary : Colors.grey,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              );
-            }),
-          ),
+          ),  
+          //  Padding(
+          //    padding: const EdgeInsets.only(bottom: 4.0),
+          //    child: Row(
+          //     mainAxisAlignment: MainAxisAlignment.center,
+          //     children: List.generate(widget.imageUrls.length, (index) {
+          //       return AnimatedContainer(
+          //         duration: const Duration(milliseconds: 300),
+          //         margin: const EdgeInsets.symmetric(horizontal: 4),
+          //         height: 8,
+          //         width: _currentIndex == index ? 16 : 8,
+          //         decoration: BoxDecoration(
+          //           color: _currentIndex == index ? FlutterFlowTheme.of(context).primary : Colors.grey,
+          //           borderRadius: BorderRadius.circular(4),
+          //         ),
+          //       );
+          //     }),
+          //              ),
+          //  ),
         ],
       ),
     );

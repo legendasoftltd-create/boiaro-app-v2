@@ -20,6 +20,10 @@ export '/pages/home_pages/filter_page/filter_page_widget.dart'
     show FilterPageWidget;
 export '/pages/author_screens/best_author_page/best_author_page_widget.dart'
     show BestAuthorPageWidget;
+export '/pages/narrator_screens/best_narrator_page/best_narrator_page_widget.dart'
+    show BestNarratorPageWidget;
+export '/pages/publisher_screens/best_publisher_page/best_publisher_page_widget.dart'
+    show BestPublisherPageWidget;
 export '/pages/audiobook_pages/audiobook_page/audiobook_page_widget.dart'
     show AudiobookPageWidget;
 export '/pages/audiobook_pages/audiobook_view_all_page/audiobook_view_all_page_widget.dart'
@@ -34,6 +38,8 @@ export '/pages/home_pages/recent_reviews_page/recent_reviews_page_widget.dart'
     show RecentReviewsPageWidget;
 export '/pages/home_pages/about_author_page/about_author_page_widget.dart'
     show AboutAuthorPageWidget;
+export '/pages/narrator_screens/about_narrator_page/about_narrator_page_widget.dart'
+    show AboutNarratorPageWidget;
 export '/pages/home_pages/read_book_page/read_book_page_widget.dart'
     show ReadBookPageWidget;
 export '/pages/home_pages/search_page/search_page_widget.dart'

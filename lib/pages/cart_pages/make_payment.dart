@@ -1,6 +1,8 @@
 import 'dart:developer';
 
+import 'package:a_i_ebook_app/app_constants.dart';
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_theme.dart';
+import 'package:a_i_ebook_app/flutter_flow/flutter_flow_util.dart';
 import 'package:a_i_ebook_app/pages/cart_pages/payment_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
@@ -117,7 +119,7 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
 /// -----------------------
 
 class CheckoutController {
-  final String baseUrl = 'https://api.boiaro.com/api';
+  final String baseUrl = FFAppConstants.baseApiUrl;
   final String jwtToken;
   final String userId;
   String? _shippingMethodId;
@@ -129,6 +131,26 @@ class CheckoutController {
     required this.jwtToken,
     required this.userId,
   });
+
+  Map<String, dynamic>? _attachEmailToAddress(
+    Map<String, dynamic>? address,
+  ) {
+    if (address == null) return null;
+    final updated = Map<String, dynamic>.from(address);
+    final existingEmail = updated['email']?.toString() ?? '';
+    if (existingEmail.isNotEmpty) {
+      return updated;
+    }
+    final appEmail = getJsonField(
+          FFAppState().userDetail,
+          r'''$.email''',
+        )?.toString() ??
+        '';
+    if (appEmail.isNotEmpty) {
+      updated['email'] = appEmail;
+    }
+    return updated;
+  }
 
   // Initiate payment
   Future<Map<String, dynamic>> initiatePayment(
@@ -142,7 +164,7 @@ class CheckoutController {
     try {
       _shippingMethodId = shippingMethodId;
       _shippingAddressId = shippingAddressId;
-      _shippingAddress = shippingAddress;
+      _shippingAddress = _attachEmailToAddress(shippingAddress);
       _cartTotal = cartTotal;
 
       final response = await http.post(
@@ -157,7 +179,7 @@ class CheckoutController {
           'paymentmode': 'SSLCOMMERZ',
           if (shippingMethodId != null) 'shippingMethodId': shippingMethodId,
           if (shippingAddressId != null) 'addressId': shippingAddressId,
-          if (shippingAddress != null) 'shippingAddress': shippingAddress,
+          if (_shippingAddress != null) 'shippingAddress': _shippingAddress,
           if (cartTotal != null) 'cartTotal': cartTotal,
           if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
         }),
@@ -181,13 +203,16 @@ class CheckoutController {
     try {
       log('Verifying payment for tran_id: $tranId');
       log('Verifying payment for jwtToken: $jwtToken');
-      log('$baseUrl/transaction/status?tran_id=$tranId');
+      log('$baseUrl/transaction/status');
       final response = await http.post(
-        Uri.parse('$baseUrl/transaction/status?tran_id=$tranId'),
+        Uri.parse('$baseUrl/transaction/status'),
         headers: {
           'Authorization': 'Bearer $jwtToken',
           'Content-Type': 'application/json',
         },
+        body: jsonEncode({
+          'tran_id': tranId,
+        }),
       );
 
       if (response.statusCode == 200) {

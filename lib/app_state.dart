@@ -83,8 +83,47 @@ class FFAppState extends ChangeNotifier {
           prefs.getString('ff_homePageBookName') ?? _homePageBookName;
     });
     _safeInit(() {
+      _homePageBookAuthor =
+          prefs.getString('ff_homePageBookAuthor') ?? _homePageBookAuthor;
+    });
+    _safeInit(() {
       _homePageBookPdf =
           prefs.getString('ff_homePageBookPdf') ?? _homePageBookPdf;
+    });
+    _safeInit(() {
+      _homePageLastAudioBookId =
+          prefs.getString('ff_homePageLastAudioBookId') ??
+              _homePageLastAudioBookId;
+    });
+    _safeInit(() {
+      _homePageLastAudioBookName =
+          prefs.getString('ff_homePageLastAudioBookName') ??
+              _homePageLastAudioBookName;
+    });
+    _safeInit(() {
+      _homePageLastAudioBookAuthor =
+          prefs.getString('ff_homePageLastAudioBookAuthor') ??
+              _homePageLastAudioBookAuthor;
+    });
+    _safeInit(() {
+      _homePageLastAudioBookImage =
+          prefs.getString('ff_homePageLastAudioBookImage') ??
+              _homePageLastAudioBookImage;
+    });
+    _safeInit(() {
+      _homePageLastAudioProgress =
+          prefs.getDouble('ff_homePageLastAudioProgress') ??
+              _homePageLastAudioProgress;
+    });
+    _safeInit(() {
+      _homePageLastAudioPositionSec =
+          prefs.getInt('ff_homePageLastAudioPositionSec') ??
+              _homePageLastAudioPositionSec;
+    });
+    _safeInit(() {
+      _homePageLastAudioDurationSec =
+          prefs.getInt('ff_homePageLastAudioDurationSec') ??
+              _homePageLastAudioDurationSec;
     });
     _safeInit(() {
       _deviceId = prefs.getString('ff_deviceId') ?? _deviceId;
@@ -265,11 +304,67 @@ class FFAppState extends ChangeNotifier {
     prefs.setString('ff_homePageBookName', value);
   }
 
+  String _homePageBookAuthor = '';
+  String get homePageBookAuthor => _homePageBookAuthor;
+  set homePageBookAuthor(String value) {
+    _homePageBookAuthor = value;
+    prefs.setString('ff_homePageBookAuthor', value);
+  }
+
   String _homePageBookPdf = '';
   String get homePageBookPdf => _homePageBookPdf;
   set homePageBookPdf(String value) {
     _homePageBookPdf = value;
     prefs.setString('ff_homePageBookPdf', value);
+  }
+
+  String _homePageLastAudioBookId = '';
+  String get homePageLastAudioBookId => _homePageLastAudioBookId;
+  set homePageLastAudioBookId(String value) {
+    _homePageLastAudioBookId = value;
+    prefs.setString('ff_homePageLastAudioBookId', value);
+  }
+
+  String _homePageLastAudioBookName = '';
+  String get homePageLastAudioBookName => _homePageLastAudioBookName;
+  set homePageLastAudioBookName(String value) {
+    _homePageLastAudioBookName = value;
+    prefs.setString('ff_homePageLastAudioBookName', value);
+  }
+
+  String _homePageLastAudioBookAuthor = '';
+  String get homePageLastAudioBookAuthor => _homePageLastAudioBookAuthor;
+  set homePageLastAudioBookAuthor(String value) {
+    _homePageLastAudioBookAuthor = value;
+    prefs.setString('ff_homePageLastAudioBookAuthor', value);
+  }
+
+  String _homePageLastAudioBookImage = '';
+  String get homePageLastAudioBookImage => _homePageLastAudioBookImage;
+  set homePageLastAudioBookImage(String value) {
+    _homePageLastAudioBookImage = value;
+    prefs.setString('ff_homePageLastAudioBookImage', value);
+  }
+
+  double _homePageLastAudioProgress = 0.0;
+  double get homePageLastAudioProgress => _homePageLastAudioProgress;
+  set homePageLastAudioProgress(double value) {
+    _homePageLastAudioProgress = value;
+    prefs.setDouble('ff_homePageLastAudioProgress', value);
+  }
+
+  int _homePageLastAudioPositionSec = 0;
+  int get homePageLastAudioPositionSec => _homePageLastAudioPositionSec;
+  set homePageLastAudioPositionSec(int value) {
+    _homePageLastAudioPositionSec = value;
+    prefs.setInt('ff_homePageLastAudioPositionSec', value);
+  }
+
+  int _homePageLastAudioDurationSec = 0;
+  int get homePageLastAudioDurationSec => _homePageLastAudioDurationSec;
+  set homePageLastAudioDurationSec(int value) {
+    _homePageLastAudioDurationSec = value;
+    prefs.setInt('ff_homePageLastAudioDurationSec', value);
   }
 
   String _deviceId = '';
@@ -537,6 +632,21 @@ class FFAppState extends ChangeNotifier {
   void clearGetpublishersCacheCache() => _getpublishersCacheManager.clear();
   void clearGetpublishersCacheCacheKey(String? uniqueKey) =>
       _getpublishersCacheManager.clearRequest(uniqueKey);
+
+  final _getnarratorsCacheManager = FutureRequestManager<ApiCallResponse>();
+  Future<ApiCallResponse> getnarratorsCache({
+    String? uniqueQueryKey,
+    bool? overrideCache,
+    required Future<ApiCallResponse> Function() requestFn,
+  }) =>
+      _getnarratorsCacheManager.performRequest(
+        uniqueQueryKey: uniqueQueryKey,
+        overrideCache: overrideCache,
+        requestFn: requestFn,
+      );
+  void clearGetnarratorsCacheCache() => _getnarratorsCacheManager.clear();
+  void clearGetnarratorsCacheCacheKey(String? uniqueKey) =>
+      _getnarratorsCacheManager.clearRequest(uniqueKey);
 
   final _getBookbyCategoryCacheManager =
       FutureRequestManager<ApiCallResponse>();

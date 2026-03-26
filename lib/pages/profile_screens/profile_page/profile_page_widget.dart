@@ -450,7 +450,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              FFLocalizations.of(context).getText('favourite'),
+                                              'Wishlist',
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -483,6 +483,291 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                               ).animateOnPageLoad(animationsMap[
                                   'containerOnPageLoadAnimation2']!),
                             ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              focusColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: () async {
+                                context
+                                    .pushNamed(BestAuthorPageWidget.routeName);
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 16.0,
+                                      color: FlutterFlowTheme.of(context)
+                                          .shadowColor,
+                                      offset: Offset(
+                                        0.0,
+                                        4.0,
+                                      ),
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      8.0, 8.0, 16.0, 8.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Container(
+                                        width: 48.0,
+                                        height: 48.0,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .lightGrey,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment:
+                                            AlignmentDirectional(0.0, 0.0),
+                                        child: Icon(
+                                          Icons.person_rounded,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryText,
+                                          size: 24.0,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding:
+                                              EdgeInsetsDirectional.fromSTEB(
+                                                  16.0, 0.0, 0.0, 0.0),
+                                          child: Text(
+                                            'Author List',
+                                            style:
+                                                FlutterFlowTheme.of(context)
+                                                    .bodyMedium
+                                                    .override(
+                                                      fontFamily:
+                                                          'SF Pro Display',
+                                                      fontSize: 17.0,
+                                                      letterSpacing: 0.0,
+                                                      lineHeight: 1.5,
+                                                    ),
+                                          ),
+                                        ),
+                                      ),
+                                      ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(0.0),
+                                        child: SvgPicture.asset(
+                                          'assets/images/arrow_right_ic.svg',
+                                          width: 20.0,
+                                          height: 20.0,
+                                          colorFilter: ColorFilter.mode(
+                                            FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                            BlendMode.srcIn,
+                                          ),
+                                          alignment: Alignment(0.0, 0.0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ).animateOnPageLoad(animationsMap[
+                                'containerOnPageLoadAnimation2']!),
+                          ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              focusColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: () async {
+                                context.pushNamed(
+                                    BestNarratorPageWidget.routeName);
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 16.0,
+                                      color: FlutterFlowTheme.of(context)
+                                          .shadowColor,
+                                      offset: Offset(
+                                        0.0,
+                                        4.0,
+                                      ),
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      8.0, 8.0, 16.0, 8.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Container(
+                                        width: 48.0,
+                                        height: 48.0,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .lightGrey,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment:
+                                            AlignmentDirectional(0.0, 0.0),
+                                        child: Icon(
+                                          Icons.record_voice_over_rounded,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryText,
+                                          size: 24.0,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding:
+                                              EdgeInsetsDirectional.fromSTEB(
+                                                  16.0, 0.0, 0.0, 0.0),
+                                          child: Text(
+                                            'Narrator List',
+                                            style:
+                                                FlutterFlowTheme.of(context)
+                                                    .bodyMedium
+                                                    .override(
+                                                      fontFamily:
+                                                          'SF Pro Display',
+                                                      fontSize: 17.0,
+                                                      letterSpacing: 0.0,
+                                                      lineHeight: 1.5,
+                                                    ),
+                                          ),
+                                        ),
+                                      ),
+                                      ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(0.0),
+                                        child: SvgPicture.asset(
+                                          'assets/images/arrow_right_ic.svg',
+                                          width: 20.0,
+                                          height: 20.0,
+                                          colorFilter: ColorFilter.mode(
+                                            FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                            BlendMode.srcIn,
+                                          ),
+                                          alignment: Alignment(0.0, 0.0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ).animateOnPageLoad(animationsMap[
+                                'containerOnPageLoadAnimation3']!),
+                          ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              focusColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: () async {
+                                context.pushNamed(
+                                    BestPublisherPageWidget.routeName);
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 16.0,
+                                      color: FlutterFlowTheme.of(context)
+                                          .shadowColor,
+                                      offset: Offset(
+                                        0.0,
+                                        4.0,
+                                      ),
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      8.0, 8.0, 16.0, 8.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Container(
+                                        width: 48.0,
+                                        height: 48.0,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .lightGrey,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment:
+                                            AlignmentDirectional(0.0, 0.0),
+                                        child: Icon(
+                                          Icons.domain_rounded,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryText,
+                                          size: 24.0,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding:
+                                              EdgeInsetsDirectional.fromSTEB(
+                                                  16.0, 0.0, 0.0, 0.0),
+                                          child: Text(
+                                            'Publisher List',
+                                            style:
+                                                FlutterFlowTheme.of(context)
+                                                    .bodyMedium
+                                                    .override(
+                                                      fontFamily:
+                                                          'SF Pro Display',
+                                                      fontSize: 17.0,
+                                                      letterSpacing: 0.0,
+                                                      lineHeight: 1.5,
+                                                    ),
+                                          ),
+                                        ),
+                                      ),
+                                      ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(0.0),
+                                        child: SvgPicture.asset(
+                                          'assets/images/arrow_right_ic.svg',
+                                          width: 20.0,
+                                          height: 20.0,
+                                          colorFilter: ColorFilter.mode(
+                                            FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                            BlendMode.srcIn,
+                                          ),
+                                          alignment: Alignment(0.0, 0.0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ).animateOnPageLoad(animationsMap[
+                                'containerOnPageLoadAnimation4']!),
+                          ),
                           
                           //implement here purchase books features
                           if (FFAppState().isLogin == true)
@@ -972,6 +1257,103 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             BlendMode.srcIn,
                                           ),
                                           fit: BoxFit.contain,
+                                          alignment: Alignment(0.0, 0.0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ).animateOnPageLoad(animationsMap[
+                                'containerOnPageLoadAnimation5']!),
+                          ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              focusColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: () async {
+                                await actions.showCustomToastBottom(
+                                  FFLocalizations.of(context)
+                                      .getText('coming_soon'),
+                                );
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 16.0,
+                                      color: FlutterFlowTheme.of(context)
+                                          .shadowColor,
+                                      offset: Offset(
+                                        0.0,
+                                        4.0,
+                                      ),
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      8.0, 8.0, 16.0, 8.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Container(
+                                        width: 48.0,
+                                        height: 48.0,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .lightGrey,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment:
+                                            AlignmentDirectional(0.0, 0.0),
+                                        child: Icon(
+                                          Icons.help_outline_rounded,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryText,
+                                          size: 24.0,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding:
+                                              EdgeInsetsDirectional.fromSTEB(
+                                                  16.0, 0.0, 0.0, 0.0),
+                                          child: Text(
+                                            'Help & Support',
+                                            style:
+                                                FlutterFlowTheme.of(context)
+                                                    .bodyMedium
+                                                    .override(
+                                                      fontFamily:
+                                                          'SF Pro Display',
+                                                      fontSize: 17.0,
+                                                      letterSpacing: 0.0,
+                                                      lineHeight: 1.5,
+                                                    ),
+                                          ),
+                                        ),
+                                      ),
+                                      ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(0.0),
+                                        child: SvgPicture.asset(
+                                          'assets/images/arrow_right_ic.svg',
+                                          width: 20.0,
+                                          height: 20.0,
+                                          colorFilter: ColorFilter.mode(
+                                            FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                            BlendMode.srcIn,
+                                          ),
                                           alignment: Alignment(0.0, 0.0),
                                         ),
                                       ),

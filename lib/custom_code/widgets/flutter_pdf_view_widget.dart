@@ -33,6 +33,7 @@ import 'pdf_viewer_settings_dialogs.dart';
 import 'speech_player_bar.dart';
 import 'bijoy_converter.dart';
 import '/services/reading_report_service.dart';
+import '/services/reading_progress_service.dart';
 
 class FlutterPdfViewWidget extends StatefulWidget {
   const FlutterPdfViewWidget({
@@ -431,6 +432,18 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
       await _startReadingSession();
     }
     final percent = _calculateProgressPercent(provider);
+    final bookId = (widget.bookId ?? FFAppState().homePageBookId).trim();
+    if (bookId.isNotEmpty) {
+      final name = (widget.namePage ?? FFAppState().homePageBookName).trim();
+      final imageUrl = FFAppState().homePageLiveReadBook.trim();
+      unawaited(ReadingProgressService.upsertProgress(
+        bookId: bookId,
+        percent: percent.toDouble(),
+        name: name,
+        imageUrl: imageUrl,
+        contentType: provider.readerType == ReaderType.epub ? 'ebook' : 'ebook',
+      ));
+    }
     await ReadingReportService.instance.updateProgress(
       percentage: percent,
       force: force,

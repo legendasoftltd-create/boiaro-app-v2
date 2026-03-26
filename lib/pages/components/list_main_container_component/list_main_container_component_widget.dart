@@ -82,6 +82,23 @@ class _ListMainContainerComponentWidgetState
 
   @override
   Widget build(BuildContext context) {
+    final typeValue = (widget.bookType ?? '').toLowerCase();
+    final showAudioIcon = typeValue.contains('audio');
+    final showHardcopyIcon =
+        typeValue.contains('hard') || typeValue.contains('print');
+    final showEbookIcon = typeValue.contains('ebook') ||
+        typeValue.contains('e-book') ||
+        typeValue.contains('epub') ||
+        typeValue.contains('pdf');
+    IconData? formatIcon;
+    if (showAudioIcon) {
+      formatIcon = Icons.headphones_rounded;
+    } else if (showHardcopyIcon) {
+      formatIcon = Icons.local_library_rounded;
+    } else if (showEbookIcon || typeValue.isNotEmpty) {
+      formatIcon = Icons.menu_book_rounded;
+    }
+
     return InkWell(
       splashColor: Colors.transparent,
       focusColor: Colors.transparent,
@@ -92,6 +109,7 @@ class _ListMainContainerComponentWidgetState
       },
       child: Container(
         width: widget.width,
+        height: 160,
         decoration: BoxDecoration(
           color: FlutterFlowTheme.of(context).primaryBackground,
           boxShadow: [
@@ -126,8 +144,8 @@ class _ListMainContainerComponentWidgetState
                       fadeInDuration: Duration(milliseconds: 200),
                       fadeOutDuration: Duration(milliseconds: 200),
                       imageUrl: widget.image!,
-                      width: 77.0,
-                      height: 114.0,
+                      width: 80.0,
+                      height: 130.0,
                       fit: BoxFit.fitWidth,
                       alignment: Alignment(0.0, 0.0),
                       errorWidget: (context, error, stackTrace) => Image.asset(
@@ -139,6 +157,33 @@ class _ListMainContainerComponentWidgetState
                       ),
                     ),
                   ),
+                  if (formatIcon != null)
+                    Positioned(
+                      right: 4.0,
+                      bottom: 4.0,
+                      child: Container(
+                        width: 20.0,
+                        height: 20.0,
+                        decoration: BoxDecoration(
+                          color: FlutterFlowTheme.of(context)
+                              .primaryBackground
+                              .withValues(alpha: 0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              blurRadius: 8.0,
+                              color: FlutterFlowTheme.of(context).shadowColor,
+                              offset: Offset(0.0, 2.0),
+                            )
+                          ],
+                        ),
+                        child: Icon(
+                          formatIcon,
+                          size: 12.0,
+                          color: FlutterFlowTheme.of(context).primaryText,
+                        ),
+                      ),
+                    ),
                   if (widget.isPurchased)
                     Positioned(
                       top: 4.0,
@@ -186,8 +231,9 @@ class _ListMainContainerComponentWidgetState
               ),
               Expanded(
                 child: Padding(
-                  padding:
-                      EdgeInsetsDirectional.fromSTEB(12.0, 12.0, 12.0, 12.0),
+                  // padding:
+                  //     EdgeInsetsDirectional.fromSTEB(12.0, 12.0, 12.0, 12.0),
+                  padding: EdgeInsets.only(left: 12.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -202,7 +248,7 @@ class _ListMainContainerComponentWidgetState
                         maxLines: 1,
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
                               fontFamily: 'SF Pro Display',
-                              fontSize: 20.0,
+                              fontSize: 13.0,
                               letterSpacing: 0.0,
                               fontWeight: FontWeight.bold,
                               lineHeight: 1.5,
@@ -215,7 +261,7 @@ class _ListMainContainerComponentWidgetState
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
                               fontFamily: 'SF Pro Display',
                               color: FlutterFlowTheme.of(context).secondaryText,
-                              fontSize: 15.0,
+                              fontSize: 11.0,
                               letterSpacing: 0.0,
                               fontWeight: FontWeight.normal,
                               lineHeight: 1.5,
@@ -249,7 +295,7 @@ class _ListMainContainerComponentWidgetState
                                       .bodyMedium
                                       .override(
                                         fontFamily: 'SF Pro Display',
-                                        fontSize: 15.0,
+                                        fontSize: 11.0,
                                         letterSpacing: 0.0,
                                         fontWeight: FontWeight.normal,
                                         lineHeight: 1.5,
@@ -412,8 +458,8 @@ class _ListMainContainerComponentWidgetState
                                             await actions.showCustomToastBottom('Added to cart!');
                                           },
                                           child: Container(
-                                            width: 32.0,
-                                            height: 32.0,
+                                            width: 25.0,
+                                            height: 25.0,
                                             decoration: BoxDecoration(
                                               color: FlutterFlowTheme.of(context).primary,
                                               shape: BoxShape.circle,
@@ -421,7 +467,7 @@ class _ListMainContainerComponentWidgetState
                                             child: Icon(
                                               Icons.add_shopping_cart_rounded,
                                               color: FlutterFlowTheme.of(context).primaryBackground,
-                                              size: 16.0,
+                                              size: 13.0,
                                             ),
                                           ),
                                         ):SizedBox();

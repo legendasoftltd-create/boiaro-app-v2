@@ -15,7 +15,7 @@ class EbookGroup {
   static String getBaseUrl({
     String? token = '',
   }) =>
-      'https://api.boiaro.com/api/';
+      '${FFAppConstants.baseApiUrl}/';
   static Map<String, String> headers = {
     'Authorization': 'Bearer [token]',
   };
@@ -42,16 +42,21 @@ class EbookGroup {
       GetsubcategoriesbycategoryApiCall();
   static GetauthorsApiCall getauthorsApiCall = GetauthorsApiCall();
   static GetpublishersApiCall getpublishersApiCall = GetpublishersApiCall();
+  static GetnarratorsApiCall getnarratorsApiCall = GetnarratorsApiCall();
   static GetpublisherdetailsApiCall getpublisherdetailsApiCall =
       GetpublisherdetailsApiCall();
   static GetauthordetailsApiCall getauthordetailsApiCall =
       GetauthordetailsApiCall();
+  static GetnarratordetailsApiCall getnarratordetailsApiCall =
+      GetnarratordetailsApiCall();
   static GetbookbypublisherApiCall getbookbypublisherApiCall =
       GetbookbypublisherApiCall();
   static GetLatestbooksApiCall getLatestbooksApiCall = GetLatestbooksApiCall();
   static GetbookdetailsApiCall getbookdetailsApiCall = GetbookdetailsApiCall();
   static GetbookbyauthorApiCall getbookbyauthorApiCall =
       GetbookbyauthorApiCall();
+  static GetbookbynarratorApiCall getbookbynarratorApiCall =
+      GetbookbynarratorApiCall();
   static GetbookbycategoryApiCall getbookbycategoryApiCall =
       GetbookbycategoryApiCall();
   static GetbookbysubcategoryApiCall getbookbysubcategoryApiCall =
@@ -1415,6 +1420,65 @@ class GetpublishersApiCall {
       ));
 }
 
+class GetnarratorsApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetnarratorsApi',
+      apiUrl: '${baseUrl}getnarrators',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? narratorDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.narratorDetails''',
+        true,
+      ) as List?;
+  List<String>? name(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].name''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  List<String>? image(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].image''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
 class GetpublisherdetailsApiCall {
   Future<ApiCallResponse> call({
     String? publisherId = '',
@@ -1607,6 +1671,85 @@ class GetauthordetailsApiCall {
   String? id(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.authorDetails[:]._id''',
+      ));
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GetnarratordetailsApiCall {
+  Future<ApiCallResponse> call({
+    String? narratorId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "narratorId": "${narratorId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetnarratordetailsApi',
+      apiUrl: '${baseUrl}getnarratordetails',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? narratorDetails(dynamic response) => getJsonField(
+        response,
+        r'''$.data.narratorDetails''',
+        true,
+      ) as List?;
+  String? name(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].name''',
+      ));
+  String? image(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].image''',
+      ));
+  String? facebookurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].facebook_url''',
+      ));
+  String? instagramurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].instagram_url''',
+      ));
+  String? youtubeurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].youtube_url''',
+      ));
+  String? websiteurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].website_url''',
+      ));
+  String? description(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.narratorDetails[:].description''',
+      ));
+  String? id(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.narratorDetails[:]._id''',
       ));
   int? success(dynamic response) => castToType<int>(getJsonField(
         response,
@@ -1861,6 +2004,49 @@ class GetbookbyauthorApiCall {
     return ApiManager.instance.makeApiCall(
       callName: 'GetbookbyauthorApi',
       apiUrl: '${baseUrl}getbookbyauthor',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  List? bookDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.bookDetails''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+}
+
+class GetbookbynarratorApiCall {
+  Future<ApiCallResponse> call({
+    String? narratorId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    final ffApiRequestBody = '''
+{
+  "narratorId": "${narratorId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetbookbynarratorApi',
+      apiUrl: '${baseUrl}getbookbynarrator',
       callType: ApiCallType.POST,
       headers: {
         'Authorization': 'Bearer ${token}',

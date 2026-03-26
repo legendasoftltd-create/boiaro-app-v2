@@ -41,6 +41,23 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
   bool isAllSelected = true;
   late Completer<ApiCallResponse> _booksCompleter;
 
+  String _resolveBookType(dynamic book) {
+    final type = getJsonField(book, r'''$.type''') ??
+        getJsonField(book, r'''$.bookType''') ??
+        getJsonField(book, r'''$.book_type''');
+    return (type?.toString() ?? '').toLowerCase();
+  }
+
+  bool _isAudiobook(dynamic book) {
+    final type = _resolveBookType(book);
+    return type.contains('audio');
+  }
+
+  bool _isAudiobookTypeValue(String? type) {
+    final normalized = (type ?? '').toLowerCase();
+    return normalized.contains('audio');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -337,11 +354,24 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                                                       bookDetailsList.length,
                                                       (bookIndex) {
                                                         final bookItem = bookDetailsList[bookIndex];
+                                                        final bookTypeValue = (getJsonField(
+                                                                  bookItem,
+                                                                  r'''$.type''',
+                                                                ) ??
+                                                                getJsonField(
+                                                                  bookItem,
+                                                                  r'''$.bookType''',
+                                                                ) ??
+                                                                getJsonField(
+                                                                  bookItem,
+                                                                  r'''$.book_type''',
+                                                                ))
+                                                            ?.toString();
                                                         return MainBookComponentWidget(
                                                           key: Key('Key_${getJsonField(bookItem, r'''$._id''').toString()}'),
                                                           image: '${isAllSelected ? FFAppConstants.bookImagesUrl : FFAppConstants.bookImagesUrl}${getJsonField(bookItem, r'''$.image''').toString()}',
                                                           price: '${getJsonField(bookItem, r'''$.price''').toString()}',
-                                                          bookType: getJsonField(bookItem, r'''$.type''')?.toString(),
+                                                          bookType: bookTypeValue,
                                                           discountAmount: getJsonField(bookItem, r'''$.discount_amount''').toString(),
                                                           discountPercentage: getJsonField(bookItem, r'''$.discount_percentage''').toString(),
                                                           id: '${getJsonField(bookItem, r'''$._id''').toString()}',
@@ -395,15 +425,82 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                                                           },
                                                           isPurchased: _model.purchasedBookIds.contains(getJsonField(bookItem, r'''$._id''').toString()),
                                                           isMainTap: () async {
-                                                            context.pushNamed(
-                                                              BookDetailspageWidget.routeName,
-                                                              queryParameters: {
-                                                                'name': serializeParam(getJsonField(bookItem, r'''$.name''').toString(), ParamType.String),
-                                                                'price': serializeParam(getJsonField(bookItem, r'''$.price''').toString(), ParamType.String),
-                                                                'image': serializeParam('${isAllSelected ? FFAppConstants.bookImagesUrl : FFAppConstants.imageUrl}${getJsonField(bookItem, r'''$.image''').toString()}', ParamType.String),
-                                                                'id': serializeParam(getJsonField(bookItem, r'''$._id''').toString(), ParamType.String),
-                                                              }.withoutNulls,
-                                                            );
+                                                            if (_isAudiobookTypeValue(
+                                                                bookTypeValue)) {
+                                                              final imagePath =
+                                                                  getJsonField(
+                                                                    bookItem,
+                                                                    r'''$.image''',
+                                                                  )?.toString();
+                                                              final imageUrl =
+                                                                  (imagePath ??
+                                                                              '')
+                                                                          .startsWith(
+                                                                              'http')
+                                                                      ? imagePath
+                                                                      : '${FFAppConstants.bookImagesUrl}${imagePath ?? ''}';
+                                                              context.pushNamed(
+                                                                AudiobookDetailsPageWidget
+                                                                    .routeName,
+                                                                extra: <String,
+                                                                    dynamic>{
+                                                                  'audiobook': {
+                                                                    'id': getJsonField(
+                                                                      bookItem,
+                                                                      r'''$._id''',
+                                                                    )?.toString(),
+                                                                    'title': getJsonField(
+                                                                      bookItem,
+                                                                      r'''$.name''',
+                                                                    )?.toString(),
+                                                                    'author': getJsonField(
+                                                                      bookItem,
+                                                                      r'''$.author.name''',
+                                                                    )?.toString(),
+                                                                    'image':
+                                                                        imageUrl,
+                                                                    'price': getJsonField(
+                                                                      bookItem,
+                                                                      r'''$.price''',
+                                                                    ),
+                                                                    'raw':
+                                                                        bookItem,
+                                                                  },
+                                                                },
+                                                              );
+                                                            } else {
+                                                              context.pushNamed(
+                                                                BookDetailspageWidget
+                                                                    .routeName,
+                                                                queryParameters: {
+                                                                  'name': serializeParam(
+                                                                      getJsonField(
+                                                                        bookItem,
+                                                                        r'''$.name''',
+                                                                      ).toString(),
+                                                                      ParamType
+                                                                          .String),
+                                                                  'price': serializeParam(
+                                                                      getJsonField(
+                                                                        bookItem,
+                                                                        r'''$.price''',
+                                                                      ).toString(),
+                                                                      ParamType
+                                                                          .String),
+                                                                  'image': serializeParam(
+                                                                      '${isAllSelected ? FFAppConstants.bookImagesUrl : FFAppConstants.imageUrl}${getJsonField(bookItem, r'''$.image''').toString()}',
+                                                                      ParamType
+                                                                          .String),
+                                                                  'id': serializeParam(
+                                                                      getJsonField(
+                                                                        bookItem,
+                                                                        r'''$._id''',
+                                                                      ).toString(),
+                                                                      ParamType
+                                                                          .String),
+                                                                }.withoutNulls,
+                                                              );
+                                                            }
                                                           },
                                                         );
                                                       },

@@ -5,9 +5,17 @@ import '/backend/api_requests/api_calls.dart';
 import '/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:share_plus/share_plus.dart';
+import '/custom_code/actions/index.dart' as actions;
+import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
+import '/pages/cart_pages/checkout_page_widget.dart';
+import '/pages/components/main_book_component/main_book_component_widget.dart';
+import '/pages/dialogs/book_review_bottom_sheet/book_review_bottom_sheet_widget.dart';
+import '/providers/cart_provider.dart';
 import 'audiobook_details_page_model.dart';
 export 'audiobook_details_page_model.dart';
+import 'package:provider/provider.dart';
 
 class AudiobookDetailsPageWidget extends StatefulWidget {
   const AudiobookDetailsPageWidget({
@@ -34,6 +42,11 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
   late Future<ApiCallResponse> _detailsFuture;
   late Future<ApiCallResponse> _relatedFuture;
   Future<ApiCallResponse>? _authorBooksFuture;
+  Future<ApiCallResponse>? _reviewsFuture;
+  bool _isPurchased = false;
+  bool _isFavorite = false;
+  bool _isFavoriteLoading = false;
+  List<String> _purchasedBookIds = [];
 
   final animationsMap = {
     'containerOnPageLoadAnimation1': AnimationInfo(
@@ -89,6 +102,16 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
       bookId: _bookId,
       type: 'audiobook',
     );
+    _reviewsFuture = EbookGroup.getreviewApiCall.call(
+      bookId: _bookId,
+      token: FFAppState().token,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (FFAppState().isLogin) {
+        await _loadPurchasedBooks();
+        await _loadFavoriteStatus();
+      }
+    });
   }
 
   @override
@@ -102,6 +125,99 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
         audiobook['_id'] ??
         getJsonField(audiobook, r'''$._id''');
     return id?.toString() ?? '';
+  }
+
+  Future<void> _loadPurchasedBooks() async {
+    try {
+      final response = await EbookGroup.userBookPurchaseRecordsApiCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      );
+      if (EbookGroup.userBookPurchaseRecordsApiCall.success(
+            response.jsonBody ?? '',
+          ) ==
+          1) {
+        _purchasedBookIds =
+            EbookGroup.userBookPurchaseRecordsApiCall.bookId(
+                  response.jsonBody ?? '',
+                ) ??
+                [];
+        _isPurchased = _purchasedBookIds.contains(_bookId);
+        if (mounted) {
+          safeSetState(() {});
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading purchased audiobooks: $e');
+    }
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    try {
+      final response = await EbookGroup.getFavouriteBookCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      );
+      _isFavorite = functions.checkFavOrNot(
+            EbookGroup.getFavouriteBookCall
+                .favouriteBookDetailsList(response.jsonBody)
+                ?.toList(),
+            _bookId,
+          ) ==
+          true;
+      if (mounted) {
+        safeSetState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error loading favorites: $e');
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isFavoriteLoading) return;
+    if (!FFAppState().isLogin) {
+      context.pushNamed(SignInPageWidget.routeName);
+      return;
+    }
+    safeSetState(() => _isFavoriteLoading = true);
+    try {
+      if (_isFavorite) {
+        final response = await EbookGroup.removeFavouritebookCall.call(
+          bookId: _bookId,
+          userId: FFAppState().userId,
+          token: FFAppState().token,
+        );
+        if (response.succeeded) {
+          _isFavorite = false;
+          await actions.showCustomToastBottom(FFAppState().unFavText);
+        }
+      } else {
+        final response = await EbookGroup.addFavouriteBookApiCall.call(
+          bookId: _bookId,
+          userId: FFAppState().userId,
+          token: FFAppState().token,
+        );
+        if (response.succeeded) {
+          _isFavorite = true;
+          await actions.showCustomToastBottom(FFAppState().favText);
+        }
+      }
+    } catch (e) {
+      debugPrint('Favorite toggle failed: $e');
+    } finally {
+      if (mounted) {
+        safeSetState(() => _isFavoriteLoading = false);
+      }
+    }
+  }
+
+  String _resolveAccessType(dynamic details, Map<String, dynamic> fallback) {
+    final access = getJsonField(details, r'''$.access_type''') ??
+        getJsonField(details, r'''$.accessType''') ??
+        getJsonField(details, r'''$.book_access_type''') ??
+        fallback['access_type'] ??
+        fallback['accessType'];
+    return (access?.toString() ?? '').toLowerCase();
   }
 
   num? _toNum(dynamic value) {
@@ -196,17 +312,19 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
           fallback['language'] ??
           '',
         'description': _sanitizeText(
-              getJsonField(bookDetails, r'''$.description''') ??
-                  fallback['description'],
-            ) ??
-            '',
+          getJsonField(bookDetails, r'''$.description''') ??
+              fallback['description'],
+        ),
         'previewAudio': previewAudio,
         'raw': bookDetails ?? fallback,
       };
     }
 
   List<Map<String, dynamic>> _normalizeChapters(
-      dynamic bookDetails, List<dynamic> fallback) {
+    dynamic bookDetails,
+    List<dynamic> fallback, {
+    required bool hasAccess,
+  }) {
     final rawChapters = (getJsonField(bookDetails, r'''$.chapters''', true) ??
             fallback)
         .toList();
@@ -219,9 +337,10 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
       final duration = getJsonField(chapter, r'''$.duration''')?.toString() ??
           getJsonField(chapter, r'''$.length''')?.toString() ??
           '--:--';
-      final isLocked = getJsonField(chapter, r'''$.isLocked''') ??
+      final rawLocked = getJsonField(chapter, r'''$.isLocked''') ??
           getJsonField(chapter, r'''$.is_locked''') ??
           false;
+      final isLocked = hasAccess ? (rawLocked == true) : true;
       final file = getJsonField(chapter, r'''$.file''') ??
           getJsonField(chapter, r'''$.audio''');
       chapters.add({
@@ -257,6 +376,10 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
         'image': image,
         'rating': _toNum(getJsonField(book, r'''$.averageRating''')) ?? 0,
         'price': _toNum(getJsonField(book, r'''$.price''')),
+        'discountAmount':
+            getJsonField(book, r'''$.discount_amount''')?.toString(),
+        'discountPercentage':
+            getJsonField(book, r'''$.discount_percentage''')?.toString(),
         'offerPrice': _calculateOfferPrice(
           getJsonField(book, r'''$.price'''),
           getJsonField(book, r'''$.discount_amount'''),
@@ -281,9 +404,17 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
         final details =
             (detailsList != null && detailsList.isNotEmpty) ? detailsList.first : null;
         final book = _normalizeBookDetails(details, fallback);
+        final accessType = _resolveAccessType(details, fallback);
+        final basePrice = (_toNum(book['price']) ?? 0).toDouble();
+        final isFreeAccess = accessType.contains('free') || basePrice <= 0;
+        final hasAccess = isFreeAccess || _isPurchased;
+        final priceLabel = basePrice <= 0
+            ? 'Free'
+            : '৳${book['offerPrice'] ?? book['price']}';
         final chapters = _normalizeChapters(
           details,
           (fallback['chapters'] as List?) ?? [],
+          hasAccess: hasAccess,
         );
         final previewAudio = book['previewAudio'] ??
             getJsonField(details, r'''$.preview_audio''') ??
@@ -346,7 +477,15 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                         ),
                         child: IconButton(
                           icon: Icon(Icons.share_rounded, color: Colors.white, size: 20),
-                          onPressed: () {},
+                          onPressed: () async {
+                            await SharePlus.instance.share(
+                              ShareParams(
+                                uri: Uri.parse(
+                                  "${FFAppConstants.webUrl}/product/$_bookId",
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -358,11 +497,61 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20),
-                          onPressed: () {},
+                          icon: _isFavoriteLoading
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  _isFavorite
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                          onPressed: _toggleFavorite,
                         ),
                       ),
                     ),
+                    if (!hasAccess && basePrice > 0)
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.shopping_cart_outlined,
+                                color: Colors.white, size: 20),
+                            onPressed: () async {
+                              if (!FFAppState().isLogin) {
+                                context.pushNamed(SignInPageWidget.routeName);
+                                return;
+                              }
+                              final cart =
+                                  Provider.of<CartProvider>(context, listen: false);
+                              cart.addItem(
+                                _bookId,
+                                book['title']?.toString() ?? '',
+                                book['image']?.toString() ?? '',
+                                basePrice,
+                                discountAmount:
+                                    _toNum(getJsonField(details, r'''$.discount_amount'''))?.toDouble(),
+                                discountPercentage: _toNum(getJsonField(
+                                    details, r'''$.discount_percentage'''))?.toDouble(),
+                                type: 'audiobook',
+                              );
+                              await actions.showCustomToastBottom(
+                                  'Added to cart!');
+                            },
+                          ),
+                        ),
+                      ),
                   ],
                   flexibleSpace: FlexibleSpaceBar(
                     background: Stack(
@@ -411,7 +600,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                   extra: <String, dynamic>{
                                     'audiobook': {
                                       ...book,
-                                      'chapters': chapters,
+                                      'chapters': [previewChapter],
                                     },
                                     'chapter': previewChapter,
                                   },
@@ -509,7 +698,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 ),
                                 SizedBox(height: 12),
                                 Text(
-                                  '৳${book['offerPrice'] ?? book['price'] ?? '0'}',
+                                  priceLabel,
                                   style: FlutterFlowTheme.of(context).headlineSmall.override(
                                         fontFamily: 'SF Pro Display',
                                         color: FlutterFlowTheme.of(context).primary,
@@ -560,6 +749,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                           onTap: chapters.isEmpty
                               ? null
                               : () async {
+                                  if (hasAccess) {
                                     context.pushNamed(
                                       AudioPlayerPageWidget.routeName,
                                       extra: <String, dynamic>{
@@ -570,6 +760,35 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                         "chapter": chapters.first,
                                       },
                                     );
+                                  } else {
+                                    if (!FFAppState().isLogin) {
+                                      context
+                                          .pushNamed(SignInPageWidget.routeName);
+                                      return;
+                                    }
+                                    final cart = Provider.of<CartProvider>(
+                                      context,
+                                      listen: false,
+                                    );
+                                    cart.addItem(
+                                      _bookId,
+                                      book['title']?.toString() ?? '',
+                                      book['image']?.toString() ?? '',
+                                      basePrice,
+                                      discountAmount: _toNum(getJsonField(
+                                          details, r'''$.discount_amount'''))?.toDouble(),
+                                      discountPercentage: _toNum(getJsonField(
+                                          details, r'''$.discount_percentage'''))?.toDouble(),
+                                      type: 'audiobook',
+                                    );
+                                    Navigator.push<void>(
+                                      context,
+                                      MaterialPageRoute<void>(
+                                        builder: (BuildContext context) =>
+                                            CheckoutPageWidget(),
+                                      ),
+                                    );
+                                  }
                                 },
                           child: Container(
                             width: double.infinity,
@@ -591,7 +810,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 Icon(Icons.headphones_rounded, color: Colors.white, size: 24),
                                 SizedBox(width: 12),
                                 Text(
-                                  'Listen Now',
+                                  hasAccess ? 'Listen Now' : 'Buy Now',
                                   style: FlutterFlowTheme.of(context).titleMedium.override(
                                         fontFamily: 'SF Pro Display',
                                         color: Colors.white,
@@ -658,35 +877,179 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
 
                         SizedBox(height: 24),
 
-                        // Opinion/Comment Box
-                        Container(
-                          padding: EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: FlutterFlowTheme.of(context).secondaryBackground,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: Offset(0, 4),
-                              )
-                            ],
-                          ),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context).primaryBackground,
-                              borderRadius: BorderRadius.circular(12),
+                        // Reviews Section
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Reviews',
+                              style: FlutterFlowTheme.of(context)
+                                  .titleLarge
+                                  .override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
-                            child: TextField(
-                              decoration: InputDecoration(
-                                hintText: 'আপনার মতামত দিন...', // Give your opinion
-                                hintStyle: FlutterFlowTheme.of(context).bodySmall,
-                                border: InputBorder.none,
-                                suffixIcon: Icon(Icons.send_rounded, color: FlutterFlowTheme.of(context).primary),
+                            InkWell(
+                              onTap: () async {
+                                await showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) =>
+                                      BookReviewBottomSheetWidget(
+                                    bookId: _bookId,
+                                  ),
+                                );
+                                safeSetState(() {
+                                  _reviewsFuture =
+                                      EbookGroup.getreviewApiCall.call(
+                                    bookId: _bookId,
+                                    token: FFAppState().token,
+                                  );
+                                });
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(Icons.rate_review_outlined,
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      size: 20),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Write Review',
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodyMedium
+                                        .override(
+                                          fontFamily: 'SF Pro Display',
+                                          color: FlutterFlowTheme.of(context)
+                                              .primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        FutureBuilder<ApiCallResponse>(
+                          future: _reviewsFuture,
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) {
+                              return SizedBox(
+                                height: 80,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: FlutterFlowTheme.of(context).primary,
+                                  ),
+                                ),
+                              );
+                            }
+                            final reviews = EbookGroup.getreviewApiCall
+                                    .reviewsList(snapshot.data!.jsonBody) ??
+                                [];
+                            if (reviews.isEmpty) {
+                              return Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Text(
+                                  'No reviews yet',
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .override(
+                                        fontFamily: 'SF Pro Display',
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                      ),
+                                ),
+                              );
+                            }
+                            return ListView.builder(
+                              shrinkWrap: true,
+                              physics: NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.zero,
+                              itemCount: reviews.length,
+                              itemBuilder: (context, index) {
+                                final review = reviews[index];
+                                final rating = getJsonField(
+                                      review,
+                                      r'''$.rating''',
+                                    ) ??
+                                    0;
+                                return Container(
+                                  margin: EdgeInsets.only(bottom: 12),
+                                  padding: EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryBackground,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: FlutterFlowTheme.of(context)
+                                          .alternate,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            getJsonField(
+                                                  review,
+                                                  r'''$.userDetails.name''',
+                                                )?.toString() ??
+                                                'User',
+                                            style: FlutterFlowTheme.of(context)
+                                                .bodyMedium
+                                                .override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.star_rounded,
+                                                  color: Color(0xFFFFC107),
+                                                  size: 16),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                rating.toString(),
+                                                style: FlutterFlowTheme.of(
+                                                        context)
+                                                    .bodySmall
+                                                    .override(
+                                                      fontFamily:
+                                                          'SF Pro Display',
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 6),
+                                      Text(
+                                        getJsonField(
+                                              review,
+                                              r'''$.description''',
+                                            )?.toString() ??
+                                            '',
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              color: FlutterFlowTheme.of(context)
+                                                  .secondaryText,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
 
                         SizedBox(height: 32),
@@ -755,12 +1118,12 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 );
                               }
                               return SizedBox(
-                                height: 200,
+                                height: 250,
                                 child: ListView.builder(
                                   scrollDirection: Axis.horizontal,
                                   itemCount: filtered.length,
                                   itemBuilder: (context, index) =>
-                                      _buildRelatedBookCard(filtered[index]),
+                                      _buildRelatedBookComponent(filtered[index]),
                                 ),
                               );
                             },
@@ -779,7 +1142,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                             final filtered = books
                                 .where((item) => item['id'] != book['id'])
                                 .toList();
-                            if (!snapshot.hasData) {
+                            if (!snapshot.hasData ) {
                               return SizedBox(
                                 height: 120,
                                 child: Center(
@@ -814,12 +1177,12 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                               );
                             }
                             return SizedBox(
-                              height: 200,
+                              height: 250,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) =>
-                                    _buildRelatedBookCard(filtered[index]),
+                                    _buildRelatedBookComponent(filtered[index]),
                               ),
                             );
                           },
@@ -874,6 +1237,11 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     final bool isLocked = chapter['isLocked'] ?? false;
     return InkWell(
       onTap: () async {
+        if (isLocked) {
+          await actions.showCustomToastBottom(
+              'Please purchase to unlock this chapter');
+          return;
+        }
           context.pushNamed(
             AudioPlayerPageWidget.routeName,
             extra: <String, dynamic>{
@@ -924,14 +1292,14 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    chapter['duration'] ?? '--:--',
-                    style: FlutterFlowTheme.of(context).bodySmall.override(
-                          fontFamily: 'SF Pro Display',
-                          color: FlutterFlowTheme.of(context).primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
+                  // Text(
+                  //   chapter['duration'] ?? '--:--',
+                  //   style: FlutterFlowTheme.of(context).bodySmall.override(
+                  //         fontFamily: 'SF Pro Display',
+                  //         color: FlutterFlowTheme.of(context).primary,
+                  //         fontWeight: FontWeight.w600,
+                  //       ),
+                  // ),
                 ],
               ),
             ),
@@ -981,74 +1349,29 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     );
   }
 
-  Widget _buildRelatedBookCard(Map<String, dynamic> related) {
+  Widget _buildRelatedBookComponent(Map<String, dynamic> related) {
     return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 16.0, 0.0),
-      child: InkWell(
-        onTap: () async {
+      padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 10.0, 0.0),
+      child: MainBookComponentWidget(
+        key: Key('Related_${related['id'] ?? ''}'),
+        id: related['id']?.toString() ?? '',
+        image: related['image']?.toString(),
+        bookName: related['title']?.toString(),
+        authorsName: related['author']?.toString(),
+        price: (related['offerPrice'] ?? related['price'] ?? 0).toString(),
+        bookType: 'audiobook',
+        discountAmount: related['discountAmount']?.toString(),
+        discountPercentage: related['discountPercentage']?.toString(),
+        isFav: false,
+        isFavAction: () async {},
+        isMainTap: () async {
           context.pushNamed(
             AudiobookDetailsPageWidget.routeName,
             extra: <String, dynamic>{
-              'audiobook': related,
+              'audiobook': related['raw'] ?? related,
             },
           );
         },
-        child: Container(
-          width: 140,
-          decoration: BoxDecoration(
-            color: FlutterFlowTheme.of(context).secondaryBackground,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-                child: Image.network(
-                  related['image'] ??
-                      'https://picsum.photos/seed/related/300/400',
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      related['title'] ?? 'Untitled',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            fontFamily: 'SF Pro Display',
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      related['author'] ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: FlutterFlowTheme.of(context).bodySmall.override(
-                            fontFamily: 'SF Pro Display',
-                            color: FlutterFlowTheme.of(context).secondaryText,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -32,6 +32,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
   double progress = 0;
   bool isLoading = false;
   bool isPaymentSuccess = false; // ✅ track payment success
+  String _currentUrl = '';
 
   @override
   Widget build(BuildContext context) {
@@ -55,23 +56,39 @@ class _PaymentWebViewState extends State<PaymentWebView> {
       child: SafeArea(
         child: Scaffold(
           appBar: PreferredSize(
-            preferredSize: Size.fromHeight(79.0),
-            child: CustomCenterAppbarWidget(
-            title: "Payment",
-            backIcon: false,
-            addIcon: false,
-            onTapAdd: () async {},
-            onBackPressed: () async {
-              if (webViewController != null) {
-                final canGoBack = await webViewController!.canGoBack();
-                if (canGoBack) {
-                  webViewController!.goBack();
-                }else{
-                  context.safePop();
-                }
-              }
-            },
-          ),
+            preferredSize: Size.fromHeight(112.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CustomCenterAppbarWidget(
+                  title: "Payment",
+                  backIcon: false,
+                  addIcon: false,
+                  onTapAdd: () async {},
+                  onBackPressed: () async {
+                    if (webViewController != null) {
+                      final canGoBack = await webViewController!.canGoBack();
+                      if (canGoBack) {
+                        webViewController!.goBack();
+                      } else {
+                        context.safePop();
+                      }
+                    }
+                  },
+                ),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: Text(
+                    _currentUrl.isEmpty ? widget.url : _currentUrl,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
           ),
           body: Stack(
             children: [
@@ -80,6 +97,9 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                   
                 onWebViewCreated: (controller) {
                   webViewController = controller;
+                  setState(() {
+                    _currentUrl = widget.url;
+                  });
                 },
                   
                 shouldOverrideUrlLoading: (controller, action) async {
@@ -99,13 +119,26 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                   return NavigationActionPolicy.ALLOW;
                 },
                 onLoadStart: (controller, uri) async{
-                  final url = uri.toString();
+                  final url = uri?.toString() ?? '';
+                  if (url.isNotEmpty) {
+                    setState(() {
+                      _currentUrl = url;
+                    });
+                  }
                   if(url.contains('payment-cancel')){
                     await controller.stopLoading();
                     _handleUrlChange(url.toString());
                   }else if(url.contains('payment-fail')){
                     await controller.stopLoading();
                     _handleUrlChange(url.toString());
+                  }
+                },
+                onLoadStop: (controller, uri) async {
+                  final url = uri?.toString() ?? '';
+                  if (url.isNotEmpty) {
+                    setState(() {
+                      _currentUrl = url;
+                    });
                   }
                 },
                 onProgressChanged: (controller, progressValue) {

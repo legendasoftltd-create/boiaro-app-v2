@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/backend/api_requests/api_calls.dart';
+import '/index.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -51,6 +53,7 @@ class MainBookComponentWidget extends StatefulWidget {
 
 class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
   late MainBookComponentModel _model;
+  bool _isFavBusy = false;
 
   @override
   void setState(VoidCallback callback) {
@@ -66,6 +69,40 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
+  Future<void> _toggleWishlist() async {
+    if (_isFavBusy) return;
+    if (!FFAppState().isLogin) {
+      context.pushNamed(SignInPageWidget.routeName);
+      return;
+    }
+    safeSetState(() => _isFavBusy = true);
+    try {
+      if (widget.isFav) {
+        final response = await EbookGroup.removeFavouritebookCall.call(
+          bookId: widget.id,
+          userId: FFAppState().userId,
+          token: FFAppState().token,
+        );
+        if (response.succeeded) {
+          await actions.showCustomToastBottom(FFAppState().unFavText);
+        }
+      } else {
+        final response = await EbookGroup.addFavouriteBookApiCall.call(
+          bookId: widget.id,
+          userId: FFAppState().userId,
+          token: FFAppState().token,
+        );
+        if (response.succeeded) {
+          await actions.showCustomToastBottom(FFAppState().favText);
+        }
+      }
+    } finally {
+      if (mounted) {
+        safeSetState(() => _isFavBusy = false);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _model.maybeDispose();
@@ -75,6 +112,23 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final typeValue = (widget.bookType ?? '').toLowerCase();
+    final showAudioIcon = typeValue.contains('audio');
+    final showHardcopyIcon =
+        typeValue.contains('hard') || typeValue.contains('print');
+    final showEbookIcon = typeValue.contains('ebook') ||
+        typeValue.contains('e-book') ||
+        typeValue.contains('epub') ||
+        typeValue.contains('pdf');
+    IconData? formatIcon;
+    if (showAudioIcon) {
+      formatIcon = Icons.headphones_rounded;
+    } else if (showHardcopyIcon) {
+      formatIcon = Icons.local_library_rounded;
+    } else if (showEbookIcon || typeValue.isNotEmpty) {
+      formatIcon = Icons.menu_book_rounded;
+    }
+
     return InkWell(
       splashColor: Colors.transparent,
       focusColor: Colors.transparent,
@@ -84,78 +138,125 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
         await widget.isMainTap?.call();
       },
       child: Container(
-        
+        margin: EdgeInsets.all(2.0),
         width: () {
+          print('Screen width: ${MediaQuery.sizeOf(context).width}');
+          print('Screen height: ${MediaQuery.sizeOf(context).height}');
+          
           if (MediaQuery.sizeOf(context).width < 810.0) {
-            return ((MediaQuery.sizeOf(context).width - 48) * 1 / 2);
+            return ((MediaQuery.sizeOf(context).width - 40) / 3);
           } else if ((MediaQuery.sizeOf(context).width >= 810.0) &&
               (MediaQuery.sizeOf(context).width < 1280.0)) {
-            return ((MediaQuery.sizeOf(context).width - 80) * 1 / 4);
+            return ((MediaQuery.sizeOf(context).width - 96) / 4);
           } else if (MediaQuery.sizeOf(context).width >= 1280.0) {
-            return ((MediaQuery.sizeOf(context).width - 112) * 1 / 6);
+            return ((MediaQuery.sizeOf(context).width - 128) / 6);
           } else {
-            return ((MediaQuery.sizeOf(context).width - 144) * 1 / 8);
+            return ((MediaQuery.sizeOf(context).width - 160) / 8);
           }
         }(),
-        height: 280.0,
-        decoration: BoxDecoration(
-          color: FlutterFlowTheme.of(context).secondaryBackground,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 16.0,
-              color: FlutterFlowTheme.of(context).shadowColor,
-              offset: Offset(
-                0.0,
-                4.0,
-              ),
-            )
-          ],
-          borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(
-            color: FlutterFlowTheme.of(context).primary.withValues(
-              alpha: 0.1,
-            ),
-            width: 2.0,
-          ),
-        ),
+        height:(){
+          double screenHeight = MediaQuery.sizeOf(context).height;
+          double screenWidth = MediaQuery.sizeOf(context).width;
+          if(screenHeight/screenWidth < 1.78){
+            return 235.0;
+          }
+          return 230.0;
+        }(),
+        // decoration: BoxDecoration(
+        //   color: FlutterFlowTheme.of(context).secondaryBackground,
+        //   boxShadow: [
+        //     BoxShadow(
+        //       blurRadius: 16.0,
+        //       color: FlutterFlowTheme.of(context).shadowColor,
+        //       offset: Offset(
+        //         0.0,
+        //         4.0,
+        //       ),
+        //     )
+        //   ],
+        //   borderRadius: BorderRadius.circular(12.0),
+        //   border: Border.all(
+        //     color: FlutterFlowTheme.of(context).primary.withValues(
+        //       alpha: 0.1,
+        //     ),
+        //     width: 2.0,
+        //   ),
+        // ),
         child: Stack(
           children: [
             Align(
               alignment: AlignmentDirectional(0.0, 0.0),
               child: Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(0.0, 12.0, 0.0, 0.0),
+                padding: EdgeInsetsDirectional.fromSTEB(0.0, 0, 0.0, 0.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.max,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(0.0),
-                      child: CachedNetworkImage(
-                        fadeInDuration: Duration(milliseconds: 200),
-                        fadeOutDuration: Duration(milliseconds: 200),
-                        imageUrl: widget.image!,
-                        width: 96.0,
-                        height: 148.0,
-                        fit: BoxFit.fitWidth,
-                        alignment: Alignment(0.0, 0.0),
-                        errorWidget: (context, error, stackTrace) =>
-                            Image.asset(
-                          'assets/images/error_image.png',
-                          width: 96.0,
-                          height: 148.0,
-                          fit: BoxFit.fitWidth,
-                          alignment: Alignment(0.0, 0.0),
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(5.0),
+                            // topLeft: Radius.circular(10.0),
+                            // topRight: Radius.circular(10.0),
+                          ),
+                          child: CachedNetworkImage(
+                            fadeInDuration: Duration(milliseconds: 200),
+                            fadeOutDuration: Duration(milliseconds: 200),
+                            imageUrl: widget.image!,
+                        width: double.infinity,
+                        height: 160.0,
+                            fit: BoxFit.fill,
+                            alignment: Alignment(0.0, 0.0),
+                            errorWidget: (context, error, stackTrace) =>
+                                Image.asset(
+                              'assets/images/error_image.png',
+                          width: 84.0,
+                          height: 128.0,
+                              fit: BoxFit.fitWidth,
+                              alignment: Alignment(0.0, 0.0),
+                            ),
+                          ),
                         ),
-                      ),
+                        if (formatIcon != null)
+                          Positioned(
+                            right: 6.0,
+                            bottom: 6.0,
+                            child: Container(
+                              width: 22.0,
+                              height: 22.0,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context)
+                                    .primaryBackground
+                                    .withValues(alpha: 0.9),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    blurRadius: 8.0,
+                                    color: FlutterFlowTheme.of(context)
+                                        .shadowColor,
+                                    offset: Offset(0.0, 2.0),
+                                  )
+                                ],
+                              ),
+                              child: Icon(
+                                formatIcon,
+                                size: 14.0,
+                                color:
+                                    FlutterFlowTheme.of(context).primaryText,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     Expanded(
                       child: Padding(
-                        padding: EdgeInsets.all(12.0),
+                        padding: EdgeInsets.all(8.0),
                         child: Column(
                           mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
                               valueOrDefault<String>(
@@ -169,7 +270,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                   .bodyMedium
                                   .override(
                                     fontFamily: 'SF Pro Display',
-                                    fontSize: 17.0,
+                                    fontSize: 13.0,
                                     letterSpacing: 0.0,
                                     fontWeight: FontWeight.bold,
                                     lineHeight: 1.2,
@@ -187,16 +288,17 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                   .bodyMedium
                                   .override(
                                     fontFamily: 'SF Pro Display',
-                                    fontSize: 13.0,
+                                    fontSize: 11.0,
                                     letterSpacing: 0.0,
                                     lineHeight: 1.2,
                                   ),
                             ),
                             Expanded(
                               child: Row(
-                                mainAxisSize: MainAxisSize.max,
+                                // mainAxisSize: MainAxisSize.max,
+                                
                                 mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                    MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   if(!widget.isPurchased)
@@ -212,159 +314,159 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                           fontFamily: 'SF Pro Display',
                                           color: FlutterFlowTheme.of(context)
                                               .primary,
-                                          fontSize: 17.0,
+                                          fontSize: 13.0,
                                           letterSpacing: 0.0,
                                           fontWeight: FontWeight.bold,
                                           lineHeight: 1.2,
                                         ),
                                   ),
-                                  Consumer<CartProvider>(
-                                    builder: (context, cart, child) {
-                                      if (widget.isPurchased) {
-                                        // Show Read Now button for purchased books
-                                        return InkWell(
-                                          splashColor: Colors.transparent,
-                                          focusColor: Colors.transparent,
-                                          hoverColor: Colors.transparent,
-                                          highlightColor: Colors.transparent,
-                                          onTap: () async {
-                                            await widget.isMainTap?.call();
-                                          },
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                                            decoration: BoxDecoration(
-                                              color: FlutterFlowTheme.of(context).primary,
-                                              borderRadius: BorderRadius.circular(16.0),
-                                            ),
-                                            child: Text(
-                                              'Read Now',
-                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                fontFamily: 'SF Pro Display',
-                                                fontSize: 12.0,
-                                                fontWeight: FontWeight.w600,
-                                                color: FlutterFlowTheme.of(context).primaryBackground,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }
+                                  // Consumer<CartProvider>(
+                                  //   builder: (context, cart, child) {
+                                  //     if (widget.isPurchased) {
+                                  //       // Show Read Now button for purchased books
+                                  //       return InkWell(
+                                  //         splashColor: Colors.transparent,
+                                  //         focusColor: Colors.transparent,
+                                  //         hoverColor: Colors.transparent,
+                                  //         highlightColor: Colors.transparent,
+                                  //         onTap: () async {
+                                  //           await widget.isMainTap?.call();
+                                  //         },
+                                  //         child: Container(
+                                  //           padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                                  //           decoration: BoxDecoration(
+                                  //             color: FlutterFlowTheme.of(context).primary,
+                                  //             borderRadius: BorderRadius.circular(16.0),
+                                  //           ),
+                                  //           child: Text(
+                                  //             'Read Now',
+                                  //             style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                  //               fontFamily: 'SF Pro Display',
+                                  //               fontSize: 12.0,
+                                  //               fontWeight: FontWeight.w600,
+                                  //               color: FlutterFlowTheme.of(context).primaryBackground,
+                                  //             ),
+                                  //           ),
+                                  //         ),
+                                  //       );
+                                  //     }
 
-                                      final isInCart = cart.items.containsKey(widget.id ?? "");
-                                      final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
+                                  //     final isInCart = cart.items.containsKey(widget.id ?? "");
+                                  //     final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
 
-                                      if (quantity > 0) {
-                                        // Show increment/decrement buttons
-                                        return Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            // Decrement button
-                                            InkWell(
-                                              splashColor: Colors.transparent,
-                                              focusColor: Colors.transparent,
-                                              hoverColor: Colors.transparent,
-                                              highlightColor: Colors.transparent,
-                                              onTap: () async {
-                                                cart.removeSingleItem(widget.id ?? "");
-                                                await actions.showCustomToastBottom('Quantity decreased!');
-                                              },
-                                              child: Container(
-                                                width: 20.0,
-                                                height: 20.0,
-                                                decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(context).primary,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  Icons.remove,
-                                                  color: FlutterFlowTheme.of(context).primaryBackground,
-                                                  size: 16.0,
-                                                ),
-                                              ),
-                                            ),
-                                            // Quantity display
-                                            Container(
-                                               padding: EdgeInsets.all(5),
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                quantity.toString(),
-                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                  fontFamily: 'SF Pro Display',
-                                                  fontSize: 14.0,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: FlutterFlowTheme.of(context).primaryText,
-                                                ),
-                                              ),
-                                            ),
-                                            // Increment button
-                                            InkWell(
-                                              splashColor: Colors.transparent,
-                                              focusColor: Colors.transparent,
-                                              hoverColor: Colors.transparent,
-                                              highlightColor: Colors.transparent,
-                                              onTap: () async {
-                                                cart.addItem(
-                                                  widget.id ?? "",
-                                                  widget.bookName ?? "",
-                                                  widget.image ?? "",
-                                                  double.tryParse(widget.price ?? "0") ?? 0,
-                                                  discountAmount: double.tryParse(widget.discountAmount ?? '0'),
-                                                  discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
-                                                  type: widget.bookType,
-                                                );
-                                                await actions.showCustomToastBottom('Quantity increased!');
-                                              },
-                                              child: Container(
-                                                width: 20.0,
-                                                height: 20.0,
-                                                decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(context).primary,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  Icons.add,
-                                                  color: FlutterFlowTheme.of(context).primaryBackground,
-                                                  size: 16.0,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      } else {
-                                        // Show add to cart button
-                                        return (double.tryParse(widget.price ?? '0') ?? 0) > 0 ? InkWell(
-                                          splashColor: Colors.transparent,
-                                          focusColor: Colors.transparent,
-                                          hoverColor: Colors.transparent,
-                                          highlightColor: Colors.transparent,
-                                          onTap: () async {
-                                            cart.addItem(
-                                              widget.id ?? "",
-                                              widget.bookName ?? "",
-                                              widget.image ?? "",
-                                              double.tryParse(widget.price ?? "0") ?? 0,
-                                              discountAmount: double.tryParse(widget.discountAmount ?? '0'),
-                                              discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
-                                              type: widget.bookType,
-                                            );
-                                            await actions.showCustomToastBottom('Added to cart!');
-                                          },
-                                          child: Container(
-                                            width: 32.0,
-                                            height: 32.0,
-                                            decoration: BoxDecoration(
-                                              color: FlutterFlowTheme.of(context).primary,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.add_shopping_cart_rounded,
-                                              color: FlutterFlowTheme.of(context).primaryBackground,
-                                              size: 16.0,
-                                            ),
-                                          ),
-                                        ):SizedBox();
-                                      }
-                                    },
-                                  ),
+                                  //     if (quantity > 0) {
+                                  //       // Show increment/decrement buttons
+                                  //       return Row(
+                                  //         mainAxisSize: MainAxisSize.min,
+                                  //         children: [
+                                  //           // Decrement button
+                                  //           InkWell(
+                                  //             splashColor: Colors.transparent,
+                                  //             focusColor: Colors.transparent,
+                                  //             hoverColor: Colors.transparent,
+                                  //             highlightColor: Colors.transparent,
+                                  //             onTap: () async {
+                                  //               cart.removeSingleItem(widget.id ?? "");
+                                  //               await actions.showCustomToastBottom('Quantity decreased!');
+                                  //             },
+                                  //             child: Container(
+                                  //               width: 18.0,
+                                  //               height: 18.0,
+                                  //               decoration: BoxDecoration(
+                                  //                 color: FlutterFlowTheme.of(context).primary,
+                                  //                 shape: BoxShape.circle,
+                                  //               ),
+                                  //               child: Icon(
+                                  //                 Icons.remove,
+                                  //                 color: FlutterFlowTheme.of(context).primaryBackground,
+                                  //                 size: 13.0,
+                                  //               ),
+                                  //             ),
+                                  //           ),
+                                  //           // Quantity display
+                                  //           Container(
+                                  //              padding: EdgeInsets.symmetric(horizontal: 5),
+                                  //             alignment: Alignment.center,
+                                  //             child: Text(
+                                  //               quantity.toString(),
+                                  //               style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                  //                 fontFamily: 'SF Pro Display',
+                                  //                 fontSize: 12.0,
+                                  //                 fontWeight: FontWeight.bold,
+                                  //                 color: FlutterFlowTheme.of(context).primaryText,
+                                  //               ),
+                                  //             ),
+                                  //           ),
+                                  //           // Increment button
+                                  //           InkWell(
+                                  //             splashColor: Colors.transparent,
+                                  //             focusColor: Colors.transparent,
+                                  //             hoverColor: Colors.transparent,
+                                  //             highlightColor: Colors.transparent,
+                                  //             onTap: () async {
+                                  //               cart.addItem(
+                                  //                 widget.id ?? "",
+                                  //                 widget.bookName ?? "",
+                                  //                 widget.image ?? "",
+                                  //                 double.tryParse(widget.price ?? "0") ?? 0,
+                                  //                 discountAmount: double.tryParse(widget.discountAmount ?? '0'),
+                                  //                 discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
+                                  //                 type: widget.bookType,
+                                  //               );
+                                  //               await actions.showCustomToastBottom('Quantity increased!');
+                                  //             },
+                                  //             child: Container(
+                                  //               width: 18.0,
+                                  //               height: 18.0,
+                                  //               decoration: BoxDecoration(
+                                  //                 color: FlutterFlowTheme.of(context).primary,
+                                  //                 shape: BoxShape.circle,
+                                  //               ),
+                                  //               child: Icon(
+                                  //                 Icons.add,
+                                  //                 color: FlutterFlowTheme.of(context).primaryBackground,
+                                  //                 size: 13.0,
+                                  //               ),
+                                  //             ),
+                                  //           ),
+                                  //         ],
+                                  //       );
+                                  //     } else {
+                                  //       // Show add to cart button
+                                  //       return (double.tryParse(widget.price ?? '0') ?? 0) > 0 ? InkWell(
+                                  //         splashColor: Colors.transparent,
+                                  //         focusColor: Colors.transparent,
+                                  //         hoverColor: Colors.transparent,
+                                  //         highlightColor: Colors.transparent,
+                                  //         onTap: () async {
+                                  //           cart.addItem(
+                                  //             widget.id ?? "",
+                                  //             widget.bookName ?? "",
+                                  //             widget.image ?? "",
+                                  //             double.tryParse(widget.price ?? "0") ?? 0,
+                                  //             discountAmount: double.tryParse(widget.discountAmount ?? '0'),
+                                  //             discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
+                                  //             type: widget.bookType,
+                                  //           );
+                                  //           await actions.showCustomToastBottom('Added to cart!');
+                                  //         },
+                                  //         child: Container(
+                                  //           width: 26.0,
+                                  //           height: 26.0,
+                                  //           decoration: BoxDecoration(
+                                  //             color: FlutterFlowTheme.of(context).primary,
+                                  //             shape: BoxShape.circle,
+                                  //           ),
+                                  //           child: Icon(
+                                  //             Icons.add_shopping_cart_rounded,
+                                  //             color: FlutterFlowTheme.of(context).primaryBackground,
+                                  //             size: 14.0,
+                                  //           ),
+                                  //         ),
+                                  //       ):SizedBox();
+                                  //     }
+                                  //   },
+                                  // ),
                                 ],
                               ),
                             ),
@@ -411,7 +513,11 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                       hoverColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       onTap: () async {
-                        await widget.isFavAction?.call();
+                        if (widget.isFavAction != null) {
+                          await widget.isFavAction?.call();
+                        } else {
+                          await _toggleWishlist();
+                        }
                       },
                       child: Container(
                         width: 28.0,
@@ -433,7 +539,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                         alignment: AlignmentDirectional(0.0, 0.0),
                         child: Builder(
                           builder: (context) {
-                            if (!widget.indicator) {
+                            if (!widget.indicator && !_isFavBusy) {
                               return Builder(
                                 builder: (context) {
                                   if (widget.isFav == true) {

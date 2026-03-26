@@ -172,9 +172,8 @@ class _NavBarPageState extends State<NavBarPage> {
     final tabs = {
       'HomePage': HomePageWidget(),
       'CategoriesScreen': CategoriesScreenWidget(),
-      'LatestPage': LatestPageWidget(),
-      'BestAuthorPage': BestAuthorPageWidget(),
       'AudiobookPage': AudiobookPageWidget(),
+      'LibraryPage': PurchaseHistoryPageWidget(),
       'ProfilePage': ProfilePageWidget(),
     };
     final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
@@ -221,30 +220,6 @@ class _NavBarPageState extends State<NavBarPage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              FFIcons.kgroup260861431,
-              size: 24.0,
-            ),
-            activeIcon: Icon(
-              FFIcons.kicon8,
-              size: 24.0,
-            ),
-            label: FFLocalizations.of(context).getText('nav_latest'),
-            tooltip: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              FFIcons.kwriter11,
-              size: 24.0,
-            ),
-            activeIcon: Icon(
-              FFIcons.kwriter11,
-              size: 24.0,
-            ),
-            label: FFLocalizations.of(context).getText('nav_author'),
-            tooltip: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
               Icons.headphones_outlined,
               size: 24.0,
             ),
@@ -252,21 +227,33 @@ class _NavBarPageState extends State<NavBarPage> {
               Icons.headphones_rounded,
               size: 24.0,
             ),
-            label: 'Audiobooks',
+            label: 'AudioBooks',
             tooltip: '',
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              FFIcons.kgroup260861432,
+              Icons.local_library_outlined,
               size: 24.0,
             ),
             activeIcon: Icon(
-              FFIcons.kicon9,
+              Icons.local_library_rounded,
               size: 24.0,
             ),
-            label: FFLocalizations.of(context).getText('nav_profile'),
+            label: 'Library',
             tooltip: '',
-          )
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.menu_rounded,
+              size: 24.0,
+            ),
+            activeIcon: Icon(
+              Icons.menu_open_rounded,
+              size: 24.0,
+            ),
+            label: 'More',
+            tooltip: '',
+          ),
         ],
       ),
     );

@@ -43,6 +43,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   double _speed = 1.0;
   Timer? _sleepTimer;
   String _sleepLabel = 'Off';
+  int _lastPersistedSecond = -1;
 
   final animationsMap = {
     'imageOnPageLoadAnimation': AnimationInfo(
@@ -71,6 +72,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     super.initState();
     _model = createModel(context, () => AudioPlayerPageModel());
     _initializeChapters();
+    _persistAudiobookMeta();
     _initAudio();
   }
 
@@ -91,12 +93,14 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
         return;
       }
       setState(() => _position = pos);
+      _persistAudiobookProgress(pos);
     });
     _mediaItemSub = handler.mediaItem.listen((item) {
       if (!mounted) {
         return;
       }
       setState(() => _duration = item?.duration ?? Duration.zero);
+      _persistAudiobookProgress(_position);
     });
     await handler.playChapter(
       audiobook: widget.audiobook,
@@ -179,10 +183,47 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       _position = Duration.zero;
       _duration = Duration.zero;
     });
+    _persistAudiobookMeta();
     await handler.playChapter(
       audiobook: widget.audiobook,
       chapter: _currentChapter ?? widget.chapter,
     );
+  }
+
+  void _persistAudiobookMeta() {
+    final audiobook = widget.audiobook;
+    final id = audiobook['id'] ??
+        audiobook['_id'] ??
+        getJsonField(audiobook, r'''$._id''');
+    final name = audiobook['title'] ?? audiobook['name'] ?? '';
+    final author = audiobook['author'] ??
+        audiobook['authorName'] ??
+        getJsonField(audiobook, r'''$.author.name''');
+    final imageValue =
+        audiobook['image'] ?? getJsonField(audiobook, r'''$.image''');
+    final imageUrl = _resolveBookImage(imageValue?.toString());
+    FFAppState().homePageLastAudioBookId = id?.toString() ?? '';
+    FFAppState().homePageLastAudioBookName = name?.toString() ?? '';
+    FFAppState().homePageLastAudioBookAuthor = author?.toString() ?? '';
+    FFAppState().homePageLastAudioBookImage = imageUrl;
+  }
+
+  void _persistAudiobookProgress(Duration position) {
+    final totalSeconds = _duration.inSeconds;
+    if (totalSeconds <= 0) {
+      return;
+    }
+    final currentSeconds = position.inSeconds;
+    if (_lastPersistedSecond >= 0 &&
+        (currentSeconds - _lastPersistedSecond).abs() < 5) {
+      return;
+    }
+    _lastPersistedSecond = currentSeconds;
+    final progress =
+        (currentSeconds / totalSeconds).clamp(0.0, 1.0).toDouble();
+    FFAppState().homePageLastAudioPositionSec = currentSeconds;
+    FFAppState().homePageLastAudioDurationSec = totalSeconds;
+    FFAppState().homePageLastAudioProgress = progress;
   }
 
   Future<void> _setSpeed(double speed) async {

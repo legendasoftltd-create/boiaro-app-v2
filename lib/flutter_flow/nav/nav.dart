@@ -79,6 +79,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               : CategoriesScreenWidget(),
         ),
         FFRoute(
+          name: AudiobookPageWidget.routeName,
+          path: AudiobookPageWidget.routePath,
+          builder: (context, params) => params.isEmpty
+              ? NavBarPage(initialPage: 'AudiobookPage')
+              : AudiobookPageWidget(),
+        ),
+        FFRoute(
           name: SubCategoriesScreenWidget.routeName,
           path: SubCategoriesScreenWidget.routePath,
           builder: (context, params) => SubCategoriesScreenWidget(
@@ -120,8 +127,22 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: BestAuthorPageWidget.routeName,
           path: BestAuthorPageWidget.routePath,
           builder: (context, params) => params.isEmpty
-              ? NavBarPage(initialPage: 'BestAuthorPage')
+              ? NavBarPage(page: BestAuthorPageWidget())
               : BestAuthorPageWidget(),
+        ),
+        FFRoute(
+          name: BestNarratorPageWidget.routeName,
+          path: BestNarratorPageWidget.routePath,
+          builder: (context, params) => params.isEmpty
+              ? NavBarPage(page: BestNarratorPageWidget())
+              : BestNarratorPageWidget(),
+        ),
+        FFRoute(
+          name: BestPublisherPageWidget.routeName,
+          path: BestPublisherPageWidget.routePath,
+          builder: (context, params) => params.isEmpty
+              ? NavBarPage(page: BestPublisherPageWidget())
+              : BestPublisherPageWidget(),
         ),
         FFRoute(
           name: PopularBooksPageWidget.routeName,
@@ -156,6 +177,24 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             ),
             authorId: params.getParam(
               'authorId',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
+          name: AboutNarratorPageWidget.routeName,
+          path: AboutNarratorPageWidget.routePath,
+          builder: (context, params) => AboutNarratorPageWidget(
+            name: params.getParam(
+              'name',
+              ParamType.String,
+            ),
+            narratorImage: params.getParam(
+              'narratorImage',
+              ParamType.String,
+            ),
+            narratorId: params.getParam(
+              'narratorId',
               ParamType.String,
             ),
           ),
@@ -210,7 +249,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: LatestPageWidget.routeName,
           path: LatestPageWidget.routePath,
           builder: (context, params) => params.isEmpty
-              ? NavBarPage(initialPage: 'LatestPage')
+              ? NavBarPage(page: LatestPageWidget())
               : LatestPageWidget(),
         ),
         FFRoute(
@@ -399,6 +438,10 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               'image',
               ParamType.String,
             ),
+            author: params.getParam(
+              'author',
+              ParamType.String,
+            ),
           ),
         ),
         FFRoute(
@@ -449,7 +492,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: PurchaseHistoryPageWidget.routeName,
           path: PurchaseHistoryPageWidget.routePath,
-          builder: (context, params) => PurchaseHistoryPageWidget(),
+          builder: (context, params) => params.isEmpty
+              ? NavBarPage(initialPage: 'LibraryPage')
+              : PurchaseHistoryPageWidget(),
         ),
         FFRoute(
           name: NewBooksPageWidget.routeName,

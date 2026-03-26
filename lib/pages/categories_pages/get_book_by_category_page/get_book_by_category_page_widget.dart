@@ -38,6 +38,18 @@ class _GetBookByCategoryPageWidgetState
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  String _resolveBookType(dynamic book) {
+    final type = getJsonField(book, r'''$.type''') ??
+        getJsonField(book, r'''$.bookType''') ??
+        getJsonField(book, r'''$.book_type''');
+    return (type?.toString() ?? '').toLowerCase();
+  }
+
+  bool _isAudiobook(dynamic book) {
+    final type = _resolveBookType(book);
+    return type.contains('audio');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -494,50 +506,94 @@ class _GetBookByCategoryPageWidgetState
                                                                   },
                                                                   isMainTap:
                                                                       () async {
-                                                                    context
-                                                                        .pushNamed(
-                                                                      BookDetailspageWidget
-                                                                          .routeName,
-                                                                      queryParameters:
-                                                                          {
-                                                                        'name':
-                                                                            serializeParam(
+                                                                    if (_isAudiobook(
+                                                                        bookDetailsListItem)) {
+                                                                      final imagePath =
                                                                           getJsonField(
-                                                                            bookDetailsListItem,
-                                                                            r'''$.name''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'price':
-                                                                            serializeParam(
-                                                                          getJsonField(
-                                                                            bookDetailsListItem,
-                                                                            r'''$.price''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'image':
-                                                                            serializeParam(
-                                                                          '${FFAppConstants.bookImagesUrl}${getJsonField(
                                                                             bookDetailsListItem,
                                                                             r'''$.image''',
-                                                                          ).toString()}',
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'id':
-                                                                            serializeParam(
-                                                                          getJsonField(
-                                                                            bookDetailsListItem,
-                                                                            r'''$._id''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                      }.withoutNulls,
-                                                                    );
+                                                                          )?.toString();
+                                                                      final imageUrl =
+                                                                          (imagePath ??
+                                                                                      '')
+                                                                                  .startsWith(
+                                                                                      'http')
+                                                                              ? imagePath
+                                                                              : '${FFAppConstants.bookImagesUrl}${imagePath ?? ''}';
+                                                                      context.pushNamed(
+                                                                        AudiobookDetailsPageWidget
+                                                                            .routeName,
+                                                                        extra: <String,
+                                                                            dynamic>{
+                                                                          'audiobook': {
+                                                                            'id': getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$._id''',
+                                                                            )?.toString(),
+                                                                            'title': getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$.name''',
+                                                                            )?.toString(),
+                                                                            'author': getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$.author.name''',
+                                                                            )?.toString(),
+                                                                            'image': imageUrl,
+                                                                            'price': getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$.price''',
+                                                                            ),
+                                                                            'raw':
+                                                                                bookDetailsListItem,
+                                                                          },
+                                                                        },
+                                                                      );
+                                                                    } else {
+                                                                      context
+                                                                          .pushNamed(
+                                                                        BookDetailspageWidget
+                                                                            .routeName,
+                                                                        queryParameters:
+                                                                            {
+                                                                          'name':
+                                                                              serializeParam(
+                                                                            getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$.name''',
+                                                                            ).toString(),
+                                                                            ParamType
+                                                                                .String,
+                                                                          ),
+                                                                          'price':
+                                                                              serializeParam(
+                                                                            getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$.price''',
+                                                                            ).toString(),
+                                                                            ParamType
+                                                                                .String,
+                                                                          ),
+                                                                          'image':
+                                                                              serializeParam(
+                                                                            '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$.image''',
+                                                                            ).toString()}',
+                                                                            ParamType
+                                                                                .String,
+                                                                          ),
+                                                                          'id':
+                                                                              serializeParam(
+                                                                            getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$._id''',
+                                                                            ).toString(),
+                                                                            ParamType
+                                                                                .String,
+                                                                          ),
+                                                                        }.withoutNulls,
+                                                                      );
+                                                                    }
                                                                   },
                                                                 ),
                                                               );

@@ -85,9 +85,9 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       _couponErrorMessage = null;
     });
     try {
-      final baseUrl = 'https://api.boiaro.com/api';
+      
       final response = await http.post(
-        Uri.parse('$baseUrl/getcoupondetails'),
+        Uri.parse('${FFAppConstants.baseApiUrl}/getcoupondetails'),
         headers: {
           'Authorization': 'Bearer ${FFAppState().token}',
           'Content-Type': 'application/json',
@@ -214,9 +214,8 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   }
 
   Future<void> _fetchAddresses() async {
-    final baseUrl = 'https://api.boiaro.com/api';
     final response = await http.post(
-      Uri.parse('$baseUrl/getaddresses'),
+      Uri.parse('${FFAppConstants.baseApiUrl}/getaddresses'),
       headers: {
         'Authorization': 'Bearer ${FFAppState().token}',
         'Content-Type': 'application/json',
@@ -263,9 +262,8 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   }
 
   Future<void> _fetchShippingMethods() async {
-    final baseUrl = 'https://api.boiaro.com/api';
-    final response = await http.get(
-      Uri.parse('$baseUrl/shipping-methods'),
+    final response = await http.post(
+      Uri.parse('${FFAppConstants.baseApiUrl}/shipping-methods'),
       headers: {
         'Authorization': 'Bearer ${FFAppState().token}',
         'Content-Type': 'application/json',
@@ -299,9 +297,8 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       _shippingError = null;
     });
     try {
-      final baseUrl = 'https://api.boiaro.com/api';
       final response = await http.post(
-        Uri.parse('$baseUrl/shipping/calculate'),
+        Uri.parse('${FFAppConstants.baseApiUrl}/shipping/calculate'),
         headers: {
           'Authorization': 'Bearer ${FFAppState().token}',
           'Content-Type': 'application/json',
@@ -375,9 +372,8 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     });
 
     try {
-      final baseUrl = 'https://api.boiaro.com/api';
       final response = await http.post(
-        Uri.parse('$baseUrl/addaddress'),
+        Uri.parse('${FFAppConstants.baseApiUrl}/addaddress'),
         headers: {
           'Authorization': 'Bearer ${FFAppState().token}',
           'Content-Type': 'application/json',

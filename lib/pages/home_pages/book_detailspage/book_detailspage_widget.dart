@@ -108,6 +108,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required String path,
     required String bookName,
     required String bookImage,
+    required String authorName,
   }) async {
     if (_isOpeningReader || _isDownloadingBook) return;
     safeSetState(() => _isOpeningReader = true);
@@ -119,6 +120,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           'pdf': serializeParam(path, ParamType.String),
           'id': serializeParam(widget.id, ParamType.String),
           'name': serializeParam(bookName, ParamType.String),
+          'author': serializeParam(authorName, ParamType.String),
           'image': serializeParam(bookImage, ParamType.String),
         }.withoutNulls,
       );
@@ -521,7 +523,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               await SharePlus.instance.share(
                                                   ShareParams(
                                                       uri: Uri.parse(
-                                                          "${FFAppConstants.baseUrl}/product/${bookId}")));
+                                                          "${FFAppConstants.webUrl}/product/${bookId}")));
                                             },
                                             child: Container(
                                               width: 40.0,
@@ -631,7 +633,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     imageUrl: bookImage,
                                                     width: 120.0,
                                                     height: 160.0,
-                                                    fit: BoxFit.cover,
+                                                    fit: BoxFit.fill,
                                                     alignment:
                                                         Alignment(0.0, 0.0),
                                                     errorWidget: (context,
@@ -1240,6 +1242,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                       bookName,
                                                                   bookImage:
                                                                       bookImage,
+                                                                  authorName:
+                                                                      authorName,
                                                                 );
                                                               }
 
@@ -2983,253 +2987,257 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               ?.toList() ??
                                                           [];
 
-                                                  return Wrap(
-                                                    spacing: 16.0,
-                                                    runSpacing: 16.0,
-                                                    alignment:
-                                                        WrapAlignment.start,
-                                                    crossAxisAlignment:
-                                                        WrapCrossAlignment
-                                                            .start,
-                                                    direction: Axis.horizontal,
-                                                    runAlignment:
-                                                        WrapAlignment.start,
-                                                    verticalDirection:
-                                                        VerticalDirection.down,
-                                                    clipBehavior: Clip.none,
-                                                    children: List.generate(
-                                                        authorRelatedbookDetailslist
-                                                            .length,
-                                                        (authorRelatedbookDetailslistIndex) {
-                                                      final authorRelatedbookDetailslistItem =
-                                                          authorRelatedbookDetailslist[
-                                                              authorRelatedbookDetailslistIndex];
-                                                      return wrapWithModel(
-                                                        model: _model
-                                                            .mainBookComponentModels
-                                                            .getModel(
-                                                          getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$.name''',
-                                                          ).toString(),
-                                                          authorRelatedbookDetailslistIndex,
-                                                        ),
-                                                        updateCallback: () =>
-                                                            safeSetState(() {}),
-                                                        child:
-                                                            MainBookComponentWidget(
-                                                          key: Key(
-                                                            'Keybek_${getJsonField(
+                                                  return SingleChildScrollView(
+                                                    scrollDirection:
+                                                        Axis.horizontal,
+                                                    child: Row(
+                                                      spacing: 5.0,
+                                                      // runSpacing: 16.0,
+                                                      // alignment:
+                                                      //     WrapAlignment.start,
+                                                      // crossAxisAlignment:
+                                                      //     WrapCrossAlignment
+                                                      //         .start,
+                                                      // direction: Axis.horizontal,
+                                                      // runAlignment:
+                                                          // WrapAlignment.start,
+                                                      verticalDirection:
+                                                          VerticalDirection.down,
+                                                      // clipBehavior: Clip.none,
+                                                      children: List.generate(
+                                                          authorRelatedbookDetailslist
+                                                              .length,
+                                                          (authorRelatedbookDetailslistIndex) {
+                                                        final authorRelatedbookDetailslistItem =
+                                                            authorRelatedbookDetailslist[
+                                                                authorRelatedbookDetailslistIndex];
+                                                        return wrapWithModel(
+                                                          model: _model
+                                                              .mainBookComponentModels
+                                                              .getModel(
+                                                            getJsonField(
                                                               authorRelatedbookDetailslistItem,
                                                               r'''$.name''',
-                                                            ).toString()}',
+                                                            ).toString(),
+                                                            authorRelatedbookDetailslistIndex,
                                                           ),
-                                                          image:
-                                                              '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$.image''',
-                                                          ).toString()}',
-                                                          bookName:
-                                                              getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$.name''',
-                                                          ).toString(),
-                                                          id: getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$._id''',
-                                                          ).toString(),
-                                                          isPurchased: _model
-                                                              .purchasedBookIds
-                                                              .contains(
-                                                            getJsonField(
+                                                          updateCallback: () =>
+                                                              safeSetState(() {}),
+                                                          child:
+                                                              MainBookComponentWidget(
+                                                            key: Key(
+                                                              'Keybek_${getJsonField(
+                                                                authorRelatedbookDetailslistItem,
+                                                                r'''$.name''',
+                                                              ).toString()}',
+                                                            ),
+                                                            image:
+                                                                '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                              authorRelatedbookDetailslistItem,
+                                                              r'''$.image''',
+                                                            ).toString()}',
+                                                            bookName:
+                                                                getJsonField(
+                                                              authorRelatedbookDetailslistItem,
+                                                              r'''$.name''',
+                                                            ).toString(),
+                                                            id: getJsonField(
                                                               authorRelatedbookDetailslistItem,
                                                               r'''$._id''',
                                                             ).toString(),
-                                                          ),
-                                                          price: getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$.price''',
-                                                          ).toString(),
-                                                          bookType: getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$.type''',
-                                                          )?.toString(),
-                                                          discountAmount:
+                                                            isPurchased: _model
+                                                                .purchasedBookIds
+                                                                .contains(
                                                               getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$.discount_amount''',
-                                                          ).toString(),
-                                                          discountPercentage:
-                                                              getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$.discount_percentage''',
-                                                          ).toString(),
-                                                          authorsName:
-                                                              getJsonField(
-                                                            authorRelatedbookDetailslistItem,
-                                                            r'''$.author.name''',
-                                                          ).toString(),
-                                                          isFav: functions.checkFavOrNot(
-                                                                  EbookGroup.getFavouriteBookCall
-                                                                      .favouriteBookDetailsList(
-                                                                        columnGetFavouriteBookResponse
-                                                                            .jsonBody,
-                                                                      )
-                                                                      ?.toList(),
-                                                                  getJsonField(
-                                                                    authorRelatedbookDetailslistItem,
-                                                                    r'''$._id''',
-                                                                  ).toString()) ==
-                                                              true,
-                                                          indicator: (authorRelatedbookDetailslistIndex ==
-                                                                  _model
-                                                                      .relatedIndex) &&
-                                                              (_model.isRelated ==
-                                                                  true),
-                                                          isFavAction:
-                                                              () async {
-                                                            if (FFAppState()
-                                                                    .isLogin ==
-                                                                true) {
-                                                              _model.isRelated =
-                                                                  true;
-                                                              _model.relatedIndex =
-                                                                  authorRelatedbookDetailslistIndex;
-                                                              safeSetState(
-                                                                  () {});
-                                                              if (functions.checkFavOrNot(
-                                                                      EbookGroup.getFavouriteBookCall
-                                                                          .favouriteBookDetailsList(
-                                                                            columnGetFavouriteBookResponse.jsonBody,
-                                                                          )
-                                                                          ?.toList(),
-                                                                      getJsonField(
-                                                                        authorRelatedbookDetailslistItem,
-                                                                        r'''$._id''',
-                                                                      ).toString()) ==
-                                                                  true) {
-                                                                _model.getPopularDetete =
-                                                                    await EbookGroup
-                                                                        .removeFavouritebookCall
-                                                                        .call(
-                                                                  userId:
-                                                                      FFAppState()
-                                                                          .userId,
-                                                                  token:
-                                                                      FFAppState()
-                                                                          .token,
-                                                                  bookId:
-                                                                      getJsonField(
-                                                                    authorRelatedbookDetailslistItem,
-                                                                    r'''$._id''',
-                                                                  ).toString(),
-                                                                );
-
-                                                                safeSetState(() =>
-                                                                    _model.apiRequestCompleter1 =
-                                                                        null);
-                                                                await _model
-                                                                    .waitForApiRequestCompleted1();
-                                                                await actions
-                                                                    .showCustomToastBottom(
-                                                                  FFAppState()
-                                                                      .unFavText,
-                                                                );
-                                                              } else {
-                                                                _model.getPopularAdd =
-                                                                    await EbookGroup
-                                                                        .addFavouriteBookApiCall
-                                                                        .call(
-                                                                  userId:
-                                                                      FFAppState()
-                                                                          .userId,
-                                                                  token:
-                                                                      FFAppState()
-                                                                          .token,
-                                                                  bookId:
-                                                                      getJsonField(
-                                                                    authorRelatedbookDetailslistItem,
-                                                                    r'''$._id''',
-                                                                  ).toString(),
-                                                                );
-
-                                                                safeSetState(() =>
-                                                                    _model.apiRequestCompleter1 =
-                                                                        null);
-                                                                await _model
-                                                                    .waitForApiRequestCompleted1();
-                                                                await actions
-                                                                    .showCustomToastBottom(
-                                                                  FFAppState()
-                                                                      .favText,
-                                                                );
-                                                              }
-
-                                                              FFAppState()
-                                                                  .clearGetFavouriteBookCacheCache();
-                                                              _model.isRelated =
-                                                                  false;
-                                                              safeSetState(
-                                                                  () {});
-                                                            } else {
-                                                              FFAppState()
-                                                                      .favChange =
-                                                                  true;
-                                                              FFAppState()
-                                                                      .bookId =
-                                                                  getJsonField(
                                                                 authorRelatedbookDetailslistItem,
                                                                 r'''$._id''',
-                                                              ).toString();
-                                                              FFAppState()
-                                                                  .update(
-                                                                      () {});
-
+                                                              ).toString(),
+                                                            ),
+                                                            price: getJsonField(
+                                                              authorRelatedbookDetailslistItem,
+                                                              r'''$.price''',
+                                                            ).toString(),
+                                                            bookType: getJsonField(
+                                                              authorRelatedbookDetailslistItem,
+                                                              r'''$.type''',
+                                                            )?.toString(),
+                                                            discountAmount:
+                                                                getJsonField(
+                                                              authorRelatedbookDetailslistItem,
+                                                              r'''$.discount_amount''',
+                                                            ).toString(),
+                                                            discountPercentage:
+                                                                getJsonField(
+                                                              authorRelatedbookDetailslistItem,
+                                                              r'''$.discount_percentage''',
+                                                            ).toString(),
+                                                            authorsName:
+                                                                getJsonField(
+                                                              authorRelatedbookDetailslistItem,
+                                                              r'''$.author.name''',
+                                                            ).toString(),
+                                                            isFav: functions.checkFavOrNot(
+                                                                    EbookGroup.getFavouriteBookCall
+                                                                        .favouriteBookDetailsList(
+                                                                          columnGetFavouriteBookResponse
+                                                                              .jsonBody,
+                                                                        )
+                                                                        ?.toList(),
+                                                                    getJsonField(
+                                                                      authorRelatedbookDetailslistItem,
+                                                                      r'''$._id''',
+                                                                    ).toString()) ==
+                                                                true,
+                                                            indicator: (authorRelatedbookDetailslistIndex ==
+                                                                    _model
+                                                                        .relatedIndex) &&
+                                                                (_model.isRelated ==
+                                                                    true),
+                                                            isFavAction:
+                                                                () async {
+                                                              if (FFAppState()
+                                                                      .isLogin ==
+                                                                  true) {
+                                                                _model.isRelated =
+                                                                    true;
+                                                                _model.relatedIndex =
+                                                                    authorRelatedbookDetailslistIndex;
+                                                                safeSetState(
+                                                                    () {});
+                                                                if (functions.checkFavOrNot(
+                                                                        EbookGroup.getFavouriteBookCall
+                                                                            .favouriteBookDetailsList(
+                                                                              columnGetFavouriteBookResponse.jsonBody,
+                                                                            )
+                                                                            ?.toList(),
+                                                                        getJsonField(
+                                                                          authorRelatedbookDetailslistItem,
+                                                                          r'''$._id''',
+                                                                        ).toString()) ==
+                                                                    true) {
+                                                                  _model.getPopularDetete =
+                                                                      await EbookGroup
+                                                                          .removeFavouritebookCall
+                                                                          .call(
+                                                                    userId:
+                                                                        FFAppState()
+                                                                            .userId,
+                                                                    token:
+                                                                        FFAppState()
+                                                                            .token,
+                                                                    bookId:
+                                                                        getJsonField(
+                                                                      authorRelatedbookDetailslistItem,
+                                                                      r'''$._id''',
+                                                                    ).toString(),
+                                                                  );
+                                                    
+                                                                  safeSetState(() =>
+                                                                      _model.apiRequestCompleter1 =
+                                                                          null);
+                                                                  await _model
+                                                                      .waitForApiRequestCompleted1();
+                                                                  await actions
+                                                                      .showCustomToastBottom(
+                                                                    FFAppState()
+                                                                        .unFavText,
+                                                                  );
+                                                                } else {
+                                                                  _model.getPopularAdd =
+                                                                      await EbookGroup
+                                                                          .addFavouriteBookApiCall
+                                                                          .call(
+                                                                    userId:
+                                                                        FFAppState()
+                                                                            .userId,
+                                                                    token:
+                                                                        FFAppState()
+                                                                            .token,
+                                                                    bookId:
+                                                                        getJsonField(
+                                                                      authorRelatedbookDetailslistItem,
+                                                                      r'''$._id''',
+                                                                    ).toString(),
+                                                                  );
+                                                    
+                                                                  safeSetState(() =>
+                                                                      _model.apiRequestCompleter1 =
+                                                                          null);
+                                                                  await _model
+                                                                      .waitForApiRequestCompleted1();
+                                                                  await actions
+                                                                      .showCustomToastBottom(
+                                                                    FFAppState()
+                                                                        .favText,
+                                                                  );
+                                                                }
+                                                    
+                                                                FFAppState()
+                                                                    .clearGetFavouriteBookCacheCache();
+                                                                _model.isRelated =
+                                                                    false;
+                                                                safeSetState(
+                                                                    () {});
+                                                              } else {
+                                                                FFAppState()
+                                                                        .favChange =
+                                                                    true;
+                                                                FFAppState()
+                                                                        .bookId =
+                                                                    getJsonField(
+                                                                  authorRelatedbookDetailslistItem,
+                                                                  r'''$._id''',
+                                                                ).toString();
+                                                                FFAppState()
+                                                                    .update(
+                                                                        () {});
+                                                    
+                                                                context.pushNamed(
+                                                                    SignInPageWidget
+                                                                        .routeName);
+                                                              }
+                                                    
+                                                              safeSetState(() {});
+                                                            },
+                                                            isMainTap: () async {
                                                               context.pushNamed(
-                                                                  SignInPageWidget
-                                                                      .routeName);
-                                                            }
-
-                                                            safeSetState(() {});
-                                                          },
-                                                          isMainTap: () async {
-                                                            context.pushNamed(
-                                                              BookDetailspageWidget
-                                                                  .routeName,
-                                                              queryParameters: {
-                                                                'name':
-                                                                    serializeParam(
-                                                                  getJsonField(
-                                                                    authorRelatedbookDetailslistItem,
-                                                                    r'''$.name''',
-                                                                  ).toString(),
-                                                                  ParamType
-                                                                      .String,
-                                                                ),
-                                                                'image':
-                                                                    serializeParam(
-                                                                  '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                                    authorRelatedbookDetailslistItem,
-                                                                    r'''$.image''',
-                                                                  ).toString()}',
-                                                                  ParamType
-                                                                      .String,
-                                                                ),
-                                                                'id':
-                                                                    serializeParam(
-                                                                  getJsonField(
-                                                                    authorRelatedbookDetailslistItem,
-                                                                    r'''$._id''',
-                                                                  ).toString(),
-                                                                  ParamType
-                                                                      .String,
-                                                                ),
-                                                              }.withoutNulls,
-                                                            );
-                                                          },
-                                                        ),
-                                                      );
-                                                    }),
+                                                                BookDetailspageWidget
+                                                                    .routeName,
+                                                                queryParameters: {
+                                                                  'name':
+                                                                      serializeParam(
+                                                                    getJsonField(
+                                                                      authorRelatedbookDetailslistItem,
+                                                                      r'''$.name''',
+                                                                    ).toString(),
+                                                                    ParamType
+                                                                        .String,
+                                                                  ),
+                                                                  'image':
+                                                                      serializeParam(
+                                                                    '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                                      authorRelatedbookDetailslistItem,
+                                                                      r'''$.image''',
+                                                                    ).toString()}',
+                                                                    ParamType
+                                                                        .String,
+                                                                  ),
+                                                                  'id':
+                                                                      serializeParam(
+                                                                    getJsonField(
+                                                                      authorRelatedbookDetailslistItem,
+                                                                      r'''$._id''',
+                                                                    ).toString(),
+                                                                    ParamType
+                                                                        .String,
+                                                                  ),
+                                                                }.withoutNulls,
+                                                              );
+                                                            },
+                                                          ),
+                                                        );
+                                                      }),
+                                                    ),
                                                   );
                                                 },
                                               ),
