@@ -1384,15 +1384,28 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                     !showAudioResume) {
                                                                   return SizedBox();
                                                                 }
-                                                                final ebookProgress =
-                                                                    _safeRatio(
-                                                                  FFAppState()
-                                                                      .homePageCurrentPdfIndex,
-                                                                  FFAppState()
-                                                                      .homePageTotalPdfPageIndex,
-                                                                );
+                                                                final totalIndex = FFAppState()
+                                                                    .homePageTotalPdfPageIndex;
+                                                                final currentIndex = FFAppState()
+                                                                    .homePageCurrentPdfIndex;
+                                                                final isEpubResume = FFAppState()
+                                                                    .homePageBookPdf
+                                                                    .toLowerCase()
+                                                                    .contains('.epub');
+                                                                final isPercentBased =
+                                                                    isEpubResume && totalIndex == 100;
+                                                                final ebookProgress = isPercentBased
+                                                                    ? (currentIndex
+                                                                            .clamp(0, 100) /
+                                                                        100)
+                                                                    : _safeRatio(
+                                                                        currentIndex,
+                                                                        totalIndex,
+                                                                      );
                                                                 final ebookProgressLabel =
-                                                                    '${FFLocalizations.of(context).getText('page')} ${FFAppState().homePageCurrentPdfIndex.toString()} ${FFLocalizations.of(context).getText('of')} ${FFAppState().homePageTotalPdfPageIndex.toString()}';
+                                                                    isPercentBased
+                                                                        ? '${currentIndex.clamp(0, 100).toString()}%'
+                                                                        : '${FFLocalizations.of(context).getText('page')} ${currentIndex.toString()} ${FFLocalizations.of(context).getText('of')} ${totalIndex.toString()}';
                                                                 final audioProgressLabel =
                                                                     _formatAudioProgressLabel(
                                                                   FFAppState()
@@ -1611,9 +1624,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                           ),
                                                                           Padding(
                                                                             padding: EdgeInsetsDirectional.fromSTEB(
-                                                                                16.0,
+                                                                                0,
                                                                                 0.0,
-                                                                                16.0,
+                                                                                0,
                                                                                 0.0),
                                                                             child:
                                                                                 Builder(
@@ -1621,7 +1634,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                 return SingleChildScrollView(
                                                                                   scrollDirection: Axis.horizontal,
                                                                                   child: Row(
-                                                                                    // spacing: 16.0,
+                                                                                    spacing: 10.0,
                                                                                     // runSpacing: 16.0,
                                                                                     // alignment: WrapAlignment.start,
                                                                                     // crossAxisAlignment: WrapCrossAlignment.start,
@@ -1773,8 +1786,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                           },
                                                                                         ),
                                                                                       );
-                                                                                    }),
-                                                                                  ),
+                                                                                    }).addToStart(SizedBox(width: 8,)),
+                                                                                  )
                                                                                 );
                                                                               },
                                                                             ),
@@ -1855,9 +1868,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                       ),
                                                                       Padding(
                                                                         padding: EdgeInsetsDirectional.fromSTEB(
-                                                                            16.0,
+                                                                            0,
                                                                             0.0,
-                                                                            16.0,
+                                                                            0,
                                                                             0.0),
                                                                         child:
                                                                             Builder(
@@ -1875,7 +1888,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                             return SingleChildScrollView(
                                                                               scrollDirection: Axis.horizontal,
                                                                               child: Row(
-                                                                                // spacing: 16.0,
+                                                                                spacing: 10.0,
                                                                                 // runSpacing: 16.0,
                                                                                 // alignment: WrapAlignment.start,
                                                                                 // crossAxisAlignment: WrapCrossAlignment.start,
@@ -2027,7 +2040,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                       },
                                                                                     ),
                                                                                   );
-                                                                                }),
+                                                                                }).addToStart(SizedBox(width: 8,)),
                                                                               ),
                                                                             );
                                                                           },
@@ -2300,7 +2313,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                 children: List.generate(popularbookDetailsList.length, (popularbookDetailsListIndex) {
                                                                                   final popularbookDetailsListItem = popularbookDetailsList[popularbookDetailsListIndex];
                                                                                   return Padding(
-                                                                                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 0, 0.0, 0),
+                                                                                      padding: EdgeInsetsDirectional.fromSTEB(10, 0, 0.0, 0),
                                                                                       child: wrapWithModel(
                                                                                         model: _model.listMainContainerComponentModels.getModel(
                                                                                           getJsonField(
@@ -2591,8 +2604,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                             ),
                                                                             SingleChildScrollView(
                                                                               scrollDirection: Axis.horizontal,
-                                                                              padding: EdgeInsetsDirectional.fromSTEB(16.0, 0, 16.0, 8.0),
+                                                                              padding: EdgeInsetsDirectional.fromSTEB(0.0, 0, 0, 8.0),
                                                                               child: Row(
+                                                                                spacing: 10,
                                                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                                                 children: List.generate(filteredFeaturedBooks.length, (bookIndex) {
                                                                                   final bookItem = filteredFeaturedBooks[bookIndex];
@@ -2674,7 +2688,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                       },
                                                                                     ),
                                                                                   );
-                                                                                })
+                                                                                }).addToStart(SizedBox(width: 10,))
                                                                                 // .divide(SizedBox(width: 16.0)).addToStart(SizedBox(width: 16.0)).addToEnd(SizedBox(width: 16.0)),
                                                                               ),
                                                                             ),

@@ -124,14 +124,68 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     if (state == AppLifecycleState.resumed && _nativeEpubWentBackground) {
       _nativeEpubLaunchInProgress = false;
       _nativeEpubWentBackground = false;
-      _nativeEpubPageSub?.cancel();
-      _nativeEpubPageSub = null;
-      ReadingReportService.instance.endSession();
-      _showDebugSnack('READING NATIVE EPUB END (on resume)');
-      if (mounted) {
-        Navigator.of(context).maybePop();
-      }
+      unawaited(_handleNativeEpubReturn());
     }
+  }
+
+  Future<void> _handleNativeEpubReturn() async {
+    await _nativeEpubPageSub?.cancel();
+    _nativeEpubPageSub = null;
+    await _syncNativeEpubProgress();
+    await ReadingReportService.instance.endSession();
+    _showDebugSnack('READING NATIVE EPUB END (on resume)');
+    if (mounted) {
+      Navigator.of(context).maybePop();
+    }
+  }
+
+  String _resolveEpubSource(String path) {
+    final trimmed = path.trim();
+    if (trimmed.isEmpty) return '';
+    final isRemote =
+        trimmed.startsWith('http://') || trimmed.startsWith('https://');
+    return isRemote ? 'remote:$trimmed' : 'local:$trimmed';
+  }
+
+  Future<void> _syncNativeEpubProgress() async {
+    final path = widget.pdf?.trim() ?? '';
+    if (path.isEmpty) return;
+    try {
+      final source = _resolveEpubSource(path);
+      if (source.isEmpty) return;
+      final details = await EpubReaderService.getProgressDetails(source);
+      final rawPercent = details['percent'];
+      final percent = rawPercent is num
+          ? rawPercent.toInt()
+          : int.tryParse(rawPercent?.toString() ?? '');
+      if (percent == null) return;
+      _lastNativeProgressSent = percent;
+      await _applyNativeEpubProgress(percent, force: true);
+    } catch (e) {
+      _showDebugSnack('READING NATIVE EPUB PROGRESS FETCH ERROR: $e');
+    }
+  }
+
+  Future<void> _applyNativeEpubProgress(int percent,
+      {bool force = false}) async {
+    final bookId = (widget.id ?? '').trim();
+    if (bookId.isEmpty) return;
+    final bounded = percent.clamp(0, 100);
+    await ReadingProgressService.upsertProgress(
+      bookId: bookId,
+      percent: bounded.toDouble(),
+      name: widget.name ?? '',
+      imageUrl: widget.image ?? '',
+      author: widget.author ?? '',
+      contentType: 'ebook',
+    );
+    FFAppState().homePageCurrentPdfIndex = bounded;
+    FFAppState().homePageTotalPdfPageIndex = 100;
+    FFAppState().update(() {});
+    await ReadingReportService.instance.updateProgress(
+      percentage: bounded,
+      force: force,
+    );
   }
 
   Future<void> _openEpubWithPlugin() async {
@@ -150,33 +204,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       final bookId = (widget.id ?? '').trim();
       if (bookId.isNotEmpty) {
         await ReadingReportService.instance.startSession(bookId: bookId);
-        await ReadingReportService.instance.updateProgress(
-          percentage: 0,
-          force: true,
-        );
-        await ReadingProgressService.upsertProgress(
-          bookId: bookId,
-          percent: 0,
-          name: widget.name ?? '',
-          imageUrl: widget.image ?? '',
-          contentType: 'ebook',
-        );
+        await _applyNativeEpubProgress(0, force: true);
         _nativeEpubPageSub?.cancel();
         _lastNativeProgressSent = 0;
         _nativeEpubPageSub = EpubReaderService.onPageChanged.listen((percent) {
           if (percent == _lastNativeProgressSent) return;
           _lastNativeProgressSent = percent;
-          ReadingReportService.instance.updateProgress(
-            percentage: percent,
-            force: true,
-          );
-          ReadingProgressService.upsertProgress(
-            bookId: bookId,
-            percent: percent.toDouble(),
-            name: widget.name ?? '',
-            imageUrl: widget.image ?? '',
-            contentType: 'ebook',
-          );
+          unawaited(_applyNativeEpubProgress(percent, force: true));
           _showDebugSnack('READING NATIVE EPUB PROGRESS: $percent%');
         });
         _nativeEpubLaunchInProgress = true;
