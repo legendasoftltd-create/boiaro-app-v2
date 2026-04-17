@@ -15,6 +15,8 @@ import '/pages/dialogs/book_review_bottom_sheet/book_review_bottom_sheet_widget.
 import '/providers/cart_provider.dart';
 import 'audiobook_details_page_model.dart';
 export 'audiobook_details_page_model.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 class AudiobookDetailsPageWidget extends StatefulWidget {
@@ -47,6 +49,10 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
   bool _isFavorite = false;
   bool _isFavoriteLoading = false;
   List<String> _purchasedBookIds = [];
+  List<Map<String, dynamic>> _v2Tracks = [];
+  bool _v2TracksLoading = false;
+  bool _hasAudioAccess = false;
+  String? _tracksLoadedForBookId;
 
   final animationsMap = {
     'containerOnPageLoadAnimation1': AnimationInfo(
@@ -107,9 +113,11 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
       token: FFAppState().token,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadV2Tracks();
       if (FFAppState().isLogin) {
         await _loadPurchasedBooks();
         await _loadFavoriteStatus();
+        await _refreshAudioAccess();
       }
     });
   }
@@ -123,8 +131,272 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
   String _extractBookId(Map<String, dynamic> audiobook) {
     final id = audiobook['id'] ??
         audiobook['_id'] ??
+        getJsonField(audiobook, r'''$.id''') ??
         getJsonField(audiobook, r'''$._id''');
-    return id?.toString() ?? '';
+    if (id != null && id.toString().trim().isNotEmpty) {
+      return id.toString();
+    }
+    // Route payload sometimes nests original object under `raw`.
+    final rawId = getJsonField(audiobook, r'''$.raw.id''') ??
+        getJsonField(audiobook, r'''$.raw._id''');
+    return rawId?.toString() ?? '';
+  }
+
+  String _extractBookIdFromDetails(dynamic details) {
+    final id = getJsonField(details, r'''$._id''') ??
+        getJsonField(details, r'''$.id''') ??
+        getJsonField(details, r'''$.book_id''');
+    return id?.toString().trim() ?? '';
+  }
+
+  Map<String, String> _apiHeaders({required bool authRequired}) {
+    final h = <String, String>{
+      'apikey': FFAppConstants.supabaseAnonApiKey,
+      'Content-Type': 'application/json',
+    };
+    if (authRequired && FFAppState().token.trim().isNotEmpty) {
+      h['Authorization'] = 'Bearer ${FFAppState().token}';
+    }
+    return h;
+  }
+
+  Future<Map<String, dynamic>?> _postV2(
+    String path, {
+    required Map<String, dynamic> body,
+    required bool authRequired,
+  }) async {
+    try {
+      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/$path');
+      final res = await http.post(
+        uri,
+        headers: _apiHeaders(authRequired: authRequired),
+        body: jsonEncode(body),
+      );
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> _loadV2Tracks() async {
+    if (_v2TracksLoading || _bookId.isEmpty) return;
+    if (_tracksLoadedForBookId == _bookId && _v2Tracks.isNotEmpty) return;
+    setState(() => _v2TracksLoading = true);
+    try {
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$_bookId/tracks');
+      final res = await http.get(
+        uri,
+        headers: _apiHeaders(authRequired: false),
+      );
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map && decoded['tracks'] is List) {
+          _v2Tracks = (decoded['tracks'] as List)
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          _tracksLoadedForBookId = _bookId;
+        }
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _v2TracksLoading = false);
+  }
+
+  Future<void> _refreshAudioAccess() async {
+    if (!FFAppState().isLogin || _bookId.isEmpty) return;
+    final body = await _postV2(
+      'access/check',
+      body: {'book_id': _bookId, 'format': 'audiobook'},
+      authRequired: true,
+    );
+    _hasAudioAccess = body?['has_access'] == true;
+    if (mounted) setState(() {});
+  }
+
+  int _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  int _audiobookCoinPrice(dynamic details, Map<String, dynamic> fallback) {
+    int pickFrom(dynamic rawFormats) {
+      if (rawFormats is! List) return 0;
+      for (final row in rawFormats) {
+        if (row is! Map) continue;
+        final m = Map<String, dynamic>.from(row);
+        if ((m['format']?.toString().toLowerCase() ?? '') == 'audiobook') {
+          final coin = _toInt(m['coin_price']);
+          if (coin > 0) return coin;
+        }
+      }
+      return 0;
+    }
+
+    final fromDetails = pickFrom(getJsonField(details, r'''$.formats'''));
+    if (fromDetails > 0) return fromDetails;
+    final fromFallback = pickFrom(fallback['formats']);
+    if (fromFallback > 0) return fromFallback;
+    return _toInt(getJsonField(details, r'''$.coin_price'''));
+  }
+
+  Future<int?> _walletBalance() async {
+    if (!FFAppState().isLogin) return null;
+    try {
+      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/wallet');
+      final res = await http.get(
+        uri,
+        headers: _apiHeaders(authRequired: true),
+      );
+      if (res.statusCode != 200) return null;
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) return null;
+      final balance = decoded['balance'];
+      if (balance is num) return balance.toInt();
+      return int.tryParse(balance?.toString() ?? '');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _unlockWithCoins(int coinCost) async {
+    final body = await _postV2(
+      'wallet/unlock',
+      body: {'book_id': _bookId, 'format': 'audiobook', 'coin_cost': coinCost},
+      authRequired: true,
+    );
+    if (body == null) {
+      await actions.showCustomToastBottom('Wallet unlock failed');
+      return false;
+    }
+    final err = body['error']?.toString();
+    if (err != null && err.trim().isNotEmpty) {
+      await actions.showCustomToastBottom(err);
+      return false;
+    }
+    await actions.showCustomToastBottom(
+      body['message']?.toString() ?? 'Unlocked successfully',
+    );
+    return true;
+  }
+
+  Future<bool> _confirmAndUnlockWithCoins({
+    required String title,
+    required int coinCost,
+  }) async {
+    final balance = await _walletBalance();
+    if (!mounted) return false;
+    final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Unlock with Coins'),
+            content: Text(
+              balance == null
+                  ? 'Unlock "$title" for $coinCost coins?'
+                  : 'Unlock "$title" for $coinCost coins?\nYour balance: $balance',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Unlock'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok) return false;
+    return _unlockWithCoins(coinCost);
+  }
+
+  Future<String?> _audioSignedUrl(int trackNumber) async {
+    final body = await _postV2(
+      'content/audio-url',
+      body: {'book_id': _bookId, 'track_number': trackNumber},
+      authRequired: false,
+    );
+    final url = body?['signed_url']?.toString();
+    if (url != null && url.trim().isNotEmpty) return url;
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> _buildPlayableChapters({
+    required bool hasAccess,
+  }) async {
+    if (_v2Tracks.isEmpty) {
+      await _loadV2Tracks();
+    }
+    if (_v2Tracks.isEmpty) {
+      final fallbackUrl = await _audioSignedUrl(1);
+      if (fallbackUrl != null && fallbackUrl.isNotEmpty) {
+        return <Map<String, dynamic>>[
+          {
+            'title': 'Episode 1',
+            'duration': '--:--',
+            'track_number': 1,
+            'isLocked': false,
+            'isPreview': true,
+            'file': fallbackUrl,
+            'raw': <String, dynamic>{},
+          }
+        ];
+      }
+    }
+    final out = <Map<String, dynamic>>[];
+    for (var i = 0; i < _v2Tracks.length; i++) {
+      final t = _v2Tracks[i];
+      final trackNumber =
+          (t['track_number'] is num) ? (t['track_number'] as num).toInt() : i + 1;
+      final isPreview = t['is_preview'] == true;
+      if (!hasAccess && !isPreview) continue;
+      final signed = await _audioSignedUrl(trackNumber);
+      if (signed == null || signed.isEmpty) continue;
+      out.add({
+        'title': t['title']?.toString() ?? 'Chapter $trackNumber',
+        'duration': t['duration']?.toString() ?? '--:--',
+        'track_number': trackNumber,
+        'isLocked': false,
+        'isPreview': isPreview,
+        'file': signed,
+        'raw': t,
+      });
+    }
+    return out;
+  }
+
+  Future<void> _openAudioPlayerFromV2({
+    required Map<String, dynamic> audiobook,
+    required bool hasAccess,
+    int? startTrackNumber,
+  }) async {
+    final chapters = await _buildPlayableChapters(hasAccess: hasAccess);
+    if (chapters.isEmpty) {
+      await actions.showCustomToastBottom(
+        hasAccess
+            ? 'Unable to load audiobook tracks'
+            : 'No free preview tracks available',
+      );
+      return;
+    }
+    Map<String, dynamic> startChapter = chapters.first;
+    if (startTrackNumber != null) {
+      final i = chapters.indexWhere(
+          (c) => (c['track_number']?.toString() ?? '') == '$startTrackNumber');
+      if (i >= 0) startChapter = chapters[i];
+    }
+    context.pushNamed(
+      AudioPlayerPageWidget.routeName,
+      extra: <String, dynamic>{
+        'audiobook': {
+          ...audiobook,
+          'chapters': chapters,
+        },
+        'chapter': startChapter,
+      },
+    );
   }
 
   Future<void> _loadPurchasedBooks() async {
@@ -403,22 +675,63 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
             : null;
         final details =
             (detailsList != null && detailsList.isNotEmpty) ? detailsList.first : null;
+        // Hydrate UUID from details when route payload did not contain a usable id.
+        final detailBookId = _extractBookIdFromDetails(details);
+        if (detailBookId.isNotEmpty && detailBookId != _bookId) {
+          _bookId = detailBookId;
+          _v2Tracks = [];
+          _tracksLoadedForBookId = null;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!mounted) return;
+            await _loadV2Tracks();
+            if (FFAppState().isLogin) {
+              await _refreshAudioAccess();
+            }
+          });
+        }
         final book = _normalizeBookDetails(details, fallback);
         final accessType = _resolveAccessType(details, fallback);
         final basePrice = (_toNum(book['price']) ?? 0).toDouble();
+        final audiobookCoinPrice = _audiobookCoinPrice(details, fallback);
         final isFreeAccess = accessType.contains('free') || basePrice <= 0;
-        final hasAccess = isFreeAccess || _isPurchased;
+        final hasAccess = isFreeAccess || _isPurchased || _hasAudioAccess;
         final priceLabel = basePrice <= 0
             ? 'Free'
             : '৳${book['offerPrice'] ?? book['price']}';
-        final chapters = _normalizeChapters(
-          details,
-          (fallback['chapters'] as List?) ?? [],
-          hasAccess: hasAccess,
-        );
-        final previewAudio = book['previewAudio'] ??
-            getJsonField(details, r'''$.preview_audio''') ??
-            getJsonField(book['raw'], r'''$.preview_audio''');
+        var chapters = _v2Tracks.isNotEmpty
+            ? _v2Tracks.asMap().entries.map((entry) {
+                final i = entry.key;
+                final t = entry.value;
+                final trackNumber = (t['track_number'] is num)
+                    ? (t['track_number'] as num).toInt()
+                    : (i + 1);
+                final isPreview = t['is_preview'] == true;
+                return <String, dynamic>{
+                  'title': t['title']?.toString() ?? 'Chapter $trackNumber',
+                  'duration': t['duration']?.toString() ?? '--:--',
+                  'track_number': trackNumber,
+                  'isLocked': hasAccess ? false : !isPreview,
+                  'isPreview': isPreview,
+                  'raw': t,
+                };
+              }).toList()
+            : _normalizeChapters(
+                details,
+                (fallback['chapters'] as List?) ?? [],
+                hasAccess: hasAccess,
+              );
+        if (chapters.isEmpty && _bookId.isNotEmpty) {
+          chapters = <Map<String, dynamic>>[
+            {
+              'title': 'Episode 1',
+              'duration': '--:--',
+              'track_number': 1,
+              'isLocked': false,
+              'isPreview': true,
+              'raw': <String, dynamic>{},
+            }
+          ];
+        }
         final categoryTag = book['category']?.toString() ?? '';
         final languageTag = book['language']?.toString() ?? '';
         final tags = <String>[
@@ -545,6 +858,9 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 discountPercentage: _toNum(getJsonField(
                                     details, r'''$.discount_percentage'''))?.toDouble(),
                                 type: 'audiobook',
+                                coinPrice: audiobookCoinPrice > 0
+                                    ? audiobookCoinPrice
+                                    : null,
                               );
                               await actions.showCustomToastBottom(
                                   'Added to cart!');
@@ -579,31 +895,11 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                           // Preview Label on Cover
                           Center(
                             child: InkWell(
-                              onTap: () {
-                                final previewPath = previewAudio?.toString().trim() ?? '';
-                                if (previewPath.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Preview audio not available'),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                final previewChapter = <String, dynamic>{
-                                  'title': 'Preview',
-                                  'file': previewPath,
-                                  'isLocked': false,
-                                  'isPreview': true,
-                                };
-                                context.pushNamed(
-                                  AudioPlayerPageWidget.routeName,
-                                  extra: <String, dynamic>{
-                                    'audiobook': {
-                                      ...book,
-                                      'chapters': [previewChapter],
-                                    },
-                                    'chapter': previewChapter,
-                                  },
+                              onTap: () async {
+                                await _openAudioPlayerFromV2(
+                                  audiobook: Map<String, dynamic>.from(book),
+                                  hasAccess: false,
+                                  startTrackNumber: 1,
                                 );
                               },
                               borderRadius: BorderRadius.circular(30),
@@ -750,21 +1046,31 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                               ? null
                               : () async {
                                   if (hasAccess) {
-                                    context.pushNamed(
-                                      AudioPlayerPageWidget.routeName,
-                                      extra: <String, dynamic>{
-                                        "audiobook": {
-                                          ...book,
-                                          'chapters': chapters,
-                                        },
-                                        "chapter": chapters.first,
-                                      },
+                                    await _openAudioPlayerFromV2(
+                                      audiobook: Map<String, dynamic>.from(book),
+                                      hasAccess: true,
                                     );
                                   } else {
                                     if (!FFAppState().isLogin) {
                                       context
                                           .pushNamed(SignInPageWidget.routeName);
                                       return;
+                                    }
+                                    if (audiobookCoinPrice > 0) {
+                                      final unlocked =
+                                          await _confirmAndUnlockWithCoins(
+                                        title: book['title']?.toString() ?? '',
+                                        coinCost: audiobookCoinPrice,
+                                      );
+                                      if (unlocked) {
+                                        await _refreshAudioAccess();
+                                        await _openAudioPlayerFromV2(
+                                          audiobook:
+                                              Map<String, dynamic>.from(book),
+                                          hasAccess: true,
+                                        );
+                                        return;
+                                      }
                                     }
                                     final cart = Provider.of<CartProvider>(
                                       context,
@@ -780,6 +1086,9 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                       discountPercentage: _toNum(getJsonField(
                                           details, r'''$.discount_percentage'''))?.toDouble(),
                                       type: 'audiobook',
+                                      coinPrice: audiobookCoinPrice > 0
+                                          ? audiobookCoinPrice
+                                          : null,
                                     );
                                     Navigator.push<void>(
                                       context,
@@ -810,7 +1119,11 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 Icon(Icons.headphones_rounded, color: Colors.white, size: 24),
                                 SizedBox(width: 12),
                                 Text(
-                                  hasAccess ? 'Listen Now' : 'Buy Now',
+                                  hasAccess
+                                      ? 'Listen Now'
+                                      : (audiobookCoinPrice > 0
+                                          ? 'Unlock with Coins'
+                                          : 'Buy Now'),
                                   style: FlutterFlowTheme.of(context).titleMedium.override(
                                         fontFamily: 'SF Pro Display',
                                         color: Colors.white,
@@ -840,7 +1153,13 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                           itemCount: chapters.length,
                           itemBuilder: (context, index) {
                             final chapter = chapters[index];
-                            return _buildChapterTile(context, book, chapter, index + 1, chapters);
+                            return _buildChapterTile(
+                              context,
+                              book,
+                              chapter,
+                              index + 1,
+                              hasAccess,
+                            );
                           },
                         ),
 
@@ -1232,7 +1551,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     Map<String, dynamic> audiobook,
     Map<String, dynamic> chapter,
     int index,
-    List<Map<String, dynamic>> chapters,
+    bool hasAccess,
   ) {
     final bool isLocked = chapter['isLocked'] ?? false;
     return InkWell(
@@ -1242,16 +1561,12 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
               'Please purchase to unlock this chapter');
           return;
         }
-          context.pushNamed(
-            AudioPlayerPageWidget.routeName,
-            extra: <String, dynamic>{
-              'audiobook': {
-                ...audiobook,
-                'chapters': chapters,
-              },
-              'chapter': chapter,
-            },
-          );
+        final startTrack = chapter['track_number'];
+        await _openAudioPlayerFromV2(
+          audiobook: audiobook,
+          hasAccess: hasAccess,
+          startTrackNumber: startTrack is num ? startTrack.toInt() : null,
+        );
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 12),

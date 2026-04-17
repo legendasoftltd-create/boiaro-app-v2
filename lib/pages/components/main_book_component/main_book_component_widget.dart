@@ -140,9 +140,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
       child: Container(
         margin: EdgeInsets.all(2.0),
         width: () {
-          print('Screen width: ${MediaQuery.sizeOf(context).width}');
-          print('Screen height: ${MediaQuery.sizeOf(context).height}');
-          
+
           if (MediaQuery.sizeOf(context).width < 810.0) {
             return ((MediaQuery.sizeOf(context).width - 40) / 3);
           } else if ((MediaQuery.sizeOf(context).width >= 810.0) &&

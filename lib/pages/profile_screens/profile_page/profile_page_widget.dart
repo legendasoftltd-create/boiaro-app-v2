@@ -1482,6 +1482,8 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                         .pushNamed(SignInPageWidget.routeName);
                                   }
 
+                                    context
+                                        .pushNamed(SignInPageWidget.routeName);
                                   safeSetState(() {});
                                 },
                                 child: Container(

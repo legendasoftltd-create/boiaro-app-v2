@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 import 'package:a_i_ebook_app/pages/cart_pages/make_payment.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -49,7 +46,6 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   Map<String, dynamic>? _selectedAddress;
   String? _selectedAddressId;
   List<dynamic> _shippingMethods = [];
-  Map<String, dynamic>? _selectedShippingMethod;
   String? _selectedShippingMethodId;
   double _shippingCost = 0.0;
 
@@ -84,77 +80,20 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       _isApplyingCoupon = true;
       _couponErrorMessage = null;
     });
-    try {
-      
-      final response = await http.post(
-        Uri.parse('${FFAppConstants.baseApiUrl}/getcoupondetails'),
-        headers: {
-          'Authorization': 'Bearer ${FFAppState().token}',
-          'Content-Type': 'application/json',
-        },
-        body: '{"coupon_code":"$code"}',
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print(code);
-        print(data);
-        final success = getJsonField(data, r'$.data.success');
-        if (success == 1) {
-          final couponDetails = getJsonField(data, r'$.data.couponDetails');
-          final discountType = getJsonField(couponDetails, r'$.discount_type').toString();
-          final discountValue = (getJsonField(couponDetails, r'$.discount_value') as num).toDouble();
-          final maxDiscount = (getJsonField(couponDetails, r'$.max_discount') as num).toDouble();
-          final minOrderAmount = (getJsonField(couponDetails, r'$.min_order_amount') as num).toDouble();
-
-          if (cartTotalAfterBookDiscounts < minOrderAmount) {
-            setState(() {
-              _couponErrorMessage = 'Minimum order amount is ৳${minOrderAmount.toStringAsFixed(2)}';
-              _isApplyingCoupon = false;
-            });
-            return;
-          }
-
-          double calculatedDiscount;
-          if (discountType.toLowerCase() == 'percentage') {
-            calculatedDiscount = cartTotalAfterBookDiscounts * (discountValue / 100.0);
-          } else {
-            calculatedDiscount = discountValue;
-          }
-          // apply max discount cap and ensure not exceeding cart total
-          if (maxDiscount > 0) {
-            calculatedDiscount = calculatedDiscount.clamp(0.0, maxDiscount);
-          }
-          calculatedDiscount = calculatedDiscount > cartTotalAfterBookDiscounts ? cartTotalAfterBookDiscounts : calculatedDiscount;
-
-          setState(() {
-            _appliedCouponCode = code;
-            _discountAmount = double.parse(calculatedDiscount.toStringAsFixed(2));
-            _couponErrorMessage = null;
-            _isApplyingCoupon = false;
-          });
-          if (_hasHardcopy(Provider.of<CartProvider>(context, listen: false))) {
-            await _calculateShippingCost();
-          }
-        } else {
-          final message = getJsonField(data, r'$.data.message').toString();
-          setState(() {
-            _couponErrorMessage = message.isNotEmpty ? message : 'Invalid coupon';
-            _isApplyingCoupon = false;
-          });
-        }
-      } else {
-        setState(() {
-          _couponErrorMessage = 'Failed to apply coupon (${response.statusCode})';
-          _isApplyingCoupon = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _couponErrorMessage = 'Error applying coupon: $e';
-        _isApplyingCoupon = false;
-      });
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Coupon API is not available in BoiAro v2 yet. This build uses mock (no discount).',
+        ),
+      ),
+    );
+    setState(() {
+      _appliedCouponCode = code;
+      _discountAmount = 0.0;
+      _couponErrorMessage = null;
+      _isApplyingCoupon = false;
+    });
   }
 
   void _removeCoupon() {
@@ -214,133 +153,99 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   }
 
   Future<void> _fetchAddresses() async {
-    final response = await http.post(
-      Uri.parse('${FFAppConstants.baseApiUrl}/getaddresses'),
-      headers: {
-        'Authorization': 'Bearer ${FFAppState().token}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'userId': FFAppState().userId,
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch addresses (${response.statusCode})');
-    }
-
-    final payload = jsonDecode(response.body);
-    final data = payload['data'];
-    List<dynamic> addresses = [];
-    if (data is List) {
-      addresses = data;
-    } else if (data is Map && data['addresses'] is List) {
-      addresses = data['addresses'] as List<dynamic>;
-    }
-
-    Map<String, dynamic>? defaultAddress;
-    for (final item in addresses) {
-      if (item is Map && item['isDefault'] == true) {
-        defaultAddress = Map<String, dynamic>.from(item);
-        break;
-      }
-    }
-
     setState(() {
-      _addresses = addresses;
-      if (addresses.isEmpty) {
-        _selectedAddress = null;
-        _selectedAddressId = null;
-        _showAddressForm = true;
-      } else {
-        final selected = defaultAddress ??
-            Map<String, dynamic>.from(addresses.first as Map);
-        _selectedAddress = selected;
-        _selectedAddressId = selected['_id']?.toString();
-      }
+      _addresses = [];
+      _selectedAddress = null;
+      _selectedAddressId = null;
+      _showAddressForm = true;
     });
   }
 
   Future<void> _fetchShippingMethods() async {
-    final response = await http.post(
-      Uri.parse('${FFAppConstants.baseApiUrl}/shipping-methods'),
-      headers: {
-        'Authorization': 'Bearer ${FFAppState().token}',
-        'Content-Type': 'application/json',
-      },
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch shipping methods (${response.statusCode})');
-    }
-
-    final payload = jsonDecode(response.body);
-    final data = payload['data'];
-    final methods = data is List ? data : <dynamic>[];
-
     setState(() {
-      _shippingMethods = methods;
-      if (methods.isNotEmpty) {
-        final selected = Map<String, dynamic>.from(methods.first as Map);
-        _selectedShippingMethod = selected;
-        _selectedShippingMethodId = selected['_id']?.toString();
-      }
+      final method = <String, dynamic>{'_id': 'standard', 'name': 'Standard'};
+      _shippingMethods = [method];
+      _selectedShippingMethodId = method['_id']?.toString();
     });
   }
 
   Future<void> _calculateShippingCost() async {
-    if (_selectedAddressId == null || _selectedShippingMethodId == null) {
-      return;
-    }
     setState(() {
-      _isCalculatingShipping = true;
-      _shippingError = null;
+      _shippingCost = 0;
+      _isCalculatingShipping = false;
     });
-    try {
-      final response = await http.post(
-        Uri.parse('${FFAppConstants.baseApiUrl}/shipping/calculate'),
-        headers: {
-          'Authorization': 'Bearer ${FFAppState().token}',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'shippingMethodId': _selectedShippingMethodId,
-          'addressId': _selectedAddressId,
-          'cartTotal': (_getBaseTotal()).toDouble(),
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to calculate shipping (${response.statusCode})');
-      }
-
-      final payload = jsonDecode(response.body);
-      final data = payload['data'] ?? {};
-      final shippingCost =
-          data['shippingCost'] ?? data['cost'] ?? data['shipping_cost'];
-      setState(() {
-        _shippingCost = (shippingCost is num)
-            ? shippingCost.toDouble()
-            : double.tryParse(shippingCost?.toString() ?? '0') ?? 0.0;
-      });
-    } catch (e) {
-      setState(() {
-        _shippingError = 'Failed to calculate shipping: $e';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCalculatingShipping = false;
-        });
-      }
-    }
   }
 
-  double _getBaseTotal() {
-    final cart = Provider.of<CartProvider>(context, listen: false);
-    final subtotalAfterBookDiscounts = cart.totalAmountAfterBookDiscounts;
-    return (subtotalAfterBookDiscounts - _discountAmount)
-        .clamp(0.0, double.infinity);
+  /// Shape expected by [CheckoutController] / v2 `shipping_address` (fullName-style keys OK).
+  Map<String, dynamic>? _shippingAddressForOrder() {
+    if (_selectedAddress != null) {
+      final raw = Map<String, dynamic>.from(_selectedAddress!);
+      final fullName = (raw['fullName'] ??
+              raw['full_name'] ??
+              raw['name'] ??
+              raw['recipient_name'] ??
+              '')
+          .toString()
+          .trim();
+      final phone = (raw['phone'] ?? raw['mobile'] ?? '').toString().trim();
+      final addressLine1 = (raw['addressLine1'] ??
+              raw['address_line1'] ??
+              raw['address'] ??
+              '')
+          .toString()
+          .trim();
+      final addressLine2 =
+          (raw['addressLine2'] ?? raw['address_line2'] ?? '').toString().trim();
+      final city = (raw['city'] ?? '').toString().trim();
+      final state = (raw['state'] ?? '').toString().trim();
+      final postalCode =
+          (raw['postalCode'] ?? raw['zip'] ?? raw['zipcode'] ?? '')
+              .toString()
+              .trim();
+      final country = (raw['country'] ?? '').toString().trim();
+      if (fullName.isEmpty ||
+          phone.isEmpty ||
+          addressLine1.isEmpty ||
+          city.isEmpty ||
+          postalCode.isEmpty ||
+          country.isEmpty) {
+        return null;
+      }
+      return {
+        'fullName': fullName,
+        'phone': phone,
+        'addressLine1': addressLine1,
+        'addressLine2': addressLine2,
+        'city': city,
+        'state': state,
+        'postalCode': postalCode,
+        'country': country,
+      };
+    }
+    final fullName = _fullNameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final addressLine1 = _addressLine1Controller.text.trim();
+    final city = _cityController.text.trim();
+    final postalCode = _postalCodeController.text.trim();
+    final country = _countryController.text.trim();
+    if (fullName.isEmpty ||
+        phone.isEmpty ||
+        addressLine1.isEmpty ||
+        city.isEmpty ||
+        postalCode.isEmpty ||
+        country.isEmpty) {
+      return null;
+    }
+    return {
+      'fullName': fullName,
+      'phone': phone,
+      'addressLine1': addressLine1,
+      'addressLine2': _addressLine2Controller.text.trim(),
+      'city': city,
+      'state': _stateController.text.trim(),
+      'postalCode': postalCode,
+      'country': country,
+    };
   }
 
   Future<void> _submitAddress() async {
@@ -372,32 +277,23 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('${FFAppConstants.baseApiUrl}/addaddress'),
-        headers: {
-          'Authorization': 'Bearer ${FFAppState().token}',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'userId': FFAppState().userId,
-          'addressType':'home',
-          'email': 'Rayhan476666ahmed@gmail.com',
-          'fullName': fullName,
-          'phone': phone,
-          'addressLine1': addressLine1,
-          'addressLine2': _addressLine2Controller.text.trim(),
-          'city': city,
-          'state': _stateController.text.trim(),
-          'postalCode': postalCode,
-          'country': country,
-          'isDefault': _setAsDefault,
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to add address (${response.statusCode})');
-      }
-
+      final synthetic = <String, dynamic>{
+        '_id': 'local-${DateTime.now().millisecondsSinceEpoch}',
+        'fullName': fullName,
+        'phone': phone,
+        'addressLine1': addressLine1,
+        'addressLine2': _addressLine2Controller.text.trim(),
+        'city': city,
+        'state': _stateController.text.trim(),
+        'postalCode': postalCode,
+        'country': country,
+        'isDefault': _setAsDefault,
+      };
+      setState(() {
+        _addresses = [synthetic];
+        _selectedAddress = synthetic;
+        _selectedAddressId = synthetic['_id']?.toString();
+      });
       _fullNameController.clear();
       _phoneController.clear();
       _addressLine1Controller.clear();
@@ -408,8 +304,6 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       _countryController.clear();
       _setAsDefault = false;
       _showAddressForm = false;
-
-      await _fetchAddresses();
       await _calculateShippingCost();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -765,7 +659,6 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                 onChanged: (value) {
                   setState(() {
                     _selectedShippingMethodId = value;
-                    _selectedShippingMethod = methodMap;
                   });
                   _calculateShippingCost();
                 },
@@ -777,7 +670,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                       ),
                 ),
                 subtitle: Text(
-                  [carrier, estimateText].where((e) => e != null && e!.isNotEmpty).join(' • '),
+                  [carrier, estimateText].where((e) => e != null && e.isNotEmpty).join(' • '),
                   style: FlutterFlowTheme.of(context).bodySmall.override(
                         color: FlutterFlowTheme.of(context).secondaryText,
                       ),
@@ -799,7 +692,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       address['postalCode']?.toString(),
       address['country']?.toString(),
       address['phone']?.toString(),
-    ].where((value) => value != null && value!.trim().isNotEmpty);
+    ].where((value) => value != null && value.trim().isNotEmpty);
     return parts.join(', ');
   }
 
@@ -843,9 +736,12 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                 //     return
                      Icon(
                       value == 'bkash' ? Icons.account_balance_wallet :
-                      value == 'ssl' ? Icons.credit_card : Icons.payment,
+                      value == 'ssl' ? Icons.credit_card :
+                      value == 'wallet' ? Icons.account_balance_wallet_rounded :
+                      Icons.payment,
                       color: value == 'bkash' ? Colors.pink : 
-                             value == 'ssl' ? Colors.blue : Colors.grey,
+                             value == 'ssl' ? Colors.blue :
+                             value == 'wallet' ? Colors.amber.shade700 : Colors.grey,
                     ),
                 //   },
                 // ),
@@ -921,7 +817,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                       // Order Summary Section
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(0.0),
+                        padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
                         decoration: BoxDecoration(
                           color: FlutterFlowTheme.of(context).secondaryBackground,
                           borderRadius: BorderRadius.circular(12.0),
@@ -1317,6 +1213,12 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                         'assets/images/ssl_logo.png',
                         
                       ),
+                      _buildPaymentOption(
+                        'wallet',
+                        'Wallet Coins',
+                        'Unlock ebook/audiobook using your coin balance',
+                        'assets/images/coin.png',
+                      ),
         
                       SizedBox(height: 24.0),
         
@@ -1380,32 +1282,53 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
               ),
               child: ElevatedButton(
                 onPressed: () async {
-                  if (hasHardcopy &&
-                      (_selectedAddressId == null ||
-                          _selectedShippingMethodId == null)) {
+                  final shippingAddress =
+                      hasHardcopy ? _shippingAddressForOrder() : null;
+                  // if (selectedPaymentMethod == 'wallet' && hasHardcopy) {
+                  //   ScaffoldMessenger.of(context).showSnackBar(
+                  //     const SnackBar(
+                  //       content: Text(
+                  //         'Wallet coins are supported for ebook/audiobook only.',
+                  //       ),
+                  //       backgroundColor: Colors.red,
+                  //     ),
+                  //   );
+                  //   return;
+                  // }
+                  if (hasHardcopy && shippingAddress == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Please select a shipping address and method'),
+                        content: Text(
+                          'Please provide complete shipping details for hardcopy orders.',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
                     return;
                   }
-                  Navigator.of(context).push(
+                  if (hasHardcopy &&
+                      (_selectedShippingMethodId == null ||
+                          _selectedShippingMethodId!.trim().isEmpty)) {
+                    setState(() {
+                      _selectedShippingMethodId = 'standard';
+                    });
+                  }
+                  final paid = await Navigator.of(context).push<bool>(
                     MaterialPageRoute(
                       builder: (context) => MakeCheckOutScreen(
+                        cartLines: cart.items.values.toList(),
                         bookIds: cart.items.keys.toList(),
                         jwtToken: FFAppState().token,
                         userId: FFAppState().userId,
                         couponCode: _appliedCouponCode,
-                        shippingMethodId: hasHardcopy ? _selectedShippingMethodId : null,
-                        shippingAddressId: hasHardcopy ? _selectedAddressId : null,
-                        shippingAddress: hasHardcopy ? _selectedAddress : null,
-                        cartTotal: hasHardcopy ? baseTotal : null,
-
+                        shippingAddress: shippingAddress,
+                        selectedPaymentMethod: selectedPaymentMethod,
                       ),
                     ),
                   );
+                  if (paid == true && mounted) {
+                    cart.clear();
+                  }
                   // if (emailController.text.isEmpty) {
                   //   ScaffoldMessenger.of(context).showSnackBar(
                   //     SnackBar(

@@ -57,12 +57,51 @@ class _HomePageWidgetState extends State<HomePageWidget>
     return type.toString().toLowerCase();
   }
 
+  String _normalizeSingleFormat(String raw) {
+    final t = raw.toLowerCase().trim();
+    if (t.isEmpty) return '';
+    if (t.contains('audio')) return 'audiobook';
+    if (t.contains('hard') || t.contains('print') || t.contains('paper')) {
+      return 'hardcopy';
+    }
+    if (t.contains('ebook') ||
+        t.contains('e-book') ||
+        t.contains('epub') ||
+        t.contains('pdf')) {
+      return 'ebook';
+    }
+    return '';
+  }
+
   String _resolveBookType(dynamic book) {
+    final formats = getJsonField(book, r'''$.formats''');
+    if (formats is List) {
+      final found = <String>{};
+      for (final row in formats) {
+        if (row is! Map) continue;
+        final normalized = _normalizeSingleFormat('${row['format'] ?? ''}');
+        if (normalized.isNotEmpty) found.add(normalized);
+      }
+      if (found.isNotEmpty) {
+        return found.join(',');
+      }
+    }
     final type = getJsonField(book, r'''$.type''') ??
         getJsonField(book, r'''$.bookType''') ??
         getJsonField(book, r'''$.book_type''') ??
         getJsonField(book, r'''$.format''');
-    return _normalizeTypeValue(type);
+    final raw = _normalizeTypeValue(type);
+    if (raw.isEmpty) return raw;
+    final parts = raw.split(RegExp(r'[,\s|/]+'));
+    final normalized = <String>{};
+    for (final p in parts) {
+      final n = _normalizeSingleFormat(p);
+      if (n.isNotEmpty) normalized.add(n);
+    }
+    if (normalized.isNotEmpty) {
+      return normalized.join(',');
+    }
+    return raw;
   }
 
   bool _hasAudio(String type) => type.contains('audio');
@@ -112,7 +151,16 @@ class _HomePageWidgetState extends State<HomePageWidget>
   }
 
   String _bookId(dynamic book) {
-    return getJsonField(book, r'''$._id''')?.toString() ?? '';
+    return getJsonField(book, r'''$._id''')?.toString() ??
+        getJsonField(book, r'''$.id''')?.toString() ??
+        '';
+  }
+
+  int _bookReads(dynamic book) {
+    final raw = getJsonField(book, r'''$.total_reads''') ??
+        getJsonField(book, r'''$.totalReads''');
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '') ?? 0;
   }
 
   List<dynamic> _pickHomeSectionBooks(List<dynamic> books, {int limit = 3}) {
@@ -136,25 +184,17 @@ class _HomePageWidgetState extends State<HomePageWidget>
       picked.add(book);
     }
 
-    final ebooks = filtered
-        .where((book) => _hasEbook(_resolveBookType(book)))
-        .toList();
-    final audios = filtered
-        .where((book) => _hasAudio(_resolveBookType(book)))
-        .toList();
+    final ebooks =
+        filtered.where((book) => _hasEbook(_resolveBookType(book))).toList();
+    final audios =
+        filtered.where((book) => _hasAudio(_resolveBookType(book))).toList();
+    final hardcopies =
+        filtered.where((book) => _hasHardcopy(_resolveBookType(book))).toList();
 
-    for (final book in ebooks) {
-      if (picked.length >= 2 || picked.length >= limit) {
-        break;
-      }
-      addBook(book);
-    }
-
-    for (final book in audios) {
-      if (picked.length >= 3 || picked.length >= limit) {
-        break;
-      }
-      addBook(book);
+    if (ebooks.isNotEmpty) addBook(ebooks.first);
+    if (audios.isNotEmpty && picked.length < limit) addBook(audios.first);
+    if (hardcopies.isNotEmpty && picked.length < limit) {
+      addBook(hardcopies.first);
     }
 
     for (final book in filtered) {
@@ -595,11 +635,11 @@ class _HomePageWidgetState extends State<HomePageWidget>
       );
 
       if (EbookGroup.userBookPurchaseRecordsApiCall.success(
-            response?.jsonBody ?? '',
+            response.jsonBody ?? '',
           ) ==
           1) {
         final bookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
-          response?.jsonBody ?? '',
+          response.jsonBody ?? '',
         );
         _model.purchasedBookIds = bookIds ?? [];
         safeSetState(() {});
@@ -1143,6 +1183,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                 await _model
                                                                     .waitForApiRequestCompleted3();
                                                               }),
+                                                              Future(() async {
+                                                                safeSetState(() {
+                                                                  FFAppState()
+                                                                      .clearGetnarratorsCacheCache();
+                                                                });
+                                                              }),
                                                             ]);
                                                           },
                                                           child: ListView(
@@ -1197,9 +1243,6 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                   );
                                                                 },
                                                               ),
-                                                              if (FFAppState()
-                                                                      .homePageLiveReadBook !=
-                                                                  '')
                                                               Container(
                                                                 width: double
                                                                     .infinity,
@@ -1366,169 +1409,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                   ),
                                                                 ),
                                                               ),
-                                                              Builder(builder: (context) {
-                                                                final showEbookResume =
-                                                                    _allowsEbook &&
-                                                                        FFAppState()
-                                                                                .homePageLiveReadBook !=
-                                                                            '';
-                                                                final showAudioResume =
-                                                                    (_selectedFilter ==
-                                                                            HomeBookFilter.all ||
-                                                                        _selectedFilter ==
-                                                                            HomeBookFilter.audiobook) &&
-                                                                    FFAppState()
-                                                                        .homePageLastAudioBookId
-                                                                        .isNotEmpty;
-                                                                if (!showEbookResume &&
-                                                                    !showAudioResume) {
-                                                                  return SizedBox();
-                                                                }
-                                                                final totalIndex = FFAppState()
-                                                                    .homePageTotalPdfPageIndex;
-                                                                final currentIndex = FFAppState()
-                                                                    .homePageCurrentPdfIndex;
-                                                                final isEpubResume = FFAppState()
-                                                                    .homePageBookPdf
-                                                                    .toLowerCase()
-                                                                    .contains('.epub');
-                                                                final isPercentBased =
-                                                                    isEpubResume && totalIndex == 100;
-                                                                final ebookProgress = isPercentBased
-                                                                    ? (currentIndex
-                                                                            .clamp(0, 100) /
-                                                                        100)
-                                                                    : _safeRatio(
-                                                                        currentIndex,
-                                                                        totalIndex,
-                                                                      );
-                                                                final ebookProgressLabel =
-                                                                    isPercentBased
-                                                                        ? '${currentIndex.clamp(0, 100).toString()}%'
-                                                                        : '${FFLocalizations.of(context).getText('page')} ${currentIndex.toString()} ${FFLocalizations.of(context).getText('of')} ${totalIndex.toString()}';
-                                                                final audioProgressLabel =
-                                                                    _formatAudioProgressLabel(
-                                                                  FFAppState()
-                                                                      .homePageLastAudioPositionSec,
-                                                                  FFAppState()
-                                                                      .homePageLastAudioDurationSec,
-                                                                );
-                                                                return Column(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  crossAxisAlignment:
-                                                                      CrossAxisAlignment
-                                                                          .start,
-                                                                  children: [
-                                                                    Padding(
-                                                                      padding: EdgeInsetsDirectional.fromSTEB(
-                                                                          16.0,
-                                                                          6.0,
-                                                                          16.0,
-                                                                          4.0),
-                                                                      child:
-                                                                          Text(
-                                                                        'Continue',
-                                                                        maxLines:
-                                                                            1,
-                                                                        style: FlutterFlowTheme.of(context)
-                                                                            .bodyMedium
-                                                                            .override(
-                                                                              fontFamily: 'SF Pro Display',
-                                                                              fontSize: 17.0,
-                                                                              letterSpacing: 0.0,
-                                                                              fontWeight: FontWeight.bold,
-                                                                              lineHeight: 1.5,
-                                                                            ),
-                                                                      ),
-                                                                    ),
-                                                                    Padding(
-                                                                      padding: EdgeInsetsDirectional.fromSTEB(
-                                                                          16.0,
-                                                                          0.0,
-                                                                          16.0,
-                                                                          6.0),
-                                                                      child:
-                                                                          Row(
-                                                                        mainAxisSize:
-                                                                            MainAxisSize
-                                                                                .max,
-                                                                        children: [
-                                                                          if (showEbookResume)
-                                                                            Expanded(
-                                                                              child: _buildResumeCard(
-                                                                                context,
-                                                                                title: FFAppState().homePageBookName,
-                                                                                bookAuthor: FFAppState().homePageBookAuthor,
-                                                                                bookType: 'eBook',
-                                                                                progressLabel: ebookProgressLabel,
-                                                                                progressValue: ebookProgress,
-                                                                                imageUrl: FFAppState().homePageLiveReadBook,
-                                                                                onTap: () async {
-                                                                                  context.pushNamed(
-                                                                                    ReadBookCustomPageWidget.routeName,
-                                                                                    queryParameters: {
-                                                                                      'pdf': serializeParam(
-                                                                                        FFAppState().homePageBookPdf,
-                                                                                        ParamType.String,
-                                                                                      ),
-                                                                                      'id': serializeParam(
-                                                                                        FFAppState().homePageBookId,
-                                                                                        ParamType.String,
-                                                                                      ),
-                                                                                  'name': serializeParam(
-                                                                                    FFAppState().homePageBookName,
-                                                                                    ParamType.String,
-                                                                                  ),
-                                                                                  'author': serializeParam(
-                                                                                    FFAppState().homePageBookAuthor,
-                                                                                    ParamType.String,
-                                                                                  ),
-                                                                                  'image': serializeParam(
-                                                                                    FFAppState().homePageLiveReadBook,
-                                                                                    ParamType.String,
-                                                                                  ),
-                                                                                    }.withoutNulls,
-                                                                                  );
-                                                                                },
-                                                                              ).animateOnPageLoad(animationsMap['containerOnPageLoadAnimation']!),
-                                                                            ),
-                                                                          if (showEbookResume &&
-                                                                              showAudioResume)
-                                                                            SizedBox(
-                                                                                width:
-                                                                                    12.0),
-                                                                          if (showAudioResume)
-                                                                            Expanded(
-                                                                              child: _buildResumeCard(
-                                                                                context,
-                                                                                title: FFAppState().homePageLastAudioBookName,
-                                                                                bookAuthor: FFAppState().homePageLastAudioBookAuthor,
-                                                                                bookType: 'Audiobook',
-                                                                                progressLabel: audioProgressLabel,
-                                                                                progressValue: FFAppState().homePageLastAudioProgress,
-                                                                                imageUrl: FFAppState().homePageLastAudioBookImage,
-                                                                                onTap: () async {
-                                                                                  context.pushNamed(
-                                                                                    AudiobookDetailsPageWidget.routeName,
-                                                                                    extra: <String, dynamic>{
-                                                                                      'audiobook': {
-                                                                                        'id': FFAppState().homePageLastAudioBookId,
-                                                                                        'title': FFAppState().homePageLastAudioBookName,
-                                                                                        'image': FFAppState().homePageLastAudioBookImage,
-                                                                                      },
-                                                                                    },
-                                                                                  );
-                                                                                },
-                                                                              ).animateOnPageLoad(animationsMap['containerOnPageLoadAnimation']!),
-                                                                            ),
-                                                                        ],
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                );
-                                                              }),
+                                                              _buildContinueReadingSection(),
                                                               Container(
                                                                 decoration:
                                                                     BoxDecoration(),
@@ -2218,6 +2099,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                   ),
                                                                 ),
                                                               ),
+                                                              _buildFeaturedNarratorsSection(),
+                                                              _buildHomeLibraryPromo(),
                                                               Container(
                                                                 decoration:
                                                                     BoxDecoration(),
@@ -2474,6 +2357,75 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                     ],
                                                                   ),
                                                                 ),
+                                                              ),
+                                                              Builder(
+                                                                builder: (context) {
+                                                                  final popularBooks = (EbookGroup
+                                                                              .getPopularBooksApiCall
+                                                                              .bookDetailsList(
+                                                                                containerGetPopularBooksApiResponse.jsonBody,
+                                                                              )
+                                                                              ?.toList() ??
+                                                                          []);
+                                                                  final trendingBooks = (EbookGroup
+                                                                              .getTrendingBooksApiCall
+                                                                              .bookDetailsList(
+                                                                                containerGetTrendingBooksApiResponse.jsonBody,
+                                                                              )
+                                                                              ?.toList() ??
+                                                                          []);
+                                                                  final freeBooks = [
+                                                                    ...popularBooks,
+                                                                    ...trendingBooks,
+                                                                  ].where((b) => _isFreeBook(b)).toList();
+                                                                  final topMostRead = [
+                                                                    ...popularBooks,
+                                                                    ...trendingBooks,
+                                                                  ]..sort((a, b) =>
+                                                                      _bookReads(b)
+                                                                          .compareTo(
+                                                                              _bookReads(a)));
+                                                                  final popularAudiobooks = popularBooks
+                                                                      .where((b) => _hasAudio(_resolveBookType(b)))
+                                                                      .toList();
+                                                                  final popularHardCopies = popularBooks
+                                                                      .where((b) => _hasHardcopy(_resolveBookType(b)))
+                                                                      .toList();
+                                                                  return Column(
+                                                                    children: [
+                                                                      _buildBookStripSection(
+                                                                        title: 'Top 10 Most Read',
+                                                                        sectionKey: 'top_10_most_read',
+                                                                        books: topMostRead.take(10).toList(),
+                                                                        favouriteJson: containerGetFavouriteBookResponse.jsonBody,
+                                                                      ),
+                                                                      _buildBookStripSection(
+                                                                        title: 'Free Books',
+                                                                        sectionKey: 'free_books',
+                                                                        books: freeBooks,
+                                                                        favouriteJson: containerGetFavouriteBookResponse.jsonBody,
+                                                                      ),
+                                                                      if (_selectedFilter == HomeBookFilter.all ||
+                                                                          _selectedFilter ==
+                                                                              HomeBookFilter.audiobook)
+                                                                        _buildBookStripSection(
+                                                                          title: 'Popular Audiobooks',
+                                                                          sectionKey: 'popular_audiobooks',
+                                                                          books: popularAudiobooks,
+                                                                          favouriteJson: containerGetFavouriteBookResponse.jsonBody,
+                                                                        ),
+                                                                      if (_selectedFilter == HomeBookFilter.all ||
+                                                                          _selectedFilter ==
+                                                                              HomeBookFilter.hardcopy)
+                                                                        _buildBookStripSection(
+                                                                          title: 'Hard Copies',
+                                                                          sectionKey: 'hard_copies',
+                                                                          books: popularHardCopies,
+                                                                          favouriteJson: containerGetFavouriteBookResponse.jsonBody,
+                                                                        ),
+                                                                    ],
+                                                                  );
+                                                                },
                                                               ),
                                                               Container(
                                                                 width: double
@@ -2736,6 +2688,401 @@ class _HomePageWidgetState extends State<HomePageWidget>
               );
             }
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContinueReadingSection() {
+    return Builder(
+      builder: (context) {
+        final showEbookResume = _allowsEbook &&
+            FFAppState().homePageLiveReadBook.trim().isNotEmpty;
+        final showAudioResume =
+            (_selectedFilter == HomeBookFilter.all ||
+                _selectedFilter == HomeBookFilter.audiobook) &&
+                FFAppState().homePageLastAudioBookId.isNotEmpty;
+
+        if (!showEbookResume && !showAudioResume) {
+          return const SizedBox.shrink();
+        }
+
+        final totalIndex = FFAppState().homePageTotalPdfPageIndex;
+        final currentIndex = FFAppState().homePageCurrentPdfIndex;
+        final isEpubResume =
+            FFAppState().homePageBookPdf.toLowerCase().contains('.epub');
+        final isPercentBased = isEpubResume && totalIndex == 100;
+        final ebookProgress = isPercentBased
+            ? (currentIndex.clamp(0, 100) / 100)
+            : _safeRatio(currentIndex, totalIndex);
+        final ebookProgressLabel = isPercentBased
+            ? '${currentIndex.clamp(0, 100)}%'
+            : '${FFLocalizations.of(context).getText('page')} $currentIndex ${FFLocalizations.of(context).getText('of')} $totalIndex';
+        final audioProgressLabel = _formatAudioProgressLabel(
+          FFAppState().homePageLastAudioPositionSec,
+          FFAppState().homePageLastAudioDurationSec,
+        );
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 4),
+              child: Text(
+                'Continue',
+                maxLines: 1,
+                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'SF Pro Display',
+                      fontSize: 17.0,
+                      fontWeight: FontWeight.bold,
+                      lineHeight: 1.5,
+                    ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 6),
+              child: Row(
+                children: [
+                  if (showEbookResume)
+                    Expanded(
+                      child: _buildResumeCard(
+                        context,
+                        title: FFAppState().homePageBookName,
+                        bookAuthor: FFAppState().homePageBookAuthor,
+                        bookType: 'eBook',
+                        progressLabel: ebookProgressLabel,
+                        progressValue: ebookProgress,
+                        imageUrl: FFAppState().homePageLiveReadBook,
+                        onTap: () async {
+                          context.pushNamed(
+                            ReadBookCustomPageWidget.routeName,
+                            queryParameters: {
+                              'pdf': serializeParam(
+                                FFAppState().homePageBookPdf,
+                                ParamType.String,
+                              ),
+                              'id': serializeParam(
+                                FFAppState().homePageBookId,
+                                ParamType.String,
+                              ),
+                              'name': serializeParam(
+                                FFAppState().homePageBookName,
+                                ParamType.String,
+                              ),
+                              'author': serializeParam(
+                                FFAppState().homePageBookAuthor,
+                                ParamType.String,
+                              ),
+                              'image': serializeParam(
+                                FFAppState().homePageLiveReadBook,
+                                ParamType.String,
+                              ),
+                            }.withoutNulls,
+                          );
+                        },
+                      ).animateOnPageLoad(
+                          animationsMap['containerOnPageLoadAnimation']!),
+                    ),
+                  if (showEbookResume && showAudioResume)
+                    const SizedBox(width: 12),
+                  if (showAudioResume)
+                    Expanded(
+                      child: _buildResumeCard(
+                        context,
+                        title: FFAppState().homePageLastAudioBookName,
+                        bookAuthor: FFAppState().homePageLastAudioBookAuthor,
+                        bookType: 'Audiobook',
+                        progressLabel: audioProgressLabel,
+                        progressValue: FFAppState().homePageLastAudioProgress,
+                        imageUrl: FFAppState().homePageLastAudioBookImage,
+                        onTap: () async {
+                          context.pushNamed(
+                            AudiobookDetailsPageWidget.routeName,
+                            extra: <String, dynamic>{
+                              'audiobook': {
+                                'id': FFAppState().homePageLastAudioBookId,
+                                'title': FFAppState().homePageLastAudioBookName,
+                                'image': FFAppState().homePageLastAudioBookImage,
+                              },
+                            },
+                          );
+                        },
+                      ).animateOnPageLoad(
+                          animationsMap['containerOnPageLoadAnimation']!),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _isFreeBook(dynamic book) {
+    final v = getJsonField(book, r'''$.is_free''');
+    if (v is bool) return v;
+    final s = (v ?? '').toString().toLowerCase();
+    return s == '1' || s == 'true' || s == 'yes';
+  }
+
+  Widget _buildBookStripSection({
+    required String title,
+    required String sectionKey,
+    required List<dynamic> books,
+    required dynamic favouriteJson,
+  }) {
+    final picked = _pickHomeSectionBooks(books);
+    if (picked.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 8, 16.0, 3),
+          child: Text(
+            title,
+            maxLines: 1,
+            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                  fontFamily: 'SF Pro Display',
+                  fontSize: 17.0,
+                  letterSpacing: 0.0,
+                  fontWeight: FontWeight.bold,
+                  lineHeight: 1.5,
+                ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 0.0, 0, 0.0),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              spacing: 10.0,
+              children: List.generate(picked.length, (idx) {
+                final item = picked[idx];
+                final id = _bookId(item);
+                return wrapWithModel(
+                  model: _model.mainBookComponentModels.getModel(
+                    '${sectionKey}_$id',
+                    idx + (sectionKey.hashCode & 0x3fffffff),
+                  ),
+                  updateCallback: () => safeSetState(() {}),
+                  child: MainBookComponentWidget(
+                    key: Key('${sectionKey}_$id'),
+                    image:
+                        '${FFAppConstants.bookImagesUrl}${getJsonField(item, r'''$.image''').toString()}',
+                    bookName: getJsonField(item, r'''$.name''').toString(),
+                    price: getJsonField(item, r'''$.price''').toString(),
+                    bookType: getJsonField(item, r'''$.type''')?.toString(),
+                    discountAmount:
+                        getJsonField(item, r'''$.discount_amount''').toString(),
+                    discountPercentage: getJsonField(
+                      item,
+                      r'''$.discount_percentage''',
+                    ).toString(),
+                    id: id,
+                    isPurchased: _model.purchasedBookIds.contains(id),
+                    authorsName: getJsonField(item, r'''$.author.name''')
+                        .toString(),
+                    isFav: functions.checkFavOrNot(
+                          EbookGroup.getFavouriteBookCall
+                              .favouriteBookDetailsList(favouriteJson)
+                              ?.toList(),
+                          id,
+                        ) ==
+                        true,
+                    isFavAction: () async {
+                      if (!FFAppState().isLogin) {
+                        FFAppState().favChange = true;
+                        FFAppState().bookId = id;
+                        FFAppState().update(() {});
+                        context.pushNamed(SignInPageWidget.routeName);
+                        return;
+                      }
+                      final currentlyFav = functions.checkFavOrNot(
+                            EbookGroup.getFavouriteBookCall
+                                .favouriteBookDetailsList(favouriteJson)
+                                ?.toList(),
+                            id,
+                          ) ==
+                          true;
+                      if (currentlyFav) {
+                        await EbookGroup.removeFavouritebookCall.call(
+                          userId: FFAppState().userId,
+                          token: FFAppState().token,
+                          bookId: id,
+                        );
+                        await actions.showCustomToastBottom(
+                          FFAppState().unFavText,
+                        );
+                      } else {
+                        await EbookGroup.addFavouriteBookApiCall.call(
+                          userId: FFAppState().userId,
+                          token: FFAppState().token,
+                          bookId: id,
+                        );
+                        await actions.showCustomToastBottom(
+                          FFAppState().favText,
+                        );
+                      }
+                      safeSetState(() {
+                        FFAppState().clearGetFavouriteBookCacheCache();
+                        _model.apiRequestCompleted1 = false;
+                      });
+                      await _model.waitForApiRequestCompleted1();
+                    },
+                    isMainTap: () async {
+                      await _openBookDetails(item);
+                    },
+                  ),
+                );
+              }).addToStart(const SizedBox(width: 8)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeaturedNarratorsSection() {
+    return FutureBuilder<ApiCallResponse>(
+      future: FFAppState().getnarratorsCache(
+        requestFn: () => EbookGroup.getnarratorsApiCall.call(
+          token: FFAppState().token,
+        ),
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+        final res = snapshot.data!;
+        final body = res.jsonBody;
+        if (EbookGroup.getnarratorsApiCall.success(body) != 1) {
+          return const SizedBox.shrink();
+        }
+        final raw = EbookGroup.getnarratorsApiCall.narratorDetailsList(body);
+        if (raw == null || raw.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final picked = raw.take(8).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+              child: Text(
+                FFLocalizations.of(context).getText('featured_narrators_title'),
+                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'SF Pro Display',
+                      fontSize: 17.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final item in picked)
+                      if (item is Map)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(end: 12),
+                          child: InkWell(
+                            onTap: () {},
+                            child: SizedBox(
+                              width: 88,
+                              child: Column(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(40),
+                                    child: CachedNetworkImage(
+                                      imageUrl: _resolveCoverUrl(
+                                        getJsonField(item, r'''$.image''')
+                                            .toString(),
+                                      ),
+                                      width: 72,
+                                      height: 72,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (_, __, ___) => Container(
+                                        width: 72,
+                                        height: 72,
+                                        color: FlutterFlowTheme.of(context)
+                                            .alternate,
+                                        child: Icon(
+                                          Icons.person,
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryText,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    getJsonField(item, r'''$.name''')
+                                        .toString(),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodySmall
+                                        .override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontSize: 12,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHomeLibraryPromo() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(
+            colors: [
+              FlutterFlowTheme.of(context).primary.withValues(alpha: 0.12),
+              FlutterFlowTheme.of(context).secondary.withValues(alpha: 0.08),
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              FFLocalizations.of(context).getText('home_app_promo_title'),
+              style: FlutterFlowTheme.of(context).titleMedium.override(
+                    fontFamily: 'SF Pro Display',
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              FFLocalizations.of(context).getText('home_app_promo_body'),
+              style: FlutterFlowTheme.of(context).bodySmall.override(
+                    color: FlutterFlowTheme.of(context).secondaryText,
+                  ),
+            ),
+          ],
         ),
       ),
     );

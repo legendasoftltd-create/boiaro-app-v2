@@ -2,6 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '/app_constants.dart';
+import '/app_state.dart';
+import '/backend/boiaro_legacy_adapter.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'api_manager.dart';
 
@@ -9,13 +12,204 @@ export 'api_manager.dart' show ApiCallResponse;
 
 const _kPrivateApiFunctionName = 'ffPrivateApiCall';
 
+Map<String, dynamic> _boiaroAuthHeaders(String? token) => {
+      'apikey': FFAppConstants.supabaseAnonApiKey,
+      'Content-Type': 'application/json',
+      if ((token ?? '').isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+
+ApiCallResponse _v2Error(dynamic body, int status) {
+  final msg = BoiaroLegacyAdapter.v2Error(body) ?? 'Request failed';
+  return ApiCallResponse(
+    BoiaroLegacyAdapter.legacyDataEnvelope(
+      success: 0,
+      message: msg,
+      extra: <String, dynamic>{'error': 1},
+    ),
+    {},
+    status,
+  );
+}
+
+bool _matchesBookTypeFilter(Map<String, dynamic> b, String? type) {
+  final t = (type ?? '').trim().toLowerCase();
+  if (t.isEmpty) {
+    return true;
+  }
+  final combined =
+      '${b['type'] ?? ''} ${b['bookType'] ?? ''}'.toLowerCase();
+  if (t == 'audiobook' || t == 'audio') {
+    return combined.contains('audio');
+  }
+  if (t == 'ebook' || t == 'e-book') {
+    return combined.contains('ebook') ||
+        combined.contains('epub') ||
+        combined.contains('pdf') ||
+        combined.isEmpty;
+  }
+  return true;
+}
+
+Future<ApiCallResponse> _homepageSectionAsBooks({
+  required String sectionKey,
+  String? type,
+  String? token,
+}) async {
+  final baseUrl = EbookGroup.getBaseUrl();
+  final res = await ApiManager.instance.makeApiCall(
+    callName: 'Homepage_$sectionKey',
+    apiUrl: '${baseUrl}homepage',
+    callType: ApiCallType.GET,
+    headers: _boiaroAuthHeaders(token),
+    params: {},
+    bodyType: BodyType.NONE,
+    returnBody: true,
+    encodeBodyUtf8: false,
+    decodeUtf8: false,
+    cache: false,
+    isStreamingApi: false,
+    alwaysAllowBody: false,
+  );
+  final body = res.jsonBody;
+  if (!res.succeeded || body is! Map) {
+    return _v2Error(body, res.statusCode);
+  }
+  final err = BoiaroLegacyAdapter.v2Error(body);
+  if (err != null) {
+    return _v2Error(body, res.statusCode);
+  }
+  final raw = body[sectionKey];
+  if (raw is! List) {
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': <dynamic>[]}),
+      res.headers,
+      res.statusCode,
+    );
+  }
+  var leg = raw
+      .whereType<Map>()
+      .map((e) => BoiaroLegacyAdapter.legacyBookFromHomepageItem(
+            Map<String, dynamic>.from(e),
+          ))
+      .where((b) => _matchesBookTypeFilter(b, type))
+      .toList();
+  return ApiCallResponse(
+    BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': leg}),
+    res.headers,
+    res.statusCode,
+  );
+}
+
+Future<ApiCallResponse> _booksForAuthor({
+  required String authorId,
+  String? type,
+  String? token,
+}) async {
+  final baseUrl = EbookGroup.getBaseUrl();
+  final res = await ApiManager.instance.makeApiCall(
+    callName: 'BooksForAuthor',
+    apiUrl: '${baseUrl}books',
+    callType: ApiCallType.GET,
+    headers: _boiaroAuthHeaders(token),
+    params: {'limit': '100', 'offset': '0'},
+    bodyType: BodyType.NONE,
+    returnBody: true,
+    encodeBodyUtf8: false,
+    decodeUtf8: false,
+    cache: false,
+    isStreamingApi: false,
+    alwaysAllowBody: false,
+  );
+  final body = res.jsonBody;
+  if (!res.succeeded || body is! Map) {
+    return _v2Error(body, res.statusCode);
+  }
+  final err = BoiaroLegacyAdapter.v2Error(body);
+  if (err != null) {
+    return _v2Error(body, res.statusCode);
+  }
+  final raw = body['books'];
+  if (raw is! List) {
+    return _v2Error(body, res.statusCode);
+  }
+  final aid = authorId.trim();
+  var leg = raw
+      .whereType<Map>()
+      .map((e) =>
+          BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(e)))
+      .where((b) {
+        final a = b['author'];
+        if (a is Map) {
+          return a['_id']?.toString() == aid;
+        }
+        return false;
+      })
+      .where((b) => _matchesBookTypeFilter(b, type))
+      .toList();
+  return ApiCallResponse(
+    BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': leg}),
+    res.headers,
+    res.statusCode,
+  );
+}
+
+Future<ApiCallResponse> _booksQuery({
+  Map<String, String>? query,
+  String? type,
+  String? token,
+}) async {
+  final baseUrl = EbookGroup.getBaseUrl();
+  final qp = <String, dynamic>{
+    'limit': '50',
+    'offset': '0',
+    if (query != null) ...query,
+  };
+  final res = await ApiManager.instance.makeApiCall(
+    callName: 'BooksQuery',
+    apiUrl: '${baseUrl}books',
+    callType: ApiCallType.GET,
+    headers: _boiaroAuthHeaders(token),
+    params: qp,
+    bodyType: BodyType.NONE,
+    returnBody: true,
+    encodeBodyUtf8: false,
+    decodeUtf8: false,
+    cache: false,
+    isStreamingApi: false,
+    alwaysAllowBody: false,
+  );
+  final body = res.jsonBody;
+  if (!res.succeeded || body is! Map) {
+    return _v2Error(body, res.statusCode);
+  }
+  final err = BoiaroLegacyAdapter.v2Error(body);
+  if (err != null) {
+    return _v2Error(body, res.statusCode);
+  }
+  final raw = body['books'];
+  if (raw is! List) {
+    return _v2Error(body, res.statusCode);
+  }
+  var leg = raw
+      .whereType<Map>()
+      .map((e) =>
+          BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(e)))
+      .where((b) => _matchesBookTypeFilter(b, type))
+      .toList();
+  return ApiCallResponse(
+    BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': leg}),
+    res.headers,
+    res.statusCode,
+  );
+}
+
 /// Start Ebook Group Code
 
 class EbookGroup {
   static String getBaseUrl({
     String? token = '',
   }) =>
-      '${FFAppConstants.baseApiUrl}/';
+      '${FFAppConstants.mobileApiBaseUrl}/';
   static Map<String, String> headers = {
     'Authorization': 'Bearer [token]',
   };
@@ -121,32 +315,15 @@ class SocialLoginCall {
     String? registrationToken,
     String? deviceId,
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl();
-    final ffApiRequestBody = '''
-{
-  "email": "$email",
-  "firstname": "$firstname",
-  "lastname": "$lastname",
-  "username": "$username",
-  "provider": "$provider",
-  "providerId": "$providerId",
-  "registrationToken": "$registrationToken",
-  "deviceId": "$deviceId"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'SocialLogin',
-      apiUrl: '${baseUrl}social_login',
-      callType: ApiCallType.POST,
-      headers: {},
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 0,
+        message:
+            'Social sign-in is not available on this API. Please use email and password.',
+        extra: const {'error': 1},
+      ),
+      {},
+      501,
     );
   }
 
@@ -181,30 +358,78 @@ class UserBookPurchaseRecordsApiCall {
     String? userId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "userId": "${userId}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'UserBookPurchaseRecordsApi',
-      apiUrl: '${baseUrl}userbookpurchaserecords',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+    final baseUrl = EbookGroup.getBaseUrl();
+    final h = _boiaroAuthHeaders(token);
+    final pRes = await ApiManager.instance.makeApiCall(
+      callName: 'LibraryPurchases',
+      apiUrl: '${baseUrl}library/purchases',
+      callType: ApiCallType.GET,
+      headers: h,
       params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final uRes = await ApiManager.instance.makeApiCall(
+      callName: 'LibraryUnlocks',
+      apiUrl: '${baseUrl}library/unlocks',
+      callType: ApiCallType.GET,
+      headers: h,
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final purchaseDetails = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    void addFrom(dynamic list) {
+      if (list is! List) {
+        return;
+      }
+      for (final row in list) {
+        if (row is! Map) {
+          continue;
+        }
+        final m = Map<String, dynamic>.from(row);
+        final books = m['books'];
+        if (books is! Map) {
+          continue;
+        }
+        final bid = books['id']?.toString() ?? '';
+        if (bid.isEmpty || seen.contains(bid)) {
+          continue;
+        }
+        seen.add(bid);
+        purchaseDetails.add({
+          'bookDetails':
+              BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(books)),
+        });
+      }
+    }
+
+    if (pRes.succeeded && pRes.jsonBody is Map) {
+      addFrom((pRes.jsonBody as Map)['purchases']);
+    }
+    if (uRes.succeeded && uRes.jsonBody is Map) {
+      addFrom((uRes.jsonBody as Map)['unlocks']);
+    }
+    final ok = pRes.succeeded || uRes.succeeded;
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: ok ? 1 : 0,
+        message: ok ? 'Success' : 'Could not load library',
+        extra: {'purchaseDetails': purchaseDetails},
+      ),
+      pRes.headers,
+      ok ? 200 : pRes.statusCode,
     );
   }
 
@@ -522,17 +747,12 @@ class GetSlidersApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetSlidersApi',
-      apiUrl: '${baseUrl}getsliders',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}homepage',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
       bodyType: BodyType.NONE,
       returnBody: true,
@@ -541,6 +761,37 @@ class GetSlidersApiCall {
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final featured = body['featured'];
+    final sliderDetails = <Map<String, dynamic>>[];
+    if (featured is List) {
+      for (final raw in featured) {
+        if (raw is! Map) {
+          continue;
+        }
+        final m = Map<String, dynamic>.from(raw);
+        final cover = m['cover_url']?.toString() ?? '';
+        final slug = m['slug']?.toString() ?? '';
+        sliderDetails.add({
+          'image': cover,
+          'button_url': slug.isNotEmpty
+              ? '${FFAppConstants.webUrl}/book/$slug'
+              : FFAppConstants.webUrl,
+        });
+      }
+    }
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'sliderDetails': sliderDetails}),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -564,30 +815,14 @@ class CheckregistereduserApiCall {
     String? email = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "email": "${email}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'CheckregistereduserApi',
-      apiUrl: '${baseUrl}checkregistereduser',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
+    // v2 has no duplicate-email probe; signup will fail if the email exists.
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 0,
+        message: '',
+      ),
+      {},
+      200,
     );
   }
 
@@ -614,31 +849,22 @@ class SignupApiCall {
     String? deviceId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "firstname": "${firstname}",
-  "lastname": "${lastname}",
-  "username": "${username}",
-  "country_code": "${countryCode}",
-  "phone": "${phone}",
-  "email": "${email}",
-  "password": "${password}",
-  "registrationToken": "${registrationToken}",
-  "deviceId": "${deviceId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final displayName = [
+      (firstname ?? '').trim(),
+      (lastname ?? '').trim(),
+    ].where((s) => s.isNotEmpty).join(' ');
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'SignupApi',
-      apiUrl: '${baseUrl}signup',
+      apiUrl: '${baseUrl}auth/signup',
       callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      headers: _boiaroAuthHeaders(null),
       params: {},
-      body: ffApiRequestBody,
+      body: BoiaroLegacyAdapter.jsonEncodeBody({
+        'email': email,
+        'password': password,
+        if (displayName.isNotEmpty) 'display_name': displayName,
+      }),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -646,6 +872,43 @@ class SignupApiCall {
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (res.statusCode == 201 && body is Map) {
+      final err = BoiaroLegacyAdapter.v2Error(body);
+      if (err != null) {
+        return ApiCallResponse(
+          BoiaroLegacyAdapter.legacyDataEnvelope(success: 2, message: err),
+          res.headers,
+          res.statusCode,
+        );
+      }
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: body['message']?.toString() ?? 'Please verify your email',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    if (body is Map && BoiaroLegacyAdapter.v2Error(body) != null) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 2,
+          message: BoiaroLegacyAdapter.v2Error(body) ?? 'Sign up failed',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 2,
+        message: 'Sign up failed',
+      ),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -660,36 +923,33 @@ class SignupApiCall {
 }
 
 class UserverificationApiCall {
+  /// v2 uses Supabase email verification; OTP is not used. When [password] is
+  /// provided, this performs `POST /auth/login` so the user can continue after
+  /// confirming email (same as sign-in).
   Future<ApiCallResponse> call({
     String? email = '',
     int? otp,
+    String? password,
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "email": "${email}",
-  "otp": ${otp}
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'UserverificationApi',
-      apiUrl: '${baseUrl}otp_verification',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
+    final pw = (password ?? '').trim();
+    if (pw.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 2,
+          message:
+              'Confirm your email using the link we sent, then enter your password below or sign in from the login screen.',
+        ),
+        {},
+        400,
+      );
+    }
+    return SigninApiCall().call(
+      email: email,
+      password: pw,
+      registrationToken: '',
+      deviceId: '',
+      token: '',
     );
   }
 
@@ -747,26 +1007,17 @@ class SigninApiCall {
     String? deviceId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "email": "${email}",
-  "password": "${password}",
-  "registrationToken": "${registrationToken}",
-  "deviceId": "${deviceId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'SigninApi',
-      apiUrl: '${baseUrl}signin',
+      apiUrl: '${baseUrl}auth/login',
       callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      headers: _boiaroAuthHeaders(null),
       params: {},
-      body: ffApiRequestBody,
+      body: BoiaroLegacyAdapter.jsonEncodeBody({
+        'email': email,
+        'password': password,
+      }),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -774,6 +1025,39 @@ class SigninApiCall {
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final access = body['access_token']?.toString();
+    if (access == null || access.isEmpty) {
+      return _v2Error(
+        body is Map<String, dynamic>
+            ? body
+            : <String, dynamic>{'error': 'Login failed: missing access token'},
+        res.statusCode,
+      );
+    }
+    final user = body['user'];
+    final uid = user is Map ? user['id']?.toString() : null;
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        extra: {
+          'token': access,
+          'refresh_token': body['refresh_token'],
+          'userDetails': {
+            'id': uid,
+            'email': user is Map ? user['email'] : null,
+          },
+        },
+      ),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -788,6 +1072,10 @@ class SigninApiCall {
   String? token(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.token''',
+      ));
+  String? refreshToken(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.refresh_token''',
       ));
   dynamic userDetails(dynamic response) => getJsonField(
         response,
@@ -804,23 +1092,14 @@ class ForgotpasswordApiCall {
     String? email = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "email": "${email}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'ForgotpasswordApi',
-      apiUrl: '${baseUrl}forgotpassword',
+      apiUrl: '${baseUrl}auth/reset-password',
       callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      headers: _boiaroAuthHeaders(null),
       params: {},
-      body: ffApiRequestBody,
+      body: BoiaroLegacyAdapter.jsonEncodeBody({'email': email}),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -829,6 +1108,18 @@ class ForgotpasswordApiCall {
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
+    final body = res.jsonBody;
+    if (res.succeeded && body is Map && BoiaroLegacyAdapter.v2Error(body) == null) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: body['message']?.toString() ?? 'Password reset email sent',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(body, res.statusCode);
   }
 
   int? success(dynamic response) => castToType<int>(getJsonField(
@@ -847,31 +1138,14 @@ class ForgotpasswordverificationApiCall {
     int? otp,
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "email": "${email}",
-  "otp": ${otp}
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'ForgotpasswordverificationApi',
-      apiUrl: '${baseUrl}forgotpasswordverification',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 1,
+        message:
+            'Open the password reset link from your email, then sign in with your new password.',
+      ),
+      {},
+      200,
     );
   }
 
@@ -891,24 +1165,30 @@ class ResetpasswordApiCall {
     String? newpassword = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "email": "${email}",
-  "newpassword": "${newpassword}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final bearer = ((token ?? '').trim().isNotEmpty
+            ? token
+            : FFAppState().token)
+        ?.trim() ??
+        '';
+    if (bearer.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message:
+              'Sign in with the link from your email first, or use Change password from your profile while logged in.',
+        ),
+        {},
+        401,
+      );
+    }
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'ResetpasswordApi',
-      apiUrl: '${baseUrl}resetpassword',
+      apiUrl: '${baseUrl}auth/update-password',
       callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      headers: _boiaroAuthHeaders(bearer),
       params: {},
-      body: ffApiRequestBody,
+      body: BoiaroLegacyAdapter.jsonEncodeBody({'password': newpassword}),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -917,6 +1197,28 @@ class ResetpasswordApiCall {
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
+    final body = res.jsonBody;
+    if (res.succeeded && body is Map && BoiaroLegacyAdapter.v2Error(body) == null) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: body['message']?.toString() ?? 'Password updated',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    if (body is Map && BoiaroLegacyAdapter.v2Error(body) != null) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 2,
+          message: BoiaroLegacyAdapter.v2Error(body) ?? 'Validation error',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(body, res.statusCode);
   }
 
   int? success(dynamic response) => castToType<int>(getJsonField(
@@ -934,30 +1236,42 @@ class GetuserApiCall {
     String? userId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "userId": "${userId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetuserApi',
-      apiUrl: '${baseUrl}getuser',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}profile',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    var user = BoiaroLegacyAdapter.legacyUserFromProfile(
+      Map<String, dynamic>.from(body),
+    );
+    final existingEmail = FFAppState().userDetail;
+    String? em;
+    if (existingEmail is Map) {
+      em = existingEmail['email']?.toString();
+    }
+    user = {...user, if (em != null && em.isNotEmpty) 'email': em};
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'user': user}),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1017,28 +1331,22 @@ class UsereditprofileApiCall {
     String? countryCode = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "id": "${id}",
-  "firstname": "${firstname}",
-  "lastname": "${lastname}",
-  "country_code": "${countryCode}",
-  "phone": "${phone}",
-  "image": "${image}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final displayName = [
+      (firstname ?? '').trim(),
+      (lastname ?? '').trim(),
+    ].where((s) => s.isNotEmpty).join(' ');
+    final body = <String, dynamic>{
+      if (displayName.isNotEmpty) 'display_name': displayName,
+      if ((image ?? '').trim().isNotEmpty) 'avatar_url': image,
+    };
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'UsereditprofileApi',
-      apiUrl: '${baseUrl}usereditprofile',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}profile',
+      callType: ApiCallType.PATCH,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
+      body: BoiaroLegacyAdapter.jsonEncodeBody(body),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -1047,6 +1355,18 @@ class UsereditprofileApiCall {
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
+    final jb = res.jsonBody;
+    if (res.succeeded && jb is Map && BoiaroLegacyAdapter.v2Error(jb) == null) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: jb['message']?.toString() ?? 'Profile updated',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(jb, res.statusCode);
   }
 
   int? success(dynamic response) => castToType<int>(getJsonField(
@@ -1137,24 +1457,14 @@ class SignoutApiCall {
     String? deviceId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "userId": "${userId}",
-  "deviceId": "${deviceId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'SignoutApi',
-      apiUrl: '${baseUrl}signout',
+      apiUrl: '${baseUrl}auth/logout',
       callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
+      body: '{}',
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -1163,6 +1473,19 @@ class SignoutApiCall {
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
+    final jb = res.jsonBody;
+    if (res.succeeded) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message:
+              jb is Map ? (jb['message']?.toString() ?? 'Logged out') : 'Logged out',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(jb, res.statusCode);
   }
 
   int? success(dynamic response) => castToType<int>(getJsonField(
@@ -1179,25 +1502,42 @@ class GetcategoriesApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetcategoriesApi',
-      apiUrl: '${baseUrl}getcategories',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}categories',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['categories'];
+    if (raw is! List) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg = raw
+        .whereType<Map>()
+        .map((e) =>
+            BoiaroLegacyAdapter.legacyCategoryFromV2(Map<String, dynamic>.from(e)))
+        .toList();
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'categoryDetails': leg}),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1306,25 +1646,42 @@ class GetauthorsApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetauthorsApi',
-      apiUrl: '${baseUrl}getauthors',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      bodyType: BodyType.JSON,
+      apiUrl: '${baseUrl}authors',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {'limit': '50', 'offset': '0'},
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['authors'];
+    if (raw is! List) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg = raw
+        .whereType<Map>()
+        .map((e) =>
+            BoiaroLegacyAdapter.legacyAuthorFromV2(Map<String, dynamic>.from(e)))
+        .toList();
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'authorDetails': leg}),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1365,25 +1722,42 @@ class GetpublishersApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetpublishersApi',
-      apiUrl: '${baseUrl}getpublishers',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}publishers',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['publishers'];
+    if (raw is! List) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg = raw
+        .whereType<Map>()
+        .map((e) => BoiaroLegacyAdapter.legacyPublisherFromV2(
+            Map<String, dynamic>.from(e)))
+        .toList();
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'publisherDetails': leg}),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1424,25 +1798,42 @@ class GetnarratorsApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetnarratorsApi',
-      apiUrl: '${baseUrl}getnarrators',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}narrators',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['narrators'];
+    if (raw is! List) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg = raw
+        .whereType<Map>()
+        .map((e) => BoiaroLegacyAdapter.legacyNarratorFromV2(
+            Map<String, dynamic>.from(e)))
+        .toList();
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'narratorDetails': leg}),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1484,30 +1875,54 @@ class GetpublisherdetailsApiCall {
     String? publisherId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "publisherId": "${publisherId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetpublisherdetailsApi',
-      apiUrl: '${baseUrl}getpublisherdetails',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}publishers',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['publishers'];
+    if (raw is! List) {
+      return _v2Error(body, res.statusCode);
+    }
+    final pid = (publisherId ?? '').trim();
+    Map<String, dynamic>? found;
+    for (final x in raw) {
+      if (x is Map && x['id']?.toString() == pid) {
+        found = Map<String, dynamic>.from(x);
+        break;
+      }
+    }
+    if (found == null) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'Publisher not found',
+        ),
+        res.headers,
+        404,
+      );
+    }
+    final leg = BoiaroLegacyAdapter.legacyPublisherFromV2(found);
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
+        'publisherDetails': [leg],
+      }),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1564,31 +1979,14 @@ class GetbookbypublisherApiCall {
     String? type = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "publisherId": "${publisherId}",
-  "type": "${type}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetbookbypublisherApi',
-      apiUrl: '${baseUrl}getbookbypublisher',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
+    // v2 book list has no publisher filter; extend API before relying on this.
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 1,
+        extra: {'bookDetails': <dynamic>[]},
+      ),
+      {},
+      200,
     );
   }
 
@@ -1608,30 +2006,44 @@ class GetauthordetailsApiCall {
     String? authorId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "authorId": "${authorId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final id = Uri.encodeComponent((authorId ?? '').trim());
+    if (id.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(success: 0, message: 'authorId required'),
+        {},
+        400,
+      );
+    }
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetauthordetailsApi',
-      apiUrl: '${baseUrl}getauthordetails',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}authors/$id',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    if (BoiaroLegacyAdapter.v2Error(body) != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg =
+        BoiaroLegacyAdapter.legacyAuthorFromV2(Map<String, dynamic>.from(body));
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
+        'authorDetails': [leg],
+      }),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1687,30 +2099,54 @@ class GetnarratordetailsApiCall {
     String? narratorId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "narratorId": "${narratorId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetnarratordetailsApi',
-      apiUrl: '${baseUrl}getnarratordetails',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}narrators',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['narrators'];
+    if (raw is! List) {
+      return _v2Error(body, res.statusCode);
+    }
+    final nid = (narratorId ?? '').trim();
+    Map<String, dynamic>? found;
+    for (final x in raw) {
+      if (x is Map && x['id']?.toString() == nid) {
+        found = Map<String, dynamic>.from(x);
+        break;
+      }
+    }
+    if (found == null) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'Narrator not found',
+        ),
+        res.headers,
+        404,
+      );
+    }
+    final leg = BoiaroLegacyAdapter.legacyNarratorFromV2(found);
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
+        'narratorDetails': [leg],
+      }),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1768,35 +2204,23 @@ class GetLatestbooksApiCall {
     String? type = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
+    String? cid;
+    if (categoryIdList != null && categoryIdList.isNotEmpty) {
+      cid = categoryIdList.first;
+    }
+    if (authorIdList != null &&
+        authorIdList.isNotEmpty &&
+        (authorIdList.first ?? '').trim().isNotEmpty) {
+      return _booksForAuthor(
+        authorId: authorIdList.first!.trim(),
+        type: type,
+        token: token,
+      );
+    }
+    return _booksQuery(
+      query: cid != null ? {'category_id': cid} : null,
+      type: type,
       token: token,
-    );
-    final authorId = _serializeList(authorIdList);
-    final categoryId = _serializeList(categoryIdList);
-
-    final ffApiRequestBody = '''
-  {
-   
-    "authorId": ${authorId},
-    "categoryId": ${categoryId},
-    "type": "${type}"
-  }''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetLatestbooksApi',
-      apiUrl: '${baseUrl}getbooks',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
     );
   }
 
@@ -1857,31 +2281,49 @@ class GetbookdetailsApiCall {
     String? type = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "bookId": "${bookId}",
-  "type": "${type}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final id = Uri.encodeComponent((bookId ?? '').trim());
+    if (id.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'Book id required',
+        ),
+        {},
+        400,
+      );
+    }
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetbookdetailsApi',
-      apiUrl: '${baseUrl}getbookdetails',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}books/$id',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg = BoiaroLegacyAdapter.legacyBookDetailFromV2(
+      Map<String, dynamic>.from(body),
+    );
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
+        'bookDetails': [leg],
+      }),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -1992,31 +2434,10 @@ class GetbookbyauthorApiCall {
     String? type = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
+    return _booksForAuthor(
+      authorId: authorId ?? '',
+      type: type,
       token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "authorId": "${authorId}",
-  "type": "${type}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetbookbyauthorApi',
-      apiUrl: '${baseUrl}getbookbyauthor',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
     );
   }
 
@@ -2036,30 +2457,15 @@ class GetbookbynarratorApiCall {
     String? narratorId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "narratorId": "${narratorId}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetbookbynarratorApi',
-      apiUrl: '${baseUrl}getbookbynarrator',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
+    // v2 list responses do not expose narrator filters; show empty until backend adds query support.
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 1,
+        message: '',
+        extra: {'bookDetails': <dynamic>[]},
+      ),
+      {},
+      200,
     );
   }
 
@@ -2080,31 +2486,21 @@ class GetbookbycategoryApiCall {
     String? type = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
+    final cid = (categoryId ?? '').trim();
+    if (cid.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'categoryId required',
+        ),
+        {},
+        400,
+      );
+    }
+    return _booksQuery(
+      query: {'category_id': cid},
+      type: type,
       token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "categoryId": "${categoryId}",
-  "type": "${type}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetbookbycategoryApi',
-      apiUrl: '${baseUrl}getbookbycategory',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
     );
   }
 
@@ -2129,31 +2525,14 @@ class GetbookbysubcategoryApiCall {
     String? type = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "subcategoryId": "${subcategoryId}",
-  "type": "${type}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetbookbysubcategoryApi',
-      apiUrl: '${baseUrl}getbookbysubcategory',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 1,
+        message: '',
+        extra: {'bookDetails': <dynamic>[]},
+      ),
+      {},
+      200,
     );
   }
 
@@ -2178,31 +2557,33 @@ class GetRelatedBooksApiCall {
     String? type = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
+    final base = await _booksQuery(
+      query: const {'limit': '30', 'offset': '0'},
+      type: type,
       token: token,
     );
-
-    final ffApiRequestBody = '''
-{
-  "bookId": "${bookId}",
-  "type": "${type}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetRelatedBooksApi',
-      apiUrl: '${baseUrl}getrelatedbooks',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
+    final bid = (bookId ?? '').trim();
+    final root = base.jsonBody;
+    if (root is! Map) {
+      return base;
+    }
+    final data = root['data'];
+    if (data is! Map) {
+      return base;
+    }
+    final books = data['bookDetails'];
+    if (books is! List) {
+      return base;
+    }
+    final filtered = books
+        .where((b) =>
+            b is Map && (b['_id']?.toString() ?? '') != bid)
+        .take(12)
+        .toList();
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': filtered}),
+      base.headers,
+      base.statusCode,
     );
   }
 
@@ -2767,33 +3148,10 @@ class GetTrendingBooksApiCall {
     String? token = '',
     String? type = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
+    return _homepageSectionAsBooks(
+      sectionKey: 'trending',
+      type: type,
       token: token,
-    );
-    final hasType = (type ?? '').trim().isNotEmpty;
-    final ffApiRequestBody = hasType
-        ? '''
-{
-  "type": "${type}"
-}'''
-        : null;
-
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetTrendingBooksApi',
-      apiUrl: '${baseUrl}gettrendingbooks',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: hasType ? BodyType.JSON : BodyType.NONE,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
     );
   }
 
@@ -2826,33 +3184,10 @@ class GetNewBooksApiCall {
     String? token = '',
     String? type = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
+    return _homepageSectionAsBooks(
+      sectionKey: 'new',
+      type: type,
       token: token,
-    );
-    final hasType = (type ?? '').trim().isNotEmpty;
-    final ffApiRequestBody = hasType
-        ? '''
-{
-  "type": "${type}"
-}'''
-        : null;
-
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetNewBooksApi',
-      apiUrl: '${baseUrl}getnewbooks',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: hasType ? BodyType.JSON : BodyType.NONE,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
     );
   }
 
@@ -2885,26 +3220,10 @@ class GetPopularBooksApiCall {
     String? token = '',
     String? type = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
+    return _booksQuery(
+      query: const {'featured': 'true'},
+      type: type,
       token: token,
-    );
-    final hasType = (type ?? '').trim().isNotEmpty;
-
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetPopularBooksApi',
-      apiUrl: '${baseUrl}getpopularbooks',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: hasType ? {'type': type} : {},
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
     );
   }
 
@@ -2929,24 +3248,14 @@ class AddFavouriteBookApiCall {
     String? bookId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "userId": "${userId}",
-  "bookId": "${bookId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'AddFavouriteBookApi',
-      apiUrl: '${baseUrl}addfavouritebook',
+      apiUrl: '${baseUrl}bookmarks',
       callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
+      body: BoiaroLegacyAdapter.jsonEncodeBody({'book_id': bookId}),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -2955,6 +3264,20 @@ class AddFavouriteBookApiCall {
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
+    final jb = res.jsonBody;
+    if (res.statusCode == 201 || (res.succeeded && jb is Map)) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: jb is Map
+              ? (jb['message']?.toString() ?? 'Bookmarked')
+              : 'Bookmarked',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(jb, res.statusCode);
   }
 }
 
@@ -2963,30 +3286,48 @@ class GetFavouriteBookCall {
     String? userId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "userId": "${userId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'GetFavouriteBook',
-      apiUrl: '${baseUrl}getfavouritebook',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}bookmarks',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['bookmarks'];
+    final fav = <Map<String, dynamic>>[];
+    if (raw is List) {
+      for (final row in raw) {
+        if (row is Map) {
+          fav.add(
+            BoiaroLegacyAdapter.legacyBookmarkFromV2(
+              Map<String, dynamic>.from(row),
+            ),
+          );
+        }
+      }
+    }
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        extra: {'favouriteBookDetails': fav},
+      ),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -3027,25 +3368,15 @@ class RemoveFavouritebookCall {
     String? bookId = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "userId": "${userId}",
-  "bookId": "${bookId}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final bid = Uri.encodeComponent((bookId ?? '').trim());
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'RemoveFavouritebook',
-      apiUrl: '${baseUrl}removefavouritebook',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      apiUrl: '${baseUrl}bookmarks/$bid',
+      callType: ApiCallType.DELETE,
+      headers: _boiaroAuthHeaders(token),
       params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
@@ -3053,6 +3384,19 @@ class RemoveFavouritebookCall {
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
+    final jb = res.jsonBody;
+    if (res.succeeded) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message:
+              jb is Map ? (jb['message']?.toString() ?? 'Removed') : 'Removed',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(jb, res.statusCode);
   }
 
   String? message(dynamic response) => castToType<String>(getJsonField(
@@ -3161,30 +3505,54 @@ class SearchApiCall {
     String? search = '',
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    final ffApiRequestBody = '''
-{
-  "search": "${search}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final baseUrl = EbookGroup.getBaseUrl();
+    final q = (search ?? '').trim();
+    if (q.length < 2) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'Search query too short (min 2 chars)',
+          extra: {'bookDetails': <dynamic>[]},
+        ),
+        {},
+        400,
+      );
+    }
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'SearchApi',
-      apiUrl: '${baseUrl}getbooks',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
+      apiUrl: '${baseUrl}search',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {'q': q},
+      bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['results'];
+    if (raw is! List) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg = raw
+        .whereType<Map>()
+        .map((e) =>
+            BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(e)))
+        .toList();
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': leg}),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -3216,26 +3584,10 @@ class LatestAllBookApiCall {
     String? token = '',
     String? type = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
+    return _booksQuery(
+      query: null,
+      type: type,
       token: token,
-    );
-    final hasType = (type ?? '').trim().isNotEmpty;
-
-    return ApiManager.instance.makeApiCall(
-      callName: 'LatestAllBookApi',
-      apiUrl: '${baseUrl}getbooks',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
-      params: hasType ? {'type': type} : {},
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
     );
   }
 
@@ -3532,17 +3884,12 @@ class GetFeaturedBooksByCategoryApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
-
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetFeaturedBooksByCategoryApi',
-      apiUrl: '${baseUrl}getfeaturedbooksbycategory',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+    final baseUrl = EbookGroup.getBaseUrl();
+    final catRes = await ApiManager.instance.makeApiCall(
+      callName: 'GetFeaturedBooksByCategory_categories',
+      apiUrl: '${baseUrl}categories',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
       params: {},
       bodyType: BodyType.NONE,
       returnBody: true,
@@ -3551,6 +3898,68 @@ class GetFeaturedBooksByCategoryApiCall {
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final catBody = catRes.jsonBody;
+    if (!catRes.succeeded || catBody is! Map) {
+      return _v2Error(catBody, catRes.statusCode);
+    }
+    final cats = catBody['categories'];
+    if (cats is! List) {
+      return _v2Error(catBody, catRes.statusCode);
+    }
+    final out = <Map<String, dynamic>>[];
+    for (final c in cats.take(12)) {
+      if (c is! Map) {
+        continue;
+      }
+      final cm = Map<String, dynamic>.from(c);
+      final cid = cm['id']?.toString();
+      if (cid == null || cid.isEmpty) {
+        continue;
+      }
+      final bRes = await ApiManager.instance.makeApiCall(
+        callName: 'GetFeaturedBooksByCategory_books',
+        apiUrl: '${baseUrl}books',
+        callType: ApiCallType.GET,
+        headers: _boiaroAuthHeaders(token),
+        params: {
+          'category_id': cid,
+          'limit': '12',
+          'offset': '0',
+        },
+        bodyType: BodyType.NONE,
+        returnBody: true,
+        encodeBodyUtf8: false,
+        decodeUtf8: false,
+        cache: false,
+        isStreamingApi: false,
+        alwaysAllowBody: false,
+      );
+      final jb = bRes.jsonBody;
+      if (!bRes.succeeded || jb is! Map) {
+        continue;
+      }
+      final booksRaw = jb['books'];
+      if (booksRaw is! List) {
+        continue;
+      }
+      final featuredBooks = booksRaw
+          .whereType<Map>()
+          .map((e) =>
+              BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(e)))
+          .toList();
+      if (featuredBooks.isEmpty) {
+        continue;
+      }
+      out.add({
+        'name': cm['name'] ?? '',
+        'featuredBooks': featuredBooks,
+      });
+    }
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'categoryBooks': out}),
+      catRes.headers,
+      200,
     );
   }
 

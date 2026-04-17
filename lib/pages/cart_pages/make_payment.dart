@@ -1,33 +1,31 @@
 import 'dart:developer';
 
-import 'package:a_i_ebook_app/app_constants.dart';
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_theme.dart';
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_util.dart';
 import 'package:a_i_ebook_app/pages/cart_pages/payment_screen.dart';
+import 'package:a_i_ebook_app/providers/cart_provider.dart';
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class MakeCheckOutScreen extends StatefulWidget {
+  /// Line items with per-format `type` (ebook / audiobook / hardcopy).
+  final List<CartItem> cartLines;
   final List<String> bookIds;
   final String jwtToken;
   final String userId;
   final String? couponCode;
-  final String? shippingMethodId;
-  final String? shippingAddressId;
   final Map<String, dynamic>? shippingAddress;
-  final double? cartTotal;
+  final String selectedPaymentMethod;
 
   const MakeCheckOutScreen({
     Key? key,
+    required this.cartLines,
     required this.bookIds,
     required this.jwtToken,
     required this.userId,
     this.couponCode,
-    this.shippingMethodId,
-    this.shippingAddressId,
     this.shippingAddress,
-    this.cartTotal,
+    this.selectedPaymentMethod = 'online',
   }) : super(key: key);
 
   @override
@@ -38,6 +36,7 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
   late final CheckoutController _checkoutController;
   bool _isLoading = true;
   String? _error;
+  String? _successMessage;
 
   @override
   void initState() {
@@ -55,29 +54,33 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
       print('Initiating payment for books: ${widget.bookIds}');
 
       final response = await _checkoutController.initiatePayment(
-        widget.bookIds,
+        widget.cartLines,
         couponCode: widget.couponCode,
-        shippingMethodId: widget.shippingMethodId,
-        shippingAddressId: widget.shippingAddressId,
         shippingAddress: widget.shippingAddress,
-        cartTotal: widget.cartTotal,
+        paymentMethod: widget.selectedPaymentMethod,
       );
       print('Payment initiation response: $response');
       if (response['success'] == 1) {
-        final tranId = response['tran_id'];
-        final gatewayUrl = response['GatewayPageURL'];
-        
-        // Navigate to DigitalPaymentScreen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => PaymentWebView(
-              url: gatewayUrl,
-              tranId: tranId,
-              bookIds: widget.bookIds,
-              checkoutController: _checkoutController,
+        final orderId = response['order_id'] as String?;
+        final gatewayUrl = response['GatewayPageURL'] as String?;
+        if (gatewayUrl != null && gatewayUrl.trim().isNotEmpty) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => PaymentWebView(
+                url: gatewayUrl,
+                orderId: orderId,
+                bookIds: widget.bookIds,
+                checkoutController: _checkoutController,
+              ),
             ),
-          ),
-        );
+          );
+          return;
+        }
+        setState(() {
+          _successMessage = response['message']?.toString() ??
+              'Wallet unlock completed successfully.';
+          _isLoading = false;
+        });
       } else {
         setState(() {
           _error = response['message'] ?? 'Payment initiation failed';
@@ -106,6 +109,29 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
       // ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _successMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.green, size: 56),
+                        const SizedBox(height: 12),
+                        Text(
+                          _successMessage!,
+                          textAlign: TextAlign.center,
+                          style: FlutterFlowTheme.of(context).bodyLarge,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Done'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
           : _error != null
               ? Center(child: Text('Error: $_error'))
               : const Center(child: Text('Redirecting to payment...')),
@@ -122,182 +148,266 @@ class CheckoutController {
   final String baseUrl = FFAppConstants.baseApiUrl;
   final String jwtToken;
   final String userId;
-  String? _shippingMethodId;
-  String? _shippingAddressId;
-  Map<String, dynamic>? _shippingAddress;
-  double? _cartTotal;
-  
+
   CheckoutController({
     required this.jwtToken,
     required this.userId,
   });
 
-  Map<String, dynamic>? _attachEmailToAddress(
-    Map<String, dynamic>? address,
-  ) {
-    if (address == null) return null;
-    final updated = Map<String, dynamic>.from(address);
-    final existingEmail = updated['email']?.toString() ?? '';
-    if (existingEmail.isNotEmpty) {
-      return updated;
-    }
-    final appEmail = getJsonField(
-          FFAppState().userDetail,
-          r'''$.email''',
-        )?.toString() ??
-        '';
-    if (appEmail.isNotEmpty) {
-      updated['email'] = appEmail;
-    }
-    return updated;
+  Map<String, String> get _headers => {
+        'apikey': FFAppConstants.supabaseAnonApiKey,
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $jwtToken',
+      };
+
+  static String _formatForApi(String? cartType) {
+    final t = (cartType ?? 'ebook').toLowerCase().trim();
+    if (t == 'audiobook' || t == 'audio') return 'audiobook';
+    if (t == 'hardcopy' || t == 'hard' || t == 'print') return 'hardcopy';
+    return 'ebook';
   }
 
-  // Initiate payment
+  bool _needsShipping(Iterable<CartItem> lines) =>
+      lines.any((c) => _formatForApi(c.type) == 'hardcopy');
+
+  bool _isUuid(String input) {
+    final v = input.trim();
+    final reg = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    );
+    return reg.hasMatch(v);
+  }
+
+  /// BoiAro v2: [name], [address], [phone] per API docs.
+  Map<String, dynamic>? _v2Shipping(Map<String, dynamic>? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final name = raw['name']?.toString().trim().isNotEmpty == true
+        ? raw['name'].toString()
+        : (raw['fullName'] ?? raw['full_name'])?.toString() ?? '';
+    final phone = raw['phone']?.toString() ?? '';
+    final addr = raw['address']?.toString() ??
+        [
+          raw['addressLine1'],
+          raw['addressLine2'],
+          raw['city'],
+          raw['state'],
+          raw['postalCode'],
+          raw['country'],
+        ].where((e) => e != null && '$e'.trim().isNotEmpty).join(', ');
+    if (name.isEmpty || addr.isEmpty || phone.isEmpty) return null;
+    return {'name': name, 'address': addr, 'phone': phone};
+  }
+
+  // Initiate payment (BoiAro v2: POST /orders → POST /payments/initiate)
   Future<Map<String, dynamic>> initiatePayment(
-    List<String> bookIds, {
+    List<CartItem> cartLines, {
     String? couponCode,
-    String? shippingMethodId,
-    String? shippingAddressId,
     Map<String, dynamic>? shippingAddress,
-    double? cartTotal,
+    String paymentMethod = 'online',
   }) async {
     try {
-      _shippingMethodId = shippingMethodId;
-      _shippingAddressId = shippingAddressId;
-      _shippingAddress = _attachEmailToAddress(shippingAddress);
-      _cartTotal = cartTotal;
+      if (couponCode != null && couponCode.isNotEmpty) {
+        log('CheckoutController: coupon codes are not applied (v2 API has no coupon endpoint).');
+      }
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/purchasebooks'),
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'userId': userId,
-          'books': bookIds,
-          'paymentmode': 'SSLCOMMERZ',
-          if (shippingMethodId != null) 'shippingMethodId': shippingMethodId,
-          if (shippingAddressId != null) 'addressId': shippingAddressId,
-          if (_shippingAddress != null) 'shippingAddress': _shippingAddress,
-          if (cartTotal != null) 'cartTotal': cartTotal,
-          if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
-        }),
+      if (cartLines.isEmpty) {
+        return {'success': 0, 'message': 'Cart is empty'};
+      }
+
+      final hasInvalidBookId = cartLines.any((c) => !_isUuid(c.id));
+      if (hasInvalidBookId) {
+        return {
+          'success': 0,
+          'message':
+              'Cart contains invalid book id. Please remove and add the item again.',
+        };
+      }
+
+      final normalizedPaymentMethod = paymentMethod == 'ssl'
+          ? 'online'
+          : paymentMethod.toLowerCase().trim();
+      final items = cartLines
+          .map(
+            (c) => {
+              'book_id': c.id,
+              'format': _formatForApi(c.type),
+              'quantity': c.quantity,
+            },
+          )
+          .toList();
+
+      if (normalizedPaymentMethod == 'wallet') {
+        if (cartLines.any((c) => _formatForApi(c.type) == 'hardcopy')) {
+          return {
+            'success': 0,
+            'message': 'Wallet unlock supports ebook/audiobook only.',
+          };
+        }
+        for (final line in cartLines) {
+          final format = _formatForApi(line.type);
+          final coinCost = line.coinPrice ?? 0;
+          if (coinCost <= 0) {
+            return {
+              'success': 0,
+              'message':
+                  'Coin price missing for ${line.name}. Please add the item again.',
+            };
+          }
+          final unlockRes = await http.post(
+            Uri.parse('$baseUrl/wallet/unlock'),
+            headers: _headers,
+            body: jsonEncode({
+              'book_id': line.id,
+              'format': format,
+              'coin_cost': coinCost,
+            }),
+          );
+          final decoded = jsonDecode(unlockRes.body);
+          if (unlockRes.statusCode != 200) {
+            final err = decoded is Map ? decoded['error']?.toString() : null;
+            return {
+              'success': 0,
+              'message': err ?? 'Wallet unlock failed (${unlockRes.statusCode})',
+            };
+          }
+        }
+        return {
+          'success': 1,
+          'message': 'Wallet unlock completed successfully.',
+          'payment_method': 'wallet',
+        };
+      }
+
+      final body = <String, dynamic>{
+        'items': items,
+        'payment_method': normalizedPaymentMethod,
+      };
+
+      final ship = _v2Shipping(shippingAddress);
+      if (_needsShipping(cartLines)) {
+        if (ship == null) {
+          return {
+            'success': 0,
+            'message':
+                'Shipping address is required for hardcopy (name, phone, full address).',
+          };
+        }
+        body['shipping_address'] = ship;
+      }
+
+      final orderRes = await http.post(
+        Uri.parse('$baseUrl/orders'),
+        headers: _headers,
+        body: jsonEncode(body),
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['data'];
-      } else {
-        throw Exception('Failed to initiate payment: ${response.statusCode}');
+      final orderDecoded = jsonDecode(orderRes.body);
+      if (orderRes.statusCode != 201 && orderRes.statusCode != 200) {
+        final err = orderDecoded is Map ? orderDecoded['error']?.toString() : null;
+        return {
+          'success': 0,
+          'message': err ?? 'Failed to create order (${orderRes.statusCode})',
+        };
       }
-    } catch (e) {
+
+      if (orderDecoded is! Map<String, dynamic>) {
+        return {'success': 0, 'message': 'Invalid order response'};
+      }
+
+      final order = orderDecoded['order'];
+      if (order is! Map) {
+        return {'success': 0, 'message': 'Order payload missing'};
+      }
+
+      final orderId = order['id']?.toString();
+      if (orderId == null || orderId.isEmpty) {
+        return {'success': 0, 'message': 'Order id missing'};
+      }
+
+      final payRes = await http.post(
+        Uri.parse('$baseUrl/payments/initiate'),
+        headers: _headers,
+        body: jsonEncode({'order_id': orderId}),
+      );
+
+      final payDecoded = jsonDecode(payRes.body);
+      if (payRes.statusCode != 200) {
+        final err = payDecoded is Map ? payDecoded['error']?.toString() : null;
+        return {
+          'success': 0,
+          'message': err ?? 'Payment initiation failed (${payRes.statusCode})',
+        };
+      }
+
+      if (payDecoded is! Map<String, dynamic>) {
+        return {'success': 0, 'message': 'Invalid payment response'};
+      }
+
+      final ok = payDecoded['success'] == true;
+      final gatewayUrl = payDecoded['gateway_url']?.toString();
+      if (!ok || gatewayUrl == null || gatewayUrl.isEmpty) {
+        final err = payDecoded['error']?.toString();
+        return {
+          'success': 0,
+          'message': err ?? 'Gateway URL not returned',
+        };
+      }
+
+      return {
+        'success': 1,
+        'GatewayPageURL': gatewayUrl,
+        'order_id': orderId,
+        'session_key': payDecoded['session_key'],
+      };
+    } catch (e, st) {
+      log('Payment initiation error: $e', stackTrace: st);
       throw Exception('Payment initiation error: $e');
     }
   }
 
-  // Verify payment
+  /// Confirm order state after SSLCommerz redirect (GET /orders/{order_id}).
   Future<Map<String, dynamic>> verifyPayment({
-    required String tranId,
+    required String orderId,
   }) async {
     try {
-      log('Verifying payment for tran_id: $tranId');
-      log('Verifying payment for jwtToken: $jwtToken');
-      log('$baseUrl/transaction/status');
-      final response = await http.post(
-        Uri.parse('$baseUrl/transaction/status'),
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'tran_id': tranId,
-        }),
+      log('Verifying order: $orderId');
+      final response = await http.get(
+        Uri.parse('$baseUrl/orders/$orderId'),
+        headers: _headers,
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        debugPrint('Payment verify handled: $data');
-        return data;
+        debugPrint('Order verify: $data');
+        return data is Map<String, dynamic> ? data : {'raw': data};
       } else {
-        throw Exception('Failed to verify payment: ${response.statusCode}');
+        throw Exception('Failed to verify order: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Payment verification error: $e');
     }
   }
-  // Handle payment failure
+
   Future<Map<String, dynamic>> handlePaymentFailure({
-    required String tranId,
+    required String orderId,
     required List<String> bookIds,
   }) async {
+    log('Payment failed for order $orderId (books: $bookIds)');
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/purchasebooks'),
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'userId': userId,
-          'books': bookIds,
-          'paymentmode': 'SSLCOMMERZ',
-          'tran_id': tranId,
-          'status': 'FAILED',
-          if (_shippingMethodId != null) 'shippingMethodId': _shippingMethodId,
-          if (_shippingAddressId != null) 'addressId': _shippingAddressId,
-          if (_shippingAddress != null) 'shippingAddress': _shippingAddress,
-          if (_cartTotal != null) 'cartTotal': _cartTotal,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        debugPrint('Payment failure handled: $data');
-        return data['data'];
-      } else {
-        throw Exception('Failed to handle payment failure: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Payment failure handling error: $e');
-    }
+      await verifyPayment(orderId: orderId);
+    } catch (_) {}
+    return {'success': 0};
   }
 
-  // Handle payment cancellation
   Future<Map<String, dynamic>> handlePaymentCancellation({
-    required String tranId,
+    required String orderId,
     required List<String> bookIds,
   }) async {
+    log('Payment cancelled for order $orderId (books: $bookIds)');
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/purchasebooks'),
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'userId': userId,
-          'books': bookIds,
-          'paymentmode': 'SSLCOMMERZ',
-          'tran_id': tranId,
-          'status': 'CANCELLED',
-          if (_shippingMethodId != null) 'shippingMethodId': _shippingMethodId,
-          if (_shippingAddressId != null) 'addressId': _shippingAddressId,
-          if (_shippingAddress != null) 'shippingAddress': _shippingAddress,
-          if (_cartTotal != null) 'cartTotal': _cartTotal,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        debugPrint('Payment cancelled handled: $data');
-        return data['data'];
-      } else {
-        throw Exception('Failed to handle payment cancellation: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Payment cancellation handling error: $e');
-    }
+      await verifyPayment(orderId: orderId);
+    } catch (_) {}
+    return {'success': 0};
   }
 }
 

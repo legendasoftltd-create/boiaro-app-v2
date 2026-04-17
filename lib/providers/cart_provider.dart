@@ -8,6 +8,7 @@ class CartItem {
   final double? discountAmount;
   final double? discountPercentage;
   final String type;
+  final int? coinPrice;
   int quantity;
 
   CartItem({
@@ -18,6 +19,7 @@ class CartItem {
     this.discountAmount,
     this.discountPercentage,
     this.type = 'ebook',
+    this.coinPrice,
     this.quantity = 1,
   });
 
@@ -54,6 +56,7 @@ class CartItem {
       'discountAmount': discountAmount,
       'discountPercentage': discountPercentage,
       'type': type,
+      'coinPrice': coinPrice,
       'quantity': quantity,
     };
   }
@@ -62,7 +65,7 @@ class CartItem {
   // each dog when using the print statement.
   @override
   String toString() {
-    return 'CartItem{id: $id, name: $name, imageUrl: $imageUrl, price: $price, discountAmount: $discountAmount, discountPercentage: $discountPercentage, type: $type, quantity: $quantity}';
+    return 'CartItem{id: $id, name: $name, imageUrl: $imageUrl, price: $price, discountAmount: $discountAmount, discountPercentage: $discountPercentage, type: $type, coinPrice: $coinPrice, quantity: $quantity}';
   }
 }
 
@@ -113,6 +116,7 @@ class CartProvider with ChangeNotifier {
     double? discountAmount,
     double? discountPercentage,
     String? type,
+    int? coinPrice,
   }) {
     if (_items.containsKey(productId)) {
       // change quantity
@@ -126,6 +130,7 @@ class CartProvider with ChangeNotifier {
           discountAmount: existingCartItem.discountAmount,
           discountPercentage: existingCartItem.discountPercentage,
           type: existingCartItem.type,
+          coinPrice: existingCartItem.coinPrice,
           quantity: increment ? existingCartItem.quantity + 1 : 1,
         ),
       );
@@ -133,13 +138,14 @@ class CartProvider with ChangeNotifier {
       _items.putIfAbsent(
         productId,
         () => CartItem(
-          id: DateTime.now().toString(), // Unique ID for the cart item
+          id: productId, // Must be the real book_id for order API
           name: name,
           imageUrl: imageUrl,
           price: price,
           discountAmount: discountAmount,
           discountPercentage: discountPercentage,
           type: (type ?? 'ebook').toLowerCase(),
+          coinPrice: coinPrice,
         ),
       );
     }
@@ -165,6 +171,8 @@ class CartProvider with ChangeNotifier {
           price: existingCartItem.price,
           discountAmount: existingCartItem.discountAmount,
           discountPercentage: existingCartItem.discountPercentage,
+          type: existingCartItem.type,
+          coinPrice: existingCartItem.coinPrice,
           quantity: existingCartItem.quantity - 1,
         ),
       );

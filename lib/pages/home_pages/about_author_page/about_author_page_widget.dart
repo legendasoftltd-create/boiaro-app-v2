@@ -7,6 +7,7 @@ import '/pages/shimmers/about_author_sec_shimmer/about_author_sec_shimmer_widget
 import '/custom_code/actions/index.dart' as actions;
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/flutter_flow/custom_functions.dart' as functions;
+import '/services/follow_service.dart';
 import '/index.dart';
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -40,6 +41,9 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
   late AboutAuthorPageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isFollowing = false;
+  bool _isFollowLoading = false;
+  int? _followersCount;
 
   @override
   void initState() {
@@ -49,9 +53,66 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (FFAppState().isLogin) {
         await _loadPurchasedBooks();
+        await _loadFollowState();
       }
       safeSetState(() {});
     });
+  }
+
+  Future<void> _loadFollowState() async {
+    if (!FollowService.supportsFollowEndpoints) return;
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
+    final id = (widget.authorId ?? '').trim();
+    if (id.isEmpty) return;
+    final state = await FollowService.fetchState(
+      entityType: 'author',
+      entityId: id,
+      token: FFAppState().token,
+    );
+    if (!mounted || state == null) return;
+    safeSetState(() {
+      _isFollowing = state.isFollowing;
+      _followersCount = state.followersCount;
+    });
+  }
+
+  Future<void> _toggleFollow() async {
+    if (!FollowService.supportsFollowEndpoints) {
+      await actions.showCustomToastBottom(
+          'Follow system is not available in current API version.');
+      return;
+    }
+    if (_isFollowLoading) return;
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) {
+      context.pushNamed(SignInPageWidget.routeName);
+      return;
+    }
+    final id = (widget.authorId ?? '').trim();
+    if (id.isEmpty) return;
+    safeSetState(() => _isFollowLoading = true);
+    final target = !_isFollowing;
+    final ok = await FollowService.setFollow(
+      entityType: 'author',
+      entityId: id,
+      token: FFAppState().token,
+      follow: target,
+    );
+    if (!mounted) return;
+    if (ok) {
+      safeSetState(() {
+        _isFollowing = target;
+        if (_followersCount != null) {
+          _followersCount = (_followersCount! + (target ? 1 : -1)).clamp(0, 1 << 30);
+        }
+      });
+      await actions.showCustomToastBottom(
+        target ? 'Followed author' : 'Unfollowed author',
+      );
+      await _loadFollowState();
+    } else {
+      await actions.showCustomToastBottom('Unable to update follow status');
+    }
+    if (mounted) safeSetState(() => _isFollowLoading = false);
   }
 
   Future<void> _loadPurchasedBooks() async {
@@ -295,6 +356,41 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                   lineHeight:
                                                                       1.5,
                                                                 ),
+                                                          ),
+                                                          Row(
+                                                            children: [
+                                                              OutlinedButton(
+                                                                onPressed: (!FollowService
+                                                                            .supportsFollowEndpoints ||
+                                                                        _isFollowLoading)
+                                                                    ? null
+                                                                    : _toggleFollow,
+                                                                child: _isFollowLoading
+                                                                    ? const SizedBox(
+                                                                        width: 14,
+                                                                        height: 14,
+                                                                        child:
+                                                                            CircularProgressIndicator(
+                                                                          strokeWidth: 2,
+                                                                        ),
+                                                                      )
+                                                                    : Text(!FollowService
+                                                                            .supportsFollowEndpoints
+                                                                        ? 'Coming soon'
+                                                                        : (_isFollowing
+                                                                            ? 'Following'
+                                                                            : 'Follow')),
+                                                              ),
+                                                              if (_followersCount != null) ...[
+                                                                const SizedBox(width: 8),
+                                                                Text(
+                                                                  '${_followersCount!} followers',
+                                                                  style: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodySmall,
+                                                                ),
+                                                              ],
+                                                            ],
                                                           ),
                                                         ].divide(SizedBox(
                                                             height: 8.0)),

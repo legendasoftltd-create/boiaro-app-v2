@@ -59,6 +59,40 @@ class _ListMainContainerComponentWidgetState
     extends State<ListMainContainerComponentWidget> {
   late ListMainContainerComponentModel _model;
 
+  String _normalizeFormat(String raw) {
+    final t = raw.toLowerCase().trim();
+    if (t.contains('audio')) return 'audiobook';
+    if (t.contains('hard') || t.contains('print') || t.contains('paper')) {
+      return 'hardcopy';
+    }
+    if (t.contains('ebook') ||
+        t.contains('e-book') ||
+        t.contains('epub') ||
+        t.contains('pdf')) {
+      return 'ebook';
+    }
+    return '';
+  }
+
+  List<String> _extractFormats(String? rawType) {
+    final raw = (rawType ?? '').toLowerCase().trim();
+    if (raw.isEmpty) return const <String>[];
+    final parts = raw.split(RegExp(r'[,\s|/]+'));
+    final set = <String>{};
+    for (final p in parts) {
+      final n = _normalizeFormat(p);
+      if (n.isNotEmpty) set.add(n);
+    }
+    return set.toList();
+  }
+
+  String _primaryCartType(List<String> formats) {
+    if (formats.contains('ebook')) return 'ebook';
+    if (formats.contains('audiobook')) return 'audiobook';
+    if (formats.contains('hardcopy')) return 'hardcopy';
+    return 'ebook';
+  }
+
   @override
   void setState(VoidCallback callback) {
     super.setState(callback);
@@ -82,21 +116,15 @@ class _ListMainContainerComponentWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final typeValue = (widget.bookType ?? '').toLowerCase();
-    final showAudioIcon = typeValue.contains('audio');
-    final showHardcopyIcon =
-        typeValue.contains('hard') || typeValue.contains('print');
-    final showEbookIcon = typeValue.contains('ebook') ||
-        typeValue.contains('e-book') ||
-        typeValue.contains('epub') ||
-        typeValue.contains('pdf');
-    IconData? formatIcon;
-    if (showAudioIcon) {
-      formatIcon = Icons.headphones_rounded;
-    } else if (showHardcopyIcon) {
-      formatIcon = Icons.local_library_rounded;
-    } else if (showEbookIcon || typeValue.isNotEmpty) {
-      formatIcon = Icons.menu_book_rounded;
+    final formats = _extractFormats(widget.bookType);
+    final cartType = _primaryCartType(formats);
+    final formatIcons = <IconData>[
+      if (formats.contains('ebook')) Icons.menu_book_rounded,
+      if (formats.contains('audiobook')) Icons.headphones_rounded,
+      if (formats.contains('hardcopy')) Icons.local_library_rounded,
+    ];
+    if (formatIcons.isEmpty && (widget.bookType ?? '').trim().isNotEmpty) {
+      formatIcons.add(Icons.menu_book_rounded);
     }
 
     return InkWell(
@@ -157,13 +185,13 @@ class _ListMainContainerComponentWidgetState
                       ),
                     ),
                   ),
-                  if (formatIcon != null)
+                  if (formatIcons.isNotEmpty)
                     Positioned(
                       right: 4.0,
                       bottom: 4.0,
                       child: Container(
-                        width: 20.0,
-                        height: 20.0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4.0, vertical: 2.0),
                         decoration: BoxDecoration(
                           color: FlutterFlowTheme.of(context)
                               .primaryBackground
@@ -177,10 +205,22 @@ class _ListMainContainerComponentWidgetState
                             )
                           ],
                         ),
-                        child: Icon(
-                          formatIcon,
-                          size: 12.0,
-                          color: FlutterFlowTheme.of(context).primaryText,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: formatIcons
+                              .map(
+                                (ic) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 1.0),
+                                  child: Icon(
+                                    ic,
+                                    size: 11.0,
+                                    color:
+                                        FlutterFlowTheme.of(context).primaryText,
+                                  ),
+                                ),
+                              )
+                              .toList(),
                         ),
                       ),
                     ),
@@ -418,7 +458,7 @@ class _ListMainContainerComponentWidgetState
                                                   double.parse(widget.price ?? "0"),
                                                   discountAmount: double.tryParse(widget.discountAmount ?? "0") ?? 0,
                                                   discountPercentage: double.tryParse(widget.discountPercentage ?? "0") ?? 0,
-                                                  type: widget.bookType,
+                                                  type: cartType,
                                                 );
                                                 await actions.showCustomToastBottom('Quantity increased!');
                                               },
@@ -453,7 +493,7 @@ class _ListMainContainerComponentWidgetState
                                               double.parse(widget.price ?? "0"),
                                               discountAmount:double.tryParse(widget.discountAmount ?? "0") ?? 0,
                                               discountPercentage: double.tryParse(widget.discountPercentage ?? "0") ?? 0,
-                                              type: widget.bookType,
+                                              type: cartType,
                                             );
                                             await actions.showCustomToastBottom('Added to cart!');
                                           },

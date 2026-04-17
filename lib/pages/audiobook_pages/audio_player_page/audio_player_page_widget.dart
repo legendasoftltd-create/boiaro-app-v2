@@ -382,16 +382,49 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     return '${FFAppConstants.bookImagesUrl}$trimmed';
   }
 
+  String _stringValue(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isNotEmpty ? trimmed : fallback;
+    }
+    if (value is Map) {
+      final name = value['name'] ?? value['title'] ?? value['full_name'];
+      if (name != null) {
+        final s = name.toString().trim();
+        if (s.isNotEmpty) return s;
+      }
+      return fallback;
+    }
+    if (value is List) {
+      final names = value
+          .map((e) => _stringValue(e, fallback: ''))
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (names.isNotEmpty) return names.join(', ');
+      return fallback;
+    }
+    final out = value.toString().trim();
+    return out.isNotEmpty ? out : fallback;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final chapterTitle = _currentChapter?['title'] ??
-        _currentChapter?['name'] ??
-        widget.chapter['title'] ??
-        widget.chapter['name'] ??
-        'Chapter';
-    final authorName = widget.audiobook['author'] ??
-        widget.audiobook['authorName'] ??
-        'Author';
+    final chapterTitle = _stringValue(
+      _currentChapter?['title'] ??
+          _currentChapter?['name'] ??
+          widget.chapter['title'] ??
+          widget.chapter['name'],
+      fallback: 'Chapter',
+    );
+    final authorName = _stringValue(
+      widget.audiobook['author'] ??
+          widget.audiobook['authorName'] ??
+          widget.audiobook['authors'] ??
+          getJsonField(widget.audiobook, r'''$.authors.name''') ??
+          getJsonField(widget.audiobook, r'''$.narrators.name'''),
+      fallback: 'Author',
+    );
     final coverImage = _resolveBookImage(widget.audiobook['image']?.toString());
 
     return GestureDetector(

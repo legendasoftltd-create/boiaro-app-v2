@@ -12,6 +12,7 @@ import 'package:equatable/equatable.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:mime_type/mime_type.dart';
 
+import '/app_constants.dart';
 import '/flutter_flow/uploaded_file.dart';
 
 import 'get_streamed_response.dart';
@@ -510,6 +511,10 @@ class ApiManager {
     // Modify for your specific needs if this differs from your API.
     if (_accessToken != null) {
       headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
+    }
+    if (apiUrl.contains('/mobile-api') ||
+        apiUrl.startsWith(FFAppConstants.mobileApiBaseUrl)) {
+      headers.putIfAbsent('apikey', () => FFAppConstants.supabaseAnonApiKey);
     }
     if (!apiUrl.startsWith('http')) {
       apiUrl = 'https://$apiUrl';

@@ -11,14 +11,15 @@ import 'package:a_i_ebook_app/flutter_flow/nav/nav.dart';
 
 class PaymentWebView extends StatefulWidget {
   final String url;
-  final String tranId;
+  /// BoiAro v2 order UUID (replaces legacy SSL `tran_id` for verification).
+  final String? orderId;
   final List<String> bookIds;
   final CheckoutController checkoutController;
 
   const PaymentWebView({
     super.key,
     required this.url,
-    required this.tranId,
+    required this.orderId,
     required this.bookIds,
     required this.checkoutController,
   });
@@ -169,12 +170,19 @@ class _PaymentWebViewState extends State<PaymentWebView> {
 
   void _handleUrlChange(String url) {
     final uri = Uri.parse(url);
-    final tranId = uri.queryParameters['tran_id'];
+    final orderId = uri.queryParameters['order_id'] ??
+        uri.queryParameters['tran_id'] ??
+        widget.orderId;
+    final status = uri.queryParameters['status']?.toLowerCase();
+
+    final isSuccess = url.contains('payment-success') || status == 'success';
+    final isFail = url.contains('payment-fail') || status == 'failed';
+    final isCancel = url.contains('payment-cancel') || status == 'cancelled';
 
     // ✅ Success
-    if (url.contains('payment-success')) {
-      if (tranId != null) {
-        widget.checkoutController.verifyPayment(tranId: tranId);
+    if (isSuccess) {
+      if (orderId != null && orderId.isNotEmpty) {
+        widget.checkoutController.verifyPayment(orderId: orderId);
       }
       setState(() {
         isPaymentSuccess = true; // 🚫 disable back
@@ -186,10 +194,12 @@ class _PaymentWebViewState extends State<PaymentWebView> {
     }
 
     // ❌ Failure
-    if (url.contains('payment-fail')) {
-      if (tranId != null) {
-        widget.checkoutController
-            .handlePaymentFailure(tranId: tranId, bookIds: widget.bookIds);
+    if (isFail) {
+      if (orderId != null && orderId.isNotEmpty) {
+        widget.checkoutController.handlePaymentFailure(
+          orderId: orderId,
+          bookIds: widget.bookIds,
+        );
       }
       setState(() => isLoading = false);
       _showErrorDialog('Payment failed');
@@ -197,10 +207,12 @@ class _PaymentWebViewState extends State<PaymentWebView> {
     }
 
     // 🚫 Cancelled
-    if (url.contains('payment-cancel')) {
-      if (tranId != null) {
-        widget.checkoutController
-            .handlePaymentCancellation(tranId: tranId, bookIds: widget.bookIds);
+    if (isCancel) {
+      if (orderId != null && orderId.isNotEmpty) {
+        widget.checkoutController.handlePaymentCancellation(
+          orderId: orderId,
+          bookIds: widget.bookIds,
+        );
       }
       setState(() => isLoading = false);
       _showCancellationDialog('Payment cancelled');

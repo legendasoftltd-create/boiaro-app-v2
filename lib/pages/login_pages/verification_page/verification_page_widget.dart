@@ -197,6 +197,7 @@ class _VerificationPageWidgetState extends State<VerificationPageWidget> {
                               await EbookGroup.userverificationApiCall.call(
                             email: widget.email,
                             otp: int.tryParse(_model.pinCodeController!.text),
+                            password: widget.password,
                           );
 
                           if (EbookGroup.userverificationApiCall.success(
