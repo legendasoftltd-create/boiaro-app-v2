@@ -660,8 +660,8 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget>
                                   key: Key(
                                     'AudiobookCategory_${getJsonField(categoryItem, r'''$.name''').toString()}',
                                   ),
-                                  image:
-                                      '${FFAppConstants.imageUrl}${getJsonField(categoryItem, r'''$.image''').toString()}',
+                                  icon:
+                                      '${FFAppConstants.imageUrl}${getJsonField(categoryItem, r'''$.icon''').toString()}',
                                   name: getJsonField(
                                           categoryItem, r'''$.name''')
                                       .toString(),

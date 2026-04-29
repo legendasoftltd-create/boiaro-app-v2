@@ -9,13 +9,13 @@ export 'category_component_model.dart';
 class CategoryComponentWidget extends StatefulWidget {
   const CategoryComponentWidget({
     super.key,
-    required this.image,
+    required this.icon,
     required this.name,
     required this.onMainTap,
     bool? isSmall,
   }) : this.isSmall = isSmall ?? false;
 
-  final String? image;
+  final String? icon;
   final String? name;
   final Future Function()? onMainTap;
   final bool isSmall;
@@ -90,13 +90,13 @@ class _CategoryComponentWidgetState extends State<CategoryComponentWidget> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                       ),
-                      child: CachedNetworkImage(
-                        fadeInDuration: Duration(milliseconds: 200),
-                        fadeOutDuration: Duration(milliseconds: 200),
-                        imageUrl: widget.image!,
-                        fit: BoxFit.cover,
-                        errorWidget: (context, error, stackTrace) =>
-                            Image.asset(
+                       child: CachedNetworkImage(
+                         fadeInDuration: Duration(milliseconds: 200),
+                         fadeOutDuration: Duration(milliseconds: 200),
+                         imageUrl: widget.icon!,
+                         fit: BoxFit.cover,
+                         errorWidget: (context, error, stackTrace) =>
+                             Image.asset(
                           'assets/images/error_image.png',
                           fit: BoxFit.cover,
                         ),
@@ -161,13 +161,13 @@ class _CategoryComponentWidgetState extends State<CategoryComponentWidget> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                       ),
-                      child: CachedNetworkImage(
-                        fadeInDuration: Duration(milliseconds: 200),
-                        fadeOutDuration: Duration(milliseconds: 200),
-                        imageUrl: widget.image!,
-                        fit: BoxFit.cover,
-                        errorWidget: (context, error, stackTrace) =>
-                            Image.asset(
+                       child: CachedNetworkImage(
+                         fadeInDuration: Duration(milliseconds: 200),
+                         fadeOutDuration: Duration(milliseconds: 200),
+                         imageUrl: widget.icon!,
+                         fit: BoxFit.cover,
+                         errorWidget: (context, error, stackTrace) =>
+                             Image.asset(
                           'assets/images/error_image.png',
                           fit: BoxFit.cover,
                         ),

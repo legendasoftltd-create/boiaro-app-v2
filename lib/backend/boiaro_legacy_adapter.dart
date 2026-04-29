@@ -55,13 +55,18 @@ class BoiaroLegacyAdapter {
       'rating': m['rating'],
       'total_reads': m['total_reads'],
       'is_free': m['is_free'],
-      'authors': m['authors'],
+      'author': m['author'] ?? m['authors'],
+      'authors': m['authors'] ?? m['author'],
+      'category': m['category'] ?? m['categories'],
+      'categories': m['categories'] ?? m['category'],
+      'publisher': m['publisher'] ?? m['publishers'],
+      'publishers': m['publishers'] ?? m['publisher'],
       'formats': const [],
     });
   }
 
   static Map<String, dynamic> legacyBookFromV2(Map<String, dynamic> b) {
-    final authors = b['authors'];
+    final authors = b['author'] ?? b['authors'];
     String authorName = '';
     String authorId = '';
     String authorImage = '';
@@ -71,12 +76,24 @@ class BoiaroLegacyAdapter {
       authorImage = authors['avatar_url']?.toString() ?? '';
     }
 
-    final categories = b['categories'];
+    final categories = b['category'] ?? b['categories'];
     String catId = '';
     String catName = '';
     if (categories is Map) {
       catId = categories['id']?.toString() ?? '';
       catName = categories['name']?.toString() ?? '';
+    }
+
+    final publishers = b['publisher'] ?? b['publishers'];
+    String publisherId = '';
+    String publisherName = '';
+    String publisherImage = '';
+    if (publishers is Map) {
+      publisherId = publishers['id']?.toString() ?? '';
+      publisherName = publishers['name']?.toString() ?? '';
+      publisherImage = (publishers['logo_url'] ?? publishers['image'])
+              ?.toString() ??
+          '';
     }
 
     final id = b['id']?.toString() ?? '';
@@ -142,6 +159,11 @@ class BoiaroLegacyAdapter {
       'category': {
         '_id': catId,
         'name': catName,
+      },
+      'publisher': {
+        '_id': publisherId,
+        'name': publisherName,
+        'image': publisherImage,
       },
       'price': price,
       'averageRating': avg,
@@ -302,6 +324,31 @@ class BoiaroLegacyAdapter {
       'phone': '',
       'image': img,
       'country_code': '',
+      'referral_code': p['referral_code']?.toString() ?? '',
+    };
+  }
+
+  static Map<String, dynamic> legacyUserFromAuthUser(Map<String, dynamic> user) {
+    final profile = user['profile'];
+    final displayName = profile is Map
+        ? profile['display_name']?.toString() ?? ''
+        : '';
+    final parts = displayName.trim().split(RegExp(r'\s+'));
+    final first = parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : '';
+    final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    final image = profile is Map ? profile['avatar_url']?.toString() ?? '' : '';
+    return {
+      'id': user['id']?.toString() ?? '',
+      'firstname': first,
+      'lastname': last,
+      'username': displayName,
+      'email': user['email']?.toString() ?? '',
+      'phone': '',
+      'image': image,
+      'country_code': '',
+      'referral_code': '',
+      'profile_id': profile is Map ? profile['id']?.toString() ?? '' : '',
+      'roles': user['roles'],
     };
   }
 }

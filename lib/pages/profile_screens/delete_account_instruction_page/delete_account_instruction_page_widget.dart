@@ -193,6 +193,7 @@ class _DeleteAccountInstructionPageWidgetState
                                               FFAppState().userId = '';
                                               FFAppState().userDetail = null;
                                               FFAppState().token = '';
+                                              FFAppState().refreshToken = '';
                                               FFAppState().update(() {});
                                               FFAppState()
                                                   .clearGetFavouriteBookCacheCache();

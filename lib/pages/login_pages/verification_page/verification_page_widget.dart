@@ -219,6 +219,12 @@ class _VerificationPageWidgetState extends State<VerificationPageWidget> {
                                   EbookGroup.userverificationApiCall.token(
                                 (_model.verifyOtpFunction?.jsonBody ?? ''),
                               )!;
+                              FFAppState().refreshToken = EbookGroup
+                                      .userverificationApiCall
+                                      .refreshToken(
+                                    (_model.verifyOtpFunction?.jsonBody ?? ''),
+                                  ) ??
+                                  '';
                               FFAppState().userDetail = EbookGroup
                                   .userverificationApiCall
                                   .userDetails(

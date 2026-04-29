@@ -252,10 +252,10 @@ class _CategoriesScreenWidgetState extends State<CategoriesScreenWidget>
                                                                 r'''$.name''',
                                                               ).toString()}',
                                                             ),
-                                                            image:
+                                                            icon:
                                                                 '${FFAppConstants.imageUrl}${getJsonField(
                                                               categoryDetailsListItem,
-                                                              r'''$.image''',
+                                                              r'''$.icon''',
                                                             ).toString()}',
                                                             name: getJsonField(
                                                               categoryDetailsListItem,

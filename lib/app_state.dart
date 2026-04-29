@@ -37,6 +37,9 @@ class FFAppState extends ChangeNotifier {
       _token = prefs.getString('ff_token') ?? _token;
     });
     _safeInit(() {
+      _refreshToken = prefs.getString('ff_refreshToken') ?? _refreshToken;
+    });
+    _safeInit(() {
       _currentPassword =
           prefs.getString('ff_currentPassword') ?? _currentPassword;
     });
@@ -154,6 +157,10 @@ class FFAppState extends ChangeNotifier {
       _lastAdShownAtMillis =
           prefs.getInt('ff_lastAdShownAtMillis') ?? _lastAdShownAtMillis;
     });
+    ApiManager.setAuthTokens(
+      accessToken: _token,
+      refreshToken: _refreshToken,
+    );
   }
 
   void update(VoidCallback callback) {
@@ -209,10 +216,37 @@ class FFAppState extends ChangeNotifier {
   }
 
   String _token = '';
-  String get token => _token;
+  String get token {
+    if (_token.isEmpty && prefs.getString('ff_token') != null) {
+      _token = prefs.getString('ff_token') ?? _token;
+    }
+    final persisted = prefs.getString('ff_token');
+    if (persisted != null && persisted != _token) {
+      _token = persisted;
+    }
+    return _token;
+  }
   set token(String value) {
     _token = value;
     prefs.setString('ff_token', value);
+    ApiManager.setAuthTokens(accessToken: value, refreshToken: _refreshToken);
+  }
+
+  String _refreshToken = '';
+  String get refreshToken {
+    if (_refreshToken.isEmpty && prefs.getString('ff_refreshToken') != null) {
+      _refreshToken = prefs.getString('ff_refreshToken') ?? _refreshToken;
+    }
+    final persisted = prefs.getString('ff_refreshToken');
+    if (persisted != null && persisted != _refreshToken) {
+      _refreshToken = persisted;
+    }
+    return _refreshToken;
+  }
+  set refreshToken(String value) {
+    _refreshToken = value;
+    prefs.setString('ff_refreshToken', value);
+    ApiManager.setAuthTokens(accessToken: _token, refreshToken: value);
   }
 
   String _currentPassword = '';

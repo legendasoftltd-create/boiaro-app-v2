@@ -31,6 +31,13 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  double _parseRating(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -584,10 +591,12 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                                         r'''$.author.name''',
                                                       ).toString(),
                                                       averageRating:
-                                                          getJsonField(
-                                                        seachFilterListItem,
-                                                        r'''$.averageRating''',
-                                                      ).toDouble(),
+                                                          _parseRating(
+                                                        getJsonField(
+                                                          seachFilterListItem,
+                                                          r'''$.averageRating''',
+                                                        ),
+                                                      ),
                                                       isFav: functions.checkFavOrNot(
                                                               EbookGroup.getFavouriteBookCall
                                                                   .favouriteBookDetailsList(

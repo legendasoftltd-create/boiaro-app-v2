@@ -567,6 +567,12 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                     EbookGroup.signinApiCall.token(
                                   (_model.loginApiFunction?.jsonBody ?? ''),
                                 )!;
+                                FFAppState().refreshToken =
+                                    EbookGroup.signinApiCall.refreshToken(
+                                          (_model.loginApiFunction?.jsonBody ??
+                                              ''),
+                                        ) ??
+                                        '';
                                 FFAppState().userId =
                                     EbookGroup.signinApiCall.userId(
                                   (_model.loginApiFunction?.jsonBody ?? ''),

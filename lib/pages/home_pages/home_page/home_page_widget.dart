@@ -232,6 +232,13 @@ class _HomePageWidgetState extends State<HomePageWidget>
       _selectedFilter == HomeBookFilter.all ||
       _selectedFilter == HomeBookFilter.ebook;
 
+  double _parseRating(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
   Widget _buildFormatToggle(BuildContext context) {
     return Container(
       // padding: EdgeInsets.all(6.0),
@@ -645,7 +652,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         safeSetState(() {});
       }
     } catch (e) {
-      debugPrint('Error loading purchased books: $e');
+      // Keep homepage API failures silent.
     }
   }
 
@@ -1368,9 +1375,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                         r'''$.name''',
                                                                                       ).toString()}',
                                                                                     ),
-                                                                                    image: '${FFAppConstants.imageUrl}${getJsonField(
+                                                                                    icon: '${FFAppConstants.imageUrl}${getJsonField(
                                                                                       categoryDetailsListItem,
-                                                                                      r'''$.image''',
+                                                                                      r'''$.icon''',
                                                                                     ).toString()}',
                                                                                     name: getJsonField(
                                                                                       categoryDetailsListItem,
@@ -1379,7 +1386,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                     isSmall: true,
                                                                                     onMainTap: () async {
                                                                                       context.pushNamed(
-                                                                                        SubCategoriesScreenWidget.routeName,
+                                                                                        GetBookByCategoryPageWidget.routeName,
                                                                                         queryParameters: {
                                                                                           'id': serializeParam(
                                                                                             getJsonField(
@@ -2051,7 +2058,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                         r'''$.name''',
                                                                                       ).toString()}',
                                                                                     ),
-                                                                                    image: '${FFAppConstants.imageUrl}${getJsonField(
+                                                                                    icon: '${FFAppConstants.imageUrl}${getJsonField(
                                                                                       authorDetailsListItem,
                                                                                       r'''$.image''',
                                                                                     ).toString()}',
@@ -2251,10 +2258,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                                                             popularbookDetailsListItem,
                                                                                             r'''$.author.name''',
                                                                                           ).toString(),
-                                                                                          averageRating: getJsonField(
-                                                                                            popularbookDetailsListItem,
-                                                                                            r'''$.averageRating''',
-                                                                                          ).toDouble(),
+                                                                                          averageRating: _parseRating(
+                                                                                            getJsonField(
+                                                                                              popularbookDetailsListItem,
+                                                                                              r'''$.averageRating''',
+                                                                                            ),
+                                                                                          ),
                                                                                           isFav: functions.checkFavOrNot(
                                                                                                   EbookGroup.getFavouriteBookCall
                                                                                                       .favouriteBookDetailsList(

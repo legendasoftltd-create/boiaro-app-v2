@@ -16,6 +16,7 @@ import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import '/providers/cart_provider.dart';
+import '/services/local_download_service.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -58,6 +59,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   bool _lastEbookAuthError = false;
   final Set<String> _purchasedFormatKeys = <String>{};
   int? _walletCoinBalance;
+  bool _isDownloadingEbook = false;
 
   @override
   void initState() {
@@ -800,6 +802,49 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       price: _formatPrice(hardcopyFormat),
       type: 'hardcopy',
     );
+  }
+
+  Future<void> _downloadEbookForOffline({
+    required String bookId,
+    required String bookName,
+    required String bookImage,
+    required String authorName,
+    required bool isBookFree,
+  }) async {
+    if (_isDownloadingEbook) return;
+    if (!FFAppState().isLogin) {
+      await actions.showCustomToastBottom('Sign in to download');
+      context.pushNamed(SignInPageWidget.routeName);
+      return;
+    }
+    safeSetState(() => _isDownloadingEbook = true);
+    try {
+      final hasAccess = isBookFree ||
+          await _hasFormatAccess(bookId: bookId, format: 'ebook');
+      if (!hasAccess) {
+        await actions.showCustomToastBottom(
+            'Buy or unlock ebook before download');
+        return;
+      }
+      String? url = await _fetchEbookSignedUrl(bookId);
+      url ??= await _fetchEbookSignedUrlGuestAware(bookId);
+      if (url == null || url.trim().isEmpty) {
+        await actions.showCustomToastBottom('Unable to fetch download URL');
+        return;
+      }
+      await LocalDownloadService.downloadBook(
+        bookId: bookId,
+        name: bookName,
+        image: bookImage,
+        author: authorName,
+        remoteUrl: url,
+      );
+      await actions.showCustomToastBottom('Book downloaded successfully');
+    } catch (_) {
+      await actions.showCustomToastBottom('Download failed');
+    } finally {
+      if (mounted) safeSetState(() => _isDownloadingEbook = false);
+    }
   }
 
   // ── Audiobook tracks / episodes ────────────────────────────────────────────
@@ -2385,6 +2430,51 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 BorderRadius.circular(10),
                                           ),
                                         ),
+                                        if (activeTab ==
+                                            BookMasterFormatTab.ebook)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 8.0),
+                                            child: FFButtonWidget(
+                                              onPressed: _isDownloadingEbook
+                                                  ? null
+                                                  : () async {
+                                                      await _downloadEbookForOffline(
+                                                        bookId: bookId,
+                                                        bookName: bookName,
+                                                        bookImage: bookImage,
+                                                        authorName: authorName,
+                                                        isBookFree: isBookFree,
+                                                      );
+                                                    },
+                                              text: _isDownloadingEbook
+                                                  ? 'Downloading...'
+                                                  : 'Download',
+                                              icon: const Icon(
+                                                Icons.download_rounded,
+                                                color: Colors.white,
+                                              ),
+                                              options: FFButtonOptions(
+                                                width: double.infinity,
+                                                height: 44,
+                                                color: FlutterFlowTheme.of(context)
+                                                    .secondaryText,
+                                                textStyle: FlutterFlowTheme.of(
+                                                        context)
+                                                    .titleSmall
+                                                    .override(
+                                                      fontFamily:
+                                                          'SF Pro Display',
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      letterSpacing: 0.0,
+                                                    ),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),

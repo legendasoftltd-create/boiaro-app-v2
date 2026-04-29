@@ -238,10 +238,10 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                                                                 r'''$.name''',
                                                               ).toString()}',
                                                             ),
-                                                            image:
+                                                            icon:
                                                                 '${FFAppConstants.imageUrl}${getJsonField(
                                                               publisherDetailsListItem,
-                                                              r'''$.image''',
+                                                              r'''$.icon''',
                                                             ).toString()}',
                                                             name: getJsonField(
                                                               publisherDetailsListItem,

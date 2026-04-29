@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:equatable/equatable.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:mime_type/mime_type.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '/app_constants.dart';
 import '/flutter_flow/uploaded_file.dart';
@@ -231,6 +232,33 @@ class ApiManager {
   // If your API calls need authentication, populate this field once
   // the user has authenticated. Alter this as needed.
   static String? _accessToken;
+  static String? _refreshToken;
+
+
+
+  static void setAuthTokens({
+    String? accessToken,
+    String? refreshToken,
+  }) {
+    _accessToken = (accessToken ?? '').trim().isEmpty ? null : accessToken;
+    _refreshToken = (refreshToken ?? '').trim().isEmpty ? null : refreshToken;
+  }
+
+  static Future<void> clearAuthTokens() async {
+    _accessToken = null;
+    _refreshToken = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('ff_token');
+    await prefs.remove('ff_refreshToken');
+  }
+
+  static bool _isMobileRestUrl(String apiUrl) =>
+      apiUrl.startsWith(FFAppConstants.mobileApiBaseUrl);
+
+  static bool _isAuthLoginUrl(String apiUrl) => apiUrl.endsWith('/auth/login');
+
+  static bool _isAuthRefreshUrl(String apiUrl) =>
+      apiUrl.endsWith('/auth/refresh');
   // You may want to call this if, for example, you make a change to the
   // database and no longer want the cached result of a call that may
   // have changed.
@@ -261,6 +289,8 @@ class ApiManager {
       }
     });
   }
+
+
 
   static Future<ApiCallResponse> urlRequest(
     ApiCallType callType,
@@ -453,6 +483,119 @@ class ApiManager {
         : postBody;
   }
 
+  static Future<ApiCallResponse> _executeRequest(
+    ApiCallType callType,
+    String apiUrl,
+    Map<String, dynamic> headers,
+    Map<String, dynamic> params,
+    String? body,
+    BodyType? bodyType,
+    bool returnBody,
+    bool encodeBodyUtf8,
+    bool decodeUtf8,
+    bool alwaysAllowBody,
+    bool isStreamingApi, {
+    http.Client? client,
+  }) async {
+    switch (callType) {
+      case ApiCallType.GET:
+        return urlRequest(
+          callType,
+          apiUrl,
+          headers,
+          params,
+          returnBody,
+          decodeUtf8,
+          isStreamingApi,
+          client: client,
+        );
+      case ApiCallType.DELETE:
+        return alwaysAllowBody
+            ? requestWithBody(
+                callType,
+                apiUrl,
+                headers,
+                params,
+                body,
+                bodyType,
+                returnBody,
+                encodeBodyUtf8,
+                decodeUtf8,
+                alwaysAllowBody,
+                isStreamingApi,
+                client: client,
+              )
+            : urlRequest(
+                callType,
+                apiUrl,
+                headers,
+                params,
+                returnBody,
+                decodeUtf8,
+                isStreamingApi,
+                client: client,
+              );
+      case ApiCallType.POST:
+      case ApiCallType.PUT:
+      case ApiCallType.PATCH:
+        return requestWithBody(
+          callType,
+          apiUrl,
+          headers,
+          params,
+          body,
+          bodyType,
+          returnBody,
+          encodeBodyUtf8,
+          decodeUtf8,
+          alwaysAllowBody,
+          isStreamingApi,
+          client: client,
+        );
+    }
+  }
+
+  static Future<bool> _refreshSession(http.Client? client) async {
+    final refreshToken = _refreshToken?.trim() ?? '';
+    if (refreshToken.isEmpty) {
+      return false;
+    }
+    try {
+      final response = await requestWithBody(
+        ApiCallType.POST,
+        '${FFAppConstants.mobileApiBaseUrl}/auth/refresh',
+        <String, dynamic>{'Content-Type': 'application/json'},
+        const {},
+        json.encode({'refreshToken': refreshToken}),
+        BodyType.JSON,
+        true,
+        false,
+        false,
+        false,
+        false,
+        client: client,
+      );
+      final body = response.jsonBody;
+      if (response.statusCode < 200 || response.statusCode >= 300 || body is! Map) {
+        return false;
+      }
+      final newAccess = body['accessToken']?.toString().trim() ?? '';
+      final newRefreshRaw = body['refreshToken']?.toString().trim() ?? '';
+      final newRefresh = newRefreshRaw.isNotEmpty ? newRefreshRaw : refreshToken;
+      if (newAccess.isEmpty) {
+        return false;
+      }
+      _accessToken = newAccess;
+      _refreshToken = newRefresh;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('ff_token', newAccess);
+      await prefs.setString('ff_refreshToken', newRefresh);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<ApiCallResponse> call(
     ApiCallOptions options, {
     http.Client? client,
@@ -512,15 +655,17 @@ class ApiManager {
     if (_accessToken != null) {
       headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
     }
-    if (apiUrl.contains('/mobile-api') ||
-        apiUrl.startsWith(FFAppConstants.mobileApiBaseUrl)) {
+    if ((apiUrl.contains('/mobile-api') || _isMobileRestUrl(apiUrl)) &&
+        FFAppConstants.supabaseAnonApiKey.isNotEmpty) {
       headers.putIfAbsent('apikey', () => FFAppConstants.supabaseAnonApiKey);
     }
     if (!apiUrl.startsWith('http')) {
       apiUrl = 'https://$apiUrl';
     }
     final safeParams = _paramsForLogging(callOptions.params);
-    log('Making API call: ${callOptions.callName} to $apiUrl Headers: ${json.encode(callOptions.headers)} Params: ${json.encode(safeParams)} Body: ${callOptions.body} Body:String ${body }',);
+     
+     // log('Making API call: ${callOptions.callName} to $apiUrl Headers: ${json.encode(callOptions.headers)} Params: ${json.encode(safeParams)} Body: ${callOptions.body} Body:String ${body }');
+
 
     // If we've already made this exact call before and caching is on,
     // return the cached result.
@@ -530,66 +675,52 @@ class ApiManager {
 
     ApiCallResponse result;
     try {
-      switch (callType) {
-        case ApiCallType.GET:
-          result = await urlRequest(
-            callType,
-            apiUrl,
-            headers,
-            params,
-            returnBody,
-            decodeUtf8,
-            isStreamingApi,
-            client: client,
-          );
-          break;
-        case ApiCallType.DELETE:
-          result = alwaysAllowBody
-              ? await requestWithBody(
-                  callType,
-                  apiUrl,
-                  headers,
-                  params,
-                  body,
-                  bodyType,
-                  returnBody,
-                  encodeBodyUtf8,
-                  decodeUtf8,
-                  alwaysAllowBody,
-                  isStreamingApi,
-                  client: client,
-                )
-              : await urlRequest(
-                  callType,
-                  apiUrl,
-                  headers,
-                  params,
-                  returnBody,
-                  decodeUtf8,
-                  isStreamingApi,
-                  client: client,
-                );
-          break;
-        case ApiCallType.POST:
-        case ApiCallType.PUT:
-        case ApiCallType.PATCH:
-          result = await requestWithBody(
-            callType,
-            apiUrl,
-            headers,
-            params,
-            body,
-            bodyType,
-            returnBody,
-            encodeBodyUtf8,
-            decodeUtf8,
-            alwaysAllowBody,
-            isStreamingApi,
-            client: client,
-          );
-          break;
+      result = await _executeRequest(
+        callType,
+        apiUrl,
+        headers,
+        params,
+        body,
+        bodyType,
+        returnBody,
+        encodeBodyUtf8,
+        decodeUtf8,
+        alwaysAllowBody,
+        isStreamingApi,
+        client: client,
+      );
+      if (result.statusCode == 401 &&
+          _isMobileRestUrl(apiUrl) &&
+          !_isAuthLoginUrl(apiUrl) &&
+          !_isAuthRefreshUrl(apiUrl) &&
+          await _refreshSession(client)) {
+        final retryHeaders = Map<String, dynamic>.from(headers);
+        if (_accessToken != null) {
+          retryHeaders[HttpHeaders.authorizationHeader] =
+              'Bearer $_accessToken';
+        }
+        result = await _executeRequest(
+          callType,
+          apiUrl,
+          retryHeaders,
+          params,
+          body,
+          bodyType,
+          returnBody,
+          encodeBodyUtf8,
+          decodeUtf8,
+          alwaysAllowBody,
+          isStreamingApi,
+          client: client,
+        );
+      } else if (result.statusCode == 401 &&
+          _isMobileRestUrl(apiUrl) &&
+          !_isAuthLoginUrl(apiUrl) &&
+          !_isAuthRefreshUrl(apiUrl)) {
+        await clearAuthTokens();
       }
-      log('API call $apiUrl status code ${result.statusCode} Response body: ${result.bodyText}');
+      
+      // log('API call $apiUrl status code ${result.statusCode} Response body: ${result.bodyText}');
       // If caching is on, cache the result (if present).
       if (cache) {
         _apiCache[callOptions] = result;

@@ -489,7 +489,8 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                               ),
                                             ),
                                           ),
-                                        Padding(
+                                        if ((widget.publisherId ?? '').isEmpty)
+                                          Padding(
                                           padding:
                                               EdgeInsetsDirectional.fromSTEB(
                                                   16.0, 16.0, 16.0, 8.0),

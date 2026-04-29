@@ -9,8 +9,10 @@ import '/pages/components/single_appbar/single_appbar_widget.dart';
 import '/pages/dialogs/log_out_dialog/log_out_dialog_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/index.dart';
+import '/pages/profile_screens/wallet_page/wallet_page_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
@@ -274,6 +276,48 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                         ),
                                   ).animateOnPageLoad(animationsMap[
                                       'textOnPageLoadAnimation2']!),
+                                  if (getJsonField(
+                                            FFAppState().userDetail,
+                                            r'''$.referral_code''',
+                                          ) !=
+                                          null &&
+                                      getJsonField(
+                                            FFAppState().userDetail,
+                                            r'''$.referral_code''',
+                                          )
+                                              .toString()
+                                              .trim()
+                                              .isNotEmpty)
+                                    InkWell(
+                                      onTap: () async {
+                                        final code = getJsonField(
+                                          FFAppState().userDetail,
+                                          r'''$.referral_code''',
+                                        ).toString();
+                                        await Clipboard.setData(
+                                            ClipboardData(text: code));
+                                        await actions.showCustomToastBottom(
+                                            'Referral code copied');
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryBackground,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          'Referral code: ${getJsonField(
+                                            FFAppState().userDetail,
+                                            r'''$.referral_code''',
+                                          ).toString()}',
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodySmall,
+                                        ),
+                                      ),
+                                    ),
                                 ].divide(SizedBox(height: 4.0)),
                               ),
                             ),
@@ -978,9 +1022,8 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                 hoverColor: Colors.transparent,
                                 highlightColor: Colors.transparent,
                                 onTap: () async {
-                                  await actions.showCustomToastBottom(FFLocalizations.of(context).getText('coming_soon'));
-                                  // context.pushNamed(
-                                  //     SubscriptionPageWidget.routeName);
+                                  context.pushNamed(
+                                      SubscriptionPageWidget.routeName);
                                 },
                                 child: Container(
                                   width: double.infinity,
@@ -1038,6 +1081,108 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
                                               FFLocalizations.of(context).getText('subscription'),
+                                              style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        fontSize: 17.0,
+                                                        letterSpacing: 0.0,
+                                                        lineHeight: 1.5,
+                                                      ),
+                                            ),
+                                          ),
+                                        ),
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(0.0),
+                                          child: SvgPicture.asset(
+                                            'assets/images/arrow_right_ic.svg',
+                                            width: 20.0,
+                                            height: 20.0,
+                                            colorFilter: ColorFilter.mode(
+                                              FlutterFlowTheme.of(context)
+                                                  .primaryText,
+                                              BlendMode.srcIn,
+                                            ),
+                                            fit: BoxFit.contain,
+                                            alignment: Alignment(0.0, 0.0),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ).animateOnPageLoad(animationsMap[
+                                  'containerOnPageLoadAnimation4']!),
+                            ),
+                          if (FFAppState().isLogin == true)
+                            Padding(
+                              padding: EdgeInsetsDirectional.fromSTEB(
+                                  16.0, 0.0, 16.0, 16.0),
+                              child: InkWell(
+                                splashColor: Colors.transparent,
+                                focusColor: Colors.transparent,
+                                hoverColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
+                                onTap: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const WalletPageWidget(),
+                                    ),
+                                  );
+                                  safeSetState(() {});
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryBackground,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        blurRadius: 16.0,
+                                        color: FlutterFlowTheme.of(context)
+                                            .shadowColor,
+                                        offset: Offset(
+                                          0.0,
+                                          4.0,
+                                        ),
+                                      )
+                                    ],
+                                    borderRadius: BorderRadius.circular(12.0),
+                                  ),
+                                  child: Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                        8.0, 8.0, 16.0, 8.0),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.max,
+                                      children: [
+                                        Container(
+                                          width: 48.0,
+                                          height: 48.0,
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context)
+                                                .lightGrey,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          alignment:
+                                              AlignmentDirectional(0.0, 0.0),
+                                          child: Icon(
+                                            Icons.account_balance_wallet_rounded,
+                                            color: FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                            size: 24.0,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Padding(
+                                            padding:
+                                                EdgeInsetsDirectional.fromSTEB(
+                                                    16.0, 0.0, 0.0, 0.0),
+                                            child: Text(
+                                              'Wallet',
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -1435,6 +1580,8 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                     FFAppState().isLogin =
                                                         false;
                                                     FFAppState().token = '';
+                                                    FFAppState().refreshToken =
+                                                        '';
                                                     FFAppState().favChange =
                                                         false;
                                                     FFAppState().bookId = '';
@@ -1581,45 +1728,6 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                             ),
                           ),
                          
-                         Padding(
-                            padding: EdgeInsetsDirectional.fromSTEB(
-                                20.0, 16.0, 20.0, 12.0),
-                            child: Text(
-                              'We\'re on social media',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontSize: 18.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ).animateOnPageLoad(animationsMap[
-                                'textOnPageLoadAnimation1']!),
-                          ),
-                          _buildSocialItem(
-                            context,
-                            'Like Facebook Page',
-                            'assets/images/facebook_ic.png',
-                            'https://www.facebook.com/boiarobd',
-                            isImage: true,
-                          ).animateOnPageLoad(animationsMap[
-                              'containerOnPageLoadAnimation5']!),
-                          _buildSocialItem(
-                            context,
-                            'Join Facebook Community',
-                            Icons.groups_rounded,
-                            'https://www.facebook.com/groups/boiaro.pathok.adda',
-                            iconColor: Color(0xFF1877F2),
-                          ).animateOnPageLoad(animationsMap[
-                              'containerOnPageLoadAnimation5']!),
-                          _buildSocialItem(
-                            context,
-                            'Subscribe Youtube Channel',
-                            'assets/images/youtube.svg',
-                            'https://www.youtube.com/@boiaro',
-                          ).animateOnPageLoad(animationsMap[
-                              'containerOnPageLoadAnimation5']!),
                         ],
                       );
                     } else {
@@ -1644,77 +1752,4 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
     );
   }
 
-  Widget _buildSocialItem(
-    BuildContext context,
-    String label,
-    dynamic icon,
-    String url, {
-    bool isImage = false,
-    Color? iconColor,
-  }) {
-    return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 12.0),
-      child: InkWell(
-        onTap: () async {
-          await launchURL(url);
-        },
-        child: Container(
-          width: double.infinity,
-          height: 60.0,
-          decoration: BoxDecoration(
-            color: FlutterFlowTheme.of(context).secondaryBackground,
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 12.0,
-                color: FlutterFlowTheme.of(context).shadowColor,
-                offset: Offset(0.0, 4.0),
-              )
-            ],
-            borderRadius: BorderRadius.circular(30.0),
-          ),
-          child: Padding(
-            padding: EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Container(
-                  width: 44.0,
-                  height: 44.0,
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).lightGrey,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: AlignmentDirectional(0.0, 0.0),
-                  child: icon is IconData
-                      ? Icon(icon, color: iconColor ?? FlutterFlowTheme.of(context).primary, size: 24.0)
-                      : (isImage
-                          ? Image.asset(icon, width: 28.0, height: 28.0, fit: BoxFit.contain)
-                          : SvgPicture.asset(icon, width: 28.0, height: 28.0, fit: BoxFit.contain)),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 0.0, 0.0),
-                    child: Text(
-                      label,
-                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            fontFamily: 'SF Pro Display',
-                            color: FlutterFlowTheme.of(context).primaryText,
-                            letterSpacing: 0.0,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: FlutterFlowTheme.of(context).primaryText,
-                  size: 24.0,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

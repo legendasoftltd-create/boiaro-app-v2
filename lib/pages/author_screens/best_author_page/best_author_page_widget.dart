@@ -236,7 +236,7 @@ class _BestAuthorPageWidgetState extends State<BestAuthorPageWidget> {
                                                                 r'''$.name''',
                                                               ).toString()}',
                                                             ),
-                                                            image:
+                                                            icon:
                                                                 '${FFAppConstants.imageUrl}${getJsonField(
                                                               authorDetailsListItem,
                                                               r'''$.image''',

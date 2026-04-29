@@ -233,10 +233,10 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                                                                 r'''$.name''',
                                                               ).toString()}',
                                                             ),
-                                                            image:
+                                                            icon:
                                                                 '${FFAppConstants.imageUrl}${getJsonField(
                                                               narratorDetailsListItem,
-                                                              r'''$.image''',
+                                                              r'''$.icon''',
                                                             ).toString()}',
                                                             name: getJsonField(
                                                               narratorDetailsListItem,

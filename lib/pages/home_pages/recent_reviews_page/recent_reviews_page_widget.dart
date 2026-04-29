@@ -3,6 +3,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/dialogs/book_review_bottom_sheet/book_review_bottom_sheet_widget.dart';
+import '/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
@@ -30,6 +31,8 @@ class RecentReviewsPageWidget extends StatefulWidget {
 
 class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
   late RecentReviewsPageModel _model;
+  final TextEditingController _commentController = TextEditingController();
+  bool _isPostingComment = false;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -43,6 +46,7 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
 
   @override
   void dispose() {
+    _commentController.dispose();
     _model.dispose();
 
     super.dispose();
@@ -204,7 +208,7 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                           await _model
                                               .waitForApiRequestCompleted();
                                         },
-                                        child: ListView.separated(
+                                        child: ListView(
                                           padding: EdgeInsets.fromLTRB(
                                             0,
                                             16.0,
@@ -212,14 +216,12 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                             16.0,
                                           ),
                                           scrollDirection: Axis.vertical,
-                                          itemCount: reviewList.length,
-                                          separatorBuilder: (_, __) =>
-                                              SizedBox(height: 16.0),
-                                          itemBuilder:
-                                              (context, reviewListIndex) {
-                                            final reviewListItem =
-                                                reviewList[reviewListIndex];
-                                            return Padding(
+                                          children: [
+                                            ...List.generate(reviewList.length,
+                                                (reviewListIndex) {
+                                              final reviewListItem =
+                                                  reviewList[reviewListIndex];
+                                              return Padding(
                                               padding: EdgeInsetsDirectional
                                                   .fromSTEB(
                                                       16.0, 0.0, 16.0, 0.0),
@@ -447,9 +449,188 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                                     ],
                                                   ),
                                                 ),
+                                              ));
+                                           
+                                            }).divide(
+                                                SizedBox(height: 16.0)),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      16, 12, 16, 8),
+                                              child: Text(
+                                                'Comments',
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .titleMedium,
                                               ),
-                                            );
-                                          },
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      16, 0, 16, 12),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: TextFormField(
+                                                      controller:
+                                                          _commentController,
+                                                      decoration:
+                                                          const InputDecoration(
+                                                        hintText:
+                                                            'Write a comment...',
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  ElevatedButton(
+                                                    onPressed: _isPostingComment
+                                                        ? null
+                                                        : () async {
+                                                            final txt =
+                                                                _commentController
+                                                                    .text
+                                                                    .trim();
+                                                            if (txt.isEmpty) {
+                                                              return;
+                                                            }
+                                                            if (!FFAppState()
+                                                                .isLogin) {
+                                                              context.pushNamed(
+                                                                  SignInPageWidget
+                                                                      .routeName);
+                                                              return;
+                                                            }
+                                                            safeSetState(() =>
+                                                                _isPostingComment =
+                                                                    true);
+                                                            final postRes =
+                                                                await EbookGroup
+                                                                    .addcommentApiCall
+                                                                    .call(
+                                                              bookId:
+                                                                  widget.bookId,
+                                                              comment: txt,
+                                                              token: FFAppState()
+                                                                  .token,
+                                                            );
+                                                            ScaffoldMessenger.of(
+                                                                    context)
+                                                                .showSnackBar(
+                                                              SnackBar(
+                                                                content: Text(
+                                                                  EbookGroup
+                                                                          .addcommentApiCall
+                                                                          .message(
+                                                                              postRes.jsonBody) ??
+                                                                      'Done',
+                                                                ),
+                                                              ),
+                                                            );
+                                                            _commentController
+                                                                .clear();
+                                                            if (mounted) {
+                                                              safeSetState(() {
+                                                                _isPostingComment =
+                                                                    false;
+                                                              });
+                                                            }
+                                                          },
+                                                    child: Text(_isPostingComment
+                                                        ? '...'
+                                                        : 'Post'),
+                                                  )
+                                                ],
+                                              ),
+                                            ),
+                                            FutureBuilder<ApiCallResponse>(
+                                              future: EbookGroup
+                                                  .getbookcommentsApiCall
+                                                  .call(
+                                                bookId: widget.bookId,
+                                                token: FFAppState().token,
+                                              ),
+                                              builder: (context, cSnap) {
+                                                if (!cSnap.hasData) {
+                                                  return const SizedBox.shrink();
+                                                }
+                                                final comments = EbookGroup
+                                                        .getbookcommentsApiCall
+                                                        .commentDetails(
+                                                          cSnap.data!.jsonBody,
+                                                        )
+                                                        ?.toList() ??
+                                                    <dynamic>[];
+                                                if (comments.isEmpty) {
+                                                  return Padding(
+                                                    padding:
+                                                        const EdgeInsets.fromLTRB(
+                                                            16, 0, 16, 0),
+                                                    child: Text(
+                                                      'No comments yet',
+                                                      style:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .bodyMedium,
+                                                    ),
+                                                  );
+                                                }
+                                                return Column(
+                                                  children: comments
+                                                      .take(20)
+                                                      .map((c) => Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .fromLTRB(
+                                                                    16,
+                                                                    0,
+                                                                    16,
+                                                                    8),
+                                                            child: Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(12),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .secondaryBackground,
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            10),
+                                                              ),
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  Text(
+                                                                    getJsonField(
+                                                                      c,
+                                                                      r'''$.profiles.display_name''',
+                                                                    ).toString(),
+                                                                    style: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodyMedium,
+                                                                  ),
+                                                                  const SizedBox(
+                                                                      height:
+                                                                          4),
+                                                                  Text(
+                                                                    getJsonField(
+                                                                      c,
+                                                                      r'''$.comment''',
+                                                                    ).toString(),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ))
+                                                      .toList(),
+                                                );
+                                              },
+                                            ),
+                                          ],
                                         ),
                                       );
                                     },

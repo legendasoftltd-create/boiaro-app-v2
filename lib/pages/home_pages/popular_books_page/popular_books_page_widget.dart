@@ -28,6 +28,13 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  double _parseRating(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -323,10 +330,12 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                                         //    r'''$.price''',
                                                         // ).toString(),
                                                         averageRating:
-                                                            getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.averageRating''',
-                                                        ).toDouble(),
+                                                            _parseRating(
+                                                          getJsonField(
+                                                            popularBookListItem,
+                                                            r'''$.averageRating''',
+                                                          ),
+                                                        ),
                                                         isFav: functions.checkFavOrNot(
                                                                 EbookGroup.getFavouriteBookCall
                                                                     .favouriteBookDetailsList(
