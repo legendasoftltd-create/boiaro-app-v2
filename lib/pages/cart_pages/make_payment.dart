@@ -42,6 +42,9 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
   void initState() {
     super.initState();
     print("User ID: ${widget.userId}, JWT Token: ${widget.jwtToken}");
+    print(
+        "bookIds: ${widget.bookIds}, couponCode: ${widget.couponCode}, shippingAddress: ${widget.shippingAddress}, selectedPaymentMethod: ${widget.selectedPaymentMethod}");
+
     _checkoutController = CheckoutController(
       jwtToken: widget.jwtToken,
       userId: widget.userId,
@@ -116,7 +119,8 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle, color: Colors.green, size: 56),
+                        const Icon(Icons.check_circle,
+                            color: Colors.green, size: 56),
                         const SizedBox(height: 12),
                         Text(
                           _successMessage!,
@@ -132,13 +136,12 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
                     ),
                   ),
                 )
-          : _error != null
-              ? Center(child: Text('Error: $_error'))
-              : const Center(child: Text('Redirecting to payment...')),
+              : _error != null
+                  ? Center(child: Text('Error: $_error'))
+                  : const Center(child: Text('Redirecting to payment...')),
     );
   }
 }
-
 
 /// -----------------------
 /// Checkout Controller
@@ -170,12 +173,44 @@ class CheckoutController {
   bool _needsShipping(Iterable<CartItem> lines) =>
       lines.any((c) => _formatForApi(c.type) == 'hardcopy');
 
-  bool _isUuid(String input) {
+  String? _extractOrderId(Map<String, dynamic> payload) {
+    final topLevel = [
+      payload['order_id'],
+      payload['orderId'],
+      payload['id'],
+    ];
+    for (final value in topLevel) {
+      final id = value?.toString().trim() ?? '';
+      if (id.isNotEmpty) return id;
+    }
+
+    final nestedCandidates = [
+      payload['order'],
+      payload['data'],
+      payload['result']
+    ];
+    for (final candidate in nestedCandidates) {
+      if (candidate is Map) {
+        final nested = Map<String, dynamic>.from(candidate);
+        final id = _extractOrderId(nested);
+        if (id != null && id.isNotEmpty) return id;
+      }
+    }
+
+    return null;
+  }
+
+  bool _isValidBookId(String input) {
     final v = input.trim();
-    final reg = RegExp(
+    if (v.isEmpty) return false;
+
+    final uuidReg = RegExp(
       r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
     );
-    return reg.hasMatch(v);
+    if (uuidReg.hasMatch(v)) return true;
+
+    final objectIdReg = RegExp(r'^[0-9a-fA-F]{24}$');
+    return objectIdReg.hasMatch(v);
   }
 
   /// BoiAro v2: [name], [address], [phone] per API docs.
@@ -214,7 +249,7 @@ class CheckoutController {
         return {'success': 0, 'message': 'Cart is empty'};
       }
 
-      final hasInvalidBookId = cartLines.any((c) => !_isUuid(c.id));
+      final hasInvalidBookId = cartLines.any((c) => !_isValidBookId(c.id));
       if (hasInvalidBookId) {
         return {
           'success': 0,
@@ -229,7 +264,7 @@ class CheckoutController {
       final items = cartLines
           .map(
             (c) => {
-              'book_id': c.id,
+              'book_id': c.id.trim(),
               'format': _formatForApi(c.type),
               'quantity': c.quantity,
             },
@@ -257,7 +292,7 @@ class CheckoutController {
             Uri.parse('$baseUrl/wallet/unlock'),
             headers: _headers,
             body: jsonEncode({
-              'book_id': line.id,
+              'book_id': line.id.trim(),
               'format': format,
               'coin_cost': coinCost,
             }),
@@ -267,7 +302,8 @@ class CheckoutController {
             final err = decoded is Map ? decoded['error']?.toString() : null;
             return {
               'success': 0,
-              'message': err ?? 'Wallet unlock failed (${unlockRes.statusCode})',
+              'message':
+                  err ?? 'Wallet unlock failed (${unlockRes.statusCode})',
             };
           }
         }
@@ -302,8 +338,10 @@ class CheckoutController {
       );
 
       final orderDecoded = jsonDecode(orderRes.body);
+      log('Create order response (${orderRes.statusCode}): $orderDecoded');
       if (orderRes.statusCode != 201 && orderRes.statusCode != 200) {
-        final err = orderDecoded is Map ? orderDecoded['error']?.toString() : null;
+        final err =
+            orderDecoded is Map ? orderDecoded['error']?.toString() : null;
         return {
           'success': 0,
           'message': err ?? 'Failed to create order (${orderRes.statusCode})',
@@ -314,14 +352,12 @@ class CheckoutController {
         return {'success': 0, 'message': 'Invalid order response'};
       }
 
-      final order = orderDecoded['order'];
-      if (order is! Map) {
-        return {'success': 0, 'message': 'Order payload missing'};
-      }
-
-      final orderId = order['id']?.toString();
+      final orderId = _extractOrderId(orderDecoded);
       if (orderId == null || orderId.isEmpty) {
-        return {'success': 0, 'message': 'Order id missing'};
+        return {
+          'success': 0,
+          'message': 'Order id missing from response',
+        };
       }
 
       final payRes = await http.post(
@@ -331,6 +367,7 @@ class CheckoutController {
       );
 
       final payDecoded = jsonDecode(payRes.body);
+      log('Initiate payment response (${payRes.statusCode}): $payDecoded');
       if (payRes.statusCode != 200) {
         final err = payDecoded is Map ? payDecoded['error']?.toString() : null;
         return {
@@ -343,10 +380,13 @@ class CheckoutController {
         return {'success': 0, 'message': 'Invalid payment response'};
       }
 
-      final ok = payDecoded['success'] == true;
-      final gatewayUrl = payDecoded['gateway_url']?.toString();
+      final ok = payDecoded['success'] == true || payDecoded['success'] == 1;
+      final gatewayUrl = payDecoded['gateway_url']?.toString() ??
+          payDecoded['GatewayPageURL']?.toString() ??
+          payDecoded['url']?.toString();
       if (!ok || gatewayUrl == null || gatewayUrl.isEmpty) {
-        final err = payDecoded['error']?.toString();
+        final err = payDecoded['error']?.toString() ??
+            payDecoded['message']?.toString();
         return {
           'success': 0,
           'message': err ?? 'Gateway URL not returned',
@@ -435,26 +475,26 @@ class OrderPlaceDialogWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, size: 60, color: isFailed ? Colors.red : Colors.green),
           const SizedBox(height: 15),
           Text(title,
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold)),
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Text(description, textAlign: TextAlign.center),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: onOkPressed ?? () => Navigator.of(context).pop(),
-            child:  Text(isSuccess?"Start Reading": "Go Back", style: FlutterFlowTheme.of(context).titleMedium.override(
-                        fontFamily: 'SF Pro Display',
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      )),
+            child: Text(isSuccess ? "Start Reading" : "Go Back",
+                style: FlutterFlowTheme.of(context).titleMedium.override(
+                      fontFamily: 'SF Pro Display',
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    )),
             style: ElevatedButton.styleFrom(
               backgroundColor: isFailed ? Colors.red : Colors.green,
               minimumSize: Size(double.infinity, 56),

@@ -8,7 +8,6 @@ import 'package:a_i_ebook_app/custom_code/widgets/bookmarks_highlights_drawer.da
 import 'package:a_i_ebook_app/custom_code/widgets/table_of_contents_drawer.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/search_drawer.dart';
 import 'package:a_i_ebook_app/custom_code/widgets/settings_drawer.dart';
-
 import '/backend/backend.dart';
 import '/backend/schema/structs/index.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -102,10 +101,12 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
   final ValueNotifier<bool> _isAtTopNotifier = ValueNotifier<bool>(true);
   final ValueNotifier<bool> _isAtBottomNotifier = ValueNotifier<bool>(false);
   String? _currentBookId;
+  String? _resolvedFilePath;
   String? _originalChapterHtml; // Store original HTML before highlights
   bool _isLoading = true;
   Timer? _progressHeartbeatTimer;
   bool _hasEndedForBackground = false;
+  ScaffoldMessengerState? _scaffoldMessenger;
 
   // Auto-scroll timers
   Timer? _autoScrollTimer; // For interval-based auto-scroll
@@ -129,21 +130,26 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
   void _onReadingDebug(String message) {
     if (!mounted || !kDebugMode) return;
     if (message.contains('PROGRESS SKIP')) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
+    final messenger = _scaffoldMessenger;
     if (messenger == null) return;
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(milliseconds: 1200),
-      ),
-    );
+    try {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(milliseconds: 1200),
+        ),
+      );
+    } catch (_) {
+      // Ignore snackbar attempts while the widget tree is tearing down.
+    }
   }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _resolvedFilePath = _resolveFilePath(widget.filePath);
     if (widget.filePath == null) {
       _isLoading = false;
     }
@@ -158,12 +164,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
     SchedulerBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<PdfViewerProvider>();
       // Generate book ID from file path
-      _currentBookId = PdfViewerTextOperations.generateBookId(widget.filePath);
+      _currentBookId =
+          PdfViewerTextOperations.generateBookId(_resolvedFilePath);
       // Load highlights and bookmarks for this book
       provider.loadHighlights(_currentBookId!);
       provider.loadBookmarks(_currentBookId!);
 
-      PdfViewerHelpers.determineReaderType(widget.filePath, provider);
+      PdfViewerHelpers.determineReaderType(_resolvedFilePath, provider);
       provider.setCurrentPage(1);
       PdfViewerHelpers.getInitialBrightness(provider);
       ReadingReportService.instance.setDebugListener(_onReadingDebug);
@@ -171,7 +178,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
       _startProgressHeartbeat();
       if (provider.readerType == ReaderType.epub) {
         EpubReaderWidget.loadEpubBook(
-          widget.filePath,
+          _resolvedFilePath,
           provider,
           context,
           (index) => EpubReaderWidget.loadEpubChapter(
@@ -202,6 +209,33 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
         }
       });
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+  }
+
+  String? _resolveFilePath(String? path) {
+    final trimmed = path?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('assets/')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('file://')) {
+      return Uri.parse(trimmed).toFilePath();
+    }
+    if (RegExp(r'^[a-zA-Z]:[\\/]').hasMatch(trimmed)) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/') && File(trimmed).existsSync()) {
+      return trimmed;
+    }
+    return Uri.parse(FFAppConstants.webUrl).resolve(trimmed).toString();
   }
 
   List<PdfTocItem> _processBookmarks(
@@ -1493,11 +1527,12 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
                             child: Container(
                               padding: EdgeInsets.only(top: 50),
                               color: Colors.white,
-                              child: (widget.filePath != null &&
-                                      (widget.filePath!.startsWith('http') ||
-                                          widget.filePath!.startsWith('https')))
+                              child: (_resolvedFilePath != null &&
+                                      (_resolvedFilePath!.startsWith('http') ||
+                                          _resolvedFilePath!
+                                              .startsWith('https')))
                                   ? SfPdfViewer.network(
-                                      widget.filePath!,
+                                      _resolvedFilePath!,
                                       key: _pdfViewerKey,
                                       controller: pdfViewerController,
                                       scrollDirection: isPdfVerticalScroll
@@ -1572,7 +1607,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
                                       },
                                     )
                                   : SfPdfViewer.file(
-                                      File(widget.filePath ?? ''),
+                                      File(_resolvedFilePath ?? ''),
                                       key: _pdfViewerKey,
                                       controller: pdfViewerController,
                                       scrollDirection: isPdfVerticalScroll

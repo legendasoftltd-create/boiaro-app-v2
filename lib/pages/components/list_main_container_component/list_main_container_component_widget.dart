@@ -23,7 +23,7 @@ class ListMainContainerComponentWidget extends StatefulWidget {
     bool? indicator,
     required this.onMainTap,
     required this.width,
-     this.price="",
+    this.price = "",
     this.discountAmount,
     this.discountPercentage,
     this.bookType,
@@ -93,6 +93,14 @@ class _ListMainContainerComponentWidgetState
     return 'ebook';
   }
 
+  double _safeDouble(String? raw, {double fallback = 0}) {
+    final value = raw?.trim() ?? '';
+    if (value.isEmpty || value.toLowerCase() == 'null') {
+      return fallback;
+    }
+    return double.tryParse(value) ?? fallback;
+  }
+
   @override
   void setState(VoidCallback callback) {
     super.setState(callback);
@@ -118,6 +126,9 @@ class _ListMainContainerComponentWidgetState
   Widget build(BuildContext context) {
     final formats = _extractFormats(widget.bookType);
     final cartType = _primaryCartType(formats);
+    final priceValue = _safeDouble(widget.price);
+    final discountAmountValue = _safeDouble(widget.discountAmount);
+    final discountPercentageValue = _safeDouble(widget.discountPercentage);
     final formatIcons = <IconData>[
       if (formats.contains('ebook')) Icons.menu_book_rounded,
       if (formats.contains('audiobook')) Icons.headphones_rounded,
@@ -153,8 +164,8 @@ class _ListMainContainerComponentWidgetState
           borderRadius: BorderRadius.circular(12.0),
           border: Border.all(
             color: FlutterFlowTheme.of(context).primary.withValues(
-              alpha: 0.1,
-            ),
+                  alpha: 0.1,
+                ),
             width: 2.0,
           ),
         ),
@@ -196,7 +207,7 @@ class _ListMainContainerComponentWidgetState
                           color: FlutterFlowTheme.of(context)
                               .primaryBackground
                               .withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(12.0),
                           boxShadow: [
                             BoxShadow(
                               blurRadius: 8.0,
@@ -214,9 +225,9 @@ class _ListMainContainerComponentWidgetState
                                       horizontal: 1.0),
                                   child: Icon(
                                     ic,
-                                    size: 11.0,
-                                    color:
-                                        FlutterFlowTheme.of(context).primaryText,
+                                    size: 15.0,
+                                    color: FlutterFlowTheme.of(context)
+                                        .primaryText,
                                   ),
                                 ),
                               )
@@ -229,38 +240,43 @@ class _ListMainContainerComponentWidgetState
                       top: 4.0,
                       right: 4.0,
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 6.0, vertical: 3.0),
                         decoration: BoxDecoration(
                           color: FlutterFlowTheme.of(context).primary,
                           borderRadius: BorderRadius.circular(10.0),
                         ),
                         child: Text(
                           'Purchased',
-                          style: FlutterFlowTheme.of(context).bodySmall.override(
-                            fontFamily: 'SF Pro Display',
-                            fontSize: 9.0,
-                            fontWeight: FontWeight.w600,
-                            color: FlutterFlowTheme.of(context).primaryBackground,
-                          ),
+                          style:
+                              FlutterFlowTheme.of(context).bodySmall.override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontSize: 9.0,
+                                    fontWeight: FontWeight.w600,
+                                    color: FlutterFlowTheme.of(context)
+                                        .primaryBackground,
+                                  ),
                         ),
                       ),
                     ),
-                   if (((double.tryParse(widget.discountAmount ?? '0')??0) > 0 ||
-                      (double.tryParse(widget.discountPercentage ?? '0')??0) > 0)&&!widget.isPurchased)
+                  if ((discountAmountValue > 0 || discountPercentageValue > 0) &&
+                      !widget.isPurchased)
                     Container(
                       margin: EdgeInsets.only(right: 8.0),
-                      padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
                       decoration: BoxDecoration(
                         color: FlutterFlowTheme.of(context).primary,
                         borderRadius: BorderRadius.circular(8.0),
                       ),
                       child: Text(
-                        (double.tryParse(widget.discountPercentage ?? '0')??0) > 0
+                        discountPercentageValue > 0
                             ? '${widget.discountPercentage}% OFF'
                             : '৳${widget.discountAmount} OFF',
                         style: FlutterFlowTheme.of(context).bodySmall.override(
                               fontFamily: 'SF Pro Display',
-                              color: FlutterFlowTheme.of(context).primaryBackground,
+                              color: FlutterFlowTheme.of(context)
+                                  .primaryBackground,
                               fontSize: 10.0,
                               letterSpacing: 0.0,
                               fontWeight: FontWeight.bold,
@@ -349,11 +365,13 @@ class _ListMainContainerComponentWidgetState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(double.parse(widget.price??'0')>0?"${valueOrDefault<String>(
-                              "৳ ${widget.price}",
-                              '\$0.00',
-                            )}":"Free",
-                            
+                          Text(
+                            priceValue > 0
+                                ? "${valueOrDefault<String>(
+                                    "৳ ${widget.price}",
+                                    '\$0.00',
+                                  )}"
+                                : "Free",
                             textAlign: TextAlign.start,
                             maxLines: 1,
                             style: FlutterFlowTheme.of(context)
@@ -367,219 +385,245 @@ class _ListMainContainerComponentWidgetState
                                   lineHeight: 1.2,
                                 ),
                           ),
-                         Consumer<CartProvider>(
-                                    builder: (context, cart, child) {
-                                      if (widget.isPurchased) {
-                                        // Show Read Now button for purchased books
-                                        return InkWell(
-                                          splashColor: Colors.transparent,
-                                          focusColor: Colors.transparent,
-                                          hoverColor: Colors.transparent,
-                                          highlightColor: Colors.transparent,
-                                          onTap: () async {
-                                            await widget.onMainTap?.call();
-                                          },
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                                            decoration: BoxDecoration(
-                                              color: FlutterFlowTheme.of(context).primary,
-                                              borderRadius: BorderRadius.circular(16.0),
-                                            ),
-                                            child: Text(
-                                              'Read Now',
-                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                fontFamily: 'SF Pro Display',
-                                                fontSize: 12.0,
-                                                fontWeight: FontWeight.w600,
-                                                color: FlutterFlowTheme.of(context).primaryBackground,
-                                              ),
-                                            ),
+                          Consumer<CartProvider>(
+                            builder: (context, cart, child) {
+                              if (widget.isPurchased) {
+                                // Show Read Now button for purchased books
+                                return InkWell(
+                                  splashColor: Colors.transparent,
+                                  focusColor: Colors.transparent,
+                                  hoverColor: Colors.transparent,
+                                  highlightColor: Colors.transparent,
+                                  onTap: () async {
+                                    await widget.onMainTap?.call();
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 12.0, vertical: 6.0),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
+                                      borderRadius: BorderRadius.circular(16.0),
+                                    ),
+                                    child: Text(
+                                      'Read Now',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 12.0,
+                                            fontWeight: FontWeight.w600,
+                                            color: FlutterFlowTheme.of(context)
+                                                .primaryBackground,
                                           ),
-                                        );
-                                      }
-
-                                      final isInCart = cart.items.containsKey(widget.id ?? "");
-                                      final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
-
-                                      if (quantity > 0) {
-                                        // Show increment/decrement buttons
-                                        return Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            // Decrement button
-                                            InkWell(
-                                              splashColor: Colors.transparent,
-                                              focusColor: Colors.transparent,
-                                              hoverColor: Colors.transparent,
-                                              highlightColor: Colors.transparent,
-                                              onTap: () async {
-                                                cart.removeSingleItem(widget.id ?? "");
-                                                await actions.showCustomToastBottom('Quantity decreased!');
-                                              },
-                                              child: Container(
-                                                width: 20.0,
-                                                height: 20.0,
-                                                decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(context).primary,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  Icons.remove,
-                                                  color: FlutterFlowTheme.of(context).primaryBackground,
-                                                  size: 16.0,
-                                                ),
-                                              ),
-                                            ),
-                                            // Quantity display
-                                            Container(
-                                               padding: EdgeInsets.all(5),
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                quantity.toString(),
-                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                  fontFamily: 'SF Pro Display',
-                                                  fontSize: 14.0,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: FlutterFlowTheme.of(context).primaryText,
-                                                ),
-                                              ),
-                                            ),
-                                            // Increment button
-                                            InkWell(
-                                              splashColor: Colors.transparent,
-                                              focusColor: Colors.transparent,
-                                              hoverColor: Colors.transparent,
-                                              highlightColor: Colors.transparent,
-                                              onTap: () async {
-                                                cart.addItem(
-                                                  widget.id ?? "",
-                                                  widget.name ?? "",
-                                                  widget.image ?? "",
-                                                  double.parse(widget.price ?? "0"),
-                                                  discountAmount: double.tryParse(widget.discountAmount ?? "0") ?? 0,
-                                                  discountPercentage: double.tryParse(widget.discountPercentage ?? "0") ?? 0,
-                                                  type: cartType,
-                                                );
-                                                await actions.showCustomToastBottom('Quantity increased!');
-                                              },
-                                              child: Container(
-                                                width: 20.0,
-                                                height: 20.0,
-                                                decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(context).primary,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  Icons.add,
-                                                  color: FlutterFlowTheme.of(context).primaryBackground,
-                                                  size: 16.0,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      } else {
-                                        // Show add to cart button
-                                        return double.parse(widget.price??'0')>0?InkWell(
-                                          splashColor: Colors.transparent,
-                                          focusColor: Colors.transparent,
-                                          hoverColor: Colors.transparent,
-                                          highlightColor: Colors.transparent,
-                                          onTap: () async {
-                                            cart.addItem(
-                                              widget.id ?? "",
-                                              widget.name ?? "",
-                                              widget.image ?? "",
-                                              double.parse(widget.price ?? "0"),
-                                              discountAmount:double.tryParse(widget.discountAmount ?? "0") ?? 0,
-                                              discountPercentage: double.tryParse(widget.discountPercentage ?? "0") ?? 0,
-                                              type: cartType,
-                                            );
-                                            await actions.showCustomToastBottom('Added to cart!');
-                                          },
-                                          child: Container(
-                                            width: 25.0,
-                                            height: 25.0,
-                                            decoration: BoxDecoration(
-                                              color: FlutterFlowTheme.of(context).primary,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.add_shopping_cart_rounded,
-                                              color: FlutterFlowTheme.of(context).primaryBackground,
-                                              size: 13.0,
-                                            ),
-                                          ),
-                                        ):SizedBox();
-                                      }
-                                    },
+                                    ),
                                   ),
+                                );
+                              }
+
+                              final isInCart =
+                                  cart.items.containsKey(widget.id ?? "");
+                              final quantity = isInCart
+                                  ? cart.items[widget.id ?? ""]?.quantity ?? 0
+                                  : 0;
+
+                              if (quantity > 0) {
+                                // Show increment/decrement buttons
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Decrement button
+                                    InkWell(
+                                      splashColor: Colors.transparent,
+                                      focusColor: Colors.transparent,
+                                      hoverColor: Colors.transparent,
+                                      highlightColor: Colors.transparent,
+                                      onTap: () async {
+                                        cart.removeSingleItem(widget.id ?? "");
+                                        await actions.showCustomToastBottom(
+                                            'Quantity decreased!');
+                                      },
+                                      child: Container(
+                                        width: 20.0,
+                                        height: 20.0,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.remove,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryBackground,
+                                          size: 16.0,
+                                        ),
+                                      ),
+                                    ),
+                                    // Quantity display
+                                    Container(
+                                      padding: EdgeInsets.all(5),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        quantity.toString(),
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              fontSize: 14.0,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primaryText,
+                                            ),
+                                      ),
+                                    ),
+                                    // Increment button
+                                    InkWell(
+                                      splashColor: Colors.transparent,
+                                      focusColor: Colors.transparent,
+                                      hoverColor: Colors.transparent,
+                                      highlightColor: Colors.transparent,
+                                      onTap: () async {
+                                        cart.addItem(
+                                          widget.id ?? "",
+                                          widget.name ?? "",
+                                          widget.image ?? "",
+                                          priceValue,
+                                          discountAmount: discountAmountValue,
+                                          discountPercentage:
+                                              discountPercentageValue,
+                                          type: cartType,
+                                        );
+                                        await actions.showCustomToastBottom(
+                                            'Quantity increased!');
+                                      },
+                                      child: Container(
+                                        width: 20.0,
+                                        height: 20.0,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.add,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryBackground,
+                                          size: 16.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              } else {
+                                // Show add to cart button
+                                return priceValue > 0
+                                    ? InkWell(
+                                        splashColor: Colors.transparent,
+                                        focusColor: Colors.transparent,
+                                        hoverColor: Colors.transparent,
+                                        highlightColor: Colors.transparent,
+                                        onTap: () async {
+                                          cart.addItem(
+                                            widget.id ?? "",
+                                            widget.name ?? "",
+                                            widget.image ?? "",
+                                            priceValue,
+                                            discountAmount:
+                                                discountAmountValue,
+                                            discountPercentage:
+                                                discountPercentageValue,
+                                            type: cartType,
+                                          );
+                                          await actions.showCustomToastBottom(
+                                              'Added to cart!');
+                                        },
+                                        child: Container(
+                                          width: 25.0,
+                                          height: 25.0,
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context)
+                                                .primary,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.add_shopping_cart_rounded,
+                                            color: FlutterFlowTheme.of(context)
+                                                .primaryBackground,
+                                            size: 13.0,
+                                          ),
+                                        ),
+                                      )
+                                    : SizedBox();
+                              }
+                            },
+                          ),
                         ],
                       ),
                     ].divide(SizedBox(height: 8.0)),
                   ),
                 ),
               ),
-              InkWell(
-                splashColor: Colors.transparent,
-                focusColor: Colors.transparent,
-                hoverColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-                onTap: () async {
-                  await widget.isFavAction?.call();
-                },
-                child: Container(
-                  width: 28.0,
-                  height: 28.0,
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).primaryBackground,
-                    boxShadow: [
-                      BoxShadow(
-                        blurRadius: 16.0,
-                        color: FlutterFlowTheme.of(context).shadowColor,
-                        offset: Offset(
-                          0.0,
-                          4.0,
-                        ),
-                      )
-                    ],
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: AlignmentDirectional(0.0, 0.0),
-                  child: Builder(
-                    builder: (context) {
-                      if (!widget.indicator) {
-                        return Builder(
-                          builder: (context) {
-                            if (widget.isFav == true) {
-                              return Icon(
-                                Icons.favorite_sharp,
-                                color: FlutterFlowTheme.of(context).primaryText,
-                                size: 16.0,
-                              );
-                            } else {
-                              return Icon(
-                                Icons.favorite_border_rounded,
-                                color: FlutterFlowTheme.of(context).primaryText,
-                                size: 16.0,
-                              );
-                            }
-                          },
-                        );
-                      } else {
-                        return Container(
-                          width: 16.0,
-                          height: 16.0,
-                          child: custom_widgets.CirculatIndicator(
-                            width: 16.0,
-                            height: 16.0,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ),
-              ),
+              // InkWell(
+              //   splashColor: Colors.transparent,
+              //   focusColor: Colors.transparent,
+              //   hoverColor: Colors.transparent,
+              //   highlightColor: Colors.transparent,
+              //   onTap: () async {
+              //     await widget.isFavAction?.call();
+              //   },
+              //   child: Container(
+              //     width: 28.0,
+              //     height: 28.0,
+              //     decoration: BoxDecoration(
+              //       color: FlutterFlowTheme.of(context).primaryBackground,
+              //       boxShadow: [
+              //         BoxShadow(
+              //           blurRadius: 16.0,
+              //           color: FlutterFlowTheme.of(context).shadowColor,
+              //           offset: Offset(
+              //             0.0,
+              //             4.0,
+              //           ),
+              //         )
+              //       ],
+              //       shape: BoxShape.circle,
+              //     ),
+              //     alignment: AlignmentDirectional(0.0, 0.0),
+              //     child: Builder(
+              //       builder: (context) {
+              //         if (!widget.indicator) {
+              //           return Builder(
+              //             builder: (context) {
+              //               if (widget.isFav == true) {
+              //                 return Icon(
+              //                   Icons.favorite_sharp,
+              //                   color: FlutterFlowTheme.of(context).primaryText,
+              //                   size: 16.0,
+              //                 );
+              //               } else {
+              //                 return Icon(
+              //                   Icons.favorite_border_rounded,
+              //                   color: FlutterFlowTheme.of(context).primaryText,
+              //                   size: 16.0,
+              //                 );
+              //               }
+              //             },
+              //           );
+              //         } else {
+              //           return Container(
+              //             width: 16.0,
+              //             height: 16.0,
+              //             child: custom_widgets.CirculatIndicator(
+              //               width: 16.0,
+              //               height: 16.0,
+              //             ),
+              //           );
+              //         }
+              //       },
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),

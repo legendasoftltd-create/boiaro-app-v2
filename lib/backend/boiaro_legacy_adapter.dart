@@ -37,7 +37,8 @@ class BoiaroLegacyAdapter {
     if (e != null) {
       return e;
     }
-    final msg = normalize(jsonBody['message'] ?? jsonBody['msg'] ?? jsonBody['detail']);
+    final msg =
+        normalize(jsonBody['message'] ?? jsonBody['msg'] ?? jsonBody['detail']);
     if (msg != null) {
       return msg;
     }
@@ -46,7 +47,10 @@ class BoiaroLegacyAdapter {
 
   /// Book card / list item: `_id`, `name`, `image` (full URL), `author`, `price`, …
   /// Minimal book row from `GET /homepage` section items.
-  static Map<String, dynamic> legacyBookFromHomepageItem(Map<String, dynamic> m) {
+  static Map<String, dynamic> legacyBookFromHomepageItem(
+    Map<String, dynamic> m, {
+    String? preferredFormat,
+  }) {
     return legacyBookFromV2({
       'id': m['id'],
       'title': m['title'],
@@ -61,7 +65,11 @@ class BoiaroLegacyAdapter {
       'categories': m['categories'] ?? m['category'],
       'publisher': m['publisher'] ?? m['publishers'],
       'publishers': m['publishers'] ?? m['publisher'],
-      'formats': const [],
+      'formats': m['formats'] ?? const [],
+      'type': m['type'] ?? m['bookType'] ?? m['format'] ?? preferredFormat,
+      'bookType':
+          m['bookType'] ?? m['type'] ?? m['format'] ?? preferredFormat,
+      'preferred_format': preferredFormat,
     });
   }
 
@@ -91,9 +99,8 @@ class BoiaroLegacyAdapter {
     if (publishers is Map) {
       publisherId = publishers['id']?.toString() ?? '';
       publisherName = publishers['name']?.toString() ?? '';
-      publisherImage = (publishers['logo_url'] ?? publishers['image'])
-              ?.toString() ??
-          '';
+      publisherImage =
+          (publishers['logo_url'] ?? publishers['image'])?.toString() ?? '';
     }
 
     final id = b['id']?.toString() ?? '';
@@ -105,11 +112,23 @@ class BoiaroLegacyAdapter {
     double? discPct;
     double? discAmt;
     if (formats is List && formats.isNotEmpty) {
+      final preferred = b['preferred_format']?.toString().toLowerCase().trim();
       Map<String, dynamic>? pick;
-      for (final f in formats) {
-        if (f is Map && (f['format']?.toString() == 'ebook')) {
-          pick = Map<String, dynamic>.from(f);
-          break;
+      if (preferred != null && preferred.isNotEmpty) {
+        for (final f in formats) {
+          if (f is Map &&
+              f['format']?.toString().toLowerCase().trim() == preferred) {
+            pick = Map<String, dynamic>.from(f);
+            break;
+          }
+        }
+      }
+      if (pick == null) {
+        for (final f in formats) {
+          if (f is Map && (f['format']?.toString() == 'ebook')) {
+            pick = Map<String, dynamic>.from(f);
+            break;
+          }
         }
       }
       pick ??= formats.first is Map
@@ -304,35 +323,49 @@ class BoiaroLegacyAdapter {
     };
   }
 
-  static String jsonEncodeBody(Map<String, dynamic> m) =>
-      json.encode(m, toEncodable: (o) => o is DateTime ? o.toIso8601String() : o);
+  static String jsonEncodeBody(Map<String, dynamic> m) => json.encode(m,
+      toEncodable: (o) => o is DateTime ? o.toIso8601String() : o);
 
   /// Maps `GET /profile` to legacy `$.data.user` used across profile screens.
-  static Map<String, dynamic> legacyUserFromProfile(Map<String, dynamic> p) {
-    final dn = p['display_name']?.toString() ?? '';
-    final parts = dn.trim().split(RegExp(r'\s+'));
+  static Map<String, dynamic> legacyUserFromProfile({
+    required Map<String, dynamic> account,
+    required Map<String, dynamic> profile,
+  }) {
+    final dn = profile['display_name']?.toString() ?? '';
+    final fullName = profile['full_name']?.toString() ?? '';
+    final nameForSplit = fullName.trim().isNotEmpty ? fullName : dn;
+    final parts = nameForSplit.trim().split(RegExp(r'\s+'));
     final first = parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : '';
-    final last =
-        parts.length > 1 ? parts.sublist(1).join(' ') : '';
-    final img = p['avatar_url']?.toString() ?? '';
+    final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    final img = profile['avatar_url']?.toString() ?? '';
     return {
-      'id': p['user_id']?.toString() ?? '',
+      'id': account['id']?.toString() ?? profile['user_id']?.toString() ?? '',
       'firstname': first,
       'lastname': last,
       'username': dn,
-      'email': '',
-      'phone': '',
+      'display_name': dn,
+      'full_name': fullName,
+      'email': account['email']?.toString() ?? '',
+      'phone': profile['phone']?.toString() ?? '',
       'image': img,
+      'avatar_url': img,
       'country_code': '',
-      'referral_code': p['referral_code']?.toString() ?? '',
+      'bio': profile['bio']?.toString() ?? '',
+      'preferred_language': profile['preferred_language']?.toString() ?? '',
+      'referral_code': profile['referral_code']?.toString() ?? '',
+      'created_at': profile['created_at']?.toString() ??
+          account['created_at']?.toString() ??
+          '',
+      'profile_id': profile['id']?.toString() ?? '',
+      'roles': account['roles'],
     };
   }
 
-  static Map<String, dynamic> legacyUserFromAuthUser(Map<String, dynamic> user) {
+  static Map<String, dynamic> legacyUserFromAuthUser(
+      Map<String, dynamic> user) {
     final profile = user['profile'];
-    final displayName = profile is Map
-        ? profile['display_name']?.toString() ?? ''
-        : '';
+    final displayName =
+        profile is Map ? profile['display_name']?.toString() ?? '' : '';
     final parts = displayName.trim().split(RegExp(r'\s+'));
     final first = parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : '';
     final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';

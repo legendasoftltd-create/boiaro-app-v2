@@ -47,7 +47,7 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
         userId: FFAppState().userId,
         token: FFAppState().token,
       );
-      
+
       if (EbookGroup.userBookPurchaseRecordsApiCall.success(
             response.jsonBody ?? '',
           ) ==
@@ -213,25 +213,33 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                             ?.toList() ??
                                                         [];
 
-                                                    return Wrap(
-                                                      spacing: 16.0,
-                                                      runSpacing: 16.0,
-                                                      alignment:
-                                                          WrapAlignment.start,
-                                                      crossAxisAlignment:
-                                                          WrapCrossAlignment
-                                                              .start,
-                                                      direction:
-                                                          Axis.horizontal,
-                                                      runAlignment:
-                                                          WrapAlignment.start,
-                                                      verticalDirection:
-                                                          VerticalDirection
-                                                              .down,
-                                                      clipBehavior: Clip.none,
-                                                      children: List.generate(
-                                                          favList.length,
-                                                          (favListIndex) {
+                                                    final screenWidth =
+                                                        MediaQuery.sizeOf(
+                                                                context)
+                                                            .width;
+                                                    final crossAxisCount =
+                                                        screenWidth < 810.0
+                                                            ? 3
+                                                            : screenWidth <
+                                                                    1280.0
+                                                                ? 4
+                                                                : 6;
+
+                                                    return GridView.builder(
+                                                      shrinkWrap: true,
+                                                      physics:
+                                                          NeverScrollableScrollPhysics(),
+                                                      gridDelegate:
+                                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                                        crossAxisCount:
+                                                            crossAxisCount,
+                                                        crossAxisSpacing: 16.0,
+                                                        mainAxisSpacing: 16.0,
+                                                        mainAxisExtent: 240.0,
+                                                      ),
+                                                      itemCount: favList.length,
+                                                      itemBuilder: (context,
+                                                          favListIndex) {
                                                         final favListItem =
                                                             favList[
                                                                 favListIndex];
@@ -266,13 +274,11 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                               favListItem,
                                                               r'''$.bookDetails.name''',
                                                             ).toString(),
-                                                            id:
-                                                                getJsonField(
+                                                            id: getJsonField(
                                                               favListItem,
                                                               r'''$.bookDetails._id''',
                                                             ).toString(),
-                                                            price:
-                                                                getJsonField(
+                                                            price: getJsonField(
                                                               favListItem,
                                                               r'''$.bookDetails.price''',
                                                             ).toString(),
@@ -281,16 +287,16 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                               favListItem,
                                                               r'''$.bookDetails.type''',
                                                             )?.toString(),
-                                                              discountAmount:
-                                                                  getJsonField(
-                                                                favListItem,
-                                                                r'''$.bookDetails.discount_amount''',
-                                                              ).toString(),
-                                                              discountPercentage:
-                                                                  getJsonField(
-                                                                favListItem,
-                                                                r'''$.bookDetails.discount_percentage''',
-                                                              ).toString(),
+                                                            discountAmount:
+                                                                getJsonField(
+                                                              favListItem,
+                                                              r'''$.bookDetails.discount_amount''',
+                                                            ).toString(),
+                                                            discountPercentage:
+                                                                getJsonField(
+                                                              favListItem,
+                                                              r'''$.bookDetails.discount_percentage''',
+                                                            ).toString(),
                                                             authorsName:
                                                                 getJsonField(
                                                               favListItem,
@@ -347,7 +353,9 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                               safeSetState(
                                                                   () {});
                                                             },
-                                                            isPurchased: _model.purchasedBookIds.contains(
+                                                            isPurchased: _model
+                                                                .purchasedBookIds
+                                                                .contains(
                                                               getJsonField(
                                                                 favListItem,
                                                                 r'''$._id''',
@@ -401,7 +409,7 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                             },
                                                           ),
                                                         );
-                                                      }),
+                                                      },
                                                     );
                                                   },
                                                 ),

@@ -10,9 +10,12 @@ class SingleAppbarWidget extends StatefulWidget {
   const SingleAppbarWidget({
     super.key,
     String? title,
-  }) : this.title = title ?? 'Title';
+    bool? showBackButton,
+  })  : this.title = title ?? 'Title',
+        this.showBackButton = showBackButton ?? true;
 
   final String title;
+  final bool showBackButton;
 
   @override
   State<SingleAppbarWidget> createState() => _SingleAppbarWidgetState();
@@ -62,6 +65,8 @@ class _SingleAppbarWidgetState extends State<SingleAppbarWidget>
 
   @override
   Widget build(BuildContext context) {
+    final shouldShowBackButton = widget.showBackButton && context.canPop();
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -72,6 +77,26 @@ class _SingleAppbarWidgetState extends State<SingleAppbarWidget>
         child: Row(
           mainAxisSize: MainAxisSize.max,
           children: [
+            SizedBox(
+              width: 40.0,
+              height: 40.0,
+              child: shouldShowBackButton
+                  ? InkWell(
+                      splashColor: Colors.transparent,
+                      focusColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
+                      onTap: () async {
+                        context.safePop();
+                      },
+                      child: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: FlutterFlowTheme.of(context).primaryText,
+                        size: 20.0,
+                      ),
+                    )
+                  : SizedBox.shrink(),
+            ),
             Expanded(
               child: Align(
                 alignment: AlignmentDirectional(0.0, 0.0),
@@ -91,6 +116,10 @@ class _SingleAppbarWidgetState extends State<SingleAppbarWidget>
                       ),
                 ).animateOnPageLoad(animationsMap['textOnPageLoadAnimation']!),
               ),
+            ),
+            SizedBox(
+              width: 40.0,
+              height: 40.0,
             ),
           ],
         ),

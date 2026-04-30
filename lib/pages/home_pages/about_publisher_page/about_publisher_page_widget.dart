@@ -34,7 +34,8 @@ class AboutPublisherPageWidget extends StatefulWidget {
   static String routePath = '/aboutPublisherPage';
 
   @override
-  State<AboutPublisherPageWidget> createState() => _AboutPublisherPageWidgetState();
+  State<AboutPublisherPageWidget> createState() =>
+      _AboutPublisherPageWidgetState();
 }
 
 class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
@@ -102,7 +103,8 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
       safeSetState(() {
         _isFollowing = target;
         if (_followersCount != null) {
-          _followersCount = (_followersCount! + (target ? 1 : -1)).clamp(0, 1 << 30);
+          _followersCount =
+              (_followersCount! + (target ? 1 : -1)).clamp(0, 1 << 30);
         }
       });
       await actions.showCustomToastBottom(
@@ -121,7 +123,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
         userId: FFAppState().userId,
         token: FFAppState().token,
       );
-      
+
       if (EbookGroup.userBookPurchaseRecordsApiCall.success(
             response.jsonBody ?? '',
           ) ==
@@ -177,12 +179,12 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                   builder: (context) {
                     if (FFAppState().connected == true) {
                       return FutureBuilder<ApiCallResponse>(
-                        future: (_model.apiRequestCompleter2 ??=
-                                Completer<ApiCallResponse>()
-                                  ..complete(
-                                      EbookGroup.getpublisherdetailsApiCall.call(
-                                    publisherId: widget.publisherId,
-                                  )))
+                        future: (_model.apiRequestCompleter2 ??= Completer<
+                                ApiCallResponse>()
+                              ..complete(
+                                  EbookGroup.getpublisherdetailsApiCall.call(
+                                publisherId: widget.publisherId,
+                              )))
                             .future,
                         builder: (context, snapshot) {
                           // Customize what your widget looks like when it's loading.
@@ -206,7 +208,8 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                             decoration: BoxDecoration(),
                             child: Builder(
                               builder: (context) {
-                                if (EbookGroup.getpublisherdetailsApiCall.success(
+                                if (EbookGroup.getpublisherdetailsApiCall
+                                        .success(
                                       containerGetpublisherdetailsApiResponse
                                           .jsonBody,
                                     ) ==
@@ -300,8 +303,8 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                           milliseconds: 200),
                                                       fadeOutDuration: Duration(
                                                           milliseconds: 200),
-                                                      imageUrl:
-                                                          widget.publisherImage!,
+                                                      imageUrl: widget
+                                                          .publisherImage!,
                                                       fit: BoxFit.cover,
                                                       errorWidget: (context,
                                                               error,
@@ -365,24 +368,28 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                         _isFollowLoading)
                                                                     ? null
                                                                     : _toggleFollow,
-                                                                child: _isFollowLoading
-                                                                    ? const SizedBox(
-                                                                        width: 14,
-                                                                        height: 14,
-                                                                        child:
-                                                                            CircularProgressIndicator(
-                                                                          strokeWidth: 2,
-                                                                        ),
-                                                                      )
-                                                                    : Text(!FollowService
-                                                                            .supportsFollowEndpoints
-                                                                        ? 'Coming soon'
-                                                                        : (_isFollowing
-                                                                            ? 'Following'
-                                                                            : 'Follow')),
+                                                                child:
+                                                                    _isFollowLoading
+                                                                        ? const SizedBox(
+                                                                            width:
+                                                                                14,
+                                                                            height:
+                                                                                14,
+                                                                            child:
+                                                                                CircularProgressIndicator(
+                                                                              strokeWidth: 2,
+                                                                            ),
+                                                                          )
+                                                                        : Text(!FollowService.supportsFollowEndpoints
+                                                                            ? 'Coming soon'
+                                                                            : (_isFollowing
+                                                                                ? 'Following'
+                                                                                : 'Follow')),
                                                               ),
-                                                              if (_followersCount != null) ...[
-                                                                const SizedBox(width: 8),
+                                                              if (_followersCount !=
+                                                                  null) ...[
+                                                                const SizedBox(
+                                                                    width: 8),
                                                                 Text(
                                                                   '${_followersCount!} followers',
                                                                   style: FlutterFlowTheme.of(
@@ -402,13 +409,15 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                             ),
                                           ),
                                         ),
-                                        if (EbookGroup.getpublisherdetailsApiCall
+                                        if (EbookGroup
+                                                    .getpublisherdetailsApiCall
                                                     .description(
                                                   containerGetpublisherdetailsApiResponse
                                                       .jsonBody,
                                                 ) !=
                                                 null &&
-                                            EbookGroup.getpublisherdetailsApiCall
+                                            EbookGroup
+                                                    .getpublisherdetailsApiCall
                                                     .description(
                                                   containerGetpublisherdetailsApiResponse
                                                       .jsonBody,
@@ -435,13 +444,15 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                       ),
                                             ),
                                           ),
-                                        if (EbookGroup.getpublisherdetailsApiCall
+                                        if (EbookGroup
+                                                    .getpublisherdetailsApiCall
                                                     .description(
                                                   containerGetpublisherdetailsApiResponse
                                                       .jsonBody,
                                                 ) !=
                                                 null &&
-                                            EbookGroup.getpublisherdetailsApiCall
+                                            EbookGroup
+                                                    .getpublisherdetailsApiCall
                                                     .description(
                                                   containerGetpublisherdetailsApiResponse
                                                       .jsonBody,
@@ -491,24 +502,27 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                           ),
                                         if ((widget.publisherId ?? '').isEmpty)
                                           Padding(
-                                          padding:
-                                              EdgeInsetsDirectional.fromSTEB(
-                                                  16.0, 16.0, 16.0, 8.0),
-                                          child: Text(
-                                            'Contact information',
-                                            textAlign: TextAlign.start,
-                                            maxLines: 1,
-                                            style: FlutterFlowTheme.of(context)
-                                                .bodyMedium
-                                                .override(
-                                                  fontFamily: 'SF Pro Display',
-                                                  fontSize: 20.0,
-                                                  letterSpacing: 0.0,
-                                                  fontWeight: FontWeight.bold,
-                                                  lineHeight: 1.5,
-                                                ),
+                                            padding:
+                                                EdgeInsetsDirectional.fromSTEB(
+                                                    16.0, 16.0, 16.0, 8.0),
+                                            child: Text(
+                                              'Contact information',
+                                              textAlign: TextAlign.start,
+                                              maxLines: 1,
+                                              style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        fontSize: 20.0,
+                                                        letterSpacing: 0.0,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        lineHeight: 1.5,
+                                                      ),
+                                            ),
                                           ),
-                                        ),
                                         Padding(
                                           padding:
                                               EdgeInsetsDirectional.fromSTEB(
@@ -755,7 +769,8 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                   future: EbookGroup
                                                       .getbookbypublisherApiCall
                                                       .call(
-                                                    publisherId: widget.publisherId,
+                                                    publisherId:
+                                                        widget.publisherId,
                                                   ),
                                                   builder: (context, snapshot) {
                                                     // Customize what your widget looks like when it's loading.
@@ -837,30 +852,43 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                         ?.toList() ??
                                                                     [];
 
-                                                                return Wrap(
-                                                                  spacing: 16.0,
-                                                                  runSpacing:
-                                                                      16.0,
-                                                                  alignment:
-                                                                      WrapAlignment
-                                                                          .start,
-                                                                  crossAxisAlignment:
-                                                                      WrapCrossAlignment
-                                                                          .start,
-                                                                  direction: Axis
-                                                                      .horizontal,
-                                                                  runAlignment:
-                                                                      WrapAlignment
-                                                                          .start,
-                                                                  verticalDirection:
-                                                                      VerticalDirection
-                                                                          .down,
-                                                                  clipBehavior:
-                                                                      Clip.none,
-                                                                  children: List.generate(
+                                                                final screenWidth =
+                                                                    MediaQuery.sizeOf(
+                                                                            context)
+                                                                        .width;
+                                                                final crossAxisCount =
+                                                                    screenWidth <
+                                                                            810.0
+                                                                        ? 3
+                                                                        : screenWidth <
+                                                                                1280.0
+                                                                            ? 4
+                                                                            : 6;
+
+
+                                                                return GridView
+                                                                    .builder(
+                                                                  shrinkWrap:
+                                                                      true,
+                                                                  physics:
+                                                                      NeverScrollableScrollPhysics(),
+                                                                  gridDelegate:
+                                                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                                                    crossAxisCount:
+                                                                        crossAxisCount,
+                                                                    crossAxisSpacing:
+                                                                        16.0,
+                                                                    mainAxisSpacing:
+                                                                        16.0,
+                                                                    mainAxisExtent:
+                                                                        240.0,
+                                                                  ),
+                                                                  itemCount:
                                                                       bookDetailsList
                                                                           .length,
-                                                                      (bookDetailsListIndex) {
+                                                                  itemBuilder:
+                                                                      (context,
+                                                                          bookDetailsListIndex) {
                                                                     final bookDetailsListItem =
                                                                         bookDetailsList[
                                                                             bookDetailsListIndex];
@@ -896,8 +924,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                           bookDetailsListItem,
                                                                           r'''$.name''',
                                                                         ).toString(),
-                                                                        id:
-                                                                            getJsonField(
+                                                                        id: getJsonField(
                                                                           bookDetailsListItem,
                                                                           r'''$._id''',
                                                                         ).toString(),
@@ -1017,7 +1044,9 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                           safeSetState(
                                                                               () {});
                                                                         },
-                                                                        isPurchased: _model.purchasedBookIds.contains(
+                                                                        isPurchased: _model
+                                                                            .purchasedBookIds
+                                                                            .contains(
                                                                           getJsonField(
                                                                             bookDetailsListItem,
                                                                             r'''$._id''',
@@ -1063,7 +1092,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                         },
                                                                       ),
                                                                     );
-                                                                  }),
+                                                                  },
                                                                 );
                                                               },
                                                             ),

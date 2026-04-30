@@ -33,12 +33,11 @@ ApiCallResponse _v2Error(dynamic body, int status) {
 }
 
 bool _matchesBookTypeFilter(Map<String, dynamic> b, String? type) {
-  final t = (type ?? '').trim().toLowerCase();
+  final t = _normalizeHomepageTypeValue(type);
   if (t.isEmpty) {
     return true;
   }
-  final combined =
-      '${b['type'] ?? ''} ${b['bookType'] ?? ''}'.toLowerCase();
+  final combined = '${b['type'] ?? ''} ${b['bookType'] ?? ''}'.toLowerCase();
   if (t == 'audiobook' || t == 'audio') {
     return combined.contains('audio');
   }
@@ -48,27 +47,151 @@ bool _matchesBookTypeFilter(Map<String, dynamic> b, String? type) {
         combined.contains('pdf') ||
         combined.isEmpty;
   }
+  if (t == 'hardcopy') {
+    return combined.contains('hard') ||
+        combined.contains('print') ||
+        combined.contains('paper');
+  }
   return true;
 }
 
-Future<ApiCallResponse> _homepageSectionAsBooks({
+String _normalizeHomepageTypeValue(String? type) {
+  final t = (type ?? '').trim().toLowerCase();
+  if (t.isEmpty) {
+    return '';
+  }
+  if (t == 'hardcover') {
+    return 'hardcopy';
+  }
+  if (t == 'ebook' || t == 'audiobook' || t == 'hardcopy') {
+    return t;
+  }
+  return '__invalid__';
+}
+
+String _preferredHomepageFormatForSection(String sectionKey, String? type) {
+  final normalizedType = _normalizeHomepageTypeValue(type);
+  if (normalizedType.isNotEmpty && normalizedType != '__invalid__') {
+    return normalizedType;
+  }
+  switch (sectionKey) {
+    case 'popularAudiobooks':
+    case 'continueListening':
+      return 'audiobook';
+    case 'popularHardCopies':
+      return 'hardcopy';
+    case 'popularEbooks':
+    case 'continueReading':
+      return 'ebook';
+    default:
+      return '';
+  }
+}
+
+List<String> _homepageSectionBucketCandidates(String sectionKey, String? type) {
+  final normalizedType = _normalizeHomepageTypeValue(type);
+  switch (normalizedType) {
+    case 'ebook':
+      return const ['ebooks', 'ebook', 'all'];
+    case 'audiobook':
+      return const ['audiobooks', 'audiobook', 'all'];
+    case 'hardcopy':
+      return const ['hardcopies', 'hardcopy', 'hardCovers', 'hardcovers', 'all'];
+    default:
+      break;
+  }
+
+  switch (sectionKey) {
+    case 'popularAudiobooks':
+    case 'continueListening':
+      return const ['audiobooks', 'audiobook', 'all'];
+    case 'popularHardCopies':
+      return const ['hardcopies', 'hardcopy', 'hardCovers', 'hardcovers', 'all'];
+    case 'popularEbooks':
+    case 'continueReading':
+      return const ['ebooks', 'ebook', 'all'];
+    default:
+      return const ['all'];
+  }
+}
+
+dynamic _extractHomepageSectionRows(String sectionKey, dynamic body, String? type) {
+  if (body is! Map) {
+    return null;
+  }
+  dynamic raw = body[sectionKey];
+  final data = body['data'];
+  if (raw == null && data is Map) {
+    raw = data[sectionKey] ?? data;
+  }
+  if (raw == null && data is List) {
+    raw = data;
+  }
+  if (raw is Map) {
+    if (raw['data'] is Map) {
+      final nested = _extractHomepageSectionRows(
+        sectionKey,
+        raw['data'],
+        type,
+      );
+      if (nested != null) {
+        return nested;
+      }
+    }
+    if (raw.containsKey(sectionKey)) {
+      return raw[sectionKey];
+    }
+    for (final bucket in _homepageSectionBucketCandidates(sectionKey, type)) {
+      if (raw.containsKey(bucket)) {
+        return raw[bucket];
+      }
+    }
+    for (final fallbackKey in const ['items', 'books', 'results', 'list']) {
+      if (raw[fallbackKey] is List) {
+        return raw[fallbackKey];
+      }
+    }
+    if (sectionKey == 'newReleases' && raw.containsKey('all')) {
+      return raw['all'];
+    }
+    if (sectionKey == 'slider' && raw.containsKey('slider')) {
+      return raw['slider'];
+    }
+    final listValues = raw.values.whereType<List>().toList();
+    if (listValues.length == 1) {
+      return listValues.first;
+    }
+  }
+  return raw;
+}
+
+Future<ApiCallResponse> _homepageSectionRequest({
   required String sectionKey,
   String? type,
   String? token,
+  int? limit,
 }) async {
-  const homepageAliases = <String, List<String>>{
-    'trending': ['trendingNow', 'trending'],
-    'new': ['NewReleases', 'new'],
-    'popular': ['popularBooks', 'popular'],
-    'free': ['FreeBooks', 'freeBooks'],
-  };
+  final normalizedType = _normalizeHomepageTypeValue(type);
+  if (normalizedType == '__invalid__') {
+    return ApiCallResponse(
+      {
+        'error': 'Invalid type. Allowed values: ebook, audiobook, hardcopy',
+      },
+      const {},
+      400,
+    );
+  }
+  final safeLimit = (limit ?? 10).clamp(1, 50);
   final baseUrl = EbookGroup.getBaseUrl();
-  final res = await ApiManager.instance.makeApiCall(
-    callName: 'Homepage_$sectionKey',
-    apiUrl: '${baseUrl}homepage',
+  return ApiManager.instance.makeApiCall(
+    callName: 'HomepageSection_$sectionKey',
+    apiUrl: '${baseUrl}homepage/$sectionKey',
     callType: ApiCallType.GET,
     headers: _boiaroAuthHeaders(token),
-    params: {},
+    params: {
+      'limit': '$safeLimit',
+      if (normalizedType.isNotEmpty) 'type': normalizedType,
+    },
     bodyType: BodyType.NONE,
     returnBody: true,
     encodeBodyUtf8: false,
@@ -76,6 +199,20 @@ Future<ApiCallResponse> _homepageSectionAsBooks({
     cache: false,
     isStreamingApi: false,
     alwaysAllowBody: false,
+  );
+}
+
+Future<ApiCallResponse> _homepageSectionAsBooks({
+  required String sectionKey,
+  String? type,
+  String? token,
+  int? limit,
+}) async {
+  final res = await _homepageSectionRequest(
+    sectionKey: sectionKey,
+    type: type,
+    token: token,
+    limit: limit,
   );
   final body = res.jsonBody;
   if (!res.succeeded || body is! Map) {
@@ -85,18 +222,11 @@ Future<ApiCallResponse> _homepageSectionAsBooks({
   if (err != null) {
     return _v2Error(body, res.statusCode);
   }
-  dynamic raw = body[sectionKey];
-  if (raw == null) {
-    for (final alias in homepageAliases[sectionKey] ?? const <String>[]) {
-      raw = body[alias];
-      if (raw != null) {
-        break;
-      }
-    }
-  }
+  final raw = _extractHomepageSectionRows(sectionKey, body, type);
   if (raw is! List) {
     return ApiCallResponse(
-      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': <dynamic>[]}),
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+          extra: {'bookDetails': <dynamic>[]}),
       res.headers,
       res.statusCode,
     );
@@ -105,6 +235,10 @@ Future<ApiCallResponse> _homepageSectionAsBooks({
       .whereType<Map>()
       .map((e) => BoiaroLegacyAdapter.legacyBookFromHomepageItem(
             Map<String, dynamic>.from(e),
+            preferredFormat: _preferredHomepageFormatForSection(
+              sectionKey,
+              type,
+            ),
           ))
       .where((b) => _matchesBookTypeFilter(b, type))
       .toList();
@@ -241,6 +375,7 @@ class EbookGroup {
       ForgotpasswordverificationApiCall();
   static ResetpasswordApiCall resetpasswordApiCall = ResetpasswordApiCall();
   static GetuserApiCall getuserApiCall = GetuserApiCall();
+  static GetprofileApiCall getprofileApiCall = GetprofileApiCall();
   static UsereditprofileApiCall usereditprofileApiCall =
       UsereditprofileApiCall();
   static UploadimageApiCall uploadimageApiCall = UploadimageApiCall();
@@ -286,7 +421,8 @@ class EbookGroup {
   static CurrencyApiCall currencyApiCall = CurrencyApiCall();
   static AddreviewApiCall addreviewApiCall = AddreviewApiCall();
   static GetreviewApiCall getreviewApiCall = GetreviewApiCall();
-  static GetbookcommentsApiCall getbookcommentsApiCall = GetbookcommentsApiCall();
+  static GetbookcommentsApiCall getbookcommentsApiCall =
+      GetbookcommentsApiCall();
   static AddcommentApiCall addcommentApiCall = AddcommentApiCall();
   static WalletApiCall walletApiCall = WalletApiCall();
   static WalletTransactionsApiCall walletTransactionsApiCall =
@@ -294,6 +430,7 @@ class EbookGroup {
   static WalletClaimDailyApiCall walletClaimDailyApiCall =
       WalletClaimDailyApiCall();
   static WalletClaimAdApiCall walletClaimAdApiCall = WalletClaimAdApiCall();
+  static GetHomepageApiCall getHomepageApiCall = GetHomepageApiCall();
   static GetTrendingBooksApiCall getTrendingBooksApiCall =
       GetTrendingBooksApiCall();
   static GetNewBooksApiCall getNewBooksApiCall = GetNewBooksApiCall();
@@ -434,8 +571,8 @@ class UserBookPurchaseRecordsApiCall {
         }
         seen.add(bid);
         purchaseDetails.add({
-          'bookDetails':
-              BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(books)),
+          'bookDetails': BoiaroLegacyAdapter.legacyBookFromV2(
+              Map<String, dynamic>.from(books)),
         });
       }
     }
@@ -807,9 +944,8 @@ class GetSlidersApiCall {
         continue;
       }
       final m = Map<String, dynamic>.from(raw);
-      final cover = (m['image'] ?? m['cover_url'] ?? m['banner_url'])
-              ?.toString() ??
-          '';
+      final cover =
+          (m['image'] ?? m['cover_url'] ?? m['banner_url'])?.toString() ?? '';
       final directUrl = (m['button_url'] ?? m['url'])?.toString() ?? '';
       final slug = m['slug']?.toString() ?? '';
       sliderDetails.add({
@@ -822,7 +958,8 @@ class GetSlidersApiCall {
       });
     }
     return ApiCallResponse(
-      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'sliderDetails': sliderDetails}),
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+          extra: {'sliderDetails': sliderDetails}),
       res.headers,
       res.statusCode,
     );
@@ -1150,7 +1287,9 @@ class ForgotpasswordApiCall {
       alwaysAllowBody: false,
     );
     final body = res.jsonBody;
-    if (res.succeeded && body is Map && BoiaroLegacyAdapter.v2Error(body) == null) {
+    if (res.succeeded &&
+        body is Map &&
+        BoiaroLegacyAdapter.v2Error(body) == null) {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
           success: 1,
@@ -1206,11 +1345,10 @@ class ResetpasswordApiCall {
     String? newpassword = '',
     String? token = '',
   }) async {
-    final bearer = ((token ?? '').trim().isNotEmpty
-            ? token
-            : FFAppState().token)
-        ?.trim() ??
-        '';
+    final bearer =
+        ((token ?? '').trim().isNotEmpty ? token : FFAppState().token)
+                ?.trim() ??
+            '';
     if (bearer.isEmpty) {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
@@ -1239,7 +1377,9 @@ class ResetpasswordApiCall {
       alwaysAllowBody: false,
     );
     final body = res.jsonBody;
-    if (res.succeeded && body is Map && BoiaroLegacyAdapter.v2Error(body) == null) {
+    if (res.succeeded &&
+        body is Map &&
+        BoiaroLegacyAdapter.v2Error(body) == null) {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
           success: 1,
@@ -1352,6 +1492,70 @@ class GetuserApiCall {
         response,
         r'''$.data.user.country_code''',
       ));
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GetprofileApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'GetprofileApi',
+      apiUrl: '${baseUrl}profile',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final account = body['userProfile'];
+    if (account is! Map || account['profile'] is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final user = BoiaroLegacyAdapter.legacyUserFromProfile(
+      account: Map<String, dynamic>.from(account),
+      profile: Map<String, dynamic>.from(account['profile'] as Map),
+    );
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
+        'user': user,
+        'profile': account['profile'],
+        'userProfile': account,
+      }),
+      res.headers,
+      res.statusCode,
+    );
+  }
+
+  dynamic userDetail(dynamic response) => getJsonField(
+        response,
+        r'''$.data.user''',
+      );
+  dynamic profile(dynamic response) => getJsonField(
+        response,
+        r'''$.data.profile''',
+      );
   int? success(dynamic response) => castToType<int>(getJsonField(
         response,
         r'''$.data.success''',
@@ -1519,8 +1723,9 @@ class SignoutApiCall {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
           success: 1,
-          message:
-              jb is Map ? (jb['message']?.toString() ?? 'Logged out') : 'Logged out',
+          message: jb is Map
+              ? (jb['message']?.toString() ?? 'Logged out')
+              : 'Logged out',
         ),
         res.headers,
         res.statusCode,
@@ -1572,8 +1777,8 @@ class GetcategoriesApiCall {
     }
     final leg = raw
         .whereType<Map>()
-        .map((e) =>
-            BoiaroLegacyAdapter.legacyCategoryFromV2(Map<String, dynamic>.from(e)))
+        .map((e) => BoiaroLegacyAdapter.legacyCategoryFromV2(
+            Map<String, dynamic>.from(e)))
         .toList();
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'categoryDetails': leg}),
@@ -1716,8 +1921,8 @@ class GetauthorsApiCall {
     }
     final leg = raw
         .whereType<Map>()
-        .map((e) =>
-            BoiaroLegacyAdapter.legacyAuthorFromV2(Map<String, dynamic>.from(e)))
+        .map((e) => BoiaroLegacyAdapter.legacyAuthorFromV2(
+            Map<String, dynamic>.from(e)))
         .toList();
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'authorDetails': leg}),
@@ -2058,7 +2263,8 @@ class GetauthordetailsApiCall {
     final id = Uri.encodeComponent((authorId ?? '').trim());
     if (id.isEmpty) {
       return ApiCallResponse(
-        BoiaroLegacyAdapter.legacyDataEnvelope(success: 0, message: 'authorId required'),
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+            success: 0, message: 'authorId required'),
         {},
         400,
       );
@@ -2624,8 +2830,7 @@ class GetRelatedBooksApiCall {
       return base;
     }
     final filtered = books
-        .where((b) =>
-            b is Map && (b['_id']?.toString() ?? '') != bid)
+        .where((b) => b is Map && (b['_id']?.toString() ?? '') != bid)
         .take(12)
         .toList();
     return ApiCallResponse(
@@ -2677,20 +2882,21 @@ class GetsubscriptionplanApiCall {
     if (err != null) {
       return _v2Error(body, res.statusCode);
     }
-    final plans = (body['plans'] is List ? body['plans'] as List : const <dynamic>[])
-        .whereType<Map>()
-        .map((e) {
-          final m = Map<String, dynamic>.from(e);
-          return <String, dynamic>{
-            ...m,
-            '_id': m['id'],
-            'duration': m['duration_days'],
-            'duration_in_terms': 'days',
-          };
-        })
-        .toList();
+    final plans =
+        (body['plans'] is List ? body['plans'] as List : const <dynamic>[])
+            .whereType<Map>()
+            .map((e) {
+      final m = Map<String, dynamic>.from(e);
+      return <String, dynamic>{
+        ...m,
+        '_id': m['id'],
+        'duration': m['duration_days'],
+        'duration_in_terms': 'days',
+      };
+    }).toList();
     return ApiCallResponse(
-      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'subscriptionDetails': plans}),
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+          extra: {'subscriptionDetails': plans}),
       res.headers,
       res.statusCode,
     );
@@ -2896,12 +3102,15 @@ class UsersubscriptionrecordApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final rows = (body['subscriptions'] is List ? body['subscriptions'] as List : const <dynamic>[])
+    final rows = (body['subscriptions'] is List
+            ? body['subscriptions'] as List
+            : const <dynamic>[])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
     return ApiCallResponse(
-      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'subscriptionDetails': rows}),
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+          extra: {'subscriptionDetails': rows}),
       res.headers,
       res.statusCode,
     );
@@ -3009,7 +3218,9 @@ class UsersubscriptionvalidityApiCall {
     if (list is! List || list.isEmpty || list.first is! Map) {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
-          extra: {'subscriptionDetails': <String, dynamic>{'daysLeft': 0}},
+          extra: {
+            'subscriptionDetails': <String, dynamic>{'daysLeft': 0}
+          },
         ),
         res.headers,
         res.statusCode,
@@ -3019,7 +3230,8 @@ class UsersubscriptionvalidityApiCall {
     final endDateRaw = (first['end_date'] ?? '').toString();
     final endDate = DateTime.tryParse(endDateRaw);
     final now = DateTime.now().toUtc();
-    final daysLeft = endDate == null ? 0 : endDate.difference(now).inDays.clamp(0, 9999);
+    final daysLeft =
+        endDate == null ? 0 : endDate.difference(now).inDays.clamp(0, 9999);
     final plan = first['subscription_plans'];
     final normalizedPlan = plan is Map
         ? <String, dynamic>{
@@ -3144,7 +3356,9 @@ class AddreviewApiCall {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
           success: 1,
-          message: body is Map ? (body['message']?.toString() ?? 'Review added') : 'Review added',
+          message: body is Map
+              ? (body['message']?.toString() ?? 'Review added')
+              : 'Review added',
         ),
         res.headers,
         res.statusCode,
@@ -3188,13 +3402,19 @@ class GetreviewApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final rows = (body['reviews'] is List ? body['reviews'] as List : const <dynamic>[])
-        .whereType<Map>()
-        .map((e) => BoiaroLegacyAdapter.legacyReviewFromV2(Map<String, dynamic>.from(e)))
-        .toList();
+    final rows =
+        (body['reviews'] is List ? body['reviews'] as List : const <dynamic>[])
+            .whereType<Map>()
+            .map((e) => BoiaroLegacyAdapter.legacyReviewFromV2(
+                Map<String, dynamic>.from(e)))
+            .toList();
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
-        extra: {'bookReviewDetails': [{'reviews': rows}]},
+        extra: {
+          'bookReviewDetails': [
+            {'reviews': rows}
+          ]
+        },
       ),
       res.headers,
       res.statusCode,
@@ -3277,7 +3497,9 @@ class GetbookcommentsApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final rows = (body['comments'] is List ? body['comments'] as List : const <dynamic>[])
+    final rows = (body['comments'] is List
+            ? body['comments'] as List
+            : const <dynamic>[])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
@@ -3338,7 +3560,9 @@ class AddcommentApiCall {
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
         success: 1,
-        message: body is Map ? (body['message']?.toString() ?? 'Comment posted') : 'Comment posted',
+        message: body is Map
+            ? (body['message']?.toString() ?? 'Comment posted')
+            : 'Comment posted',
       ),
       res.headers,
       res.statusCode,
@@ -3429,7 +3653,9 @@ class WalletTransactionsApiCall {
       return _v2Error(res.jsonBody, res.statusCode);
     }
     final body = Map<String, dynamic>.from(res.jsonBody as Map);
-    final tx = (body['transactions'] is List ? body['transactions'] as List : const <dynamic>[])
+    final tx = (body['transactions'] is List
+            ? body['transactions'] as List
+            : const <dynamic>[])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
@@ -3474,7 +3700,9 @@ class WalletClaimDailyApiCall {
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
         success: 1,
-        message: body is Map ? (body['message']?.toString() ?? 'Daily reward claimed') : 'Daily reward claimed',
+        message: body is Map
+            ? (body['message']?.toString() ?? 'Daily reward claimed')
+            : 'Daily reward claimed',
       ),
       res.headers,
       res.statusCode,
@@ -3503,7 +3731,8 @@ class WalletClaimAdApiCall {
       callType: ApiCallType.POST,
       headers: _boiaroAuthHeaders(token),
       params: {},
-      body: BoiaroLegacyAdapter.jsonEncodeBody({'placement': placement ?? 'general'}),
+      body: BoiaroLegacyAdapter.jsonEncodeBody(
+          {'placement': placement ?? 'general'}),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -3519,7 +3748,9 @@ class WalletClaimAdApiCall {
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
         success: 1,
-        message: body is Map ? (body['message']?.toString() ?? 'Ad reward claimed') : 'Ad reward claimed',
+        message: body is Map
+            ? (body['message']?.toString() ?? 'Ad reward claimed')
+            : 'Ad reward claimed',
       ),
       res.headers,
       res.statusCode,
@@ -3536,15 +3767,322 @@ class WalletClaimAdApiCall {
       ));
 }
 
+class GetHomepageApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+    String? type = '',
+    int? limit,
+  }) async {
+    final normalizedType = _normalizeHomepageTypeValue(type);
+    if (normalizedType == '__invalid__') {
+      return ApiCallResponse(
+        {
+          'error': 'Invalid type. Allowed values: ebook, audiobook, hardcopy',
+        },
+        const {},
+        400,
+      );
+    }
+    final safeLimit = (limit ?? 10).clamp(1, 50);
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'GetHomepageApi',
+      apiUrl: '${baseUrl}homepage',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {
+        'limit': '$safeLimit',
+        if (normalizedType.isNotEmpty) 'type': normalizedType,
+      },
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+
+    // Sliders: body['slider'] is {'slider': [...]}
+    final sliderRaw = body['slider'];
+    final sliderList =
+        sliderRaw is Map ? sliderRaw['slider'] : sliderRaw;
+    final sliderDetails = <Map<String, dynamic>>[];
+    if (sliderList is List) {
+      for (final raw in sliderList) {
+        if (raw is! Map) continue;
+        final m = Map<String, dynamic>.from(raw);
+        final cover =
+            (m['image'] ?? m['cover_url'] ?? m['banner_url'])?.toString() ??
+                '';
+        final directUrl = (m['button_url'] ?? m['url'])?.toString() ?? '';
+        final slug = m['slug']?.toString() ?? '';
+        sliderDetails.add({
+          'image': cover,
+          'button_url': directUrl.isNotEmpty
+              ? directUrl
+              : slug.isNotEmpty
+                  ? '${FFAppConstants.webUrl}/book/$slug'
+                  : FFAppConstants.webUrl,
+        });
+      }
+    }
+
+    // Categories: body['allCategory']
+    final catRaw = body['allCategory'];
+    final categoryDetails = <Map<String, dynamic>>[];
+    if (catRaw is List) {
+      for (final c in catRaw) {
+        if (c is Map) {
+          categoryDetails.add(BoiaroLegacyAdapter.legacyCategoryFromV2(
+              Map<String, dynamic>.from(c)));
+        }
+      }
+    }
+
+    // Authors: body['allAuthor']
+    final authorRaw = body['allAuthor'];
+    final authorDetails = <Map<String, dynamic>>[];
+    if (authorRaw is List) {
+      for (final a in authorRaw) {
+        if (a is Map) {
+          authorDetails.add(BoiaroLegacyAdapter.legacyAuthorFromV2(
+              Map<String, dynamic>.from(a)));
+        }
+      }
+    }
+
+    // Narrators: body['allNarrators']
+    final narratorRaw = body['allNarrators'];
+    final narratorDetails = <Map<String, dynamic>>[];
+    if (narratorRaw is List) {
+      for (final n in narratorRaw) {
+        if (n is Map) {
+          narratorDetails.add(BoiaroLegacyAdapter.legacyNarratorFromV2(
+              Map<String, dynamic>.from(n)));
+        }
+      }
+    }
+
+    // Trending: body['trendingNow']['trendingNow']
+    final trendingRaw = body['trendingNow'];
+    final trendingList =
+        trendingRaw is Map ? trendingRaw['trendingNow'] : trendingRaw;
+    final trendingBooks = <Map<String, dynamic>>[];
+    if (trendingList is List) {
+      for (final b in trendingList) {
+        if (b is Map) {
+          trendingBooks.add(BoiaroLegacyAdapter.legacyBookFromHomepageItem(
+            Map<String, dynamic>.from(b),
+            preferredFormat: normalizedType,
+          ));
+        }
+      }
+    }
+
+    // Popular: body['popularBooks']
+    final popularRaw = body['popularBooks'];
+    final popularBooks = <Map<String, dynamic>>[];
+    if (popularRaw is List) {
+      for (final b in popularRaw) {
+        if (b is Map) {
+          popularBooks.add(BoiaroLegacyAdapter.legacyBookFromHomepageItem(
+            Map<String, dynamic>.from(b),
+            preferredFormat: normalizedType,
+          ));
+        }
+      }
+    }
+
+    // New releases: body['NewReleases']['all']
+    final newRaw = body['newReleases'] ?? body['NewReleases'];
+    final newList = newRaw is Map ? newRaw['all'] : newRaw;
+    final newBooks = <Map<String, dynamic>>[];
+    if (newList is List) {
+      for (final b in newList) {
+        if (b is Map) {
+          newBooks.add(BoiaroLegacyAdapter.legacyBookFromHomepageItem(
+            Map<String, dynamic>.from(b),
+            preferredFormat: normalizedType,
+          ));
+        }
+      }
+    }
+
+    List<Map<String, dynamic>> mapHomepageBookList(
+      dynamic raw, {
+      String? nestedKey,
+      String? sectionKey,
+    }) {
+      final source = raw is Map && nestedKey != null ? raw[nestedKey] : raw;
+      final rows = <Map<String, dynamic>>[];
+      if (source is List) {
+        for (final item in source) {
+          if (item is Map) {
+            rows.add(BoiaroLegacyAdapter.legacyBookFromHomepageItem(
+              Map<String, dynamic>.from(item),
+              preferredFormat: _preferredHomepageFormatForSection(
+                sectionKey ?? nestedKey ?? '',
+                normalizedType,
+              ),
+            ));
+          }
+        }
+      }
+      return rows;
+    }
+
+    final becauseYouRead =
+        mapHomepageBookList(
+      body['becauseYouRead'] ?? body['BecauseYouRead'],
+      sectionKey: 'becauseYouRead',
+    );
+    final editorsPick = mapHomepageBookList(
+      body['editorsPick'],
+      sectionKey: 'editorsPick',
+    );
+    final popularEbooks = mapHomepageBookList(
+      body['popularEbooks'],
+      sectionKey: 'popularEbooks',
+    );
+    final popularAudiobooks = mapHomepageBookList(
+      body['popularAudiobooks'],
+      sectionKey: 'popularAudiobooks',
+    );
+    final popularHardCopies = mapHomepageBookList(
+      body['popularHardCopies'],
+      sectionKey: 'popularHardCopies',
+    );
+    final topTenMostRead = mapHomepageBookList(
+      body['topMostRead'] ?? body['topTenMostRead'],
+      sectionKey: 'topMostRead',
+    );
+    final freeBooks = mapHomepageBookList(
+      body['freeBooks'] ?? body['FreeBooks'],
+      sectionKey: 'freeBooks',
+    );
+
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
+        'sliderDetails': sliderDetails,
+        'categoryDetails': categoryDetails,
+        'authorDetails': authorDetails,
+        'narratorDetails': narratorDetails,
+        'trendingBooks': trendingBooks,
+        'popularBooks': popularBooks,
+        'newBooks': newBooks,
+        'becauseYouRead': becauseYouRead,
+        'editorsPick': editorsPick,
+        'popularEbooks': popularEbooks,
+        'popularAudiobooks': popularAudiobooks,
+        'popularHardCopies': popularHardCopies,
+        'topTenMostRead': topTenMostRead,
+        'freeBooks': freeBooks,
+      }),
+      res.headers,
+      res.statusCode,
+    );
+  }
+
+  List? sliderDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.sliderDetails''',
+        true,
+      ) as List?;
+  List? categoryDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.categoryDetails''',
+        true,
+      ) as List?;
+  List? authorDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.authorDetails''',
+        true,
+      ) as List?;
+  List? narratorDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.narratorDetails''',
+        true,
+      ) as List?;
+  List? trendingBookList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.trendingBooks''',
+        true,
+      ) as List?;
+  List? popularBookList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.popularBooks''',
+        true,
+      ) as List?;
+  List? newBookList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.newBooks''',
+        true,
+      ) as List?;
+  List? becauseYouReadList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.becauseYouRead''',
+        true,
+      ) as List?;
+  List? editorsPickList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.editorsPick''',
+        true,
+      ) as List?;
+  List? popularEbookList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.popularEbooks''',
+        true,
+      ) as List?;
+  List? popularAudiobookList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.popularAudiobooks''',
+        true,
+      ) as List?;
+  List? popularHardCopyList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.popularHardCopies''',
+        true,
+      ) as List?;
+  List? topTenMostReadList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.topTenMostRead''',
+        true,
+      ) as List?;
+  List? freeBookList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.freeBooks''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
 class GetTrendingBooksApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
     String? type = '',
+    int? limit,
   }) async {
     return _homepageSectionAsBooks(
-      sectionKey: 'trending',
+      sectionKey: 'trendingNow',
       type: type,
       token: token,
+      limit: limit,
     );
   }
 
@@ -3552,15 +4090,6 @@ class GetTrendingBooksApiCall {
         response,
         r'''$.data.success''',
       ));
-  List<String>? averageRating(dynamic response) => (getJsonField(
-        response,
-        r'''$.data.bookDetails[:].averageRating''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
   List? bookDetailsList(dynamic response) => getJsonField(
         response,
         r'''$.data.bookDetails''',
@@ -3576,11 +4105,13 @@ class GetNewBooksApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
     String? type = '',
+    int? limit,
   }) async {
     return _homepageSectionAsBooks(
-      sectionKey: 'new',
+      sectionKey: 'newReleases',
       type: type,
       token: token,
+      limit: limit,
     );
   }
 
@@ -3588,15 +4119,6 @@ class GetNewBooksApiCall {
         response,
         r'''$.data.success''',
       ));
-  List<String>? averageRating(dynamic response) => (getJsonField(
-        response,
-        r'''$.data.bookDetails[:].averageRating''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
   List? bookDetailsList(dynamic response) => getJsonField(
         response,
         r'''$.data.bookDetails''',
@@ -3612,11 +4134,25 @@ class GetPopularBooksApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
     String? type = '',
+    String? sectionKey = '',
+    int? limit,
   }) async {
-    return _booksQuery(
-      query: const {'isFeatured': 'true'},
+    final normalizedType = _normalizeHomepageTypeValue(type);
+    final normalizedSection = (sectionKey ?? '').trim();
+    final resolvedSection = normalizedSection.isNotEmpty
+        ? normalizedSection
+        : normalizedType == 'audiobook'
+            ? 'popularAudiobooks'
+            : normalizedType == 'hardcopy'
+                ? 'popularHardCopies'
+                : normalizedType == 'ebook'
+                    ? 'popularEbooks'
+                    : 'popularBooks';
+    return _homepageSectionAsBooks(
+      sectionKey: resolvedSection,
       type: type,
       token: token,
+      limit: limit,
     );
   }
 
@@ -3826,7 +4362,9 @@ class DownloadhistoryApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final rows = (body['purchases'] is List ? body['purchases'] as List : const <dynamic>[])
+    final rows = (body['purchases'] is List
+            ? body['purchases'] as List
+            : const <dynamic>[])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
@@ -3881,7 +4419,9 @@ class DownloadpdfApiCall {
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
         success: 1,
-        message: body is Map ? (body['signed_url']?.toString() ?? 'URL ready') : 'URL ready',
+        message: body is Map
+            ? (body['signed_url']?.toString() ?? 'URL ready')
+            : 'URL ready',
       ),
       res.headers,
       res.statusCode,
@@ -4027,12 +4567,16 @@ class GetnotificationApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final rows = (body['notifications'] is List ? body['notifications'] as List : const <dynamic>[])
+    final rows = (body['notifications'] is List
+            ? body['notifications'] as List
+            : const <dynamic>[])
         .whereType<Map>()
-        .map((e) => BoiaroLegacyAdapter.legacyNotificationFromV2(Map<String, dynamic>.from(e)))
+        .map((e) => BoiaroLegacyAdapter.legacyNotificationFromV2(
+            Map<String, dynamic>.from(e)))
         .toList();
     return ApiCallResponse(
-      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'notificationDetails': rows}),
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+          extra: {'notificationDetails': rows}),
       res.headers,
       res.statusCode,
     );
@@ -4107,7 +4651,9 @@ class ChangepasswordApiCall {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
           success: 1,
-          message: body is Map ? (body['message']?.toString() ?? 'Password updated') : 'Password updated',
+          message: body is Map
+              ? (body['message']?.toString() ?? 'Password updated')
+              : 'Password updated',
         ),
         res.headers,
         res.statusCode,
@@ -4353,8 +4899,8 @@ class GetFeaturedBooksByCategoryApiCall {
       }
       final featuredBooks = booksRaw
           .whereType<Map>()
-          .map((e) =>
-              BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(e)))
+          .map((e) => BoiaroLegacyAdapter.legacyBookFromV2(
+              Map<String, dynamic>.from(e)))
           .toList();
       if (featuredBooks.isEmpty) {
         continue;

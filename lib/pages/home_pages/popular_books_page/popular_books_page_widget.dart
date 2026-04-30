@@ -2,7 +2,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
-import '/pages/components/list_main_container_component/list_main_container_component_widget.dart';
+import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/empty_components/no_popular_book/no_popular_book_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/flutter_flow/custom_functions.dart' as functions;
@@ -14,7 +14,16 @@ import 'popular_books_page_model.dart';
 export 'popular_books_page_model.dart';
 
 class PopularBooksPageWidget extends StatefulWidget {
-  const PopularBooksPageWidget({super.key});
+  const PopularBooksPageWidget({
+    super.key,
+    this.type,
+    this.sectionKey,
+    this.title,
+  });
+
+  final String? type;
+  final String? sectionKey;
+  final String? title;
 
   static String routeName = 'PopularBooksPage';
   static String routePath = '/popularBooksPage';
@@ -27,12 +36,14 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
   late PopularBooksPageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  String get _cacheKey =>
+      'popular_${widget.sectionKey ?? 'popularBooks'}_${widget.type ?? 'all'}';
 
-  double _parseRating(dynamic value) {
-    if (value is num) {
-      return value.toDouble();
-    }
-    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  bool _shouldShowApiMessage(ApiCallResponse response) {
+    final success = EbookGroup.getPopularBooksApiCall.success(response.jsonBody);
+    final message =
+        EbookGroup.getPopularBooksApiCall.message(response.jsonBody) ?? '';
+    return success != 1 && message.trim().isNotEmpty;
   }
 
   @override
@@ -99,7 +110,10 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Popular books',
+                  title: valueOrDefault<String>(
+                    widget.title,
+                    'Popular books',
+                  ),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -144,8 +158,13 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                             child: FutureBuilder<ApiCallResponse>(
                               future: FFAppState()
                                   .popularBookCache(
+                                uniqueQueryKey: _cacheKey,
                                 requestFn: () =>
-                                    EbookGroup.getPopularBooksApiCall.call(),
+                                    EbookGroup.getPopularBooksApiCall.call(
+                                  type: widget.type,
+                                  sectionKey: widget.sectionKey,
+                                  limit: 50,
+                                ),
                               )
                                   .then((result) {
                                 _model.apiRequestCompleted2 = true;
@@ -174,12 +193,9 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                   decoration: BoxDecoration(),
                                   child: Builder(
                                     builder: (context) {
-                                      if (EbookGroup.getPopularBooksApiCall
-                                              .success(
-                                            containerGetPopularBooksApiResponse
-                                                .jsonBody,
-                                          ) ==
-                                          2) {
+                                      if (_shouldShowApiMessage(
+                                        containerGetPopularBooksApiResponse,
+                                      )) {
                                         return Align(
                                           alignment:
                                               AlignmentDirectional(0.0, 0.0),
@@ -239,14 +255,16 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                               onRefresh: () async {
                                                 safeSetState(() {
                                                   FFAppState()
-                                                      .clearPopularBookCacheCache();
+                                                      .clearPopularBookCacheCacheKey(
+                                                    _cacheKey,
+                                                  );
                                                   _model.apiRequestCompleted2 =
                                                       false;
                                                 });
                                                 await _model
                                                     .waitForApiRequestCompleted2();
                                               },
-                                              child: ListView.separated(
+                                              child: ListView(
                                                 padding: EdgeInsets.fromLTRB(
                                                   0,
                                                   16.0,
@@ -254,113 +272,134 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                                   16.0,
                                                 ),
                                                 scrollDirection: Axis.vertical,
-                                                itemCount:
-                                                    popularBookList.length,
-                                                separatorBuilder: (_, __) =>
-                                                    SizedBox(height: 16.0),
-                                                itemBuilder: (context,
-                                                    popularBookListIndex) {
-                                                  final popularBookListItem =
-                                                      popularBookList[
-                                                          popularBookListIndex];
-                                                  return Padding(
+                                                children: [
+                                                  Padding(
                                                     padding:
                                                         EdgeInsetsDirectional
                                                             .fromSTEB(16.0, 0.0,
                                                                 16.0, 0.0),
-                                                    child: wrapWithModel(
-                                                      model: _model
-                                                          .listMainContainerComponentModels
-                                                          .getModel(
-                                                        getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.name''',
-                                                        ).toString(),
-                                                        popularBookListIndex,
-                                                      ),
-                                                      updateCallback: () =>
-                                                          safeSetState(() {}),
-                                                      child:
-                                                          ListMainContainerComponentWidget(
-                                                        key: Key(
-                                                          'Keyc76_${getJsonField(
-                                                            popularBookListItem,
-                                                            r'''$.name''',
-                                                          ).toString()}',
-                                                        ),
-                                                        image:
-                                                            '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.image''',
-                                                        ).toString()}',
-                                                        name: getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.name''',
-                                                        ).toString(),
-                                                        id: getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$._id''',
-                                                        ).toString(),
-                                                        price: getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.price''',
-                                                        ).toString(),
-                                                        bookType: getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.type''',
-                                                        )?.toString(),
-                                                        discountAmount:
-                                                            getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.discount_amount''',
-                                                        ).toString(),
-                                                        discountPercentage:
-                                                            getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.discount_percentage''',
-                                                        ).toString(),
-                                                        authorName:
-                                                            getJsonField(
-                                                          popularBookListItem,
-                                                          r'''$.author.name''',
-                                                        ).toString(),
-                                                        // price:
-                                                        //     getJsonField(
-                                                        //   popularBookListItem,
-                                                        //    r'''$.price''',
-                                                        // ).toString(),
-                                                        averageRating:
-                                                            _parseRating(
-                                                          getJsonField(
-                                                            popularBookListItem,
-                                                            r'''$.averageRating''',
+                                                    child: Builder(
+                                                      builder: (context) {
+                                                        final screenWidth =
+                                                            MediaQuery.sizeOf(
+                                                                    context)
+                                                                .width;
+                                                        final crossAxisCount =
+                                                            screenWidth < 810.0
+                                                                ? 3
+                                                                : screenWidth <
+                                                                        1280.0
+                                                                    ? 4
+                                                                    : 6;
+
+                                                        return GridView
+                                                            .builder(
+                                                          shrinkWrap: true,
+                                                          physics:
+                                                              NeverScrollableScrollPhysics(),
+                                                          gridDelegate:
+                                                              SliverGridDelegateWithFixedCrossAxisCount(
+                                                            crossAxisCount:
+                                                                crossAxisCount,
+                                                            crossAxisSpacing:
+                                                                16.0,
+                                                            mainAxisSpacing:
+                                                                16.0,
+                                                            mainAxisExtent:
+                                                                240.0,
                                                           ),
-                                                        ),
-                                                        isFav: functions.checkFavOrNot(
-                                                                EbookGroup.getFavouriteBookCall
-                                                                    .favouriteBookDetailsList(
-                                                                      containerGetFavouriteBookResponse
-                                                                          .jsonBody,
-                                                                    )
-                                                                    ?.toList(),
+                                                          itemCount:
+                                                              popularBookList
+                                                                  .length,
+                                                          itemBuilder: (context,
+                                                              popularBookListIndex) {
+                                                            final popularBookListItem =
+                                                                popularBookList[
+                                                                    popularBookListIndex];
+                                                            return wrapWithModel(
+                                                              model: _model
+                                                                  .mainBookComponentModels
+                                                                  .getModel(
                                                                 getJsonField(
                                                                   popularBookListItem,
+                                                                  r'''$.name''',
+                                                                ).toString(),
+                                                                popularBookListIndex,
+                                                              ),
+                                                              updateCallback: () =>
+                                                                  safeSetState(
+                                                                      () {}),
+                                                              child:
+                                                                  MainBookComponentWidget(
+                                                                key: Key(
+                                                                  'Keyc76_${getJsonField(
+                                                                    popularBookListItem,
+                                                                    r'''$.name''',
+                                                                  ).toString()}',
+                                                                ),
+                                                                image:
+                                                                    '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                                  popularBookListItem,
+                                                                  r'''$.image''',
+                                                                ).toString()}',
+                                                                bookName:
+                                                                    getJsonField(
+                                                                  popularBookListItem,
+                                                                  r'''$.name''',
+                                                                ).toString(),
+                                                                id: getJsonField(
+                                                                  popularBookListItem,
                                                                   r'''$._id''',
-                                                                ).toString()) ==
-                                                            true,
-                                                        indicator: (popularBookListIndex ==
-                                                                _model
-                                                                    .popularBookIndex) &&
-                                                            (_model.isPopularBook ==
-                                                                true),
-                                                        width: double.infinity,
-                                                        isPurchased: _model.purchasedBookIds.contains(
-                                                          getJsonField(
-                                                            popularBookListItem,
-                                                            r'''$._id''',
-                                                          ).toString(),
-                                                        ),
-                                                        isFavAction: () async {
+                                                                ).toString(),
+                                                                price:
+                                                                    getJsonField(
+                                                                  popularBookListItem,
+                                                                  r'''$.price''',
+                                                                ).toString(),
+                                                                bookType:
+                                                                    getJsonField(
+                                                                  popularBookListItem,
+                                                                  r'''$.type''',
+                                                                )?.toString(),
+                                                                discountAmount:
+                                                                    getJsonField(
+                                                                  popularBookListItem,
+                                                                  r'''$.discount_amount''',
+                                                                ).toString(),
+                                                                discountPercentage:
+                                                                    getJsonField(
+                                                                  popularBookListItem,
+                                                                  r'''$.discount_percentage''',
+                                                                ).toString(),
+                                                                authorsName:
+                                                                    getJsonField(
+                                                                  popularBookListItem,
+                                                                  r'''$.author.name''',
+                                                                ).toString(),
+                                                                isFav: functions.checkFavOrNot(
+                                                                        EbookGroup.getFavouriteBookCall
+                                                                            .favouriteBookDetailsList(
+                                                                              containerGetFavouriteBookResponse.jsonBody,
+                                                                            )
+                                                                            ?.toList(),
+                                                                        getJsonField(
+                                                                          popularBookListItem,
+                                                                          r'''$._id''',
+                                                                        ).toString()) ==
+                                                                    true,
+                                                                indicator: (popularBookListIndex ==
+                                                                        _model
+                                                                            .popularBookIndex) &&
+                                                                    (_model.isPopularBook ==
+                                                                        true),
+                                                                isPurchased: _model.purchasedBookIds.contains(
+                                                                  getJsonField(
+                                                                    popularBookListItem,
+                                                                    r'''$._id''',
+                                                                  ).toString(),
+                                                                ),
+                                                                isFavAction:
+                                                                    () async {
                                                           if (FFAppState()
                                                                   .isLogin ==
                                                               true) {
@@ -469,7 +508,8 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
 
                                                           safeSetState(() {});
                                                         },
-                                                        onMainTap: () async {
+                                                                isMainTap:
+                                                                    () async {
                                                           context.pushNamed(
                                                             BookDetailspageWidget
                                                                 .routeName,
@@ -513,10 +553,14 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                                             }.withoutNulls,
                                                           );
                                                         },
-                                                      ),
+                                                              ),
+                                                            );
+                                                          },
+                                                        );
+                                                      },
                                                     ),
-                                                  );
-                                                },
+                                                  ),
+                                                ],
                                               ),
                                             );
                                           },

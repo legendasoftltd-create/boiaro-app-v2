@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -98,14 +99,25 @@ class _MyAppState extends State<MyApp> {
 
     _appStateNotifier = AppStateNotifier.instance;
     _router = createRouter(_appStateNotifier);
+    _loadSavedLocale();
+  }
+
+  Future<void> _loadSavedLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLang = prefs.getString('app_language');
+    if (savedLang != null) {
+      safeSetState(() => _locale = createLocale(savedLang));
+    }
   }
 
   void setThemeMode(ThemeMode mode) => safeSetState(() {
         _themeMode = mode;
       });
 
-  void setLocale(String language) {
+  void setLocale(String language) async {
     safeSetState(() => _locale = createLocale(language));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_language', language);
   }
 
   @override

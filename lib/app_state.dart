@@ -807,6 +807,21 @@ class FFAppState extends ChangeNotifier {
   void clearGetSlidersCacheCacheKey(String? uniqueKey) =>
       _getSlidersCacheManager.clearRequest(uniqueKey);
 
+  final _getHomepageCacheManager = FutureRequestManager<ApiCallResponse>();
+  Future<ApiCallResponse> getHomepageCache({
+    String? uniqueQueryKey,
+    bool? overrideCache,
+    required Future<ApiCallResponse> Function() requestFn,
+  }) =>
+      _getHomepageCacheManager.performRequest(
+        uniqueQueryKey: uniqueQueryKey,
+        overrideCache: overrideCache,
+        requestFn: requestFn,
+      );
+  void clearGetHomepageCacheCache() => _getHomepageCacheManager.clear();
+  void clearGetHomepageCacheCacheKey(String? uniqueKey) =>
+      _getHomepageCacheManager.clearRequest(uniqueKey);
+
   final _getNewBooksCacheManager = FutureRequestManager<ApiCallResponse>();
   Future<ApiCallResponse> getNewBooksCache({
     String? uniqueQueryKey,

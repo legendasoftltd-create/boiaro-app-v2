@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:a_i_ebook_app/app_constants.dart';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -56,6 +57,15 @@ class LocalDownloadedBook {
 class LocalDownloadService {
   static const String _downloadsKey = 'ff_local_downloaded_books_v1';
   static final Dio _dio = Dio();
+
+  static String _resolveRemoteUrl(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return Uri.parse(FFAppConstants.webUrl).resolve(trimmed).toString();
+  }
 
   static Future<List<LocalDownloadedBook>> getAllDownloads() async {
     final prefs = await SharedPreferences.getInstance();
@@ -121,13 +131,17 @@ class LocalDownloadService {
     required String remoteUrl,
     void Function(int received, int total)? onProgress,
   }) async {
+    final resolvedRemoteUrl = _resolveRemoteUrl(remoteUrl);
+    if (resolvedRemoteUrl.isEmpty) {
+      throw Exception('Download URL is empty.');
+    }
     final downloadDir = await _downloadsDirectory();
-    final extension = _extensionFromUrl(remoteUrl);
+    final extension = _extensionFromUrl(resolvedRemoteUrl);
     final savePath = p.join(downloadDir.path, '${bookId}_book$extension');
     final file = File(savePath);
 
     await _dio.download(
-      remoteUrl,
+      resolvedRemoteUrl,
       savePath,
       deleteOnError: true,
       onReceiveProgress: onProgress,
@@ -143,7 +157,7 @@ class LocalDownloadService {
       name: name,
       image: image,
       author: author,
-      remoteUrl: remoteUrl,
+      remoteUrl: resolvedRemoteUrl,
       localPath: savePath,
       downloadedAtMillis: now,
     );

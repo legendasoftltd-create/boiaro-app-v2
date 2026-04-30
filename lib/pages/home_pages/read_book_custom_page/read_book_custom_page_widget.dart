@@ -5,6 +5,10 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -50,6 +54,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   bool _nativeEpubWentBackground = false;
   StreamSubscription<int>? _nativeEpubPageSub;
   int _lastNativeProgressSent = -1;
+  String? _openedEpubSource;
 
   bool get _isEpub => (widget.pdf ?? '').toLowerCase().trim().contains('.epub');
 
@@ -140,19 +145,38 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   }
 
   String _resolveEpubSource(String path) {
+    final resolved = _resolveBookPath(path);
+    if (resolved.isEmpty) return '';
+    final isRemote =
+        resolved.startsWith('http://') || resolved.startsWith('https://');
+    return isRemote ? 'remote:$resolved' : 'local:$resolved';
+  }
+
+  String _resolveBookPath(String path) {
     final trimmed = path.trim();
     if (trimmed.isEmpty) return '';
-    final isRemote =
-        trimmed.startsWith('http://') || trimmed.startsWith('https://');
-    return isRemote ? 'remote:$trimmed' : 'local:$trimmed';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('assets/')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('file://')) {
+      return Uri.parse(trimmed).toFilePath();
+    }
+    if (RegExp(r'^[a-zA-Z]:[\\/]').hasMatch(trimmed)) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/') && File(trimmed).existsSync()) {
+      return trimmed;
+    }
+    return Uri.parse(FFAppConstants.webUrl).resolve(trimmed).toString();
   }
 
   Future<void> _syncNativeEpubProgress() async {
-    final path = widget.pdf?.trim() ?? '';
-    if (path.isEmpty) return;
+    final source = _openedEpubSource ?? _resolveEpubSource(widget.pdf ?? '');
+    if (source.isEmpty) return;
     try {
-      final source = _resolveEpubSource(path);
-      if (source.isEmpty) return;
       final details = await EpubReaderService.getProgressDetails(source);
       final rawPercent = details['percent'];
       final percent = rawPercent is num
@@ -188,9 +212,45 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     );
   }
 
+  Future<String> _prepareNativeEpubPath(String sourcePath) async {
+    final isRemote = sourcePath.startsWith('http://') ||
+        sourcePath.startsWith('https://');
+    if (!isRemote) {
+      _openedEpubSource = _resolveEpubSource(sourcePath);
+      return sourcePath;
+    }
+
+    final tempDir = await getTemporaryDirectory();
+    final cacheDir = Directory(p.join(tempDir.path, 'native_epub_cache'));
+    if (!cacheDir.existsSync()) {
+      await cacheDir.create(recursive: true);
+    }
+
+    final uri = Uri.parse(sourcePath);
+    final ext = p.extension(uri.path).toLowerCase();
+    final safeExt = ext.isEmpty ? '.epub' : ext;
+    final fileName =
+        'book_${widget.id ?? DateTime.now().millisecondsSinceEpoch}$safeExt';
+    final cachedFile = File(p.join(cacheDir.path, fileName));
+
+    if (!cachedFile.existsSync() || cachedFile.lengthSync() == 0) {
+      final response = await http.get(uri);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw HttpException(
+          'Failed to download EPUB (${response.statusCode})',
+          uri: uri,
+        );
+      }
+      await cachedFile.writeAsBytes(response.bodyBytes, flush: true);
+    }
+
+    _openedEpubSource = 'local:${cachedFile.path}';
+    return cachedFile.path;
+  }
+
   Future<void> _openEpubWithPlugin() async {
-    final path = widget.pdf?.trim();
-    if (path == null || path.isEmpty || !mounted) {
+    final sourcePath = _resolveBookPath(widget.pdf ?? '');
+    if (sourcePath.isEmpty || !mounted) {
       return;
     }
 
@@ -217,11 +277,9 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
         _nativeEpubWentBackground = false;
         _showDebugSnack('READING NATIVE EPUB START: bookId=$bookId');
       }
-      final isRemote =
-          path.startsWith('http://') || path.startsWith('https://');
+      final path = await _prepareNativeEpubPath(sourcePath);
       final opened = await EpubReaderService.readBook(
-        epubUrl: isRemote ? path : null,
-        filePath: isRemote ? null : path,
+        filePath: path,
       );
       if (!opened) {
         throw Exception('Failed to open EPUB reader');

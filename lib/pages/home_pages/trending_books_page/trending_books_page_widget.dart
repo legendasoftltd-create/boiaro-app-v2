@@ -14,7 +14,14 @@ import 'trending_books_page_model.dart';
 export 'trending_books_page_model.dart';
 
 class TrendingBooksPageWidget extends StatefulWidget {
-  const TrendingBooksPageWidget({super.key});
+  const TrendingBooksPageWidget({
+    super.key,
+    this.type,
+    this.title,
+  });
+
+  final String? type;
+  final String? title;
 
   static String routeName = 'TrendingBooksPage';
   static String routePath = '/trendingBooksPage';
@@ -28,6 +35,15 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
   late TrendingBooksPageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  String get _cacheKey => 'trending_${widget.type ?? 'all'}';
+
+  bool _shouldShowApiMessage(ApiCallResponse response) {
+    final success =
+        EbookGroup.getTrendingBooksApiCall.success(response.jsonBody);
+    final message =
+        EbookGroup.getTrendingBooksApiCall.message(response.jsonBody) ?? '';
+    return success != 1 && message.trim().isNotEmpty;
+  }
 
   @override
   void initState() {
@@ -132,7 +148,10 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                         ),
                       ),
                       Text(
-                        'Trending books',
+                        valueOrDefault<String>(
+                          widget.title,
+                          'Trending books',
+                        ),
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -220,8 +239,12 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                             child: FutureBuilder<ApiCallResponse>(
                               future: FFAppState()
                                   .getTrendingBooksCache(
+                                uniqueQueryKey: _cacheKey,
                                 requestFn: () =>
-                                    EbookGroup.getTrendingBooksApiCall.call(),
+                                    EbookGroup.getTrendingBooksApiCall.call(
+                                  type: widget.type,
+                                  limit: 50,
+                                ),
                               )
                                   .then((result) {
                                 _model.apiRequestCompleted2 = true;
@@ -254,12 +277,9 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                   ),
                                   child: Builder(
                                     builder: (context) {
-                                      if (EbookGroup.getTrendingBooksApiCall
-                                              .success(
-                                            containerGetTrendingBooksApiResponse
-                                                .jsonBody,
-                                          ) ==
-                                          2) {
+                                      if (_shouldShowApiMessage(
+                                        containerGetTrendingBooksApiResponse,
+                                      )) {
                                         return Align(
                                           alignment:
                                               AlignmentDirectional(0.0, 0.0),
@@ -319,7 +339,9 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                                 onRefresh: () async {
                                                   safeSetState(() {
                                                     FFAppState()
-                                                        .clearGetTrendingBooksCacheCache();
+                                                        .clearGetTrendingBooksCacheCacheKey(
+                                                      _cacheKey,
+                                                    );
                                                     _model.apiRequestCompleted2 =
                                                         false;
                                                   });
@@ -355,29 +377,41 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                                                   ?.toList() ??
                                                               [];
 
-                                                          return Wrap(
-                                                            spacing: 16.0,
-                                                            runSpacing: 16.0,
-                                                            alignment:
-                                                                WrapAlignment
-                                                                    .start,
-                                                            crossAxisAlignment:
-                                                                WrapCrossAlignment
-                                                                    .start,
-                                                            direction:
-                                                                Axis.horizontal,
-                                                            runAlignment:
-                                                                WrapAlignment
-                                                                    .start,
-                                                            verticalDirection:
-                                                                VerticalDirection
-                                                                    .down,
-                                                            clipBehavior:
-                                                                Clip.none,
-                                                            children: List.generate(
+                                                          final screenWidth =
+                                                              MediaQuery.sizeOf(
+                                                                      context)
+                                                                  .width;
+                                                          final crossAxisCount =
+                                                              screenWidth <
+                                                                      810.0
+                                                                  ? 3
+                                                                  : screenWidth <
+                                                                          1280.0
+                                                                      ? 4
+                                                                      : 6;
+
+                                                          return GridView
+                                                              .builder(
+                                                            shrinkWrap: true,
+                                                            physics:
+                                                                NeverScrollableScrollPhysics(),
+                                                            gridDelegate:
+                                                                SliverGridDelegateWithFixedCrossAxisCount(
+                                                              crossAxisCount:
+                                                                  crossAxisCount,
+                                                              crossAxisSpacing:
+                                                                  16.0,
+                                                              mainAxisSpacing:
+                                                                  16.0,
+                                                              mainAxisExtent:
+                                                                  240.0,
+                                                            ),
+                                                            itemCount:
                                                                 trendingBooksList
                                                                     .length,
-                                                                (trendingBooksListIndex) {
+                                                            itemBuilder:
+                                                                (context,
+                                                                    trendingBooksListIndex) {
                                                               final trendingBooksListItem =
                                                                   trendingBooksList[
                                                                       trendingBooksListIndex];
@@ -622,7 +656,7 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                                                   },
                                                                 ),
                                                               );
-                                                            }),
+                                                            },
                                                           );
                                                         },
                                                       ),

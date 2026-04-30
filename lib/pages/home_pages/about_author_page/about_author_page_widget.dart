@@ -102,7 +102,8 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
       safeSetState(() {
         _isFollowing = target;
         if (_followersCount != null) {
-          _followersCount = (_followersCount! + (target ? 1 : -1)).clamp(0, 1 << 30);
+          _followersCount =
+              (_followersCount! + (target ? 1 : -1)).clamp(0, 1 << 30);
         }
       });
       await actions.showCustomToastBottom(
@@ -121,7 +122,7 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
         userId: FFAppState().userId,
         token: FFAppState().token,
       );
-      
+
       if (EbookGroup.userBookPurchaseRecordsApiCall.success(
             response.jsonBody ?? '',
           ) ==
@@ -365,24 +366,28 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                         _isFollowLoading)
                                                                     ? null
                                                                     : _toggleFollow,
-                                                                child: _isFollowLoading
-                                                                    ? const SizedBox(
-                                                                        width: 14,
-                                                                        height: 14,
-                                                                        child:
-                                                                            CircularProgressIndicator(
-                                                                          strokeWidth: 2,
-                                                                        ),
-                                                                      )
-                                                                    : Text(!FollowService
-                                                                            .supportsFollowEndpoints
-                                                                        ? 'Coming soon'
-                                                                        : (_isFollowing
-                                                                            ? 'Following'
-                                                                            : 'Follow')),
+                                                                child:
+                                                                    _isFollowLoading
+                                                                        ? const SizedBox(
+                                                                            width:
+                                                                                14,
+                                                                            height:
+                                                                                14,
+                                                                            child:
+                                                                                CircularProgressIndicator(
+                                                                              strokeWidth: 2,
+                                                                            ),
+                                                                          )
+                                                                        : Text(!FollowService.supportsFollowEndpoints
+                                                                            ? 'Coming soon'
+                                                                            : (_isFollowing
+                                                                                ? 'Following'
+                                                                                : 'Follow')),
                                                               ),
-                                                              if (_followersCount != null) ...[
-                                                                const SizedBox(width: 8),
+                                                              if (_followersCount !=
+                                                                  null) ...[
+                                                                const SizedBox(
+                                                                    width: 8),
                                                                 Text(
                                                                   '${_followersCount!} followers',
                                                                   style: FlutterFlowTheme.of(
@@ -491,238 +496,243 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                           ),
                                         if ((widget.authorId ?? '').isEmpty)
                                           Padding(
-                                          padding:
-                                              EdgeInsetsDirectional.fromSTEB(
-                                                  16.0, 16.0, 16.0, 8.0),
-                                          child: Text(
-                                            'Personal information',
-                                            textAlign: TextAlign.start,
-                                            maxLines: 1,
-                                            style: FlutterFlowTheme.of(context)
-                                                .bodyMedium
-                                                .override(
-                                                  fontFamily: 'SF Pro Display',
-                                                  fontSize: 20.0,
-                                                  letterSpacing: 0.0,
-                                                  fontWeight: FontWeight.bold,
-                                                  lineHeight: 1.5,
-                                                ),
+                                            padding:
+                                                EdgeInsetsDirectional.fromSTEB(
+                                                    16.0, 16.0, 16.0, 8.0),
+                                            child: Text(
+                                              'Personal information',
+                                              textAlign: TextAlign.start,
+                                              maxLines: 1,
+                                              style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        fontSize: 20.0,
+                                                        letterSpacing: 0.0,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        lineHeight: 1.5,
+                                                      ),
+                                            ),
                                           ),
-                                        ),
                                         if ((widget.authorId ?? '').isEmpty)
                                           Padding(
-                                          padding:
-                                              EdgeInsetsDirectional.fromSTEB(
-                                                  16.0, 0.0, 16.0, 0.0),
-                                          child: Container(
-                                            width: double.infinity,
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .secondaryBackground,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  blurRadius: 16.0,
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .shadowColor,
-                                                  offset: Offset(
-                                                    0.0,
-                                                    4.0,
-                                                  ),
-                                                )
-                                              ],
-                                              borderRadius:
-                                                  BorderRadius.circular(12.0),
-                                            ),
-                                            child: Padding(
-                                              padding: EdgeInsets.all(16.0),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.max,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (!(EbookGroup
-                                                                  .getauthordetailsApiCall
-                                                                  .facebookurl(
-                                                                containerGetauthordetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              null ||
-                                                          EbookGroup
-                                                                  .getauthordetailsApiCall
-                                                                  .facebookurl(
-                                                                containerGetauthordetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              '')) {
-                                                        await launchURL(EbookGroup
-                                                            .getauthordetailsApiCall
-                                                            .facebookurl(
-                                                          containerGetauthordetailsApiResponse
-                                                              .jsonBody,
-                                                        )!);
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              0.0),
-                                                      child: Image.asset(
-                                                        'assets/images/facebook_ic.png',
-                                                        width: 36.0,
-                                                        height: 36.0,
-                                                        fit: BoxFit.contain,
+                                            padding:
+                                                EdgeInsetsDirectional.fromSTEB(
+                                                    16.0, 0.0, 16.0, 0.0),
+                                            child: Container(
+                                              width: double.infinity,
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .secondaryBackground,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    blurRadius: 16.0,
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .shadowColor,
+                                                    offset: Offset(
+                                                      0.0,
+                                                      4.0,
+                                                    ),
+                                                  )
+                                                ],
+                                                borderRadius:
+                                                    BorderRadius.circular(12.0),
+                                              ),
+                                              child: Padding(
+                                                padding: EdgeInsets.all(16.0),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.max,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    InkWell(
+                                                      splashColor:
+                                                          Colors.transparent,
+                                                      focusColor:
+                                                          Colors.transparent,
+                                                      hoverColor:
+                                                          Colors.transparent,
+                                                      highlightColor:
+                                                          Colors.transparent,
+                                                      onTap: () async {
+                                                        if (!(EbookGroup
+                                                                    .getauthordetailsApiCall
+                                                                    .facebookurl(
+                                                                  containerGetauthordetailsApiResponse
+                                                                      .jsonBody,
+                                                                ) ==
+                                                                null ||
+                                                            EbookGroup
+                                                                    .getauthordetailsApiCall
+                                                                    .facebookurl(
+                                                                  containerGetauthordetailsApiResponse
+                                                                      .jsonBody,
+                                                                ) ==
+                                                                '')) {
+                                                          await launchURL(EbookGroup
+                                                              .getauthordetailsApiCall
+                                                              .facebookurl(
+                                                            containerGetauthordetailsApiResponse
+                                                                .jsonBody,
+                                                          )!);
+                                                        }
+                                                      },
+                                                      child: ClipRRect(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(0.0),
+                                                        child: Image.asset(
+                                                          'assets/images/facebook_ic.png',
+                                                          width: 36.0,
+                                                          height: 36.0,
+                                                          fit: BoxFit.contain,
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (!(EbookGroup
-                                                                  .getauthordetailsApiCall
-                                                                  .instagramurl(
-                                                                containerGetauthordetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              null ||
-                                                          EbookGroup
-                                                                  .getauthordetailsApiCall
-                                                                  .instagramurl(
-                                                                containerGetauthordetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              '')) {
-                                                        await launchURL(EbookGroup
-                                                            .getauthordetailsApiCall
-                                                            .instagramurl(
-                                                          containerGetauthordetailsApiResponse
-                                                              .jsonBody,
-                                                        )!);
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              0.0),
-                                                      child: SvgPicture.asset(
-                                                        'assets/images/instagram.svg',
-                                                        width: 36.0,
-                                                        height: 36.0,
-                                                        fit: BoxFit.cover,
+                                                    InkWell(
+                                                      splashColor:
+                                                          Colors.transparent,
+                                                      focusColor:
+                                                          Colors.transparent,
+                                                      hoverColor:
+                                                          Colors.transparent,
+                                                      highlightColor:
+                                                          Colors.transparent,
+                                                      onTap: () async {
+                                                        if (!(EbookGroup
+                                                                    .getauthordetailsApiCall
+                                                                    .instagramurl(
+                                                                  containerGetauthordetailsApiResponse
+                                                                      .jsonBody,
+                                                                ) ==
+                                                                null ||
+                                                            EbookGroup
+                                                                    .getauthordetailsApiCall
+                                                                    .instagramurl(
+                                                                  containerGetauthordetailsApiResponse
+                                                                      .jsonBody,
+                                                                ) ==
+                                                                '')) {
+                                                          await launchURL(EbookGroup
+                                                              .getauthordetailsApiCall
+                                                              .instagramurl(
+                                                            containerGetauthordetailsApiResponse
+                                                                .jsonBody,
+                                                          )!);
+                                                        }
+                                                      },
+                                                      child: ClipRRect(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(0.0),
+                                                        child: SvgPicture.asset(
+                                                          'assets/images/instagram.svg',
+                                                          width: 36.0,
+                                                          height: 36.0,
+                                                          fit: BoxFit.cover,
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (!(EbookGroup
-                                                                  .getauthordetailsApiCall
-                                                                  .youtubeurl(
-                                                                containerGetauthordetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              null ||
-                                                          EbookGroup
-                                                                  .getauthordetailsApiCall
-                                                                  .youtubeurl(
-                                                                containerGetauthordetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              '')) {
-                                                        await launchURL(EbookGroup
-                                                            .getauthordetailsApiCall
-                                                            .youtubeurl(
-                                                          containerGetauthordetailsApiResponse
-                                                              .jsonBody,
-                                                        )!);
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              0.0),
-                                                      child: SvgPicture.asset(
-                                                        'assets/images/youtube.svg',
-                                                        width: 36.0,
-                                                        height: 36.0,
-                                                        fit: BoxFit.cover,
+                                                    InkWell(
+                                                      splashColor:
+                                                          Colors.transparent,
+                                                      focusColor:
+                                                          Colors.transparent,
+                                                      hoverColor:
+                                                          Colors.transparent,
+                                                      highlightColor:
+                                                          Colors.transparent,
+                                                      onTap: () async {
+                                                        if (!(EbookGroup
+                                                                    .getauthordetailsApiCall
+                                                                    .youtubeurl(
+                                                                  containerGetauthordetailsApiResponse
+                                                                      .jsonBody,
+                                                                ) ==
+                                                                null ||
+                                                            EbookGroup
+                                                                    .getauthordetailsApiCall
+                                                                    .youtubeurl(
+                                                                  containerGetauthordetailsApiResponse
+                                                                      .jsonBody,
+                                                                ) ==
+                                                                '')) {
+                                                          await launchURL(EbookGroup
+                                                              .getauthordetailsApiCall
+                                                              .youtubeurl(
+                                                            containerGetauthordetailsApiResponse
+                                                                .jsonBody,
+                                                          )!);
+                                                        }
+                                                      },
+                                                      child: ClipRRect(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(0.0),
+                                                        child: SvgPicture.asset(
+                                                          'assets/images/youtube.svg',
+                                                          width: 36.0,
+                                                          height: 36.0,
+                                                          fit: BoxFit.cover,
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (!(EbookGroup
-                                                                  .getauthordetailsApiCall
-                                                                  .websiteurl(
-                                                                containerGetauthordetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              null ||
-                                                          EbookGroup
-                                                                  .getauthordetailsApiCall
-                                                                  .websiteurl(
-                                                                containerGetauthordetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              '')) {
-                                                        await launchURL(EbookGroup
-                                                            .getauthordetailsApiCall
-                                                            .websiteurl(
-                                                          containerGetauthordetailsApiResponse
-                                                              .jsonBody,
-                                                        )!);
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              0.0),
-                                                      child: SvgPicture.asset(
-                                                        'assets/images/link(1).svg',
-                                                        width: 36.0,
-                                                        height: 36.0,
-                                                        fit: BoxFit.cover,
+                                                    InkWell(
+                                                      splashColor:
+                                                          Colors.transparent,
+                                                      focusColor:
+                                                          Colors.transparent,
+                                                      hoverColor:
+                                                          Colors.transparent,
+                                                      highlightColor:
+                                                          Colors.transparent,
+                                                      onTap: () async {
+                                                        if (!(EbookGroup
+                                                                    .getauthordetailsApiCall
+                                                                    .websiteurl(
+                                                                  containerGetauthordetailsApiResponse
+                                                                      .jsonBody,
+                                                                ) ==
+                                                                null ||
+                                                            EbookGroup
+                                                                    .getauthordetailsApiCall
+                                                                    .websiteurl(
+                                                                  containerGetauthordetailsApiResponse
+                                                                      .jsonBody,
+                                                                ) ==
+                                                                '')) {
+                                                          await launchURL(EbookGroup
+                                                              .getauthordetailsApiCall
+                                                              .websiteurl(
+                                                            containerGetauthordetailsApiResponse
+                                                                .jsonBody,
+                                                          )!);
+                                                        }
+                                                      },
+                                                      child: ClipRRect(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(0.0),
+                                                        child: SvgPicture.asset(
+                                                          'assets/images/link(1).svg',
+                                                          width: 36.0,
+                                                          height: 36.0,
+                                                          fit: BoxFit.cover,
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                ].divide(SizedBox(width: 16.0)),
+                                                  ].divide(
+                                                      SizedBox(width: 16.0)),
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
                                         FutureBuilder<ApiCallResponse>(
                                           future: FFAppState()
                                               .getFavouriteBookCache(
@@ -838,30 +848,42 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                         ?.toList() ??
                                                                     [];
 
-                                                                return Wrap(
-                                                                  spacing: 16.0,
-                                                                  runSpacing:
-                                                                      16.0,
-                                                                  alignment:
-                                                                      WrapAlignment
-                                                                          .start,
-                                                                  crossAxisAlignment:
-                                                                      WrapCrossAlignment
-                                                                          .start,
-                                                                  direction: Axis
-                                                                      .horizontal,
-                                                                  runAlignment:
-                                                                      WrapAlignment
-                                                                          .start,
-                                                                  verticalDirection:
-                                                                      VerticalDirection
-                                                                          .down,
-                                                                  clipBehavior:
-                                                                      Clip.none,
-                                                                  children: List.generate(
+                                                                final screenWidth =
+                                                                    MediaQuery.sizeOf(
+                                                                            context)
+                                                                        .width;
+                                                                final crossAxisCount =
+                                                                    screenWidth <
+                                                                            810.0
+                                                                        ? 3
+                                                                        : screenWidth <
+                                                                                1280.0
+                                                                            ? 4
+                                                                            : 6;
+
+                                                                return GridView
+                                                                    .builder(
+                                                                  shrinkWrap:
+                                                                      true,
+                                                                  physics:
+                                                                      NeverScrollableScrollPhysics(),
+                                                                  gridDelegate:
+                                                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                                                    crossAxisCount:
+                                                                        crossAxisCount,
+                                                                    crossAxisSpacing:
+                                                                        10.0,
+                                                                    mainAxisSpacing:
+                                                                        10.0,
+                                                                    mainAxisExtent:
+                                                                        240.0,
+                                                                  ),
+                                                                  itemCount:
                                                                       bookDetailsList
                                                                           .length,
-                                                                      (bookDetailsListIndex) {
+                                                                  itemBuilder:
+                                                                      (context,
+                                                                          bookDetailsListIndex) {
                                                                     final bookDetailsListItem =
                                                                         bookDetailsList[
                                                                             bookDetailsListIndex];
@@ -897,8 +919,7 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                           bookDetailsListItem,
                                                                           r'''$.name''',
                                                                         ).toString(),
-                                                                        id:
-                                                                            getJsonField(
+                                                                        id: getJsonField(
                                                                           bookDetailsListItem,
                                                                           r'''$._id''',
                                                                         ).toString(),
@@ -912,14 +933,16 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                           bookDetailsListItem,
                                                                           r'''$.type''',
                                                                         )?.toString(),
-                                                                      discountAmount: getJsonField(
-                                                                        bookDetailsListItem,
-                                                                        r'''$.discount_amount''',
-                                                                      ).toString(),
-                                                                      discountPercentage: getJsonField(
-                                                                        bookDetailsListItem,
-                                                                        r'''$.discount_percentage''',
-                                                                      ).toString(),
+                                                                        discountAmount:
+                                                                            getJsonField(
+                                                                          bookDetailsListItem,
+                                                                          r'''$.discount_amount''',
+                                                                        ).toString(),
+                                                                        discountPercentage:
+                                                                            getJsonField(
+                                                                          bookDetailsListItem,
+                                                                          r'''$.discount_percentage''',
+                                                                        ).toString(),
                                                                         authorsName:
                                                                             'By ${getJsonField(
                                                                           bookDetailsListItem,
@@ -1016,7 +1039,9 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                           safeSetState(
                                                                               () {});
                                                                         },
-                                                                        isPurchased: _model.purchasedBookIds.contains(
+                                                                        isPurchased: _model
+                                                                            .purchasedBookIds
+                                                                            .contains(
                                                                           getJsonField(
                                                                             bookDetailsListItem,
                                                                             r'''$._id''',
@@ -1062,7 +1087,7 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                         },
                                                                       ),
                                                                     );
-                                                                  }),
+                                                                  },
                                                                 );
                                                               },
                                                             ),

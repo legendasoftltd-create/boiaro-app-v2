@@ -116,7 +116,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: TrendingBooksPageWidget.routeName,
           path: TrendingBooksPageWidget.routePath,
-          builder: (context, params) => TrendingBooksPageWidget(),
+          builder: (context, params) => TrendingBooksPageWidget(
+            type: params.getParam(
+              'type',
+              ParamType.String,
+            ),
+            title: params.getParam(
+              'title',
+              ParamType.String,
+            ),
+          ),
         ),
         FFRoute(
           name: FilterPageWidget.routeName,
@@ -126,28 +135,35 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: BestAuthorPageWidget.routeName,
           path: BestAuthorPageWidget.routePath,
-          builder: (context, params) => params.isEmpty
-              ? NavBarPage(page: BestAuthorPageWidget())
-              : BestAuthorPageWidget(),
+          builder: (context, params) => BestAuthorPageWidget(),
         ),
         FFRoute(
           name: BestNarratorPageWidget.routeName,
           path: BestNarratorPageWidget.routePath,
-          builder: (context, params) => params.isEmpty
-              ? NavBarPage(page: BestNarratorPageWidget())
-              : BestNarratorPageWidget(),
+          builder: (context, params) => BestNarratorPageWidget(),
         ),
         FFRoute(
           name: BestPublisherPageWidget.routeName,
           path: BestPublisherPageWidget.routePath,
-          builder: (context, params) => params.isEmpty
-              ? NavBarPage(page: BestPublisherPageWidget())
-              : BestPublisherPageWidget(),
+          builder: (context, params) => BestPublisherPageWidget(),
         ),
         FFRoute(
           name: PopularBooksPageWidget.routeName,
           path: PopularBooksPageWidget.routePath,
-          builder: (context, params) => PopularBooksPageWidget(),
+          builder: (context, params) => PopularBooksPageWidget(
+            type: params.getParam(
+              'type',
+              ParamType.String,
+            ),
+            sectionKey: params.getParam(
+              'sectionKey',
+              ParamType.String,
+            ),
+            title: params.getParam(
+              'title',
+              ParamType.String,
+            ),
+          ),
         ),
         FFRoute(
           name: RecentReviewsPageWidget.routeName,
@@ -499,7 +515,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: NewBooksPageWidget.routeName,
           path: NewBooksPageWidget.routePath,
-          builder: (context, params) => NewBooksPageWidget(),
+          builder: (context, params) => NewBooksPageWidget(
+            type: params.getParam(
+              'type',
+              ParamType.String,
+            ),
+            title: params.getParam(
+              'title',
+              ParamType.String,
+            ),
+          ),
         ),
         FFRoute(
           name: AudiobookViewAllPageWidget.routeName,

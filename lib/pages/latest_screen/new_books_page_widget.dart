@@ -14,7 +14,14 @@ import 'new_books_page_model.dart';
 export 'new_books_page_model.dart';
 
 class NewBooksPageWidget extends StatefulWidget {
-  const NewBooksPageWidget({super.key});
+  const NewBooksPageWidget({
+    super.key,
+    this.type,
+    this.title,
+  });
+
+  final String? type;
+  final String? title;
 
   static String routeName = 'NewBooksPage';
   static String routePath = '/newBooksPage';
@@ -28,6 +35,13 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
   late NewBooksPageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  String get _cacheKey => 'new_${widget.type ?? 'all'}';
+
+  bool _shouldShowApiMessage(ApiCallResponse response) {
+    final success = EbookGroup.getNewBooksApiCall.success(response.jsonBody);
+    final message = EbookGroup.getNewBooksApiCall.message(response.jsonBody) ?? '';
+    return success != 1 && message.trim().isNotEmpty;
+  }
 
   @override
   void initState() {
@@ -132,7 +146,10 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                         ),
                       ),
                       Text(
-                        'New books',
+                        valueOrDefault<String>(
+                          widget.title,
+                          'New books',
+                        ),
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -220,8 +237,12 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                             child: FutureBuilder<ApiCallResponse>(
                               future: FFAppState()
                                   .getNewBooksCache(
+                                uniqueQueryKey: _cacheKey,
                                 requestFn: () =>
-                                    EbookGroup.getNewBooksApiCall.call(),
+                                    EbookGroup.getNewBooksApiCall.call(
+                                  type: widget.type,
+                                  limit: 50,
+                                ),
                               )
                                   .then((result) {
                                 _model.apiRequestCompleted2 = true;
@@ -254,12 +275,9 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                   ),
                                   child: Builder(
                                     builder: (context) {
-                                      if (EbookGroup.getNewBooksApiCall
-                                              .success(
-                                            containerGetNewBooksApiResponse
-                                                .jsonBody,
-                                          ) ==
-                                          2) {
+                                      if (_shouldShowApiMessage(
+                                        containerGetNewBooksApiResponse,
+                                      )) {
                                         return Align(
                                           alignment:
                                               AlignmentDirectional(0.0, 0.0),
@@ -319,7 +337,9 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                                 onRefresh: () async {
                                                   safeSetState(() {
                                                     FFAppState()
-                                                        .clearGetNewBooksCacheCache();
+                                                        .clearGetNewBooksCacheCacheKey(
+                                                      _cacheKey,
+                                                    );
                                                     _model.apiRequestCompleted2 =
                                                         false;
                                                   });
@@ -359,29 +379,41 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                                                   ?.toList() ??
                                                               [];
 
-                                                          return Wrap(
-                                                            spacing: 16.0,
-                                                            runSpacing: 16.0,
-                                                            alignment:
-                                                                WrapAlignment
-                                                                    .start,
-                                                            crossAxisAlignment:
-                                                                WrapCrossAlignment
-                                                                    .start,
-                                                            direction:
-                                                                Axis.horizontal,
-                                                            runAlignment:
-                                                                WrapAlignment
-                                                                    .start,
-                                                            verticalDirection:
-                                                                VerticalDirection
-                                                                    .down,
-                                                            clipBehavior:
-                                                                Clip.none,
-                                                            children: List.generate(
+                                                          final screenWidth =
+                                                              MediaQuery.sizeOf(
+                                                                      context)
+                                                                  .width;
+                                                          final crossAxisCount =
+                                                              screenWidth <
+                                                                      810.0
+                                                                  ? 3
+                                                                  : screenWidth <
+                                                                          1280.0
+                                                                      ? 4
+                                                                      : 6;
+
+                                                          return GridView
+                                                              .builder(
+                                                            shrinkWrap: true,
+                                                            physics:
+                                                                NeverScrollableScrollPhysics(),
+                                                            gridDelegate:
+                                                                SliverGridDelegateWithFixedCrossAxisCount(
+                                                              crossAxisCount:
+                                                                  crossAxisCount,
+                                                              crossAxisSpacing:
+                                                                  16.0,
+                                                              mainAxisSpacing:
+                                                                  16.0,
+                                                              mainAxisExtent:
+                                                                  240.0,
+                                                            ),
+                                                            itemCount:
                                                                 newBooksList
                                                                     .length,
-                                                                (newBooksListIndex) {
+                                                            itemBuilder:
+                                                                (context,
+                                                                    newBooksListIndex) {
                                                               final newBooksListItem =
                                                                   newBooksList[
                                                                       newBooksListIndex];
@@ -634,7 +666,7 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                                                   },
                                                                 ),
                                                               );
-                                                            }),
+                                                            },
                                                           );
                                                         },
                                                       ),

@@ -20,7 +20,8 @@ class BestPublisherPageWidget extends StatefulWidget {
   static String routePath = '/bestPublisherPage';
 
   @override
-  State<BestPublisherPageWidget> createState() => _BestPublisherPageWidgetState();
+  State<BestPublisherPageWidget> createState() =>
+      _BestPublisherPageWidgetState();
 }
 
 class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
@@ -76,7 +77,8 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                         future: FFAppState()
                             .getpublishersCache(
                           uniqueQueryKey: FFAppState().userId,
-                          requestFn: () => EbookGroup.getpublishersApiCall.call(),
+                          requestFn: () =>
+                              EbookGroup.getpublishersApiCall.call(),
                         )
                             .then((result) {
                           try {
@@ -101,7 +103,8 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                               ),
                             );
                           }
-                          final containerGetpublishersApiResponse = snapshot.data!;
+                          final containerGetpublishersApiResponse =
+                              snapshot.data!;
 
                           return Container(
                             width: double.infinity,
@@ -109,7 +112,8 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                             child: Builder(
                               builder: (context) {
                                 if (EbookGroup.getpublishersApiCall.success(
-                                      containerGetpublishersApiResponse.jsonBody,
+                                      containerGetpublishersApiResponse
+                                          .jsonBody,
                                     ) ==
                                     2) {
                                   return Align(
@@ -119,7 +123,8 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                                           16.0, 0.0, 16.0, 0.0),
                                       child: Text(
                                         valueOrDefault<String>(
-                                          EbookGroup.getpublishersApiCall.message(
+                                          EbookGroup.getpublishersApiCall
+                                              .message(
                                             containerGetpublishersApiResponse
                                                 .jsonBody,
                                           ),
@@ -241,7 +246,7 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                                                             icon:
                                                                 '${FFAppConstants.imageUrl}${getJsonField(
                                                               publisherDetailsListItem,
-                                                              r'''$.icon''',
+                                                              r'''$.image''',
                                                             ).toString()}',
                                                             name: getJsonField(
                                                               publisherDetailsListItem,
@@ -249,7 +254,7 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                                                             ).toString(),
                                                             onMainTap:
                                                                 () async {
-                                                           context.pushNamed(
+                                                              context.pushNamed(
                                                                 AboutPublisherPageWidget
                                                                     .routeName,
                                                                 queryParameters:

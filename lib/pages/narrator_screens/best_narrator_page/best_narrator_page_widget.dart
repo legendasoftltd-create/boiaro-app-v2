@@ -71,13 +71,17 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                   builder: (context) {
                     if (FFAppState().connected) {
                       return FutureBuilder<ApiCallResponse>(
-                        future: FFAppState().getnarratorsCache(
+                        future: FFAppState()
+                            .getnarratorsCache(
                           uniqueQueryKey: FFAppState().userId,
-                          requestFn: () => EbookGroup.getnarratorsApiCall.call(),
-                        ).then((result) {
+                          requestFn: () =>
+                              EbookGroup.getnarratorsApiCall.call(),
+                        )
+                            .then((result) {
                           try {
                             _model.apiRequestCompleted = true;
-                            _model.apiRequestLastUniqueKey = FFAppState().userId;
+                            _model.apiRequestLastUniqueKey =
+                                FFAppState().userId;
                           } finally {}
                           return result;
                         }),
@@ -96,7 +100,8 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                               ),
                             );
                           }
-                          final containerGetnarratorsApiResponse = snapshot.data!;
+                          final containerGetnarratorsApiResponse =
+                              snapshot.data!;
 
                           return Container(
                             width: double.infinity,
@@ -114,7 +119,8 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                                           16.0, 0.0, 16.0, 0.0),
                                       child: Text(
                                         valueOrDefault<String>(
-                                          EbookGroup.getnarratorsApiCall.message(
+                                          EbookGroup.getnarratorsApiCall
+                                              .message(
                                             containerGetnarratorsApiResponse
                                                 .jsonBody,
                                           ),
@@ -236,7 +242,7 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                                                             icon:
                                                                 '${FFAppConstants.imageUrl}${getJsonField(
                                                               narratorDetailsListItem,
-                                                              r'''$.icon''',
+                                                              r'''$.image''',
                                                             ).toString()}',
                                                             name: getJsonField(
                                                               narratorDetailsListItem,
