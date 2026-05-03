@@ -1220,14 +1220,6 @@ class SignupApiCall {
     );
     final body = res.jsonBody;
     if (res.statusCode == 201 && body is Map) {
-      final err = BoiaroLegacyAdapter.v2Error(body);
-      if (err != null) {
-        return ApiCallResponse(
-          BoiaroLegacyAdapter.legacyDataEnvelope(success: 2, message: err),
-          res.headers,
-          res.statusCode,
-        );
-      }
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
           success: 1,
@@ -4389,7 +4381,7 @@ class AddFavouriteBookApiCall {
     final baseUrl = EbookGroup.getBaseUrl();
     final res = await ApiManager.instance.makeApiCall(
       callName: 'AddFavouriteBookApi',
-      apiUrl: '${baseUrl}bookmarks',
+      apiUrl: '${baseUrl}me/bookmarks',
       callType: ApiCallType.POST,
       headers: _boiaroAuthHeaders(token),
       params: {},
@@ -4427,7 +4419,7 @@ class GetFavouriteBookCall {
     final baseUrl = EbookGroup.getBaseUrl();
     final res = await ApiManager.instance.makeApiCall(
       callName: 'GetFavouriteBook',
-      apiUrl: '${baseUrl}bookmarks',
+      apiUrl: '${baseUrl}me/bookmarks',
       callType: ApiCallType.GET,
       headers: _boiaroAuthHeaders(token),
       params: {},
@@ -4440,14 +4432,10 @@ class GetFavouriteBookCall {
       alwaysAllowBody: false,
     );
     final body = res.jsonBody;
-    if (!res.succeeded || body is! Map) {
+    if (!res.succeeded) {
       return _v2Error(body, res.statusCode);
     }
-    final err = BoiaroLegacyAdapter.v2Error(body);
-    if (err != null) {
-      return _v2Error(body, res.statusCode);
-    }
-    final raw = body['bookmarks'];
+    final raw = body is List ? body : (body is Map ? body['bookmarks'] : null);
     final fav = <Map<String, dynamic>>[];
     if (raw is List) {
       for (final row in raw) {
@@ -4510,7 +4498,7 @@ class RemoveFavouritebookCall {
     final bid = Uri.encodeComponent((bookId ?? '').trim());
     final res = await ApiManager.instance.makeApiCall(
       callName: 'RemoveFavouritebook',
-      apiUrl: '${baseUrl}bookmarks/$bid',
+      apiUrl: '${baseUrl}me/bookmarks/$bid',
       callType: ApiCallType.DELETE,
       headers: _boiaroAuthHeaders(token),
       params: {},

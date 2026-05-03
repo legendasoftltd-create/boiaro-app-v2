@@ -3,7 +3,6 @@ import 'package:a_i_ebook_app/pages/home_pages/home_page/webview.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/internationalization.dart';
@@ -164,9 +163,10 @@ class _BannerSliderState extends State<BannerSlider> {
                                           fontWeight: FontWeight.w600,
                                           color: theme.primaryText,
                                         )
-                                      : GoogleFonts.merriweather(
-                                          fontSize: 18,
-                                          height: 1.2,
+                                      : theme.titleMedium.override(
+                                          fontFamily: theme.titleMediumFamily,
+                                          fontSize: 18.0,
+                                          lineHeight: 1.2,
                                           fontWeight: FontWeight.w600,
                                           color: theme.primaryText,
                                         ),

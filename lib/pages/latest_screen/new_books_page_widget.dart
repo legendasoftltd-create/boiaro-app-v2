@@ -140,6 +140,9 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                 width: 20.0,
                                 height: 20.0,
                                 fit: BoxFit.contain,
+                                colorFilter: ColorFilter.mode(
+                                    FlutterFlowTheme.of(context).primaryText,
+                                    BlendMode.srcIn),
                               ),
                             ),
                           ),
@@ -188,6 +191,9 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                 'assets/images/filter.svg',
                                 width: 20.0,
                                 height: 20.0,
+                                colorFilter: ColorFilter.mode(
+                                    FlutterFlowTheme.of(context).primaryText,
+                                    BlendMode.srcIn),
                                 fit: BoxFit.cover,
                               ),
                             ),

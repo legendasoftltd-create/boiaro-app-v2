@@ -73,7 +73,7 @@ class _SingleAppbarWidgetState extends State<SingleAppbarWidget>
         color: FlutterFlowTheme.of(context).primaryBackground,
       ),
       child: Padding(
-        padding: EdgeInsetsDirectional.fromSTEB(16.0, 26.0, 16.0, 26.0),
+        padding: EdgeInsetsDirectional.fromSTEB(16.0, 26.0, 16.0, 10.0),
         child: Row(
           mainAxisSize: MainAxisSize.max,
           children: [

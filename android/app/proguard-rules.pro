@@ -23,6 +23,10 @@
 -keep class com.facebook.** { *; }
 -dontwarn com.facebook.**
 
+# flutter_facebook_auth plugin
+-keep class app.meedu.flutter_facebook_auth.** { *; }
+-dontwarn app.meedu.flutter_facebook_auth.**
+
 # Audio service (MainActivity extends AudioServiceActivity)
 -keep class com.ryanheise.audioservice.** { *; }
 

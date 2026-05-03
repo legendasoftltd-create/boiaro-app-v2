@@ -1643,13 +1643,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     errorWidget: (context,
                                                             error,
                                                             stackTrace) =>
-                                                        Image.asset(
-                                                      'assets/images/error_image.png',
-                                                      width: 120.0,
-                                                      height: 160.0,
-                                                      fit: BoxFit.cover,
-                                                      alignment:
-                                                          Alignment(0.0, 0.0),
+                                                        Icon(
+                                                     Icons.photo_outlined,
+                                                     color: FlutterFlowTheme.of(context).primaryText.withValues(alpha: 0.4),
+                                                      size: 120.0,
                                                     ),
                                                   ),
                                                 ),

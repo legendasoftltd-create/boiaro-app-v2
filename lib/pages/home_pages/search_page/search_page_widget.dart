@@ -159,6 +159,9 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                             width: 24.0,
                             height: 24.0,
                             fit: BoxFit.cover,
+                            colorFilter: ColorFilter.mode(
+                                FlutterFlowTheme.of(context).primaryText,
+                                BlendMode.srcIn),
                           ),
                         ),
                       ),
@@ -236,6 +239,9 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                 width: 24.0,
                                 height: 24.0,
                                 fit: BoxFit.cover,
+                                colorFilter: ColorFilter.mode(
+                                    FlutterFlowTheme.of(context).primaryText,
+                                    BlendMode.srcIn),
                               ),
                             ),
                           ),

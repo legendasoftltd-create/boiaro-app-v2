@@ -407,7 +407,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                                             ? 'Coming soon'
                                                                             : (_isFollowing
                                                                                 ? 'Following'
-                                                                                : 'Follow')),
+                                                                                : 'Follow'),style: FlutterFlowTheme.of(context).bodyMedium),
                                                               ),
                                                               if (_followersCount !=
                                                                   null) ...[

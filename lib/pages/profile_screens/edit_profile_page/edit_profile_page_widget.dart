@@ -495,30 +495,30 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 validator: _model.textController1Validator
                                     .asValidator(context),
                               ),
-                              TextFormField(
-                                controller: _model.textController2,
-                                focusNode: _model.textFieldFocusNode2,
-                                autofocus: false,
-                                textInputAction: TextInputAction.next,
-                                obscureText: false,
-                                decoration: _editFieldDecoration(
-                                  context,
-                                  labelText: 'Full name',
-                                  hintText: 'Legal or full name',
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      fontFamily: 'SF Pro Display',
-                                      fontSize: 17.0,
-                                      letterSpacing: 0.0,
-                                      lineHeight: 1.5,
-                                    ),
-                                cursorColor:
-                                    FlutterFlowTheme.of(context).primary,
-                                validator: _model.textController2Validator
-                                    .asValidator(context),
-                              ),
+                              // TextFormField(
+                              //   controller: _model.textController2,
+                              //   focusNode: _model.textFieldFocusNode2,
+                              //   autofocus: false,
+                              //   textInputAction: TextInputAction.next,
+                              //   obscureText: false,
+                              //   decoration: _editFieldDecoration(
+                              //     context,
+                              //     labelText: 'Full name',
+                              //     hintText: 'Legal or full name',
+                              //   ),
+                              //   style: FlutterFlowTheme.of(context)
+                              //       .bodyMedium
+                              //       .override(
+                              //         fontFamily: 'SF Pro Display',
+                              //         fontSize: 17.0,
+                              //         letterSpacing: 0.0,
+                              //         lineHeight: 1.5,
+                              //       ),
+                              //   cursorColor:
+                              //       FlutterFlowTheme.of(context).primary,
+                              //   validator: _model.textController2Validator
+                              //       .asValidator(context),
+                              // ),
                               TextFormField(
                                 controller: _model.textController3,
                                 focusNode: _model.textFieldFocusNode3,
@@ -644,22 +644,22 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 validator: _model.textController5Validator
                                     .asValidator(context),
                               ),
-                              custom_widgets.CustomLabelCountryCodeEditWidget(
-                                width: double.infinity,
-                                height: 50.0,
-                                initialValue: getJsonField(
-                                  FFAppState().userDetail,
-                                  r'''$.phone''',
-                                ).toString(),
-                                code: functions
-                                    .getCountryCodeInit('${getJsonField(
-                                  FFAppState().userDetail,
-                                  r'''$.country_code''',
-                                ).toString()} ${getJsonField(
-                                  FFAppState().userDetail,
-                                  r'''$.phone''',
-                                ).toString()}'),
-                              ),
+                              // custom_widgets.CustomLabelCountryCodeEditWidget(
+                              //   width: double.infinity,
+                              //   height: 50.0,
+                              //   initialValue: getJsonField(
+                              //     FFAppState().userDetail,
+                              //     r'''$.phone''',
+                              //   ).toString(),
+                              //   code: functions
+                              //       .getCountryCodeInit('${getJsonField(
+                              //     FFAppState().userDetail,
+                              //     r'''$.country_code''',
+                              //   ).toString()} ${getJsonField(
+                              //     FFAppState().userDetail,
+                              //     r'''$.phone''',
+                              //   ).toString()}'),
+                              // ),
                             ].divide(SizedBox(height: 16.0)),
                           ),
                         ),

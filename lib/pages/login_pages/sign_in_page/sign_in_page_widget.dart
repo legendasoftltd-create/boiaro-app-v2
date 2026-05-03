@@ -292,6 +292,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                         width: 20.0,
                                         height: 20.0,
                                         fit: BoxFit.contain,
+                                        color: FlutterFlowTheme.of(context).primaryText,
                                       ),
                                     ),
                                   ),
@@ -692,7 +693,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                       style: FlutterFlowTheme.of(context)
                                           .titleSmall
                                           .override(
-                                            color: Colors.black,
+                                            color: FlutterFlowTheme.of(context).primaryText,
                                             fontWeight: FontWeight.w600,
                                           ),
                                     ),
@@ -888,12 +889,21 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                       FFAppState().update(() {});
                                       context.safePop();
                                     } else {
-                                      await actions.showCustomToastBottom(
-                                        result.errorMessage ??
-                                            EbookGroup.socialLoginCall.message(
-                                              (result.response?.jsonBody ?? ''),
-                                            ) ??
-                                            'Login failed',
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            result.errorMessage ??
+                                                EbookGroup.socialLoginCall.message(
+                                                  (result.response?.jsonBody ?? ''),
+                                                ) ??
+                                                'Login failed',
+                                            style: TextStyle(
+                                              color: FlutterFlowTheme.of(context).primaryBackground,
+                                            ),
+                                          ),
+                                          duration: Duration(milliseconds: 4000),
+                                          backgroundColor: FlutterFlowTheme.of(context).primaryText,
+                                        ),
                                       );
                                     }
                                   },
@@ -956,7 +966,37 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                   hoverColor: Colors.transparent,
                   highlightColor: Colors.transparent,
                   onTap: () async {
-                    context.pushNamed(SignUpPageWidget.routeName);
+                    final result = await context.pushNamed(SignUpPageWidget.routeName);
+                    print('SignUp Result: $result');
+                    if (result is Map) {
+                      safeSetState(() {
+                        if (result['email'] != null) {
+                          _model.textController1.text = result['email'] as String;
+                        }
+                        if (result['password'] != null) {
+                          _model.textController2.text = result['password'] as String;
+                          _model.passwordVisibility = true; // Show password temporarily or just keep it filled
+                        }
+                      });
+                      final message = result['message']?.toString();
+                      if (message != null && message.isNotEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              message,
+                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                    fontFamily: 'SF Pro Display',
+                                    color: Colors.white,
+                                    fontSize: 14.0,
+                                  ),
+                            ),
+                            duration: Duration(milliseconds: 4000),
+                            backgroundColor: Colors.black,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
                   },
                   child: RichText(
                     textScaler: MediaQuery.of(context).textScaler,

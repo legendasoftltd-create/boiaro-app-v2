@@ -408,7 +408,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                             ? 'Coming soon'
                                                                             : (_isFollowing
                                                                                 ? 'Unfollow'
-                                                                                : 'Follow')),
+                                                                                : 'Follow'),style: FlutterFlowTheme.of(context).bodyMedium),
                                                               ),
                                                               if (_followersCount !=
                                                                   null) ...[
@@ -547,219 +547,219 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                       ),
                                             ),
                                           ),
-                                        Padding(
-                                          padding:
-                                              EdgeInsetsDirectional.fromSTEB(
-                                                  16.0, 0.0, 16.0, 0.0),
-                                          child: Container(
-                                            width: double.infinity,
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .secondaryBackground,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  blurRadius: 16.0,
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .shadowColor,
-                                                  offset: Offset(
-                                                    0.0,
-                                                    4.0,
-                                                  ),
-                                                )
-                                              ],
-                                              borderRadius:
-                                                  BorderRadius.circular(12.0),
-                                            ),
-                                            child: Padding(
-                                              padding: EdgeInsets.all(16.0),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.max,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (!(EbookGroup
-                                                                  .getpublisherdetailsApiCall
-                                                                  .facebookurl(
-                                                                containerGetpublisherdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              null ||
-                                                          EbookGroup
-                                                                  .getpublisherdetailsApiCall
-                                                                  .facebookurl(
-                                                                containerGetpublisherdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              '')) {
-                                                        await launchURL(EbookGroup
-                                                            .getpublisherdetailsApiCall
-                                                            .facebookurl(
-                                                          containerGetpublisherdetailsApiResponse
-                                                              .jsonBody,
-                                                        )!);
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              0.0),
-                                                      child: Image.asset(
-                                                        'assets/images/facebook_ic.png',
-                                                        width: 36.0,
-                                                        height: 36.0,
-                                                        fit: BoxFit.contain,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (!(EbookGroup
-                                                                  .getpublisherdetailsApiCall
-                                                                  .instagramurl(
-                                                                containerGetpublisherdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              null ||
-                                                          EbookGroup
-                                                                  .getpublisherdetailsApiCall
-                                                                  .instagramurl(
-                                                                containerGetpublisherdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              '')) {
-                                                        await launchURL(EbookGroup
-                                                            .getpublisherdetailsApiCall
-                                                            .instagramurl(
-                                                          containerGetpublisherdetailsApiResponse
-                                                              .jsonBody,
-                                                        )!);
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              0.0),
-                                                      child: SvgPicture.asset(
-                                                        'assets/images/instagram.svg',
-                                                        width: 36.0,
-                                                        height: 36.0,
-                                                        fit: BoxFit.cover,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (!(EbookGroup
-                                                                  .getpublisherdetailsApiCall
-                                                                  .youtubeurl(
-                                                                containerGetpublisherdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              null ||
-                                                          EbookGroup
-                                                                  .getpublisherdetailsApiCall
-                                                                  .youtubeurl(
-                                                                containerGetpublisherdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              '')) {
-                                                        await launchURL(EbookGroup
-                                                            .getpublisherdetailsApiCall
-                                                            .youtubeurl(
-                                                          containerGetpublisherdetailsApiResponse
-                                                              .jsonBody,
-                                                        )!);
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              0.0),
-                                                      child: SvgPicture.asset(
-                                                        'assets/images/youtube.svg',
-                                                        width: 36.0,
-                                                        height: 36.0,
-                                                        fit: BoxFit.cover,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  InkWell(
-                                                    splashColor:
-                                                        Colors.transparent,
-                                                    focusColor:
-                                                        Colors.transparent,
-                                                    hoverColor:
-                                                        Colors.transparent,
-                                                    highlightColor:
-                                                        Colors.transparent,
-                                                    onTap: () async {
-                                                      if (!(EbookGroup
-                                                                  .getpublisherdetailsApiCall
-                                                                  .websiteurl(
-                                                                containerGetpublisherdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              null ||
-                                                          EbookGroup
-                                                                  .getpublisherdetailsApiCall
-                                                                  .websiteurl(
-                                                                containerGetpublisherdetailsApiResponse
-                                                                    .jsonBody,
-                                                              ) ==
-                                                              '')) {
-                                                        await launchURL(EbookGroup
-                                                            .getpublisherdetailsApiCall
-                                                            .websiteurl(
-                                                          containerGetpublisherdetailsApiResponse
-                                                              .jsonBody,
-                                                        )!);
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              0.0),
-                                                      child: SvgPicture.asset(
-                                                        'assets/images/link(1).svg',
-                                                        width: 36.0,
-                                                        height: 36.0,
-                                                        fit: BoxFit.cover,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ].divide(SizedBox(width: 16.0)),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
+                                        // Padding(
+                                        //   padding:
+                                        //       EdgeInsetsDirectional.fromSTEB(
+                                        //           16.0, 0.0, 16.0, 0.0),
+                                        //   child: Container(
+                                        //     width: double.infinity,
+                                        //     decoration: BoxDecoration(
+                                        //       color:
+                                        //           FlutterFlowTheme.of(context)
+                                        //               .secondaryBackground,
+                                        //       boxShadow: [
+                                        //         BoxShadow(
+                                        //           blurRadius: 16.0,
+                                        //           color: FlutterFlowTheme.of(
+                                        //                   context)
+                                        //               .shadowColor,
+                                        //           offset: Offset(
+                                        //             0.0,
+                                        //             4.0,
+                                        //           ),
+                                        //         )
+                                        //       ],
+                                        //       borderRadius:
+                                        //           BorderRadius.circular(12.0),
+                                        //     ),
+                                        //     child: Padding(
+                                        //       padding: EdgeInsets.all(16.0),
+                                        //       child: Row(
+                                        //         mainAxisSize: MainAxisSize.max,
+                                        //         mainAxisAlignment:
+                                        //             MainAxisAlignment.center,
+                                        //         children: [
+                                        //           InkWell(
+                                        //             splashColor:
+                                        //                 Colors.transparent,
+                                        //             focusColor:
+                                        //                 Colors.transparent,
+                                        //             hoverColor:
+                                        //                 Colors.transparent,
+                                        //             highlightColor:
+                                        //                 Colors.transparent,
+                                        //             onTap: () async {
+                                        //               if (!(EbookGroup
+                                        //                           .getpublisherdetailsApiCall
+                                        //                           .facebookurl(
+                                        //                         containerGetpublisherdetailsApiResponse
+                                        //                             .jsonBody,
+                                        //                       ) ==
+                                        //                       null ||
+                                        //                   EbookGroup
+                                        //                           .getpublisherdetailsApiCall
+                                        //                           .facebookurl(
+                                        //                         containerGetpublisherdetailsApiResponse
+                                        //                             .jsonBody,
+                                        //                       ) ==
+                                        //                       '')) {
+                                        //                 await launchURL(EbookGroup
+                                        //                     .getpublisherdetailsApiCall
+                                        //                     .facebookurl(
+                                        //                   containerGetpublisherdetailsApiResponse
+                                        //                       .jsonBody,
+                                        //                 )!);
+                                        //               }
+                                        //             },
+                                        //             child: ClipRRect(
+                                        //               borderRadius:
+                                        //                   BorderRadius.circular(
+                                        //                       0.0),
+                                        //               child: Image.asset(
+                                        //                 'assets/images/facebook_ic.png',
+                                        //                 width: 36.0,
+                                        //                 height: 36.0,
+                                        //                 fit: BoxFit.contain,
+                                        //               ),
+                                        //             ),
+                                        //           ),
+                                        //           InkWell(
+                                        //             splashColor:
+                                        //                 Colors.transparent,
+                                        //             focusColor:
+                                        //                 Colors.transparent,
+                                        //             hoverColor:
+                                        //                 Colors.transparent,
+                                        //             highlightColor:
+                                        //                 Colors.transparent,
+                                        //             onTap: () async {
+                                        //               if (!(EbookGroup
+                                        //                           .getpublisherdetailsApiCall
+                                        //                           .instagramurl(
+                                        //                         containerGetpublisherdetailsApiResponse
+                                        //                             .jsonBody,
+                                        //                       ) ==
+                                        //                       null ||
+                                        //                   EbookGroup
+                                        //                           .getpublisherdetailsApiCall
+                                        //                           .instagramurl(
+                                        //                         containerGetpublisherdetailsApiResponse
+                                        //                             .jsonBody,
+                                        //                       ) ==
+                                        //                       '')) {
+                                        //                 await launchURL(EbookGroup
+                                        //                     .getpublisherdetailsApiCall
+                                        //                     .instagramurl(
+                                        //                   containerGetpublisherdetailsApiResponse
+                                        //                       .jsonBody,
+                                        //                 )!);
+                                        //               }
+                                        //             },
+                                        //             child: ClipRRect(
+                                        //               borderRadius:
+                                        //                   BorderRadius.circular(
+                                        //                       0.0),
+                                        //               child: SvgPicture.asset(
+                                        //                 'assets/images/instagram.svg',
+                                        //                 width: 36.0,
+                                        //                 height: 36.0,
+                                        //                 fit: BoxFit.cover,
+                                        //               ),
+                                        //             ),
+                                        //           ),
+                                        //           InkWell(
+                                        //             splashColor:
+                                        //                 Colors.transparent,
+                                        //             focusColor:
+                                        //                 Colors.transparent,
+                                        //             hoverColor:
+                                        //                 Colors.transparent,
+                                        //             highlightColor:
+                                        //                 Colors.transparent,
+                                        //             onTap: () async {
+                                        //               if (!(EbookGroup
+                                        //                           .getpublisherdetailsApiCall
+                                        //                           .youtubeurl(
+                                        //                         containerGetpublisherdetailsApiResponse
+                                        //                             .jsonBody,
+                                        //                       ) ==
+                                        //                       null ||
+                                        //                   EbookGroup
+                                        //                           .getpublisherdetailsApiCall
+                                        //                           .youtubeurl(
+                                        //                         containerGetpublisherdetailsApiResponse
+                                        //                             .jsonBody,
+                                        //                       ) ==
+                                        //                       '')) {
+                                        //                 await launchURL(EbookGroup
+                                        //                     .getpublisherdetailsApiCall
+                                        //                     .youtubeurl(
+                                        //                   containerGetpublisherdetailsApiResponse
+                                        //                       .jsonBody,
+                                        //                 )!);
+                                        //               }
+                                        //             },
+                                        //             child: ClipRRect(
+                                        //               borderRadius:
+                                        //                   BorderRadius.circular(
+                                        //                       0.0),
+                                        //               child: SvgPicture.asset(
+                                        //                 'assets/images/youtube.svg',
+                                        //                 width: 36.0,
+                                        //                 height: 36.0,
+                                        //                 fit: BoxFit.cover,
+                                        //               ),
+                                        //             ),
+                                        //           ),
+                                        //           InkWell(
+                                        //             splashColor:
+                                        //                 Colors.transparent,
+                                        //             focusColor:
+                                        //                 Colors.transparent,
+                                        //             hoverColor:
+                                        //                 Colors.transparent,
+                                        //             highlightColor:
+                                        //                 Colors.transparent,
+                                        //             onTap: () async {
+                                        //               if (!(EbookGroup
+                                        //                           .getpublisherdetailsApiCall
+                                        //                           .websiteurl(
+                                        //                         containerGetpublisherdetailsApiResponse
+                                        //                             .jsonBody,
+                                        //                       ) ==
+                                        //                       null ||
+                                        //                   EbookGroup
+                                        //                           .getpublisherdetailsApiCall
+                                        //                           .websiteurl(
+                                        //                         containerGetpublisherdetailsApiResponse
+                                        //                             .jsonBody,
+                                        //                       ) ==
+                                        //                       '')) {
+                                        //                 await launchURL(EbookGroup
+                                        //                     .getpublisherdetailsApiCall
+                                        //                     .websiteurl(
+                                        //                   containerGetpublisherdetailsApiResponse
+                                        //                       .jsonBody,
+                                        //                 )!);
+                                        //               }
+                                        //             },
+                                        //             child: ClipRRect(
+                                        //               borderRadius:
+                                        //                   BorderRadius.circular(
+                                        //                       0.0),
+                                        //               child: SvgPicture.asset(
+                                        //                 'assets/images/link(1).svg',
+                                        //                 width: 36.0,
+                                        //                 height: 36.0,
+                                        //                 fit: BoxFit.cover,
+                                        //               ),
+                                        //             ),
+                                        //           ),
+                                        //         ].divide(SizedBox(width: 16.0)),
+                                        //       ),
+                                        //     ),
+                                        //   ),
+                                        // ),
                                         FutureBuilder<ApiCallResponse>(
                                           future: FFAppState()
                                               .getFavouriteBookCache(

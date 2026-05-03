@@ -155,241 +155,15 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                           Padding(
                             padding: EdgeInsetsDirectional.fromSTEB(
                                 16.0, 0.0, 16.0, 0.0),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    width: 50.0,
-                                    child: TextFormField(
-                                      controller: _model.textController1,
-                                      focusNode: _model.textFieldFocusNode1,
-                                      autofocus: false,
-                                      textCapitalization:
-                                          TextCapitalization.sentences,
-                                      textInputAction: TextInputAction.next,
-                                      obscureText: false,
-                                      decoration: InputDecoration(
-                                        labelText: 'First name',
-                                        labelStyle: FlutterFlowTheme.of(context)
-                                            .labelMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .primaryText,
-                                              fontSize: 14.0,
-                                              letterSpacing: 0.0,
-                                            ),
-                                        hintText: 'Enter your first name',
-                                        hintStyle: FlutterFlowTheme.of(context)
-                                            .labelMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 17.0,
-                                              letterSpacing: 0.0,
-                                              lineHeight: 1.5,
-                                            ),
-                                        errorStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .error,
-                                              fontSize: 15.0,
-                                              letterSpacing: 0.0,
-                                              lineHeight: 1.2,
-                                            ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .black30,
-                                            width: 1.0,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(12.0),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                            width: 1.0,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(12.0),
-                                        ),
-                                        errorBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .error,
-                                            width: 1.0,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(12.0),
-                                        ),
-                                        focusedErrorBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .error,
-                                            width: 1.0,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(12.0),
-                                        ),
-                                        contentPadding:
-                                            EdgeInsetsDirectional.fromSTEB(
-                                                16.0, 13.0, 0.0, 12.0),
-                                      ),
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            fontSize: 17.0,
-                                            letterSpacing: 0.0,
-                                            lineHeight: 1.5,
-                                          ),
-                                      cursorColor:
-                                          FlutterFlowTheme.of(context).primary,
-                                      validator: _model.textController1Validator
-                                          .asValidator(context),
-                                      inputFormatters: [
-                                        if (!isAndroid && !isiOS)
-                                          TextInputFormatter.withFunction(
-                                              (oldValue, newValue) {
-                                            return TextEditingValue(
-                                              selection: newValue.selection,
-                                              text: newValue.text
-                                                  .toCapitalization(
-                                                      TextCapitalization
-                                                          .sentences),
-                                            );
-                                          }),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _model.textController2,
-                                    focusNode: _model.textFieldFocusNode2,
-                                    autofocus: false,
-                                    textCapitalization:
-                                        TextCapitalization.sentences,
-                                    textInputAction: TextInputAction.next,
-                                    obscureText: false,
-                                    decoration: InputDecoration(
-                                      labelText: 'Last name',
-                                      labelStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                            fontSize: 14.0,
-                                            letterSpacing: 0.0,
-                                          ),
-                                      hintText: 'Enter your last name',
-                                      hintStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            fontSize: 17.0,
-                                            letterSpacing: 0.0,
-                                            lineHeight: 1.5,
-                                          ),
-                                      errorStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            fontFamily: 'SF Pro Display',
-                                            color: FlutterFlowTheme.of(context)
-                                                .error,
-                                            fontSize: 15.0,
-                                            letterSpacing: 0.0,
-                                            lineHeight: 1.2,
-                                          ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: FlutterFlowTheme.of(context)
-                                              .black30,
-                                          width: 1.0,
-                                        ),
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: FlutterFlowTheme.of(context)
-                                              .primaryText,
-                                          width: 1.0,
-                                        ),
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
-                                      ),
-                                      errorBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: FlutterFlowTheme.of(context)
-                                              .error,
-                                          width: 1.0,
-                                        ),
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
-                                      ),
-                                      focusedErrorBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: FlutterFlowTheme.of(context)
-                                              .error,
-                                          width: 1.0,
-                                        ),
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
-                                      ),
-                                      contentPadding:
-                                          EdgeInsetsDirectional.fromSTEB(
-                                              16.0, 13.0, 0.0, 12.0),
-                                    ),
-                                    style: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .override(
-                                          fontFamily: 'SF Pro Display',
-                                          fontSize: 17.0,
-                                          letterSpacing: 0.0,
-                                          lineHeight: 1.5,
-                                        ),
-                                    cursorColor:
-                                        FlutterFlowTheme.of(context).primary,
-                                    validator: _model.textController2Validator
-                                        .asValidator(context),
-                                    inputFormatters: [
-                                      if (!isAndroid && !isiOS)
-                                        TextInputFormatter.withFunction(
-                                            (oldValue, newValue) {
-                                          return TextEditingValue(
-                                            selection: newValue.selection,
-                                            text: newValue.text
-                                                .toCapitalization(
-                                                    TextCapitalization
-                                                        .sentences),
-                                          );
-                                        }),
-                                    ],
-                                  ),
-                                ),
-                              ].divide(SizedBox(width: 16.0)),
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsetsDirectional.fromSTEB(
-                                16.0, 0.0, 16.0, 0.0),
                             child: TextFormField(
-                              controller: _model.textController3,
-                              focusNode: _model.textFieldFocusNode3,
+                              controller: _model.textController1,
+                              focusNode: _model.textFieldFocusNode1,
                               autofocus: false,
-                              textCapitalization: TextCapitalization.sentences,
+                              textCapitalization: TextCapitalization.words,
                               textInputAction: TextInputAction.next,
                               obscureText: false,
                               decoration: InputDecoration(
-                                labelText: 'Username',
+                                labelText: 'Display Name',
                                 labelStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -399,7 +173,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                       fontSize: 14.0,
                                       letterSpacing: 0.0,
                                     ),
-                                hintText: 'Enter your username',
+                                hintText: 'Enter your display name',
                                 hintStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -458,29 +232,8 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                     lineHeight: 1.5,
                                   ),
                               cursorColor: FlutterFlowTheme.of(context).primary,
-                              validator: _model.textController3Validator
+                              validator: _model.textController1Validator
                                   .asValidator(context),
-                              inputFormatters: [
-                                if (!isAndroid && !isiOS)
-                                  TextInputFormatter.withFunction(
-                                      (oldValue, newValue) {
-                                    return TextEditingValue(
-                                      selection: newValue.selection,
-                                      text: newValue.text.toCapitalization(
-                                          TextCapitalization.sentences),
-                                    );
-                                  }),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsetsDirectional.fromSTEB(
-                                16.0, 0.0, 16.0, 0.0),
-                            child: custom_widgets.CustomLabelCountryCodeWidget(
-                              key: ValueKey('signup_phone_BD'),
-                              width: double.infinity,
-                              height: 50.0,
-                              initialCountryCodeLocal: 'BD',
                             ),
                           ),
                           Padding(
@@ -799,12 +552,8 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                   _model.signupApis =
                                       await EbookGroup.signupApiCall.call(
                                     firstname: _model.textController1.text,
-                                    lastname: _model.textController2.text,
-                                    username: _model.textController3.text,
                                     email: _model.textController4.text,
                                     password: _model.textController5.text,
-                                    phone: FFAppState().phone,
-                                    countryCode: '+${FFAppState().countryCode}',
                                     registrationToken: FFAppState().tokenFcm,
                                     deviceId: FFAppState().deviceId,
                                   );
@@ -820,39 +569,17 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                     );
                                   } else {
                                     if (EbookGroup.signupApiCall.success(
-                                          (_model.signupApis?.jsonBody ?? ''),
-                                        ) ==
-                                        1) {
-                                      context.pushNamed(
-                                        VerificationPageWidget.routeName,
-                                        queryParameters: {
-                                          'firstname': serializeParam(
-                                            _model.textController1.text,
-                                            ParamType.String,
+                                            (_model.signupApis?.jsonBody ?? ''),
+                                          ) ==
+                                          1) {
+                                        context.pop({
+                                          'email': _model.textController4.text,
+                                          'password': _model.textController5.text,
+                                          'message': EbookGroup.signupApiCall.message(
+                                            (_model.signupApis?.jsonBody ?? ''),
                                           ),
-                                          'lastname': serializeParam(
-                                            _model.textController2.text,
-                                            ParamType.String,
-                                          ),
-                                          'username': serializeParam(
-                                            _model.textController3.text,
-                                            ParamType.String,
-                                          ),
-                                          'email': serializeParam(
-                                            _model.textController4.text,
-                                            ParamType.String,
-                                          ),
-                                          'password': serializeParam(
-                                            _model.textController5.text,
-                                            ParamType.String,
-                                          ),
-                                          'phone': serializeParam(
-                                            FFAppState().phone,
-                                            ParamType.String,
-                                          ),
-                                        }.withoutNulls,
-                                      );
-                                    } else {
+                                        });
+                                      } else {
                                       await actions.showCustomToastBottom(
                                         EbookGroup.signupApiCall.message(
                                           (_model.signupApis?.jsonBody ?? ''),

@@ -155,47 +155,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
   }
 
   List<dynamic> _pickHomeSectionBooks(List<dynamic> books, {int limit = 3}) {
-    final filtered = _filterBooks(books);
-    if (filtered.isEmpty) {
-      return [];
-    }
-    if (_selectedFilter != HomeBookFilter.all) {
-      // return filtered.take(limit).toList();
-      return filtered;
-    }
-
-    final picked = <dynamic>[];
-    final usedIds = <String>{};
-    void addBook(dynamic book) {
-      final id = _bookId(book);
-      if (usedIds.contains(id)) {
-        return;
-      }
-      usedIds.add(id);
-      picked.add(book);
-    }
-
-    final ebooks =
-        filtered.where((book) => _hasEbook(_resolveBookType(book))).toList();
-    final audios =
-        filtered.where((book) => _hasAudio(_resolveBookType(book))).toList();
-    final hardcopies =
-        filtered.where((book) => _hasHardcopy(_resolveBookType(book))).toList();
-
-    if (ebooks.isNotEmpty) addBook(ebooks.first);
-    if (audios.isNotEmpty && picked.length < limit) addBook(audios.first);
-    if (hardcopies.isNotEmpty && picked.length < limit) {
-      addBook(hardcopies.first);
-    }
-
-    for (final book in filtered) {
-      if (picked.length >= limit) {
-        break;
-      }
-      addBook(book);
-    }
-
-    return picked;
+    return _filterBooks(books);
   }
 
   bool _matchesFilter(dynamic book) {
@@ -1433,8 +1393,6 @@ class _HomePageWidgetState extends State<HomePageWidget>
       children: [
         _buildSectionHeader(
           FFLocalizations.of(context).getText('categories_title'),
-          fontSize: 20.0,
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
           onViewAll: () async {
             context.pushNamed(CategoriesScreenWidget.routeName);
           },
@@ -1559,16 +1517,50 @@ class _HomePageWidgetState extends State<HomePageWidget>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-          child: Text(
-            FFLocalizations.of(context).getText('featured_narrators_title'),
-            style: FlutterFlowTheme.of(context).bodyMedium.override(
-                  fontFamily: 'SF Pro Display',
-                  fontSize: 17.0,
-                  fontWeight: FontWeight.bold,
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+              child: Text(
+                FFLocalizations.of(context).getText('featured_narrators_title'),
+                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'SF Pro Display',
+                      fontSize: 17.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 16.0, 0.0),
+              child: InkWell(
+                splashColor: Colors.transparent,
+                focusColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                onTap: () async {
+                  context.pushNamed(BestNarratorPageWidget.routeName);
+                },
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                  decoration: BoxDecoration(
+                    color: FlutterFlowTheme.of(context).primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    FFLocalizations.of(context).getText('view_all'),
+                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 14.0,
+                          color: Colors.white,
+                          lineHeight: 1.5,
+                        ),
+                  ),
                 ),
-          ),
+              ),
+            ),
+          ],
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
@@ -2097,6 +2089,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
               style: FlutterFlowTheme.of(context).titleMedium.override(
                     fontFamily: 'SF Pro Display',
                     fontWeight: FontWeight.bold,
+                    color: FlutterFlowTheme.of(context).primaryText,
                   ),
             ),
             const SizedBox(height: 8),

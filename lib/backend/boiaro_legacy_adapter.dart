@@ -304,7 +304,7 @@ class BoiaroLegacyAdapter {
   }
 
   static Map<String, dynamic> legacyBookmarkFromV2(Map<String, dynamic> row) {
-    final book = row['books'];
+    final book = row['book'] ?? row['books'];
     Map<String, dynamic>? bmap;
     if (book is Map) {
       bmap = legacyBookFromV2(Map<String, dynamic>.from(book));

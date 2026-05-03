@@ -14,11 +14,13 @@ export 'purchase_history_page_model.dart';
 class _LibraryData {
   _LibraryData({
     required this.purchaseResponse,
+    required this.favoriteResponse,
     required this.downloads,
     required this.progressMap,
   });
 
   final ApiCallResponse purchaseResponse;
+  final ApiCallResponse favoriteResponse;
   final List<LocalDownloadedBook> downloads;
   final Map<String, LocalReadingProgress> progressMap;
 }
@@ -104,16 +106,26 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
   }
 
   Future<_LibraryData> _loadLibraryData() async {
-    final purchaseResponse = await EbookGroup.userBookPurchaseRecordsApiCall.call(
-      userId: FFAppState().userId,
-      token: FFAppState().token,
-    );
-    final downloads = await LocalDownloadService.getAllDownloads();
-    final progressMap = await ReadingProgressService.getAllProgress();
+    final futures = await Future.wait([
+      EbookGroup.userBookPurchaseRecordsApiCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      ),
+      EbookGroup.getFavouriteBookCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      ),
+      LocalDownloadService.getAllDownloads(),
+      ReadingProgressService.getAllProgress(),
+    ]);
+
     return _LibraryData(
-      purchaseResponse: purchaseResponse,
-      downloads: downloads.where((e) => e.existsOnDisk).toList(),
-      progressMap: progressMap,
+      purchaseResponse: futures[0] as ApiCallResponse,
+      favoriteResponse: futures[1] as ApiCallResponse,
+      downloads: (futures[2] as List<LocalDownloadedBook>)
+          .where((e) => e.existsOnDisk)
+          .toList(),
+      progressMap: futures[3] as Map<String, LocalReadingProgress>,
     );
   }
 
@@ -309,6 +321,67 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                       progressPercent: progressEntry.percent.clamp(0.0, 100.0),
                     ),
                   );
+                }
+
+                final favResponse = data.favoriteResponse;
+                final favOk = favResponse.succeeded;
+                final favDetails = favOk
+                    ? (EbookGroup.getFavouriteBookCall
+                            .favouriteBookDetailsList(favResponse.jsonBody) ??
+                        [])
+                    : [];
+
+                for (final favItem in favDetails) {
+                  final bookId = getJsonField(favItem, r'''$.bookDetails._id''')
+                      .toString();
+                  if (bookId.isEmpty) continue;
+                  final existingIdx =
+                      items.indexWhere((element) => element.id == bookId);
+                  if (existingIdx != -1) {
+                    final old = items[existingIdx];
+                    items[existingIdx] = _LibraryItem(
+                      id: old.id,
+                      name: old.name,
+                      author: old.author,
+                      imageUrl: old.imageUrl,
+                      contentType: old.contentType,
+                      isDownloaded: old.isDownloaded,
+                      isPurchased: old.isPurchased,
+                      isFavorite: true,
+                      progressPercent: old.progressPercent,
+                    );
+                  } else {
+                    final name =
+                        getJsonField(favItem, r'''$.bookDetails.name''')
+                            .toString();
+                    final author = getJsonField(
+                            favItem, r'''$.bookDetails.author.name''')
+                        .toString();
+                    final image =
+                        getJsonField(favItem, r'''$.bookDetails.image''')
+                            .toString();
+                    final type =
+                        getJsonField(favItem, r'''$.bookDetails.type''')
+                            .toString();
+                    items.add(
+                      _LibraryItem(
+                        id: bookId,
+                        name: name.isNotEmpty ? name : 'Unknown Book',
+                        author: author.isNotEmpty ? author : 'Unknown Author',
+                        imageUrl: image.isEmpty
+                            ? ''
+                            : (image.startsWith('http')
+                                ? image
+                                : '${FFAppConstants.bookImagesUrl}$image'),
+                        contentType: _normalizeContentType(type),
+                        isDownloaded: downloadedById.containsKey(bookId),
+                        isPurchased: false,
+                        isFavorite: true,
+                        progressPercent:
+                            data.progressMap[bookId]?.percent ?? 0.0,
+                      ),
+                    );
+                  }
                 }
 
                 final filteredItems = items.where((item) {

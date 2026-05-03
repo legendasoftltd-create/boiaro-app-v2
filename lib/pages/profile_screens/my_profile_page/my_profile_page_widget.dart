@@ -169,6 +169,7 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
             .join(' ');
     final bio = _profileValue('bio');
     final preferredLanguage = _profileValue('preferred_language').toUpperCase();
+    final email = _profileValue('email');
     final referralCode = _profileValue('referral_code');
     final createdAt = _profileValue('created_at');
     final joinedOn = createdAt.isNotEmpty
@@ -227,6 +228,7 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
                                 width: 20.0,
                                 height: 20.0,
                                 fit: BoxFit.contain,
+                                color: FlutterFlowTheme.of(context).primaryText,
                               ),
                             ),
                           ),
@@ -278,6 +280,9 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
                                 width: 20.0,
                                 height: 20.0,
                                 fit: BoxFit.cover,
+                                colorFilter: ColorFilter.mode(
+                                    FlutterFlowTheme.of(context).primaryText,
+                                    BlendMode.srcIn),
                               ),
                             ),
                           ),
@@ -326,8 +331,8 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
                     ),
                     _infoCard(
                       context: context,
-                      label: 'Full name',
-                      child: _valueText(context, fullName, maxLines: 2),
+                      label: 'Email',
+                      child: _valueText(context, email, maxLines: 2),
                     ),
                     _infoCard(
                       context: context,
@@ -342,34 +347,34 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _valueText(context, preferredLanguage, maxLines: 1),
-                          if (referralCode.isNotEmpty)
-                            Text(
-                              'Referral code: $referralCode',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
-                                    fontSize: 15.0,
-                                    letterSpacing: 0.0,
-                                    lineHeight: 1.5,
-                                  ),
-                            ),
-                          if (joinedOn.isNotEmpty)
-                            Text(
-                              'Joined: $joinedOn',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    fontFamily: 'SF Pro Display',
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
-                                    fontSize: 15.0,
-                                    letterSpacing: 0.0,
-                                    lineHeight: 1.5,
-                                  ),
-                            ),
+                          // if (referralCode.isNotEmpty)
+                            // Text(
+                            //   'Referral code: $referralCode',
+                            //   style: FlutterFlowTheme.of(context)
+                            //       .bodyMedium
+                            //       .override(
+                            //         fontFamily: 'SF Pro Display',
+                            //         color: FlutterFlowTheme.of(context)
+                            //             .secondaryText,
+                            //         fontSize: 15.0,
+                            //         letterSpacing: 0.0,
+                            //         lineHeight: 1.5,
+                            //       ),
+                            // ),
+                          // if (joinedOn.isNotEmpty)
+                          //   Text(
+                          //     'Joined: $joinedOn',
+                          //     style: FlutterFlowTheme.of(context)
+                          //         .bodyMedium
+                          //         .override(
+                          //           fontFamily: 'SF Pro Display',
+                          //           color: FlutterFlowTheme.of(context)
+                          //               .secondaryText,
+                          //           fontSize: 15.0,
+                          //           letterSpacing: 0.0,
+                          //           lineHeight: 1.5,
+                          //         ),
+                          //   ),
                         ].divide(const SizedBox(height: 4.0)),
                       ),
                     ),

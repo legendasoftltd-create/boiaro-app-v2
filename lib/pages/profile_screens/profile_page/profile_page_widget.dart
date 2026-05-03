@@ -225,7 +225,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                       return ListView(
                         padding: EdgeInsets.fromLTRB(
                           0,
-                          24.0,
+                          4.0,
                           0,
                           24.0,
                         ),
@@ -310,48 +310,48 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                         ),
                                   ).animateOnPageLoad(animationsMap[
                                       'textOnPageLoadAnimation2']!),
-                                  if (getJsonField(
-                                            FFAppState().userDetail,
-                                            r'''$.referral_code''',
-                                          ) !=
-                                          null &&
-                                      getJsonField(
-                                            FFAppState().userDetail,
-                                            r'''$.referral_code''',
-                                          )
-                                              .toString()
-                                              .trim()
-                                              .isNotEmpty)
-                                    InkWell(
-                                      onTap: () async {
-                                        final code = getJsonField(
-                                          FFAppState().userDetail,
-                                          r'''$.referral_code''',
-                                        ).toString();
-                                        await Clipboard.setData(
-                                            ClipboardData(text: code));
-                                        await actions.showCustomToastBottom(
-                                            'Referral code copied');
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: FlutterFlowTheme.of(context)
-                                              .secondaryBackground,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        child: Text(
-                                          'Referral code: ${getJsonField(
-                                            FFAppState().userDetail,
-                                            r'''$.referral_code''',
-                                          ).toString()}',
-                                          style: FlutterFlowTheme.of(context)
-                                              .bodySmall,
-                                        ),
-                                      ),
-                                    ),
+                                  // if (getJsonField(
+                                  //           FFAppState().userDetail,
+                                  //           r'''$.referral_code''',
+                                  //         ) !=
+                                  //         null &&
+                                  //     getJsonField(
+                                  //           FFAppState().userDetail,
+                                  //           r'''$.referral_code''',
+                                  //         )
+                                  //             .toString()
+                                  //             .trim()
+                                  //             .isNotEmpty)
+                                  //   InkWell(
+                                  //     onTap: () async {
+                                  //       final code = getJsonField(
+                                  //         FFAppState().userDetail,
+                                  //         r'''$.referral_code''',
+                                  //       ).toString();
+                                  //       await Clipboard.setData(
+                                  //           ClipboardData(text: code));
+                                  //       await actions.showCustomToastBottom(
+                                  //           'Referral code copied');
+                                  //     },
+                                  //     child: Container(
+                                  //       padding: const EdgeInsets.symmetric(
+                                  //           horizontal: 12, vertical: 8),
+                                  //       decoration: BoxDecoration(
+                                  //         color: FlutterFlowTheme.of(context)
+                                  //             .secondaryBackground,
+                                  //         borderRadius:
+                                  //             BorderRadius.circular(10),
+                                  //       ),
+                                  //       child: Text(
+                                  //         'Referral code: ${getJsonField(
+                                  //           FFAppState().userDetail,
+                                  //           r'''$.referral_code''',
+                                  //         ).toString()}',
+                                  //         style: FlutterFlowTheme.of(context)
+                                  //             .bodySmall,
+                                  //       ),
+                                  //     ),
+                                  //   ),
                                 ].divide(SizedBox(height: 4.0)),
                               ),
                             ),
@@ -1143,213 +1143,214 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                               ).animateOnPageLoad(animationsMap[
                                   'containerOnPageLoadAnimation3']!),
                             ),
-                          if (FFAppState().isLogin == true)
-                            Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                  16.0, 0.0, 16.0, 16.0),
-                              child: InkWell(
-                                splashColor: Colors.transparent,
-                                focusColor: Colors.transparent,
-                                hoverColor: Colors.transparent,
-                                highlightColor: Colors.transparent,
-                                onTap: () async {
-                                  context.pushNamed(
-                                      SubscriptionPageWidget.routeName);
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryBackground,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        blurRadius: 16.0,
-                                        color: FlutterFlowTheme.of(context)
-                                            .shadowColor,
-                                        offset: Offset(
-                                          0.0,
-                                          4.0,
-                                        ),
-                                      )
-                                    ],
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        8.0, 8.0, 16.0, 8.0),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.max,
-                                      children: [
-                                        Container(
-                                          width: 48.0,
-                                          height: 48.0,
-                                          decoration: BoxDecoration(
-                                            color: FlutterFlowTheme.of(context)
-                                                .lightGrey,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          alignment:
-                                              AlignmentDirectional(0.0, 0.0),
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(0.0),
-                                            child: SvgPicture.asset(
-                                              'assets/images/premium.svg',
-                                              colorFilter: ColorFilter.mode(
-                                                FlutterFlowTheme.of(context)
-                                                    .primaryText,
-                                                BlendMode.srcIn,
-                                              ),
-                                              fit: BoxFit.contain,
-                                              alignment: Alignment(0.0, 0.0),
-                                            ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    16.0, 0.0, 0.0, 0.0),
-                                            child: Text(
-                                              FFLocalizations.of(context).getText('subscription'),
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        fontFamily:
-                                                            'SF Pro Display',
-                                                        fontSize: 17.0,
-                                                        letterSpacing: 0.0,
-                                                        lineHeight: 1.5,
-                                                      ),
-                                            ),
-                                          ),
-                                        ),
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(0.0),
-                                          child: SvgPicture.asset(
-                                            'assets/images/arrow_right_ic.svg',
-                                            width: 20.0,
-                                            height: 20.0,
-                                            colorFilter: ColorFilter.mode(
-                                              FlutterFlowTheme.of(context)
-                                                  .primaryText,
-                                              BlendMode.srcIn,
-                                            ),
-                                            fit: BoxFit.contain,
-                                            alignment: Alignment(0.0, 0.0),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ).animateOnPageLoad(animationsMap[
-                                  'containerOnPageLoadAnimation4']!),
-                            ),
-                          if (FFAppState().isLogin == true)
-                            Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                  16.0, 0.0, 16.0, 16.0),
-                              child: InkWell(
-                                splashColor: Colors.transparent,
-                                focusColor: Colors.transparent,
-                                hoverColor: Colors.transparent,
-                                highlightColor: Colors.transparent,
-                                onTap: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const WalletPageWidget(),
-                                    ),
-                                  );
-                                  safeSetState(() {});
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryBackground,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        blurRadius: 16.0,
-                                        color: FlutterFlowTheme.of(context)
-                                            .shadowColor,
-                                        offset: Offset(
-                                          0.0,
-                                          4.0,
-                                        ),
-                                      )
-                                    ],
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        8.0, 8.0, 16.0, 8.0),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.max,
-                                      children: [
-                                        Container(
-                                          width: 48.0,
-                                          height: 48.0,
-                                          decoration: BoxDecoration(
-                                            color: FlutterFlowTheme.of(context)
-                                                .lightGrey,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          alignment:
-                                              AlignmentDirectional(0.0, 0.0),
-                                          child: Icon(
-                                            Icons.account_balance_wallet_rounded,
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                            size: 24.0,
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    16.0, 0.0, 0.0, 0.0),
-                                            child: Text(
-                                              'Wallet',
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        fontFamily:
-                                                            'SF Pro Display',
-                                                        fontSize: 17.0,
-                                                        letterSpacing: 0.0,
-                                                        lineHeight: 1.5,
-                                                      ),
-                                            ),
-                                          ),
-                                        ),
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(0.0),
-                                          child: SvgPicture.asset(
-                                            'assets/images/arrow_right_ic.svg',
-                                            width: 20.0,
-                                            height: 20.0,
-                                            colorFilter: ColorFilter.mode(
-                                              FlutterFlowTheme.of(context)
-                                                  .primaryText,
-                                              BlendMode.srcIn,
-                                            ),
-                                            fit: BoxFit.contain,
-                                            alignment: Alignment(0.0, 0.0),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ).animateOnPageLoad(animationsMap[
-                                  'containerOnPageLoadAnimation4']!),
-                            ),
+                          // if (FFAppState().isLogin == true)
+                          //   Padding(
+                          //     padding: EdgeInsetsDirectional.fromSTEB(
+                          //         16.0, 0.0, 16.0, 16.0),
+                          //     child: InkWell(
+                          //       splashColor: Colors.transparent,
+                          //       focusColor: Colors.transparent,
+                          //       hoverColor: Colors.transparent,
+                          //       highlightColor: Colors.transparent,
+                          //       onTap: () async {
+                          //         context.pushNamed(
+                          //             SubscriptionPageWidget.routeName);
+                          //       },
+                          //       child: Container(
+                          //         width: double.infinity,
+                          //         decoration: BoxDecoration(
+                          //           color: FlutterFlowTheme.of(context)
+                          //               .secondaryBackground,
+                          //           boxShadow: [
+                          //             BoxShadow(
+                          //               blurRadius: 16.0,
+                          //               color: FlutterFlowTheme.of(context)
+                          //                   .shadowColor,
+                          //               offset: Offset(
+                          //                 0.0,
+                          //                 4.0,
+                          //               ),
+                          //             )
+                          //           ],
+                          //           borderRadius: BorderRadius.circular(12.0),
+                          //         ),
+                          //         child: Padding(
+                          //           padding: EdgeInsetsDirectional.fromSTEB(
+                          //               8.0, 8.0, 16.0, 8.0),
+                          //           child: Row(
+                          //             mainAxisSize: MainAxisSize.max,
+                          //             children: [
+                          //               Container(
+                          //                 width: 48.0,
+                          //                 height: 48.0,
+                          //                 decoration: BoxDecoration(
+                          //                   color: FlutterFlowTheme.of(context)
+                          //                       .lightGrey,
+                          //                   shape: BoxShape.circle,
+                          //                 ),
+                          //                 alignment:
+                          //                     AlignmentDirectional(0.0, 0.0),
+                          //                 child: ClipRRect(
+                          //                   borderRadius:
+                          //                       BorderRadius.circular(0.0),
+                          //                   child: SvgPicture.asset(
+                          //                     'assets/images/premium.svg',
+                          //                     colorFilter: ColorFilter.mode(
+                          //                       FlutterFlowTheme.of(context)
+                          //                           .primaryText,
+                          //                       BlendMode.srcIn,
+                          //                     ),
+                          //                     fit: BoxFit.contain,
+                          //                     alignment: Alignment(0.0, 0.0),
+                          //                   ),
+                          //                 ),
+                          //               ),
+                          //               Expanded(
+                          //                 child: Padding(
+                          //                   padding:
+                          //                       EdgeInsetsDirectional.fromSTEB(
+                          //                           16.0, 0.0, 0.0, 0.0),
+                          //                   child: Text(
+                          //                     FFLocalizations.of(context).getText('subscription'),
+                          //                     style:
+                          //                         FlutterFlowTheme.of(context)
+                          //                             .bodyMedium
+                          //                             .override(
+                          //                               fontFamily:
+                          //                                   'SF Pro Display',
+                          //                               fontSize: 17.0,
+                          //                               letterSpacing: 0.0,
+                          //                               lineHeight: 1.5,
+                          //                             ),
+                          //                   ),
+                          //                 ),
+                          //               ),
+                          //               ClipRRect(
+                          //                 borderRadius:
+                          //                     BorderRadius.circular(0.0),
+                          //                 child: SvgPicture.asset(
+                          //                   'assets/images/arrow_right_ic.svg',
+                          //                   width: 20.0,
+                          //                   height: 20.0,
+                          //                   colorFilter: ColorFilter.mode(
+                          //                     FlutterFlowTheme.of(context)
+                          //                         .primaryText,
+                          //                     BlendMode.srcIn,
+                          //                   ),
+                          //                   fit: BoxFit.contain,
+                          //                   alignment: Alignment(0.0, 0.0),
+                          //                 ),
+                          //               ),
+                          //             ],
+                          //           ),
+                          //         ),
+                          //       ),
+                          //     ).animateOnPageLoad(animationsMap[
+                          //         'containerOnPageLoadAnimation4']!),
+                          //   ),
+                          // if (FFAppState().isLogin == true)
+                          //   Padding(
+                          //     padding: EdgeInsetsDirectional.fromSTEB(
+                          //         16.0, 0.0, 16.0, 16.0),
+                          //     child: InkWell(
+                          //       splashColor: Colors.transparent,
+                          //       focusColor: Colors.transparent,
+                          //       hoverColor: Colors.transparent,
+                          //       highlightColor: Colors.transparent,
+                          //       onTap: () async {
+                          //         await Navigator.push(
+                          //           context,
+                          //           MaterialPageRoute(
+                          //             builder: (context) => const WalletPageWidget(),
+                          //           ),
+                          //         );
+                          //         safeSetState(() {});
+                          //       },
+                          //       child: Container(
+                          //         width: double.infinity,
+                          //         decoration: BoxDecoration(
+                          //           color: FlutterFlowTheme.of(context)
+                          //               .secondaryBackground,
+                          //           boxShadow: [
+                          //             BoxShadow(
+                          //               blurRadius: 16.0,
+                          //               color: FlutterFlowTheme.of(context)
+                          //                   .shadowColor,
+                          //               offset: Offset(
+                          //                 0.0,
+                          //                 4.0,
+                          //               ),
+                          //             )
+                          //           ],
+                          //           borderRadius: BorderRadius.circular(12.0),
+                          //         ),
+                          //         child: Padding(
+                          //           padding: EdgeInsetsDirectional.fromSTEB(
+                          //               8.0, 8.0, 16.0, 8.0),
+                          //           child: Row(
+                          //             mainAxisSize: MainAxisSize.max,
+                          //             children: [
+                          //               Container(
+                          //                 width: 48.0,
+                          //                 height: 48.0,
+                          //                 decoration: BoxDecoration(
+                          //                   color: FlutterFlowTheme.of(context)
+                          //                       .lightGrey,
+                          //                   shape: BoxShape.circle,
+                          //                 ),
+                          //                 alignment:
+                          //                     AlignmentDirectional(0.0, 0.0),
+                          //                 child: Icon(
+                          //                   Icons.account_balance_wallet_rounded,
+                          //                   color: FlutterFlowTheme.of(context)
+                          //                       .primaryText,
+                          //                   size: 24.0,
+                          //                 ),
+                          //               ),
+                          //               Expanded(
+                          //                 child: Padding(
+                          //                   padding:
+                          //                       EdgeInsetsDirectional.fromSTEB(
+                          //                           16.0, 0.0, 0.0, 0.0),
+                          //                   child: Text(
+                          //                     'Wallet',
+                          //                     style:
+                          //                         FlutterFlowTheme.of(context)
+                          //                             .bodyMedium
+                          //                             .override(
+                          //                               fontFamily:
+                          //                                   'SF Pro Display',
+                          //                               fontSize: 17.0,
+                          //                               letterSpacing: 0.0,
+                          //                               lineHeight: 1.5,
+                          //                             ),
+                          //                   ),
+                          //                 ),
+                          //               ),
+                          //               ClipRRect(
+                          //                 borderRadius:
+                          //                     BorderRadius.circular(0.0),
+                          //                 child: SvgPicture.asset(
+                          //                   'assets/images/arrow_right_ic.svg',
+                          //                   width: 20.0,
+                          //                   height: 20.0,
+                          //                   colorFilter: ColorFilter.mode(
+                          //                     FlutterFlowTheme.of(context)
+                          //                         .primaryText,
+                          //                     BlendMode.srcIn,
+                          //                   ),
+                          //                   fit: BoxFit.contain,
+                          //                   alignment: Alignment(0.0, 0.0),
+                          //                 ),
+                          //               ),
+                          //             ],
+                          //           ),
+                          //         ),
+                          //       ),
+                          //     ).animateOnPageLoad(animationsMap[
+                          //         'containerOnPageLoadAnimation4']!),
+                          //   ),
+                          
                           Padding(
                             padding: EdgeInsetsDirectional.fromSTEB(
                                 16.0, 0.0, 16.0, 16.0),
@@ -1543,103 +1544,104 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                             ).animateOnPageLoad(animationsMap[
                                 'containerOnPageLoadAnimation5']!),
                           ),
-                          Padding(
-                            padding: EdgeInsetsDirectional.fromSTEB(
-                                16.0, 0.0, 16.0, 16.0),
-                            child: InkWell(
-                              splashColor: Colors.transparent,
-                              focusColor: Colors.transparent,
-                              hoverColor: Colors.transparent,
-                              highlightColor: Colors.transparent,
-                              onTap: () async {
-                                await actions.showCustomToastBottom(
-                                  FFLocalizations.of(context)
-                                      .getText('coming_soon'),
-                                );
-                              },
-                              child: Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context)
-                                      .secondaryBackground,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      blurRadius: 16.0,
-                                      color: FlutterFlowTheme.of(context)
-                                          .shadowColor,
-                                      offset: Offset(
-                                        0.0,
-                                        4.0,
-                                      ),
-                                    )
-                                  ],
-                                  borderRadius: BorderRadius.circular(12.0),
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsetsDirectional.fromSTEB(
-                                      8.0, 8.0, 16.0, 8.0),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.max,
-                                    children: [
-                                      Container(
-                                        width: 48.0,
-                                        height: 48.0,
-                                        decoration: BoxDecoration(
-                                          color: FlutterFlowTheme.of(context)
-                                              .lightGrey,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        alignment:
-                                            AlignmentDirectional(0.0, 0.0),
-                                        child: Icon(
-                                          Icons.help_outline_rounded,
-                                          color: FlutterFlowTheme.of(context)
-                                              .primaryText,
-                                          size: 24.0,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Padding(
-                                          padding:
-                                              EdgeInsetsDirectional.fromSTEB(
-                                                  16.0, 0.0, 0.0, 0.0),
-                                          child: Text(
-                                            'Help & Support',
-                                            style:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodyMedium
-                                                    .override(
-                                                      fontFamily:
-                                                          'SF Pro Display',
-                                                      fontSize: 17.0,
-                                                      letterSpacing: 0.0,
-                                                      lineHeight: 1.5,
-                                                    ),
-                                          ),
-                                        ),
-                                      ),
-                                      ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(0.0),
-                                        child: SvgPicture.asset(
-                                          'assets/images/arrow_right_ic.svg',
-                                          width: 20.0,
-                                          height: 20.0,
-                                          colorFilter: ColorFilter.mode(
-                                            FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                            BlendMode.srcIn,
-                                          ),
-                                          alignment: Alignment(0.0, 0.0),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ).animateOnPageLoad(animationsMap[
-                                'containerOnPageLoadAnimation5']!),
-                          ),
+
+                          // Padding(
+                          //   padding: EdgeInsetsDirectional.fromSTEB(
+                          //       16.0, 0.0, 16.0, 16.0),
+                          //   child: InkWell(
+                          //     splashColor: Colors.transparent,
+                          //     focusColor: Colors.transparent,
+                          //     hoverColor: Colors.transparent,
+                          //     highlightColor: Colors.transparent,
+                          //     onTap: () async {
+                          //       await actions.showCustomToastBottom(
+                          //         FFLocalizations.of(context)
+                          //             .getText('coming_soon'),
+                          //       );
+                          //     },
+                          //     child: Container(
+                          //       width: double.infinity,
+                          //       decoration: BoxDecoration(
+                          //         color: FlutterFlowTheme.of(context)
+                          //             .secondaryBackground,
+                          //         boxShadow: [
+                          //           BoxShadow(
+                          //             blurRadius: 16.0,
+                          //             color: FlutterFlowTheme.of(context)
+                          //                 .shadowColor,
+                          //             offset: Offset(
+                          //               0.0,
+                          //               4.0,
+                          //             ),
+                          //           )
+                          //         ],
+                          //         borderRadius: BorderRadius.circular(12.0),
+                          //       ),
+                          //       child: Padding(
+                          //         padding: EdgeInsetsDirectional.fromSTEB(
+                          //             8.0, 8.0, 16.0, 8.0),
+                          //         child: Row(
+                          //           mainAxisSize: MainAxisSize.max,
+                          //           children: [
+                          //             Container(
+                          //               width: 48.0,
+                          //               height: 48.0,
+                          //               decoration: BoxDecoration(
+                          //                 color: FlutterFlowTheme.of(context)
+                          //                     .lightGrey,
+                          //                 shape: BoxShape.circle,
+                          //               ),
+                          //               alignment:
+                          //                   AlignmentDirectional(0.0, 0.0),
+                          //               child: Icon(
+                          //                 Icons.help_outline_rounded,
+                          //                 color: FlutterFlowTheme.of(context)
+                          //                     .primaryText,
+                          //                 size: 24.0,
+                          //               ),
+                          //             ),
+                          //             Expanded(
+                          //               child: Padding(
+                          //                 padding:
+                          //                     EdgeInsetsDirectional.fromSTEB(
+                          //                         16.0, 0.0, 0.0, 0.0),
+                          //                 child: Text(
+                          //                   'Help & Support',
+                          //                   style:
+                          //                       FlutterFlowTheme.of(context)
+                          //                           .bodyMedium
+                          //                           .override(
+                          //                             fontFamily:
+                          //                                 'SF Pro Display',
+                          //                             fontSize: 17.0,
+                          //                             letterSpacing: 0.0,
+                          //                             lineHeight: 1.5,
+                          //                           ),
+                          //                 ),
+                          //               ),
+                          //             ),
+                          //             ClipRRect(
+                          //               borderRadius:
+                          //                   BorderRadius.circular(0.0),
+                          //               child: SvgPicture.asset(
+                          //                 'assets/images/arrow_right_ic.svg',
+                          //                 width: 20.0,
+                          //                 height: 20.0,
+                          //                 colorFilter: ColorFilter.mode(
+                          //                   FlutterFlowTheme.of(context)
+                          //                       .primaryText,
+                          //                   BlendMode.srcIn,
+                          //                 ),
+                          //                 alignment: Alignment(0.0, 0.0),
+                          //               ),
+                          //             ),
+                          //           ],
+                          //         ),
+                          //       ),
+                          //     ),
+                          //   ).animateOnPageLoad(animationsMap[
+                          //       'containerOnPageLoadAnimation5']!),
+                          // ),
                           
                           SizedBox(height: 16),
                           Builder(
@@ -1663,7 +1665,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                           alignment: AlignmentDirectional(
                                                   0.0, 0.0)
                                               .resolve(
-                                                  Directionality.of(context)),
+                                                  Directionality.of(dialogContext)),
                                           child: GestureDetector(
                                             onTap: () {
                                               FocusScope.of(dialogContext)
@@ -1707,7 +1709,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                             ''),
                                                       ) ==
                                                       1) {
-                                                    Navigator.pop(context);
+                                                    Navigator.pop(dialogContext);
                                                     FFAppState().isLogin =
                                                         false;
                                                     FFAppState().token = '';
@@ -1759,9 +1761,6 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                     context
                                         .pushNamed(SignInPageWidget.routeName);
                                   }
-
-                                    context
-                                        .pushNamed(SignInPageWidget.routeName);
                                   safeSetState(() {});
                                 },
                                 child: Container(

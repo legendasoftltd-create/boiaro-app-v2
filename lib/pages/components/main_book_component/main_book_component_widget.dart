@@ -227,13 +227,12 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                             fit: BoxFit.fill,
                             alignment: Alignment(0.0, 0.0),
                             errorWidget: (context, error, stackTrace) =>
-                                Image.asset(
-                              'assets/images/error_image.png',
-                              width: 84.0,
-                              height: 128.0,
-                              fit: BoxFit.fitWidth,
-                              alignment: Alignment(0.0, 0.0),
-                            ),
+                                Icon(
+                                  Icons.photo_size_select_actual_outlined,
+                                  size: 84.0,
+                                  color: FlutterFlowTheme.of(context).primaryText.withValues(alpha: 0.1),
+                                ),
+                                
                           ),
                         ),
                         if (formatIcons.isNotEmpty)
