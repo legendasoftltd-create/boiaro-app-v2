@@ -3,6 +3,8 @@ import 'package:a_i_ebook_app/flutter_flow/flutter_flow_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Result class for social login operations
@@ -62,11 +64,11 @@ class SocialLoginRepository {
         return null;
       }
 
-      // 1. Get ID Token for Identity (used by Supabase Auth)
+      // 1. Get ID Token for Identity
       final googleAuth = await googleUser.authentication;
       final idToken = (googleAuth.idToken ?? '').trim();
 
-      // 2. Get Access Token for Authorization (optional if backend only needs idToken, but we send both)
+      // 2. Get Access Token for Authorization
       final authClient = await googleUser.authorizationClient
           .authorizeScopes(['email', 'profile']);
       final accessToken = (authClient.accessToken ?? '').trim();
@@ -75,6 +77,22 @@ class SocialLoginRepository {
         debugPrint('Google sign in error: missing both idToken and accessToken');
         return null;
       }
+      
+      // 3. Authenticate with Firebase Auth
+      String? firebaseToken;
+      try {
+        final credential = GoogleAuthProvider.credential(
+          idToken: idToken.isNotEmpty ? idToken : null,
+          accessToken: accessToken.isNotEmpty ? accessToken : null,
+        );
+        final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        firebaseToken = await userCredential.user?.getIdToken();
+        debugPrint('Successfully authenticated with Firebase Auth.');
+      } catch (e) {
+        debugPrint('Firebase Auth Error: $e');
+        // If Firebase auth fails (e.g. audience mismatch), we continue to legacy backend.
+      }
+
       final String? deviceId = FFAppState().deviceId;
       final String? fcmToken = FFAppState().tokenFcm;
 
@@ -85,7 +103,8 @@ class SocialLoginRepository {
         username: googleUser.displayName ?? '',
         provider: 'google',
         providerId: googleUser.id,
-        accessToken: accessToken,
+        // If Firebase token exists, we pass it as the access token, or keep Google's token
+        accessToken: firebaseToken ?? accessToken,
         idToken: idToken,
         registrationToken: fcmToken,
         deviceId: deviceId,
