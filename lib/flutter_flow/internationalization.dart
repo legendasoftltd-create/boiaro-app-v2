@@ -54,6 +54,10 @@ class FFLocalizations {
       'home_app_promo_title': 'Your library, always with you',
       'home_app_promo_body':
           'Read offline, sync progress, and enjoy premium audiobooks — same spirit as boiarov2.blocknots.com.',
+      'slider_editors_choice': 'Editor\'s Choice',
+      'slider_read_ebook': 'Read eBook',
+      'slider_listen_now': 'Listen Now',
+      'slider_order_copy': 'Order Copy',
     },
     'bn': {
       'profile_title': 'প্রোফাইল',
@@ -98,6 +102,10 @@ class FFLocalizations {
       'home_app_promo_title': 'আপনার লাইব্রেরি, সবসময় সাথে',
       'home_app_promo_body':
           'অফলাইনে পড়ুন, অগ্রগতি সিঙ্ক করুন এবং প্রিমিয়াম অডিওবুক উপভোগ করুন।',
+      'slider_editors_choice': 'সম্পাদকের পছন্দ',
+      'slider_read_ebook': 'ই-বই পড়ুন',
+      'slider_listen_now': 'এখন শুনুন',
+      'slider_order_copy': 'কপি অর্ডার করুন',
     },
   };
 

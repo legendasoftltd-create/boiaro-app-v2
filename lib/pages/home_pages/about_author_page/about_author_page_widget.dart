@@ -54,6 +54,7 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
       if (FFAppState().isLogin) {
         await _loadPurchasedBooks();
         await _loadFollowState();
+        await _reloadFollowStateFromAuthorList();
       }
       safeSetState(() {});
     });
@@ -74,6 +75,28 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
       _isFollowing = state.isFollowing;
       _followersCount = state.followersCount;
     });
+  }
+
+  Future<void> _reloadFollowStateFromAuthorList() async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
+    final id = (widget.authorId ?? '').trim();
+    if (id.isEmpty) return;
+    final res = await EbookGroup.getauthorsApiCall.call(
+      token: FFAppState().token,
+    );
+    final list = EbookGroup.getauthorsApiCall.authorDetailsList(res.jsonBody)
+            ?.toList() ??
+        <dynamic>[];
+    for (final row in list) {
+      final rid = getJsonField(row, r'''$._id''')?.toString() ?? '';
+      if (rid != id) continue;
+      final followedRaw = getJsonField(row, r'''$.followed''');
+      if (!mounted) return;
+      safeSetState(() {
+        _isFollowing = followedRaw == true;
+      });
+      return;
+    }
   }
 
   Future<void> _toggleFollow() async {
@@ -109,7 +132,7 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
       await actions.showCustomToastBottom(
         target ? 'Followed author' : 'Unfollowed author',
       );
-      await _loadFollowState();
+      await _reloadFollowStateFromAuthorList();
     } else {
       await actions.showCustomToastBottom('Unable to update follow status');
     }
@@ -183,6 +206,7 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                   ..complete(
                                       EbookGroup.getauthordetailsApiCall.call(
                                     authorId: widget.authorId,
+                                    token: FFAppState().token,
                                   )))
                             .future,
                         builder: (context, snapshot) {
@@ -202,7 +226,6 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                           }
                           final containerGetauthordetailsApiResponse =
                               snapshot.data!;
-
                           return Container(
                             decoration: BoxDecoration(),
                             child: Builder(

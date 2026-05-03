@@ -27,7 +27,14 @@ import '/providers/cart_provider.dart';
 enum HomeBookFilter { all, ebook, audiobook, hardcopy }
 
 class HomePageWidget extends StatefulWidget {
-  const HomePageWidget({super.key});
+  const HomePageWidget({
+    super.key,
+    this.embeddedAudiobookMode = false,
+  });
+
+  /// When true (Audiobook tab shell), shows only the homepage feed for audiobooks
+  /// — same sections as Home with the Audiobook filter — without logo row or format chips.
+  final bool embeddedAudiobookMode;
 
   static String routeName = 'HomePage';
   static String routePath = '/homePage';
@@ -116,17 +123,6 @@ class _HomePageWidgetState extends State<HomePageWidget>
       type.contains('hard') || type.contains('print') || type.contains('paper');
 
   Future<void> _openBookDetails(dynamic book) async {
-    final type = _resolveBookType(book);
-    if (_hasAudio(type)) {
-      context.pushNamed(
-        AudiobookDetailsPageWidget.routeName,
-        extra: <String, dynamic>{
-          'audiobook': book,
-        },
-      );
-      return;
-    }
-
     context.pushNamed(
       BookDetailspageWidget.routeName,
       queryParameters: {
@@ -139,7 +135,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
           ParamType.String,
         ),
         'image': serializeParam(
-          '${FFAppConstants.bookImagesUrl}${getJsonField(book, r'''$.image''').toString()}',
+          _resolveCoverUrl(
+            getJsonField(book, r'''$.image''').toString(),
+          ),
           ParamType.String,
         ),
         'id': serializeParam(
@@ -645,6 +643,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
   void initState() {
     super.initState();
     _model = createModel(context, () => HomePageModel());
+    if (widget.embeddedAudiobookMode) {
+      _selectedFilter = HomeBookFilter.audiobook;
+    }
 
     animationsMap.addAll({
       'columnOnPageLoadAnimation': AnimationInfo(
@@ -749,17 +750,15 @@ class _HomePageWidgetState extends State<HomePageWidget>
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
-    return Scaffold(
-      key: scaffoldKey,
-      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-      body: SafeArea(
-        top: true,
-        child: Builder(
-          builder: (context) {
-            if (FFAppState().connected == true) {
-              return Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
+    final homeBody = SafeArea(
+      top: true,
+      child: Builder(
+        builder: (context) {
+          if (FFAppState().connected == true) {
+            return Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                if (!widget.embeddedAudiobookMode) ...[
                   Padding(
                     padding:
                         EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 16.0),
@@ -1015,6 +1014,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                         EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 12.0),
                     child: _buildFormatToggle(context),
                   ),
+                ],
                   Expanded(
                     child: FutureBuilder<ApiCallResponse>(
                       future: Future.value(_emptyFavouriteResponse()).then((result) {
@@ -1173,7 +1173,15 @@ class _HomePageWidgetState extends State<HomePageWidget>
             }
           },
         ),
-      ),
+    );
+
+    if (widget.embeddedAudiobookMode) {
+      return homeBody;
+    }
+    return Scaffold(
+      key: scaffoldKey,
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      body: homeBody,
     );
   }
 
@@ -1360,21 +1368,53 @@ class _HomePageWidgetState extends State<HomePageWidget>
         EbookGroup.getHomepageApiCall.sliderDetailsList(homepageJson)
                 ?.toList() ??
             [];
-    if (sliders.isEmpty) {
+    if (sliders.isNotEmpty) {
+      return BannerSlider(
+        sliderItems: sliders,
+        onOpenBook: _openBookDetails,
+      );
+    }
+    // Audiobook-tab homepage requests often omit `slider`; reuse the same
+    // hero strip as Home by loading the unfiltered homepage cache for sliders only.
+    if (!widget.embeddedAudiobookMode) {
       return const SizedBox.shrink();
     }
-    return BannerSlider(
-      imageUrls: sliders
-          .map<String>(
-            (e) =>
-                '${FFAppConstants.sliderImagesUrl}${getJsonField(e, r'''$.image''').toString()}',
-          )
-          .toList(),
-      links: sliders
-          .map<String>(
-            (e) => getJsonField(e, r'''$.button_url''').toString(),
-          )
-          .toList(),
+    return FutureBuilder<ApiCallResponse>(
+      future: FFAppState().getHomepageCache(
+        uniqueQueryKey: 'homepage_all',
+        requestFn: () => EbookGroup.getHomepageApiCall.call(
+          token: FFAppState().token,
+          type: '',
+        ),
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return SizedBox(
+            height: 200,
+            child: Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: FlutterFlowTheme.of(context).primary,
+                ),
+              ),
+            ),
+          );
+        }
+        final body = snapshot.data!.jsonBody;
+        final fallback =
+            EbookGroup.getHomepageApiCall.sliderDetailsList(body)?.toList() ??
+                [];
+        if (fallback.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return BannerSlider(
+          sliderItems: fallback,
+          onOpenBook: _openBookDetails,
+        );
+      },
     );
   }
 

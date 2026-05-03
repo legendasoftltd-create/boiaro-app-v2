@@ -10,6 +10,7 @@ import '/pages/cart_pages/checkout_page_widget.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/dialogs/book_review_bottom_sheet/book_review_bottom_sheet_widget.dart';
 import '/pages/empty_components/blank_component/blank_component_widget.dart';
+import '/pages/home_pages/about_publisher_page/about_publisher_page_widget.dart';
 import '/pages/shimmers/book_detail_shimmer/book_detail_shimmer_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/custom_code/widgets/index.dart' as custom_widgets;
@@ -60,6 +61,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   final Set<String> _purchasedFormatKeys = <String>{};
   int? _walletCoinBalance;
   bool _isDownloadingEbook = false;
+  bool _isBookmarkBusy = false;
 
   @override
   void initState() {
@@ -69,10 +71,61 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (FFAppState().isLogin) {
         await _checkIfPurchased();
+        await _loadBookmarkStatus();
         await _refreshWalletCoinBalance();
       }
       safeSetState(() {});
     });
+  }
+
+  Future<void> _loadBookmarkStatus() async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
+    final bid = (widget.id ?? '').trim();
+    if (bid.isEmpty) return;
+    try {
+      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bid/bookmark');
+      final res = await http.get(uri, headers: _apiHeaders(authRequired: true));
+      if (res.statusCode != 200) return;
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) {
+        _model.isFavorite = decoded['bookmarked'] == true;
+        _model.isFavoriteInitialized = true;
+        if (mounted) safeSetState(() {});
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleBookmarkStatus() async {
+    if (_isBookmarkBusy) return;
+    if (!FFAppState().isLogin) {
+      FFAppState().favChange = true;
+      FFAppState().bookId = widget.id ?? '';
+      FFAppState().update(() {});
+      context.pushNamed(SignInPageWidget.routeName);
+      return;
+    }
+    final bid = (widget.id ?? '').trim();
+    if (bid.isEmpty) return;
+    _isBookmarkBusy = true;
+    safeSetState(() => _model.isFavoriteLoading = true);
+    try {
+      final target = !(_model.isFavorite == true);
+      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bid/bookmark');
+      final res = await http.post(
+        uri,
+        headers: _apiHeaders(authRequired: true),
+        body: jsonEncode({'bookmarked': target}),
+      );
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        _model.isFavorite = target;
+        await actions.showCustomToastBottom(target ? FFAppState().favText : FFAppState().unFavText);
+      }
+    } catch (_) {} finally {
+      _isBookmarkBusy = false;
+      if (mounted) {
+        safeSetState(() => _model.isFavoriteLoading = false);
+      }
+    }
   }
 
   Future<void> _checkIfPurchased() async {
@@ -112,7 +165,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
       if (purchasesRes.statusCode == 200) {
         final decoded = jsonDecode(purchasesRes.body);
-        if (decoded is Map) absorbRows(decoded['purchases']);
+        if (decoded is Map) {
+          absorbRows(decoded['purchases']);
+          absorbRows(decoded['items']);
+        }
       }
       if (unlocksRes.statusCode == 200) {
         final decoded = jsonDecode(unlocksRes.body);
@@ -195,6 +251,25 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     final c = format['coin_price'];
     if (c is num) return c.toInt();
     return int.tryParse((c ?? '0').toString()) ?? 0;
+  }
+
+  int _previewPercent(Map<String, dynamic>? format) {
+    final raw = format?['preview_percentage'];
+    if (raw is num) return raw.toInt();
+    final parsed = int.tryParse('${raw ?? ''}');
+    if (parsed == null || parsed <= 0) return 15;
+    return parsed;
+  }
+
+  bool _hasLocalFormatAccess({
+    required String bookId,
+    required String format,
+    required bool isFree,
+    required double price,
+  }) {
+    if (isFree || price <= 0) return true;
+    return _purchasedFormatKeys
+        .contains('${bookId.toLowerCase()}::${format.toLowerCase().trim()}');
   }
 
   Map<String, String> _apiHeaders({required bool authRequired}) {
@@ -316,6 +391,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       getJsonField(responseJson, r'''$.data.bookDetails[0].raw.pdf_url'''),
       getJsonField(responseJson, r'''$.data.bookDetails[0].raw.ebook_url'''),
       getJsonField(responseJson, r'''$.data.bookDetails[0].raw.file_url'''),
+    ];
+    for (final c in candidates) {
+      final v = c?.toString().trim() ?? '';
+      if (v.isNotEmpty) return v;
+    }
+    return null;
+  }
+
+  String? _extractEbookPreviewUrlFromDetails(dynamic responseJson) {
+    final candidates = <dynamic>[
+      getJsonField(responseJson, r'''$.data.bookDetails[0].preview_pdf'''),
+      getJsonField(responseJson, r'''$.data.bookDetails[0].preview_url'''),
+      getJsonField(responseJson, r'''$.data.bookDetails[0].raw.preview_pdf'''),
     ];
     for (final c in candidates) {
       final v = c?.toString().trim() ?? '';
@@ -523,6 +611,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required String bookImage,
     required String authorName,
     required bool hasFullAccess,
+    int previewPercent = 15,
   }) async {
     final tracks = await _fetchAudioTracks(bookId);
     final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
@@ -546,8 +635,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
     }
 
+    final previewCount = hasFullAccess
+        ? effectiveTracks.length
+        : (((effectiveTracks.length * (previewPercent / 100)).ceil())
+              .clamp(1, effectiveTracks.length));
     for (var i = 0; i < effectiveTracks.length; i++) {
       final track = effectiveTracks[i];
+      final isTrackPreview = track['is_preview'] == true || i < previewCount;
       final trackNumber = (track['track_number'] is num)
           ? (track['track_number'] as num).toInt()
           : (i + 1);
@@ -565,9 +659,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         authRequired: hasFullAccess && FFAppState().isLogin,
       );
       if (signedUrl == null || signedUrl.isEmpty) {
-        if (!hasFullAccess && track['is_preview'] != true) {
+        if (!hasFullAccess && !isTrackPreview) {
           continue;
         }
+        continue;
+      }
+      if (!hasFullAccess && !isTrackPreview) {
         continue;
       }
       chapters.add({
@@ -575,8 +672,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         'file': signedUrl,
         'track_number': trackNumber,
         'duration': track['duration']?.toString() ?? '',
-        'isLocked': hasFullAccess ? false : (track['is_preview'] != true),
-        'isPreview': track['is_preview'] == true,
+        'isLocked': hasFullAccess ? false : !isTrackPreview,
+        'isPreview': !hasFullAccess ? true : (track['is_preview'] == true),
       });
     }
 
@@ -584,9 +681,14 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       await actions.showCustomToastBottom(
         hasFullAccess
             ? 'Unable to load audiobook tracks'
-            : 'No free preview tracks available',
+            : 'No preview tracks available',
       );
       return false;
+    }
+
+    if (!hasFullAccess) {
+      await actions.showCustomToastBottom(
+          'Preview limit: $previewPercent%. Buy or unlock to listen full audiobook.');
     }
 
     await context.pushNamed(
@@ -658,10 +760,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
       final ebookPrice = _formatPrice(ebookFormat);
       final ebookCoinPrice = _formatCoinPrice(ebookFormat);
+      final ebookPreviewPercent = _previewPercent(ebookFormat);
       final isEbookFree = isBookFree || ebookPrice <= 0;
       final hasAccessByApi = FFAppState().isLogin
           ? await _hasFormatAccess(bookId: bookId, format: 'ebook')
           : false;
+      final hasAccess = isEbookFree || hasAccessByApi;
 
       // URL-first strategy: sometimes /access/check can be stale while URL is available.
       String? url;
@@ -673,7 +777,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
       url ??= _extractEbookUrlFromDetails(responseJson);
 
-      if (url != null && url.trim().isNotEmpty) {
+      if (hasAccess && url != null && url.trim().isNotEmpty) {
         await _openBook(
           path: url,
           bookName: bookName,
@@ -689,10 +793,22 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         return;
       }
 
-      final hasAccess = isEbookFree || hasAccessByApi;
       if (hasAccess) {
         await actions.showCustomToastBottom(
             'Unable to fetch ebook URL. Please try again.');
+        return;
+      }
+
+      final previewUrl = _extractEbookPreviewUrlFromDetails(responseJson);
+      if (previewUrl != null && previewUrl.trim().isNotEmpty) {
+        await _openBook(
+          path: previewUrl,
+          bookName: '$bookName (Preview)',
+          bookImage: bookImage,
+          authorName: authorName,
+        );
+        await actions.showCustomToastBottom(
+            'Preview limit: $ebookPreviewPercent%. Buy or unlock to read full book.');
         return;
       }
 
@@ -745,6 +861,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
       final audiobookPrice = _formatPrice(audiobookFormat);
       final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
+      final audiobookPreviewPercent = _previewPercent(audiobookFormat);
       final isAudiobookFree = isBookFree || audiobookPrice <= 0;
       final hasAccess = isAudiobookFree ||
           (FFAppState().isLogin &&
@@ -756,6 +873,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           bookImage: bookImage,
           authorName: authorName,
           hasFullAccess: hasAccess,
+          previewPercent: audiobookPreviewPercent,
         );
         if (!opened && !FFAppState().isLogin && !isAudiobookFree) {
           context.pushNamed(SignInPageWidget.routeName);
@@ -776,6 +894,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
             bookImage: bookImage,
             authorName: authorName,
             hasFullAccess: true,
+            previewPercent: audiobookPreviewPercent,
           );
           return;
         }
@@ -793,6 +912,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     if (hardcopyFormat == null || hardcopyFormat['is_available'] == false) {
       await actions.showCustomToastBottom(
           'Hardcopy format is not available for this book');
+      return;
+    }
+    final hasHardcopyAccess = FFAppState().isLogin &&
+        await _hasFormatAccess(bookId: bookId, format: 'hardcopy');
+    if (hasHardcopyAccess) {
+      context.pushNamed(OrdersPageWidget.routeName);
       return;
     }
     await _addToCartAndCheckout(
@@ -1152,30 +1277,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           );
         }
         final bookDetailspageGetbookdetailsApiResponse = snapshot.data!;
-        String price = valueOrDefault<String>(
-            EbookGroup.getbookdetailsApiCall
-                    .price(
-                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                    )
-                    ?.toString() ??
-                "0",
-            "0");
-        String discountAmount = valueOrDefault<String>(
-            EbookGroup.getbookdetailsApiCall
-                    .discountAmount(
-                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                    )
-                    ?.toString() ??
-                "0",
-            "0");
-        String discountPercentage = valueOrDefault<String>(
-            EbookGroup.getbookdetailsApiCall
-                    .discountPercentage(
-                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                    )
-                    ?.toString() ??
-                "0",
-            "0");
         String bookId = valueOrDefault<String>(
             EbookGroup.getbookdetailsApiCall
                     .id(
@@ -1236,6 +1337,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           selectedFormat = hardcopyFormat;
           selectedLabel = 'Hardcopy';
         }
+        final previewPercent = _previewPercent(selectedFormat);
+        final showPreviewBadge = activeTab != BookMasterFormatTab.hardcopy &&
+            !_hasLocalFormatAccess(
+              bookId: bookId,
+              format: activeTab == BookMasterFormatTab.ebook
+                  ? 'ebook'
+                  : 'audiobook',
+              isFree: isBookFree,
+              price: _formatPrice(selectedFormat),
+            );
 
         return Scaffold(
           key: scaffoldKey,
@@ -1273,10 +1384,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                 return FutureBuilder<ApiCallResponse>(
                   future: (_model.apiRequestCompleter1 ??=
                           Completer<ApiCallResponse>()
-                            ..complete(EbookGroup.getFavouriteBookCall.call(
-                              userId: FFAppState().userId,
-                              token: FFAppState().token,
-                            )))
+                            ..complete(
+                              ApiCallResponse(
+                                {'ok': true},
+                                const {},
+                                200,
+                              ),
+                            ))
                       .future,
                   builder: (context, snapshot) {
                     // Customize what your widget looks like when it's loading.
@@ -1287,18 +1401,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                       );
                     }
                     final columnGetFavouriteBookResponse = snapshot.data!;
-
-                    if (!_model.isFavoriteInitialized) {
-                      _model.isFavorite = functions.checkFavOrNot(
-                        EbookGroup.getFavouriteBookCall
-                            .favouriteBookDetailsList(
-                              columnGetFavouriteBookResponse.jsonBody,
-                            )
-                            ?.toList(),
-                        widget.id!,
-                      );
-                      _model.isFavoriteInitialized = true;
-                    }
 
                     return Column(
                       mainAxisSize: MainAxisSize.max,
@@ -1425,7 +1527,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               await SharePlus.instance.share(
                                                   ShareParams(
                                                       uri: Uri.parse(
-                                                          "${FFAppConstants.webUrl}/product/${bookId}")));
+                                                          "${FFAppConstants.webUrl}/b/${bookId}")));
                                             },
                                             child: Container(
                                               width: 40.0,
@@ -1750,71 +1852,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   // Add to Wishlist button
                                                   Expanded(
                                                     child: OutlinedButton.icon(
-                                                      onPressed: () async {
-                                                        if (FFAppState()
-                                                                .isLogin ==
-                                                            true) {
-                                                          _model.isFavoriteLoading =
-                                                              true;
-                                                          safeSetState(() {});
-                                                          if (_model
-                                                                  .isFavorite ==
-                                                              true) {
-                                                            _model.getDetailBookDetete =
-                                                                await EbookGroup
-                                                                    .removeFavouritebookCall
-                                                                    .call(
-                                                              userId:
-                                                                  FFAppState()
-                                                                      .userId,
-                                                              token:
-                                                                  FFAppState()
-                                                                      .token,
-                                                              bookId: widget.id,
-                                                            );
-                                                            await actions
-                                                                .showCustomToastBottom(
-                                                                    FFAppState()
-                                                                        .unFavText);
-                                                          } else {
-                                                            _model.getDetailBookAdd =
-                                                                await EbookGroup
-                                                                    .addFavouriteBookApiCall
-                                                                    .call(
-                                                              userId:
-                                                                  FFAppState()
-                                                                      .userId,
-                                                              token:
-                                                                  FFAppState()
-                                                                      .token,
-                                                              bookId: widget.id,
-                                                            );
-                                                            await actions
-                                                                .showCustomToastBottom(
-                                                                    FFAppState()
-                                                                        .favText);
-                                                          }
-                                                          FFAppState()
-                                                              .clearGetFavouriteBookCacheCache();
-                                                          _model.isFavorite =
-                                                              !_model
-                                                                  .isFavorite!;
-                                                          _model.isFavoriteLoading =
-                                                              false;
-                                                          safeSetState(() {});
-                                                        } else {
-                                                          FFAppState()
-                                                                  .favChange =
-                                                              true;
-                                                          FFAppState().bookId =
-                                                              widget.id!;
-                                                          FFAppState()
-                                                              .update(() {});
-                                                          context.pushNamed(
-                                                              SignInPageWidget
-                                                                  .routeName);
-                                                        }
-                                                      },
+                                                      onPressed: _toggleBookmarkStatus,
                                                       icon: _model
                                                                   .isFavoriteLoading ==
                                                               true
@@ -1885,90 +1923,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   
                                                 ],
                                               ),
-                                              SizedBox(height: 10.0),
-                                              // price and discount
-                                              Row(
-                                                children: [
-                                                  SizedBox(width: 5.0),
-                                                  Text(
-                                                    'Price: ',
-                                                    style: FlutterFlowTheme.of(
-                                                            context)
-                                                        .bodyMedium
-                                                        .override(
-                                                          fontFamily:
-                                                              'SF Pro Display',
-                                                          fontSize: 14.0,
-                                                          letterSpacing: 0.0,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                  ),
-                                                  Text(
-                                                    '৳${price}',
-                                                    style:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .bodyMedium
-                                                            .override(
-                                                              fontFamily:
-                                                                  'SF Pro Display',
-                                                              color: (discountAmount !=
-                                                                          '0' &&
-                                                                      discountPercentage !=
-                                                                          '0')
-                                                                  ? FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .secondaryText
-                                                                  : FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .primary,
-                                                              fontSize: 14.0,
-                                                              letterSpacing:
-                                                                  0.0,
-                                                              fontWeight: (discountAmount !=
-                                                                          '0' &&
-                                                                      discountPercentage !=
-                                                                          '0')
-                                                                  ? FontWeight
-                                                                      .normal
-                                                                  : FontWeight
-                                                                      .bold,
-                                                              decoration: (discountAmount !=
-                                                                          '0' &&
-                                                                      discountPercentage !=
-                                                                          '0')
-                                                                  ? TextDecoration
-                                                                      .lineThrough
-                                                                  : null,
-                                                            ),
-                                                  ),
-                                                  if (discountPercentage !=
-                                                          "0" &&
-                                                      discountPercentage != '0')
-                                                    SizedBox(width: 8.0),
-                                                  if (discountPercentage !=
-                                                          "0" &&
-                                                      discountPercentage != '0')
-                                                    Text(
-                                                      '৳${(double.tryParse(price) ?? 0) - (double.tryParse(discountAmount) ?? 0)}',
-                                                      style: FlutterFlowTheme
-                                                              .of(context)
-                                                          .bodyMedium
-                                                          .override(
-                                                            fontFamily:
-                                                                'SF Pro Display',
-                                                            fontSize: 16.0,
-                                                            letterSpacing: 0.0,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .primary,
-                                                          ),
-                                                    ),
-                                                ],
-                                              )
+                                             
                                             ],
                                           ),
                                         ),
@@ -2376,6 +2331,47 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               ],
                                             ),
                                           ),
+                                        if (showPreviewBadge)
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 10.0),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .primaryBackground,
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color:
+                                                        FlutterFlowTheme.of(
+                                                                context)
+                                                            .primary
+                                                            .withOpacity(0.3),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  'Preview $previewPercent%',
+                                                  style: FlutterFlowTheme.of(
+                                                          context)
+                                                      .bodySmall
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        letterSpacing: 0.0,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                         FFButtonWidget(
                                           onPressed: () => _handleMasterAction(
                                             tab: activeTab,
@@ -2391,14 +2387,29 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 bookDetailspageGetbookdetailsApiResponse
                                                     .jsonBody,
                                           ),
-                                          text: activeTab ==
-                                                  BookMasterFormatTab.ebook
-                                              ? 'Read eBook'
-                                              : activeTab ==
-                                                      BookMasterFormatTab
-                                                          .audiobook
-                                                  ? 'Listen Audiobook'
-                                                  : 'Buy Hardcopy',
+                                          text: activeTab == BookMasterFormatTab.ebook
+                                              ? (_hasLocalFormatAccess(
+                                                      bookId: bookId,
+                                                      format: 'ebook',
+                                                      isFree: isBookFree,
+                                                      price: _formatPrice(ebookFormat))
+                                                  ? 'Read Now'
+                                                  : 'Read Preview')
+                                              : activeTab == BookMasterFormatTab.audiobook
+                                                  ? (_hasLocalFormatAccess(
+                                                          bookId: bookId,
+                                                          format: 'audiobook',
+                                                          isFree: isBookFree,
+                                                          price: _formatPrice(audiobookFormat))
+                                                      ? 'Listen Now'
+                                                      : 'Listen Preview')
+                                                  : (_hasLocalFormatAccess(
+                                                          bookId: bookId,
+                                                          format: 'hardcopy',
+                                                          isFree: isBookFree,
+                                                          price: _formatPrice(hardcopyFormat))
+                                                      ? 'View Orders'
+                                                      : 'Buy Hardcopy'),
                                           icon: Icon(
                                             activeTab ==
                                                     BookMasterFormatTab.ebook
@@ -2772,7 +2783,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
                                   // Extract narrator from audiobook format
                                   final narratorObj =
-                                      audiobookFormat?['narrators'];
+                                      audiobookFormat?['narrators'] ??
+                                          audiobookFormat?['narrator'];
                                   final narName = narratorObj is Map
                                       ? narratorObj['name']?.toString() ?? ''
                                       : '';
@@ -2784,6 +2796,31 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                   final narId = narratorObj is Map
                                       ? narratorObj['id']?.toString() ?? ''
                                       : '';
+                                  final publisherName =
+                                      getJsonField(
+                                        bookDetailspageGetbookdetailsApiResponse
+                                            .jsonBody,
+                                        r'''$.data.bookDetails[0].publisher.name''',
+                                      )?.toString() ??
+                                          '';
+                                  final publisherImageRaw =
+                                      getJsonField(
+                                        bookDetailspageGetbookdetailsApiResponse
+                                            .jsonBody,
+                                        r'''$.data.bookDetails[0].publisher.logo_url''',
+                                      )?.toString() ??
+                                          '';
+                                  final publisherId =
+                                      getJsonField(
+                                        bookDetailspageGetbookdetailsApiResponse
+                                            .jsonBody,
+                                        r'''$.data.bookDetails[0].publisher.id''',
+                                      )?.toString() ??
+                                          '';
+                                  final publisherImage = publisherImageRaw
+                                          .startsWith('http')
+                                      ? publisherImageRaw
+                                      : '${FFAppConstants.imageUrl}$publisherImageRaw';
                                   return Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -2847,6 +2884,33 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           ParamType.String),
                                                   'narratorId': serializeParam(
                                                       narId, ParamType.String),
+                                                }.withoutNulls,
+                                              );
+                                            }
+                                          },
+                                        ),
+
+                                      if (publisherName.isNotEmpty)
+                                        _buildPersonRow(
+                                          label: 'Publisher',
+                                          name: publisherName,
+                                          imageUrl: publisherImage,
+                                          subtitle: '',
+                                          onTap: () {
+                                            if (publisherId.isNotEmpty) {
+                                              context.pushNamed(
+                                                AboutPublisherPageWidget.routeName,
+                                                queryParameters: {
+                                                  'name': serializeParam(
+                                                      publisherName,
+                                                      ParamType.String),
+                                                  'publisherImage':
+                                                      serializeParam(
+                                                          publisherImage,
+                                                          ParamType.String),
+                                                  'publisherId': serializeParam(
+                                                      publisherId,
+                                                      ParamType.String),
                                                 }.withoutNulls,
                                               );
                                             }

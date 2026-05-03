@@ -809,6 +809,9 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                                 .completeFacebookLoginWithEmail(
                                           result.userData!,
                                           email,
+                                          (result.userData!['__accessToken'] ??
+                                                  '')
+                                              .toString(),
                                         );
 
                                         if (completeResult.success &&

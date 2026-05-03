@@ -62,6 +62,12 @@ class SocialLoginRepository {
         return null;
       }
 
+      final googleAuth = await googleUser.authentication;
+      final token = (googleAuth.idToken ?? '').trim();
+      if (token.isEmpty) {
+        debugPrint('Google sign in error: missing access token');
+        return null;
+      }
       final String? deviceId = FFAppState().deviceId;
       final String? fcmToken = FFAppState().tokenFcm;
 
@@ -72,6 +78,7 @@ class SocialLoginRepository {
         username: googleUser.displayName ?? '',
         provider: 'google',
         providerId: googleUser.id,
+        accessToken: token,
         registrationToken: fcmToken,
         deviceId: deviceId,
       );
@@ -88,6 +95,10 @@ class SocialLoginRepository {
       );
 
       if (result.status == LoginStatus.success) {
+        final fbAccessToken = result.accessToken?.tokenString ?? '';
+        if (fbAccessToken.trim().isEmpty) {
+          return SocialLoginResult.errorResult('Facebook access token missing');
+        }
         final userData = await FacebookAuth.instance.getUserData();
         final String? userId = userData['id'] as String?;
 
@@ -111,12 +122,19 @@ class SocialLoginRepository {
           } else {
             // No cached email, need to ask user
             debugPrint('Facebook login: No cached email, requesting from user');
-            return SocialLoginResult.needsEmailResult(userData);
+            return SocialLoginResult.needsEmailResult({
+              ...userData,
+              '__accessToken': fbAccessToken,
+            });
           }
         }
 
         // Email is available (either from Facebook or cache), proceed with login
-        return await _completeFacebookLogin(userData, email);
+        return await _completeFacebookLogin(
+          userData,
+          email,
+          fbAccessToken,
+        );
       } else {
         debugPrint('Facebook sign in failed: ${result.message}');
         return SocialLoginResult.errorResult(
@@ -133,13 +151,15 @@ class SocialLoginRepository {
   Future<SocialLoginResult> completeFacebookLoginWithEmail(
     Map<String, dynamic> userData,
     String email,
+    String accessToken,
   ) async {
-    return await _completeFacebookLogin(userData, email);
+    return await _completeFacebookLogin(userData, email, accessToken);
   }
 
   Future<SocialLoginResult> _completeFacebookLogin(
     Map<String, dynamic> userData,
     String email,
+    String accessToken,
   ) async {
     try {
       final String? deviceId = FFAppState().deviceId;
@@ -160,6 +180,7 @@ class SocialLoginRepository {
         username: name ?? '',
         provider: 'facebook',
         providerId: userId,
+        accessToken: accessToken,
         registrationToken: fcmToken,
         deviceId: deviceId,
       );

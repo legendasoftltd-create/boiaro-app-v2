@@ -14,6 +14,7 @@ class PaymentWebView extends StatefulWidget {
   /// BoiAro v2 order UUID (replaces legacy SSL `tran_id` for verification).
   final String? orderId;
   final List<String> bookIds;
+  final List<String> purchasedFormats;
   final CheckoutController checkoutController;
 
   const PaymentWebView({
@@ -21,6 +22,7 @@ class PaymentWebView extends StatefulWidget {
     required this.url,
     required this.orderId,
     required this.bookIds,
+    required this.purchasedFormats,
     required this.checkoutController,
   });
 
@@ -34,6 +36,34 @@ class _PaymentWebViewState extends State<PaymentWebView> {
   bool isLoading = false;
   bool isPaymentSuccess = false; // ✅ track payment success
   String _currentUrl = '';
+
+  String get _postSuccessActionLabel {
+    final formats =
+        widget.purchasedFormats.map((e) => e.toLowerCase().trim()).toSet();
+    if (formats.contains('hardcopy') ||
+        formats.contains('hard') ||
+        formats.contains('print')) {
+      return 'View Orders';
+    }
+    if (formats.contains('audiobook') || formats.contains('audio')) {
+      return 'Start Listening';
+    }
+    return 'Start Reading';
+  }
+
+  bool _isPaymentCallbackUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return false;
+    final path = uri.path.toLowerCase();
+    final status = uri.queryParameters['status']?.toLowerCase();
+    final validStatus = <String>{'success', 'failed', 'cancelled'};
+    final isV2Callback =
+        path.contains('/payment/callback') && validStatus.contains(status);
+    final isCheckoutRedirect = path.contains('/checkout/success') ||
+        path.contains('/checkout/fail') ||
+        path.contains('/checkout/cancel');
+    return isV2Callback || isCheckoutRedirect;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +87,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
       child: SafeArea(
         child: Scaffold(
           appBar: PreferredSize(
-            preferredSize: Size.fromHeight(112.0),
+            preferredSize: Size.fromHeight(116.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -108,10 +138,8 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                   if (uri != null) {
                     final url = uri.toString();
                     log('Intercepted URL: $url');
-                  
-                    if (url.contains('payment-success') ||
-                        url.contains('payment-fail') ||
-                        url.contains('payment-cancel')) {
+
+                    if (_isPaymentCallbackUrl(url)) {
                       setState(() => isLoading = true);
                       _handleUrlChange(url);
                       return NavigationActionPolicy.CANCEL;
@@ -126,10 +154,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                       _currentUrl = url;
                     });
                   }
-                  if(url.contains('payment-cancel')){
-                    await controller.stopLoading();
-                    _handleUrlChange(url.toString());
-                  }else if(url.contains('payment-fail')){
+                  if (_isPaymentCallbackUrl(url)) {
                     await controller.stopLoading();
                     _handleUrlChange(url.toString());
                   }
@@ -170,14 +195,15 @@ class _PaymentWebViewState extends State<PaymentWebView> {
 
   void _handleUrlChange(String url) {
     final uri = Uri.parse(url);
+    final path = uri.path.toLowerCase();
     final orderId = uri.queryParameters['order_id'] ??
         uri.queryParameters['tran_id'] ??
         widget.orderId;
     final status = uri.queryParameters['status']?.toLowerCase();
 
-    final isSuccess = url.contains('payment-success') || status == 'success';
-    final isFail = url.contains('payment-fail') || status == 'failed';
-    final isCancel = url.contains('payment-cancel') || status == 'cancelled';
+    final isSuccess = path.contains('/checkout/success') || status == 'success';
+    final isFail = path.contains('/checkout/fail') || status == 'failed';
+    final isCancel = path.contains('/checkout/cancel') || status == 'cancelled';
 
     // ✅ Success
     if (isSuccess) {
@@ -232,9 +258,19 @@ void _showSuccessDialog(String message) {
           title: "Payment Successful",
           description: message,
           isSuccess: true,
+          successButtonText: _postSuccessActionLabel,
           onOkPressed: () {
             Navigator.of(context).pop(); // ✅ close manually
             context.read<CartProvider>().clear();
+            final formats =
+                widget.purchasedFormats.map((e) => e.toLowerCase().trim()).toSet();
+            if (formats.contains('hardcopy') ||
+                formats.contains('hard') ||
+                formats.contains('print')) {
+              context.goNamed(ProfilePageWidget.routeName);
+              context.pushNamed(OrdersPageWidget.routeName);
+              return;
+            }
             context.goNamed(ProfilePageWidget.routeName);
             context.pushNamed(PurchaseHistoryPageWidget.routeName);
           },

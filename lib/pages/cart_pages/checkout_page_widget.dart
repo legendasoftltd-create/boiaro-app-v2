@@ -1,9 +1,12 @@
 import 'package:a_i_ebook_app/pages/cart_pages/make_payment.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/app_constants.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/providers/cart_provider.dart';
 import '/app_state.dart';
@@ -27,25 +30,20 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressLine1Controller = TextEditingController();
   final TextEditingController _addressLine2Controller = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _thanaController = TextEditingController();
   final TextEditingController _postalCodeController = TextEditingController();
-  final TextEditingController _countryController = TextEditingController();
   String? _appliedCouponCode;
   String? _couponErrorMessage;
   bool _isApplyingCoupon = false;
   double _discountAmount = 0.0;
-  bool _showAddressForm = false;
-  bool _setAsDefault = false;
   bool _isLoadingShippingData = false;
-  bool _isSubmittingAddress = false;
   bool _isCalculatingShipping = false;
   bool _shippingDataLoaded = false;
   String? _shippingError;
-  List<dynamic> _addresses = [];
-  Map<String, dynamic>? _selectedAddress;
-  String? _selectedAddressId;
   List<dynamic> _shippingMethods = [];
+  List<Map<String, dynamic>> _districts = [];
+  String? _selectedDistrictName;
+  bool _selectedDistrictIsDhaka = false;
   String? _selectedShippingMethodId;
   double _shippingCost = 0.0;
 
@@ -61,10 +59,8 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     _phoneController.dispose();
     _addressLine1Controller.dispose();
     _addressLine2Controller.dispose();
-    _cityController.dispose();
-    _stateController.dispose();
+    _thanaController.dispose();
     _postalCodeController.dispose();
-    _countryController.dispose();
     super.dispose();
   }
 
@@ -133,6 +129,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     try {
       await Future.wait([
         _fetchAddresses(),
+        _fetchDistricts(),
         _fetchShippingMethods(),
       ]);
       setState(() {
@@ -153,87 +150,122 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   }
 
   Future<void> _fetchAddresses() async {
-    setState(() {
-      _addresses = [];
-      _selectedAddress = null;
-      _selectedAddressId = null;
-      _showAddressForm = true;
-    });
+    return;
   }
 
   Future<void> _fetchShippingMethods() async {
+    final uri = Uri.parse(
+      '${FFAppConstants.mobileApiBaseUrl}/shipping/methods',
+    ).replace(
+      queryParameters: {
+        if ((_selectedDistrictName ?? '').trim().isNotEmpty)
+          'districtId': _selectedDistrictName!.trim(),
+      },
+    );
+    final res = await http.get(uri, headers: {
+      'Content-Type': 'application/json',
+      if (FFAppConstants.supabaseAnonApiKey.isNotEmpty)
+        'apikey': FFAppConstants.supabaseAnonApiKey,
+      if (FFAppState().token.isNotEmpty)
+        'Authorization': 'Bearer ${FFAppState().token}',
+    });
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Shipping methods failed (${res.statusCode})');
+    }
+    final decoded = jsonDecode(res.body);
+    final raw = decoded is List
+        ? decoded
+        : (decoded is Map ? decoded['methods'] : null);
+    final methods = <dynamic>[];
+    if (raw is List) {
+      methods.addAll(raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)));
+    }
     setState(() {
-      final method = <String, dynamic>{'_id': 'standard', 'name': 'Standard'};
-      _shippingMethods = [method];
-      _selectedShippingMethodId = method['_id']?.toString();
+      _shippingMethods = methods;
+      _selectedShippingMethodId = methods.isNotEmpty
+          ? (Map<String, dynamic>.from(methods.first as Map)['id']?.toString() ??
+              Map<String, dynamic>.from(methods.first as Map)['_id']?.toString())
+          : null;
     });
   }
 
   Future<void> _calculateShippingCost() async {
+    if (_shippingMethods.isEmpty || _selectedShippingMethodId == null) {
+      setState(() {
+        _shippingCost = 0;
+        _isCalculatingShipping = false;
+      });
+      return;
+    }
+    final selected = _shippingMethods
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .firstWhere(
+          (m) =>
+              m['id']?.toString() == _selectedShippingMethodId ||
+              m['_id']?.toString() == _selectedShippingMethodId,
+          orElse: () => <String, dynamic>{},
+        );
+    final baseCostRaw = selected['base_cost'] ?? selected['cost'] ?? 0;
+    final baseCost = baseCostRaw is num
+        ? baseCostRaw.toDouble()
+        : double.tryParse(baseCostRaw.toString()) ?? 0.0;
     setState(() {
-      _shippingCost = 0;
+      _shippingCost = baseCost;
       _isCalculatingShipping = false;
+    });
+  }
+
+  Future<void> _fetchDistricts() async {
+    final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/shipping/districts');
+    final res = await http.get(uri, headers: {
+      'Content-Type': 'application/json',
+      if (FFAppConstants.supabaseAnonApiKey.isNotEmpty)
+        'apikey': FFAppConstants.supabaseAnonApiKey,
+      if (FFAppState().token.isNotEmpty)
+        'Authorization': 'Bearer ${FFAppState().token}',
+    });
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Districts failed (${res.statusCode})');
+    }
+    final decoded = jsonDecode(res.body);
+    final raw = decoded is List
+        ? decoded
+        : (decoded is Map ? decoded['districts'] : null);
+    final districts = <Map<String, dynamic>>[];
+    if (raw is List) {
+      for (final d in raw.whereType<Map>()) {
+        final m = Map<String, dynamic>.from(d);
+        final name = (m['name'] ?? '').toString().trim();
+        if (name.isEmpty) continue;
+        districts.add({
+          'name': name,
+          'is_dhaka_area': m['is_dhaka_area'] == true,
+        });
+      }
+    }
+    setState(() {
+      _districts = districts;
+      if (_districts.isNotEmpty && (_selectedDistrictName ?? '').isEmpty) {
+        _selectedDistrictName = _districts.first['name']?.toString();
+        _selectedDistrictIsDhaka = _districts.first['is_dhaka_area'] == true;
+      }
     });
   }
 
   /// Shape expected by [CheckoutController] / v2 `shipping_address` (fullName-style keys OK).
   Map<String, dynamic>? _shippingAddressForOrder() {
-    if (_selectedAddress != null) {
-      final raw = Map<String, dynamic>.from(_selectedAddress!);
-      final fullName = (raw['fullName'] ??
-              raw['full_name'] ??
-              raw['name'] ??
-              raw['recipient_name'] ??
-              '')
-          .toString()
-          .trim();
-      final phone = (raw['phone'] ?? raw['mobile'] ?? '').toString().trim();
-      final addressLine1 = (raw['addressLine1'] ??
-              raw['address_line1'] ??
-              raw['address'] ??
-              '')
-          .toString()
-          .trim();
-      final addressLine2 =
-          (raw['addressLine2'] ?? raw['address_line2'] ?? '').toString().trim();
-      final city = (raw['city'] ?? '').toString().trim();
-      final state = (raw['state'] ?? '').toString().trim();
-      final postalCode =
-          (raw['postalCode'] ?? raw['zip'] ?? raw['zipcode'] ?? '')
-              .toString()
-              .trim();
-      final country = (raw['country'] ?? '').toString().trim();
-      if (fullName.isEmpty ||
-          phone.isEmpty ||
-          addressLine1.isEmpty ||
-          city.isEmpty ||
-          postalCode.isEmpty ||
-          country.isEmpty) {
-        return null;
-      }
-      return {
-        'fullName': fullName,
-        'phone': phone,
-        'addressLine1': addressLine1,
-        'addressLine2': addressLine2,
-        'city': city,
-        'state': state,
-        'postalCode': postalCode,
-        'country': country,
-      };
-    }
     final fullName = _fullNameController.text.trim();
     final phone = _phoneController.text.trim();
     final addressLine1 = _addressLine1Controller.text.trim();
-    final city = _cityController.text.trim();
+    final city = (_selectedDistrictName ?? '').trim();
     final postalCode = _postalCodeController.text.trim();
-    final country = _countryController.text.trim();
+    final state = _thanaController.text.trim();
     if (fullName.isEmpty ||
         phone.isEmpty ||
         addressLine1.isEmpty ||
         city.isEmpty ||
-        postalCode.isEmpty ||
-        country.isEmpty) {
+        state.isEmpty) {
       return null;
     }
     return {
@@ -242,83 +274,10 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       'addressLine1': addressLine1,
       'addressLine2': _addressLine2Controller.text.trim(),
       'city': city,
-      'state': _stateController.text.trim(),
+      'state': state,
       'postalCode': postalCode,
-      'country': country,
+      'country': 'Bangladesh',
     };
-  }
-
-  Future<void> _submitAddress() async {
-    if (_isSubmittingAddress) return;
-    final fullName = _fullNameController.text.trim();
-    final phone = _phoneController.text.trim();
-    final addressLine1 = _addressLine1Controller.text.trim();
-    final city = _cityController.text.trim();
-    final postalCode = _postalCodeController.text.trim();
-    final country = _countryController.text.trim();
-
-    if (fullName.isEmpty ||
-        phone.isEmpty ||
-        addressLine1.isEmpty ||
-        city.isEmpty ||
-        postalCode.isEmpty ||
-        country.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please fill in all required address fields'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSubmittingAddress = true;
-    });
-
-    try {
-      final synthetic = <String, dynamic>{
-        '_id': 'local-${DateTime.now().millisecondsSinceEpoch}',
-        'fullName': fullName,
-        'phone': phone,
-        'addressLine1': addressLine1,
-        'addressLine2': _addressLine2Controller.text.trim(),
-        'city': city,
-        'state': _stateController.text.trim(),
-        'postalCode': postalCode,
-        'country': country,
-        'isDefault': _setAsDefault,
-      };
-      setState(() {
-        _addresses = [synthetic];
-        _selectedAddress = synthetic;
-        _selectedAddressId = synthetic['_id']?.toString();
-      });
-      _fullNameController.clear();
-      _phoneController.clear();
-      _addressLine1Controller.clear();
-      _addressLine2Controller.clear();
-      _cityController.clear();
-      _stateController.clear();
-      _postalCodeController.clear();
-      _countryController.clear();
-      _setAsDefault = false;
-      _showAddressForm = false;
-      await _calculateShippingCost();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to add address: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmittingAddress = false;
-        });
-      }
-    }
   }
 
   Widget _buildShippingSection() {
@@ -408,62 +367,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
             ),
           ),
           SizedBox(height: 12.0),
-          if (_addresses.isEmpty && !_showAddressForm)
-            Text(
-              'No saved addresses found.',
-              style: FlutterFlowTheme.of(context).bodySmall.override(
-                    color: FlutterFlowTheme.of(context).secondaryText,
-                  ),
-            ),
-          if (_addresses.isNotEmpty && !_showAddressForm)
-            ..._addresses.map((address) {
-              final addressMap = Map<String, dynamic>.from(address as Map);
-              final addressId = addressMap['_id']?.toString() ?? '';
-              return RadioListTile<String>(
-                value: addressId,
-                groupValue: _selectedAddressId,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedAddressId = value;
-                    _selectedAddress = addressMap;
-                  });
-                  _calculateShippingCost();
-                },
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  addressMap['fullName']?.toString() ?? 'Unnamed',
-                  style: FlutterFlowTheme.of(context).bodyLarge.override(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                subtitle: Text(
-                  _formatAddressLine(addressMap),
-                  style: FlutterFlowTheme.of(context).bodySmall.override(
-                        color: FlutterFlowTheme.of(context).secondaryText,
-                      ),
-                ),
-                activeColor: FlutterFlowTheme.of(context).primary,
-              );
-            }).toList(),
-          if (_showAddressForm) _buildAddressForm(),
-          if (_addresses.isNotEmpty && !_showAddressForm)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () {
-                  setState(() {
-                    _showAddressForm = true;
-                  });
-                },
-                child: Text(
-                  'Add New Address',
-                  style: FlutterFlowTheme.of(context).bodyMedium.override(
-                        color: FlutterFlowTheme.of(context).primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-            ),
+          _buildAddressForm(),
         ],
       ),
     );
@@ -475,117 +379,78 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       children: [
         _buildAddressField(
           controller: _fullNameController,
-          label: 'Full Name',
+          label: 'Name',
+          hintText: 'e.g. Md Rahim Uddin',
         ),
         SizedBox(height: 8.0),
         _buildAddressField(
           controller: _phoneController,
           label: 'Phone',
+          hintText: 'e.g. 01712-345678',
           keyboardType: TextInputType.phone,
+        ),
+        SizedBox(height: 8.0),
+        if (_districts.isNotEmpty) ...[
+          DropdownButtonFormField<String>(
+            value: _selectedDistrictName,
+            decoration: InputDecoration(
+              labelText: 'District',
+              hintText: 'Select district (e.g. Dhaka)',
+              filled: true,
+              fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              isDense: true,
+            ),
+            items: _districts
+                .map(
+                  (d) => DropdownMenuItem<String>(
+                    value: d['name']?.toString(),
+                    child: Text(d['name']?.toString() ?? ''),
+                  ),
+                )
+                .toList(),
+            onChanged: (v) async {
+              if (v == null) return;
+              final district = _districts.firstWhere(
+                (d) => d['name']?.toString() == v,
+                orElse: () => <String, dynamic>{},
+              );
+              setState(() {
+                _selectedDistrictName = v;
+                _selectedDistrictIsDhaka = district['is_dhaka_area'] == true;
+              });
+              await _fetchShippingMethods();
+              await _calculateShippingCost();
+            },
+          ),
+          SizedBox(height: 6.0),
+          Text(
+            _selectedDistrictIsDhaka ? 'Delivery Zone: Dhaka area' : 'Delivery Zone: Outside Dhaka',
+            style: FlutterFlowTheme.of(context).bodySmall.override(
+                  color: FlutterFlowTheme.of(context).secondaryText,
+                ),
+          ),
+        ],
+        SizedBox(height: 8.0),
+        _buildAddressField(
+          controller: _thanaController,
+          label: 'Thana',
+          hintText: 'e.g. Dhanmondi',
         ),
         SizedBox(height: 8.0),
         _buildAddressField(
           controller: _addressLine1Controller,
-          label: 'Address Line 1',
-        ),
-        SizedBox(height: 8.0),
-        _buildAddressField(
-          controller: _addressLine2Controller,
-          label: 'Address Line 2 (Optional)',
-        ),
-        SizedBox(height: 8.0),
-        _buildAddressField(
-          controller: _cityController,
-          label: 'City',
-        ),
-        SizedBox(height: 8.0),
-        _buildAddressField(
-          controller: _stateController,
-          label: 'State (Optional)',
+          label: 'Address',
+          hintText: 'Road no, house, village, area',
         ),
         SizedBox(height: 8.0),
         _buildAddressField(
           controller: _postalCodeController,
-          label: 'Postal Code',
-        ),
-        SizedBox(height: 8.0),
-        _buildAddressField(
-          controller: _countryController,
-          label: 'Country',
-        ),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          value: _setAsDefault,
-          onChanged: (value) {
-            setState(() {
-              _setAsDefault = value ?? false;
-            });
-          },
-          title: Text(
-            'Set as default',
-            style: FlutterFlowTheme.of(context).bodyMedium,
-          ),
-          controlAffinity: ListTileControlAffinity.leading,
-        ),
-        SizedBox(height: 8.0),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _isSubmittingAddress ? null : _submitAddress,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: FlutterFlowTheme.of(context).primary,
-                  minimumSize: Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                ),
-                child: _isSubmittingAddress
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        'Save Address',
-                        style: FlutterFlowTheme.of(context).titleMedium.override(
-                              fontFamily: 'SF Pro Display',
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-              ),
-            ),
-            SizedBox(width: 12.0),
-            if (_addresses.isNotEmpty)
-              OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    _showAddressForm = false;
-                  });
-                },
-                style: OutlinedButton.styleFrom(
-                  minimumSize: Size(110, 48),
-                  side: BorderSide(color: FlutterFlowTheme.of(context).primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                ),
-                child: Text(
-                  'Cancel',
-                  style: FlutterFlowTheme.of(context).titleMedium.override(
-                        fontFamily: 'SF Pro Display',
-                        color: FlutterFlowTheme.of(context).primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-          ],
+          label: 'Postcode (Optional)',
+          hintText: 'e.g. 1209',
+          keyboardType: TextInputType.number,
         ),
       ],
     );
@@ -594,6 +459,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   Widget _buildAddressField({
     required TextEditingController controller,
     required String label,
+    String? hintText,
     TextInputType? keyboardType,
   }) {
     return TextField(
@@ -601,6 +467,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
+        hintText: hintText,
         filled: true,
         fillColor: FlutterFlowTheme.of(context).secondaryBackground,
         border: OutlineInputBorder(
@@ -641,18 +508,12 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
           if (_shippingMethods.isNotEmpty)
             ..._shippingMethods.map((method) {
               final methodMap = Map<String, dynamic>.from(method as Map);
-              final methodId = methodMap['_id']?.toString() ?? '';
+              final methodId =
+                  methodMap['id']?.toString() ?? methodMap['_id']?.toString() ?? '';
               final name = methodMap['name']?.toString() ?? 'Shipping';
-              final carrier = methodMap['carrier']?.toString();
-              final estimatedDays = methodMap['estimatedDays'];
-              String? estimateText;
-              if (estimatedDays is Map) {
-                final min = estimatedDays['min']?.toString();
-                final max = estimatedDays['max']?.toString();
-                if (min != null && max != null) {
-                  estimateText = '$min-$max days';
-                }
-              }
+              final carrier = methodMap['description']?.toString() ??
+                  methodMap['carrier']?.toString();
+              final estimateText = methodMap['delivery_days']?.toString();
               return RadioListTile<String>(
                 value: methodId,
                 groupValue: _selectedShippingMethodId,
@@ -681,19 +542,6 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
         ],
       ),
     );
-  }
-
-  String _formatAddressLine(Map<String, dynamic> address) {
-    final parts = [
-      address['addressLine1']?.toString(),
-      address['addressLine2']?.toString(),
-      address['city']?.toString(),
-      address['state']?.toString(),
-      address['postalCode']?.toString(),
-      address['country']?.toString(),
-      address['phone']?.toString(),
-    ].where((value) => value != null && value.trim().isNotEmpty);
-    return parts.join(', ');
   }
 
   Widget _buildPaymentOption(String value, String title, String subtitle, String imagePath) {

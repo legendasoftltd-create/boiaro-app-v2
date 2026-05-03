@@ -28,28 +28,27 @@ class EditProfilePageModel extends FlutterFlowModel<EditProfilePageWidget> {
   String? Function(BuildContext, String?)? textController1Validator;
   String? _textController1Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'please  enter valid first name';
+      return 'Please enter a display name';
     }
-
     return null;
   }
 
-  // State field(s) for TextField widget.
   FocusNode? textFieldFocusNode2;
   TextEditingController? textController2;
   String? Function(BuildContext, String?)? textController2Validator;
-  String? _textController2Validator(BuildContext context, String? val) {
-    if (val == null || val.isEmpty) {
-      return 'please  enter valid last name';
-    }
 
-    return null;
-  }
-
-  // State field(s) for TextField widget.
   FocusNode? textFieldFocusNode3;
   TextEditingController? textController3;
   String? Function(BuildContext, String?)? textController3Validator;
+
+  FocusNode? textFieldFocusNode4;
+  TextEditingController? textController4;
+  String? Function(BuildContext, String?)? textController4Validator;
+
+  FocusNode? textFieldFocusNode5;
+  TextEditingController? textController5;
+  String? Function(BuildContext, String?)? textController5Validator;
+
   // Stores action output result for [Backend Call - API (UsereditprofileApi)] action in Button widget.
   ApiCallResponse? userEditFunction;
   // Stores action output result for [Backend Call - API (GetuserApi)] action in Button widget.
@@ -60,7 +59,11 @@ class EditProfilePageModel extends FlutterFlowModel<EditProfilePageWidget> {
     customCenterAppbarModel =
         createModel(context, () => CustomCenterAppbarModel());
     textController1Validator = _textController1Validator;
-    textController2Validator = _textController2Validator;
+    final noop = (BuildContext _, String? __) => null;
+    textController2Validator = noop;
+    textController3Validator = noop;
+    textController4Validator = noop;
+    textController5Validator = noop;
   }
 
   @override
@@ -68,11 +71,13 @@ class EditProfilePageModel extends FlutterFlowModel<EditProfilePageWidget> {
     customCenterAppbarModel.dispose();
     textFieldFocusNode1?.dispose();
     textController1?.dispose();
-
     textFieldFocusNode2?.dispose();
     textController2?.dispose();
-
     textFieldFocusNode3?.dispose();
     textController3?.dispose();
+    textFieldFocusNode4?.dispose();
+    textController4?.dispose();
+    textFieldFocusNode5?.dispose();
+    textController5?.dispose();
   }
 }

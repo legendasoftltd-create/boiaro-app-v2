@@ -55,6 +55,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
       if (FFAppState().isLogin) {
         await _loadPurchasedBooks();
         await _loadFollowState();
+        await _reloadFollowStateFromNarratorList();
       }
       safeSetState(() {});
     });
@@ -75,6 +76,28 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
       _isFollowing = state.isFollowing;
       _followersCount = state.followersCount;
     });
+  }
+
+  Future<void> _reloadFollowStateFromNarratorList() async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
+    final id = (widget.narratorId ?? '').trim();
+    if (id.isEmpty) return;
+    final res = await EbookGroup.getnarratorsApiCall.call(
+      token: FFAppState().token,
+    );
+    final list = EbookGroup.getnarratorsApiCall.narratorDetailsList(res.jsonBody)
+            ?.toList() ??
+        <dynamic>[];
+    for (final row in list) {
+      final rid = getJsonField(row, r'''$._id''')?.toString() ?? '';
+      if (rid != id) continue;
+      final followedRaw = getJsonField(row, r'''$.followed''');
+      if (!mounted) return;
+      safeSetState(() {
+        _isFollowing = followedRaw == true;
+      });
+      return;
+    }
   }
 
   Future<void> _toggleFollow() async {
@@ -110,7 +133,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
       await actions.showCustomToastBottom(
         target ? 'Followed narrator' : 'Unfollowed narrator',
       );
-      await _loadFollowState();
+      await _reloadFollowStateFromNarratorList();
     } else {
       await actions.showCustomToastBottom('Unable to update follow status');
     }
@@ -184,6 +207,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                   ..complete(
                                       EbookGroup.getnarratordetailsApiCall.call(
                                     narratorId: widget.narratorId,
+                                    token: FFAppState().token,
                                   )))
                             .future,
                         builder: (context, snapshot) {
@@ -203,7 +227,6 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                           }
                           final containerGetauthordetailsApiResponse =
                               snapshot.data!;
-
                           return Container(
                             decoration: BoxDecoration(),
                             child: Builder(

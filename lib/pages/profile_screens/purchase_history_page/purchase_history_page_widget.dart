@@ -4,11 +4,9 @@ import 'package:a_i_ebook_app/pages/home_pages/book_detailspage/book_detailspage
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/pages/components/single_appbar/single_appbar_widget.dart';
 import '/services/local_download_service.dart';
 import '/services/reading_progress_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'purchase_history_page_model.dart';
 export 'purchase_history_page_model.dart';
@@ -68,6 +66,24 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
   late TabController _tabController;
   int _selectedTabIndex = 0;
   int _selectedChipIndex = 0;
+
+  String _normalizeContentType(String raw) {
+    final value = raw.toLowerCase();
+    if (value.contains('audio')) return 'audiobook';
+    if (value.contains('hard') || value.contains('print')) return 'hardcopy';
+    return 'ebook';
+  }
+
+  String _typeLabel(String contentType) {
+    switch (_normalizeContentType(contentType)) {
+      case 'audiobook':
+        return 'Audiobook';
+      case 'hardcopy':
+        return 'Hardcopy';
+      default:
+        return 'Ebook';
+    }
+  }
 
   @override
   void initState() {
@@ -170,12 +186,14 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                   final bookId = (i < bookIds.length ? bookIds[i] : '').trim();
                   if (bookId.isEmpty) continue;
                   final imagePath = i < bookImages.length ? bookImages[i] : '';
-                  final imageUrl = imagePath.isNotEmpty
-                      ? '${FFAppConstants.bookImagesUrl}$imagePath'
-                      : '';
+                  final imageUrl = imagePath.isEmpty
+                      ? ''
+                      : (imagePath.startsWith('http')
+                          ? imagePath
+                          : '${FFAppConstants.bookImagesUrl}$imagePath');
                   final contentType = (getJsonField(
                                 purchaseItem,
-                                r'''$.bookDetails.type''',
+                                r'''$.format''',
                               ) ??
                           getJsonField(
                             purchaseItem,
@@ -185,9 +203,14 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                             purchaseItem,
                             r'''$.type''',
                           ) ??
+                          getJsonField(
+                                purchaseItem,
+                                r'''$.bookDetails.type''',
+                              ) ??
                           '')
                       .toString()
                       .toLowerCase();
+                  final normalizedType = _normalizeContentType(contentType);
                   final isFavorite = (getJsonField(
                             purchaseItem,
                             r'''$.bookDetails.isFavorite''',
@@ -217,8 +240,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                           ? authorNames[i]
                           : 'Unknown Author',
                       imageUrl: imageUrl,
-                      contentType:
-                          contentType.isEmpty ? 'ebook' : contentType,
+                      contentType: normalizedType,
                       isDownloaded: isDownloaded,
                       isPurchased: true,
                       isFavorite: isFavorite,
@@ -252,7 +274,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                           ? downloadItem.author
                           : 'Unknown Author',
                       imageUrl: downloadItem.image,
-                      contentType: contentType,
+                      contentType: _normalizeContentType(contentType),
                       isDownloaded: true,
                       isPurchased: false,
                       isFavorite: false,
@@ -280,7 +302,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                           ? progressEntry.author
                           : 'Unknown Author',
                       imageUrl: progressEntry.imageUrl,
-                      contentType: contentType,
+                      contentType: _normalizeContentType(contentType),
                       isDownloaded: false,
                       isPurchased: false,
                       isFavorite: false,
@@ -290,12 +312,12 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                 }
 
                 final filteredItems = items.where((item) {
+                  final itemType = _normalizeContentType(item.contentType);
                   var passesTab = true;
                   if (_selectedTabIndex == 0) {
-                    passesTab =
-                        item.contentType.isEmpty || item.contentType == 'ebook';
+                    passesTab = itemType == 'ebook';
                   } else if (_selectedTabIndex == 1) {
-                    passesTab = item.contentType == 'audiobook';
+                    passesTab = itemType == 'audiobook';
                   } else if (_selectedTabIndex == 2) {
                     passesTab = item.isFavorite;
                   }
@@ -425,19 +447,57 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                                           Padding(
                                             padding: const EdgeInsetsDirectional
                                                 .fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                            child: Text(
-                                              item.author,
-                                              style: FlutterFlowTheme.of(
-                                                      context)
-                                                  .bodySmall
-                                                  .override(
-                                                    fontFamily:
-                                                        'SF Pro Display',
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    item.author,
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
+                                                        .bodySmall
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .secondaryText,
+                                                          letterSpacing: 0.0,
+                                                        ),
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8.0,
+                                                    vertical: 3.0,
+                                                  ),
+                                                  decoration: BoxDecoration(
                                                     color: FlutterFlowTheme.of(
                                                             context)
-                                                        .secondaryText,
-                                                    letterSpacing: 0.0,
+                                                        .primary
+                                                        .withOpacity(0.12),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12.0),
                                                   ),
+                                                  child: Text(
+                                                    _typeLabel(item.contentType),
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
+                                                        .bodySmall
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          color:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .primary,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          letterSpacing: 0.0,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],

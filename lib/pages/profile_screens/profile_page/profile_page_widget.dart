@@ -155,7 +155,36 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
       ),
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (FFAppState().isLogin == true) {
+        await _refreshUserDetailFromProfileApi();
+      }
+      if (mounted) {
+        safeSetState(() {});
+      }
+    });
+  }
+
+  /// Keeps header (avatar, name, email) in sync with `GET /profile` after edits.
+  Future<void> _refreshUserDetailFromProfileApi() async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) {
+      return;
+    }
+    final response = await EbookGroup.getprofileApiCall.call(
+      token: FFAppState().token,
+    );
+    if (!mounted || !response.succeeded) {
+      return;
+    }
+    final fresh = EbookGroup.getprofileApiCall.userDetail(response.jsonBody);
+    final existing = FFAppState().userDetail;
+    if (fresh is Map) {
+      FFAppState().userDetail = <String, dynamic>{
+        if (existing is Map) ...Map<String, dynamic>.from(existing),
+        ...Map<String, dynamic>.from(fresh),
+      };
+      FFAppState().update(() {});
+    }
   }
 
   @override
@@ -217,6 +246,9 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                       shape: BoxShape.circle,
                                     ),
                                     child: CachedNetworkImage(
+                                      key: ValueKey<String>(
+                                        '${getJsonField(FFAppState().userDetail, r'''$.image''').toString()}_${getJsonField(FFAppState().userDetail, r'''$.firstname''').toString()}_${getJsonField(FFAppState().userDetail, r'''$.lastname''').toString()}',
+                                      ),
                                       fadeInDuration:
                                           Duration(milliseconds: 200),
                                       fadeOutDuration:
@@ -226,6 +258,8 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                         FFAppState().userDetail,
                                         r'''$.image''',
                                       ).toString()}',
+                                      cacheKey:
+                                          '${getJsonField(FFAppState().userDetail, r'''$.image''').toString()}',
                                       fit: BoxFit.cover,
                                       errorWidget:
                                           (context, error, stackTrace) =>
@@ -332,8 +366,13 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                 highlightColor: Colors.transparent,
                                 onTap: () async {
                                   if (FFAppState().isLogin == true) {
-                                    context.pushNamed(
-                                        MyProfilePageWidget.routeName);
+                                    await context.pushNamed(
+                                      MyProfilePageWidget.routeName,
+                                    );
+                                    if (mounted) {
+                                      await _refreshUserDetailFromProfileApi();
+                                      safeSetState(() {});
+                                    }
                                   } else {
                                     context
                                         .pushNamed(SignInPageWidget.routeName);
@@ -896,6 +935,98 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             width: 20.0,
                                             height: 20.0,
                                             colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
+                                            fit: BoxFit.contain,
+                                            alignment: Alignment(0.0, 0.0),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ).animateOnPageLoad(animationsMap[
+                                  'containerOnPageLoadAnimation3']!),
+                            ),
+                          if (FFAppState().isLogin == true)
+                            Padding(
+                              padding: EdgeInsetsDirectional.fromSTEB(
+                                  16.0, 0.0, 16.0, 16.0),
+                              child: InkWell(
+                                splashColor: Colors.transparent,
+                                focusColor: Colors.transparent,
+                                hoverColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
+                                onTap: () async {
+                                  context.pushNamed(OrdersPageWidget.routeName);
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryBackground,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        blurRadius: 16.0,
+                                        color: FlutterFlowTheme.of(context)
+                                            .shadowColor,
+                                        offset: Offset(
+                                          0.0,
+                                          4.0,
+                                        ),
+                                      )
+                                    ],
+                                    borderRadius: BorderRadius.circular(12.0),
+                                  ),
+                                  child: Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                        8.0, 8.0, 16.0, 8.0),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.max,
+                                      children: [
+                                        Container(
+                                          width: 48.0,
+                                          height: 48.0,
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context)
+                                                .lightGrey,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          alignment:
+                                              AlignmentDirectional(0.0, 0.0),
+                                          child: const Icon(
+                                            Icons.shopping_bag_outlined,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Padding(
+                                            padding:
+                                                EdgeInsetsDirectional.fromSTEB(
+                                                    16.0, 0.0, 0.0, 0.0),
+                                            child: Text(
+                                              'My Orders',
+                                              style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        fontSize: 17.0,
+                                                        letterSpacing: 0.0,
+                                                        lineHeight: 1.5,
+                                                      ),
+                                            ),
+                                          ),
+                                        ),
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(0.0),
+                                          child: SvgPicture.asset(
+                                            'assets/images/arrow_right_ic.svg',
+                                            width: 20.0,
+                                            height: 20.0,
+                                            colorFilter: ColorFilter.mode(
+                                                FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                                BlendMode.srcIn),
                                             fit: BoxFit.contain,
                                             alignment: Alignment(0.0, 0.0),
                                           ),

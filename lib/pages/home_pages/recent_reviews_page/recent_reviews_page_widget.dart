@@ -93,7 +93,7 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                             child: Container(
                               height: 489.0,
                               child: BookReviewBottomSheetWidget(
-                                bookId: widget.reviewId!,
+                                bookId: widget.bookId!,
                               ),
                             ),
                           ),
@@ -115,7 +115,7 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                             '0',
                           ),
                           requestFn: () => EbookGroup.getreviewApiCall.call(
-                            bookId: widget.reviewId,
+                            bookId: widget.bookId,
                             token: FFAppState().token,
                           ),
                         )

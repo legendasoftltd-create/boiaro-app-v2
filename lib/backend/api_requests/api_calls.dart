@@ -19,6 +19,97 @@ Map<String, dynamic> _boiaroAuthHeaders(String? token) => {
       if ((token ?? '').isNotEmpty) 'Authorization': 'Bearer $token',
     };
 
+/// Public uploads and covers may be absolute URLs or site-relative paths.
+String resolveBoiaroPublicMediaUrl(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) {
+    return '';
+  }
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return '${FFAppConstants.webUrl}$trimmed';
+}
+
+/// One homepage hero slider row (book-shaped API) plus legacy card for navigation.
+Map<String, dynamic> homepageSliderDetailFromRaw(Map<String, dynamic> m) {
+  final coverRaw =
+      (m['image'] ?? m['cover_url'] ?? m['banner_url'])?.toString() ?? '';
+  final coverResolved = resolveBoiaroPublicMediaUrl(coverRaw);
+  final directUrl = (m['button_url'] ?? m['url'])?.toString() ?? '';
+  final slug = m['slug']?.toString() ?? '';
+  final buttonUrl = directUrl.isNotEmpty
+      ? directUrl
+      : slug.isNotEmpty
+          ? '${FFAppConstants.webUrl}/book/$slug'
+          : FFAppConstants.webUrl;
+
+  final legacyBook = BoiaroLegacyAdapter.legacyBookFromHomepageItem(
+    Map<String, dynamic>.from(m),
+    preferredFormat: 'ebook',
+  );
+  if (coverResolved.isNotEmpty) {
+    legacyBook['image'] = coverResolved;
+  }
+
+  var hasEbook = false;
+  var hasAudiobook = false;
+  var hasHardcopy = false;
+  final formats = m['formats'];
+  if (formats is List) {
+    for (final f in formats) {
+      if (f is! Map) {
+        continue;
+      }
+      if (f['in_stock'] == false) {
+        continue;
+      }
+      final ft = f['format']?.toString().toLowerCase().trim() ?? '';
+      if (ft == 'ebook' || ft == 'e-book') {
+        hasEbook = true;
+      } else if (ft.contains('audio')) {
+        hasAudiobook = true;
+      } else if (ft == 'hardcopy' || ft.contains('hard') || ft == 'print') {
+        hasHardcopy = true;
+      }
+    }
+  }
+
+  final titleBn = m['title']?.toString().trim() ?? '';
+  final titleEn = m['title_en']?.toString().trim() ?? '';
+  final title =
+      titleBn.isNotEmpty ? titleBn : (titleEn.isNotEmpty ? titleEn : '');
+
+  var authorName = '';
+  final author = m['author'];
+  if (author is Map) {
+    authorName = author['name']?.toString() ?? '';
+  }
+
+  var categoryName = '';
+  final category = m['category'];
+  if (category is Map) {
+    categoryName = category['name']?.toString() ?? '';
+  }
+
+  final showEditorsBadge = m['is_featured'] == true;
+  final displayTitle =
+      title.isNotEmpty ? title : (legacyBook['name']?.toString() ?? '');
+
+  return {
+    'image': coverResolved.isNotEmpty ? coverResolved : coverRaw,
+    'button_url': buttonUrl,
+    'title': displayTitle,
+    'author_name': authorName,
+    'category_name': categoryName,
+    'has_ebook': hasEbook,
+    'has_audiobook': hasAudiobook,
+    'has_hardcopy': hasHardcopy,
+    'show_editors_badge': showEditorsBadge,
+    'legacy_book': legacyBook,
+  };
+}
+
 ApiCallResponse _v2Error(dynamic body, int status) {
   final msg = BoiaroLegacyAdapter.v2Error(body) ?? 'Request failed';
   return ApiCallResponse(
@@ -262,6 +353,7 @@ Future<ApiCallResponse> _booksForAuthor({
     headers: _boiaroAuthHeaders(token),
     params: {
       'limit': '100',
+      'author': authorId,
       'authorId': authorId,
     },
     bodyType: BodyType.NONE,
@@ -474,18 +566,87 @@ class SocialLoginCall {
     String? username,
     String? provider,
     String? providerId,
+    String? accessToken,
     String? registrationToken,
     String? deviceId,
   }) async {
+    final providerNormalized = (provider ?? '').toLowerCase().trim();
+    final isGoogle = providerNormalized == 'google';
+    final isFacebook = providerNormalized == 'facebook';
+    if (!isGoogle && !isFacebook) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'Unsupported social provider.',
+          extra: const {'error': 1},
+        ),
+        {},
+        400,
+      );
+    }
+    final tokenForServer =
+        (accessToken ?? '').trim().isNotEmpty ? accessToken!.trim() : '';
+    if (tokenForServer.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'Social access token is required.',
+          extra: const {'error': 1},
+        ),
+        {},
+        400,
+      );
+    }
+    final baseUrl = EbookGroup.getBaseUrl();
+    final endpoint = isGoogle ? 'auth/social/google' : 'auth/social/facebook';
+    final body = BoiaroLegacyAdapter.jsonEncodeBody({
+      'access_token': tokenForServer,
+      'accessToken': tokenForServer,
+      if ((registrationToken ?? '').trim().isNotEmpty)
+        'registrationToken': registrationToken!.trim(),
+      if ((deviceId ?? '').trim().isNotEmpty) 'deviceId': deviceId!.trim(),
+      if ((email ?? '').trim().isNotEmpty) 'email': email!.trim(),
+      if ((firstname ?? '').trim().isNotEmpty) 'firstname': firstname!.trim(),
+      if ((lastname ?? '').trim().isNotEmpty) 'lastname': lastname!.trim(),
+      if ((username ?? '').trim().isNotEmpty) 'username': username!.trim(),
+      if ((providerId ?? '').trim().isNotEmpty) 'providerId': providerId!.trim(),
+    });
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'SocialLoginCall',
+      apiUrl: '$baseUrl$endpoint',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(''),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final jb = res.jsonBody;
+    if (!res.succeeded || jb is! Map) {
+      return _v2Error(jb, res.statusCode);
+    }
+    final Map<String, dynamic> user = jb['user'] is Map
+        ? Map<String, dynamic>.from(jb['user'] as Map)
+        : <String, dynamic>{};
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
-        success: 0,
-        message:
-            'Social sign-in is not available on this API. Please use email and password.',
-        extra: const {'error': 1},
+        success: 1,
+        message: jb['message']?.toString() ?? 'Login successful',
+        extra: {
+          'token': jb['access_token']?.toString() ?? '',
+          'refresh_token': jb['refresh_token']?.toString() ?? '',
+          'expires_in': jb['expires_in'],
+          'user_id': jb['user_id']?.toString() ?? user['id']?.toString() ?? '',
+          'userDetails': BoiaroLegacyAdapter.legacyUserFromAuthUser(user),
+        },
       ),
-      {},
-      501,
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -566,22 +727,34 @@ class UserBookPurchaseRecordsApiCall {
           continue;
         }
         final bid = books['id']?.toString() ?? '';
-        if (bid.isEmpty || seen.contains(bid)) {
+        final format = (m['format'] ?? '').toString().toLowerCase().trim();
+        final dedupeKey = format.isNotEmpty ? '$bid::$format' : bid;
+        if (bid.isEmpty || seen.contains(dedupeKey)) {
           continue;
         }
-        seen.add(bid);
+        seen.add(dedupeKey);
+        final legacyBook =
+            BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(books));
+        if (format.isNotEmpty) {
+          legacyBook['type'] = format;
+          legacyBook['bookType'] = format;
+        }
         purchaseDetails.add({
-          'bookDetails': BoiaroLegacyAdapter.legacyBookFromV2(
-              Map<String, dynamic>.from(books)),
+          'bookDetails': legacyBook,
+          'type': format,
+          'contentType': format,
+          'format': format,
         });
       }
     }
 
     if (pRes.succeeded && pRes.jsonBody is Map) {
       addFrom((pRes.jsonBody as Map)['purchases']);
+      addFrom((pRes.jsonBody as Map)['items']);
     }
     if (uRes.succeeded && uRes.jsonBody is Map) {
       addFrom((uRes.jsonBody as Map)['unlocks']);
+      addFrom((uRes.jsonBody as Map)['items']);
     }
     final ok = pRes.succeeded || uRes.succeeded;
     return ApiCallResponse(
@@ -932,7 +1105,10 @@ class GetSlidersApiCall {
     if (err != null) {
       return _v2Error(body, res.statusCode);
     }
-    final featured = body['slider'] ?? body['featured'];
+    var featured = body['slider'] ?? body['featured'];
+    if (featured is Map && featured['slider'] is List) {
+      featured = featured['slider'];
+    }
     final sliderDetails = <Map<String, dynamic>>[];
     final sliderRows = featured is List
         ? featured
@@ -943,19 +1119,9 @@ class GetSlidersApiCall {
       if (raw is! Map) {
         continue;
       }
-      final m = Map<String, dynamic>.from(raw);
-      final cover =
-          (m['image'] ?? m['cover_url'] ?? m['banner_url'])?.toString() ?? '';
-      final directUrl = (m['button_url'] ?? m['url'])?.toString() ?? '';
-      final slug = m['slug']?.toString() ?? '';
-      sliderDetails.add({
-        'image': cover,
-        'button_url': directUrl.isNotEmpty
-            ? directUrl
-            : slug.isNotEmpty
-                ? '${FFAppConstants.webUrl}/book/$slug'
-                : FFAppConstants.webUrl,
-      });
+      sliderDetails.add(
+        homepageSliderDetailFromRaw(Map<String, dynamic>.from(raw)),
+      );
     }
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
@@ -1571,19 +1737,54 @@ class UsereditprofileApiCall {
     String? id = '',
     String? firstname = '',
     String? lastname = '',
+    String? displayName = '',
+    String? fullName = '',
     String? phone = '',
     String? image = '',
     String? countryCode = '',
+    String? bio = '',
+    String? preferredLanguage = '',
+    String? genre = '',
+    String? specialty = '',
+    String? experience = '',
+    String? websiteUrl = '',
+    String? facebookUrl = '',
+    String? instagramUrl = '',
+    String? youtubeUrl = '',
+    String? portfolioUrl = '',
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
-    final displayName = [
+    final rawImage = (image ?? '').trim();
+    final normalizedImage = (rawImage.toLowerCase() == 'null' ||
+            rawImage.toLowerCase() == 'undefined')
+        ? ''
+        : rawImage;
+    final dn = (displayName ?? '').trim();
+    final fn = (fullName ?? '').trim();
+    final composedFromNames = [
       (firstname ?? '').trim(),
       (lastname ?? '').trim(),
     ].where((s) => s.isNotEmpty).join(' ');
+    final effectiveDisplay =
+        dn.isNotEmpty ? dn : composedFromNames;
     final body = <String, dynamic>{
-      if (displayName.isNotEmpty) 'display_name': displayName,
-      if ((image ?? '').trim().isNotEmpty) 'avatar_url': image,
+      if (effectiveDisplay.isNotEmpty) 'display_name': effectiveDisplay,
+      if (fn.isNotEmpty) 'full_name': fn,
+      if (normalizedImage.isNotEmpty) 'avatar_url': normalizedImage,
+      if ((phone ?? '').trim().isNotEmpty) 'phone': phone,
+      if ((bio ?? '').trim().isNotEmpty) 'bio': bio,
+      if ((preferredLanguage ?? '').trim().isNotEmpty)
+        'preferred_language': preferredLanguage,
+      if ((genre ?? '').trim().isNotEmpty) 'genre': genre,
+      if ((specialty ?? '').trim().isNotEmpty) 'specialty': specialty,
+      if ((experience ?? '').trim().isNotEmpty) 'experience': experience,
+      if ((websiteUrl ?? '').trim().isNotEmpty) 'website_url': websiteUrl,
+      if ((facebookUrl ?? '').trim().isNotEmpty) 'facebook_url': facebookUrl,
+      if ((instagramUrl ?? '').trim().isNotEmpty)
+        'instagram_url': instagramUrl,
+      if ((youtubeUrl ?? '').trim().isNotEmpty) 'youtube_url': youtubeUrl,
+      if ((portfolioUrl ?? '').trim().isNotEmpty) 'portfolio_url': portfolioUrl,
     };
     final res = await ApiManager.instance.makeApiCall(
       callName: 'UsereditprofileApi',
@@ -1635,13 +1836,12 @@ class UploadimageApiCall {
 
     return ApiManager.instance.makeApiCall(
       callName: 'UploadimageApi',
-      apiUrl: '${baseUrl}uploadimage',
+      apiUrl: '${baseUrl}profile/upload-image',
       callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      headers: _boiaroAuthHeaders(token),
       params: {
         'image': image,
+        'file': image,
       },
       bodyType: BodyType.MULTIPART,
       returnBody: true,
@@ -2237,7 +2437,7 @@ class GetbookbypublisherApiCall {
       );
     }
     return _booksQuery(
-      query: {'publisherId': pid},
+      query: {'publisher': pid, 'publisherId': pid},
       type: type,
       token: token,
     );
@@ -2711,15 +2911,20 @@ class GetbookbynarratorApiCall {
     String? narratorId = '',
     String? token = '',
   }) async {
-    // v2 list responses do not expose narrator filters; show empty until backend adds query support.
-    return ApiCallResponse(
-      BoiaroLegacyAdapter.legacyDataEnvelope(
-        success: 1,
-        message: '',
-        extra: {'bookDetails': <dynamic>[]},
-      ),
-      {},
-      200,
+    final nid = (narratorId ?? '').trim();
+    if (nid.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'narratorId required',
+        ),
+        {},
+        400,
+      );
+    }
+    return _booksQuery(
+      query: {'narrator': nid},
+      token: token,
     );
   }
 
@@ -3332,14 +3537,14 @@ class AddreviewApiCall {
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
+    final bid = Uri.encodeComponent((bookId ?? '').trim());
     final res = await ApiManager.instance.makeApiCall(
       callName: 'AddreviewApi',
-      apiUrl: '${baseUrl}reviews',
+      apiUrl: '${baseUrl}books/$bid/reviews',
       callType: ApiCallType.POST,
       headers: _boiaroAuthHeaders(token),
       params: {},
       body: BoiaroLegacyAdapter.jsonEncodeBody({
-        'book_id': bookId,
         'rating': rating ?? 0,
         'comment': description,
       }),
@@ -3399,15 +3604,19 @@ class GetreviewApiCall {
       alwaysAllowBody: false,
     );
     final body = res.jsonBody;
-    if (!res.succeeded || body is! Map) {
+    if (!res.succeeded) {
       return _v2Error(body, res.statusCode);
     }
-    final rows =
-        (body['reviews'] is List ? body['reviews'] as List : const <dynamic>[])
-            .whereType<Map>()
-            .map((e) => BoiaroLegacyAdapter.legacyReviewFromV2(
-                Map<String, dynamic>.from(e)))
-            .toList();
+    final rawRows = body is List
+        ? body
+        : (body is Map && body['reviews'] is List
+            ? body['reviews'] as List
+            : const <dynamic>[]);
+    final rows = rawRows
+        .whereType<Map>()
+        .map((e) =>
+            BoiaroLegacyAdapter.legacyReviewFromV2(Map<String, dynamic>.from(e)))
+        .toList();
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
         extra: {
@@ -3818,21 +4027,12 @@ class GetHomepageApiCall {
     final sliderDetails = <Map<String, dynamic>>[];
     if (sliderList is List) {
       for (final raw in sliderList) {
-        if (raw is! Map) continue;
-        final m = Map<String, dynamic>.from(raw);
-        final cover =
-            (m['image'] ?? m['cover_url'] ?? m['banner_url'])?.toString() ??
-                '';
-        final directUrl = (m['button_url'] ?? m['url'])?.toString() ?? '';
-        final slug = m['slug']?.toString() ?? '';
-        sliderDetails.add({
-          'image': cover,
-          'button_url': directUrl.isNotEmpty
-              ? directUrl
-              : slug.isNotEmpty
-                  ? '${FFAppConstants.webUrl}/book/$slug'
-                  : FFAppConstants.webUrl,
-        });
+        if (raw is! Map) {
+          continue;
+        }
+        sliderDetails.add(
+          homepageSliderDetailFromRaw(Map<String, dynamic>.from(raw)),
+        );
       }
     }
 
@@ -4362,9 +4562,9 @@ class DownloadhistoryApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final rows = (body['purchases'] is List
-            ? body['purchases'] as List
-            : const <dynamic>[])
+    final rows = ((body['purchases'] is List
+                ? body['purchases'] as List
+                : (body['items'] is List ? body['items'] as List : const <dynamic>[])))
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();

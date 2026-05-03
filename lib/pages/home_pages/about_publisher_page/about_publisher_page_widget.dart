@@ -55,6 +55,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
       if (FFAppState().isLogin) {
         await _loadPurchasedBooks();
         await _loadFollowState();
+        await _reloadFollowStateFromPublisherList();
       }
       safeSetState(() {});
     });
@@ -75,6 +76,29 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
       _isFollowing = state.isFollowing;
       _followersCount = state.followersCount;
     });
+  }
+
+  Future<void> _reloadFollowStateFromPublisherList() async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
+    final id = (widget.publisherId ?? '').trim();
+    if (id.isEmpty) return;
+    final res = await EbookGroup.getpublishersApiCall.call(
+      token: FFAppState().token,
+    );
+    final list = EbookGroup.getpublishersApiCall
+            .publisherDetailsList(res.jsonBody)
+            ?.toList() ??
+        <dynamic>[];
+    for (final row in list) {
+      final rid = getJsonField(row, r'''$._id''')?.toString() ?? '';
+      if (rid != id) continue;
+      final followedRaw = getJsonField(row, r'''$.followed''');
+      if (!mounted) return;
+      safeSetState(() {
+        _isFollowing = followedRaw == true;
+      });
+      return;
+    }
   }
 
   Future<void> _toggleFollow() async {
@@ -110,7 +134,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
       await actions.showCustomToastBottom(
         target ? 'Followed publisher' : 'Unfollowed publisher',
       );
-      await _loadFollowState();
+      await _reloadFollowStateFromPublisherList();
     } else {
       await actions.showCustomToastBottom('Unable to update follow status');
     }
@@ -184,6 +208,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                               ..complete(
                                   EbookGroup.getpublisherdetailsApiCall.call(
                                 publisherId: widget.publisherId,
+                                token: FFAppState().token,
                               )))
                             .future,
                         builder: (context, snapshot) {
@@ -203,7 +228,6 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                           }
                           final containerGetpublisherdetailsApiResponse =
                               snapshot.data!;
-
                           return Container(
                             decoration: BoxDecoration(),
                             child: Builder(
@@ -383,7 +407,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                                         : Text(!FollowService.supportsFollowEndpoints
                                                                             ? 'Coming soon'
                                                                             : (_isFollowing
-                                                                                ? 'Following'
+                                                                                ? 'Unfollow'
                                                                                 : 'Follow')),
                                                               ),
                                                               if (_followersCount !=

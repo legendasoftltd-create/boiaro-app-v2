@@ -513,6 +513,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               : PurchaseHistoryPageWidget(),
         ),
         FFRoute(
+          name: OrdersPageWidget.routeName,
+          path: OrdersPageWidget.routePath,
+          builder: (context, params) => OrdersPageWidget(),
+        ),
+        FFRoute(
           name: NewBooksPageWidget.routeName,
           path: NewBooksPageWidget.routePath,
           builder: (context, params) => NewBooksPageWidget(

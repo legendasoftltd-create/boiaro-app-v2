@@ -73,6 +73,7 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
                 url: gatewayUrl,
                 orderId: orderId,
                 bookIds: widget.bookIds,
+                purchasedFormats: widget.cartLines.map((e) => e.type).toList(),
                 checkoutController: _checkoutController,
               ),
             ),
@@ -461,6 +462,7 @@ class OrderPlaceDialogWidget extends StatelessWidget {
   final bool isFailed;
   final bool isSuccess;
   final VoidCallback? onOkPressed;
+  final String? successButtonText;
 
   const OrderPlaceDialogWidget({
     super.key,
@@ -470,6 +472,7 @@ class OrderPlaceDialogWidget extends StatelessWidget {
     this.isFailed = false,
     this.isSuccess = false,
     this.onOkPressed,
+    this.successButtonText,
   });
 
   @override
@@ -489,7 +492,8 @@ class OrderPlaceDialogWidget extends StatelessWidget {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: onOkPressed ?? () => Navigator.of(context).pop(),
-            child: Text(isSuccess ? "Start Reading" : "Go Back",
+            child: Text(
+                isSuccess ? (successButtonText ?? "Start Reading") : "Go Back",
                 style: FlutterFlowTheme.of(context).titleMedium.override(
                       fontFamily: 'SF Pro Display',
                       color: Colors.white,

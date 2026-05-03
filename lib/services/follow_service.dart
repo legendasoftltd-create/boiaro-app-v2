@@ -13,9 +13,7 @@ class FollowState {
 }
 
 class FollowService {
-  // v2 documentation currently does not define follow/unfollow endpoints
-  // for authors/narrators/publishers.
-  static const bool supportsFollowEndpoints = false;
+  static const bool supportsFollowEndpoints = true;
 
   static Map<String, String> _headers({required String token}) => {
         'apikey': FFAppConstants.supabaseAnonApiKey,
@@ -55,16 +53,7 @@ class FollowService {
     final id = entityId.trim();
     if (id.isEmpty) return null;
     final headers = _headers(token: token);
-    final urls = <String>[
-      '$base/$plural/$id/follow/status',
-      '$base/$plural/$id/is-following',
-      '$base/$plural/$id',
-      '$base/$singular/$id/follow/status',
-      '$base/$singular/$id/is-following',
-      '$base/$singular/$id',
-      '$base/follows/check?entity_type=$singular&entity_id=$id',
-      '$base/follows/check?type=$singular&id=$id',
-    ];
+    final urls = <String>['$base/$plural/$id', '$base/$singular/$id'];
     for (final u in urls) {
       try {
         final res = await http.get(Uri.parse(u), headers: headers);
@@ -95,71 +84,15 @@ class FollowService {
     final id = entityId.trim();
     if (id.isEmpty) return false;
     final headers = _headers(token: token);
-    final followUrls = <String>[
-      '$base/$plural/$id/follow',
-      '$base/$plural/follow',
-      '$base/$plural/$id',
-      '$base/$singular/$id/follow',
-      '$base/$singular/follow',
-      '$base/$singular/$id',
-      '$base/follows',
-    ];
-    final unfollowUrls = <String>[
-      '$base/$plural/$id/unfollow',
-      '$base/$plural/$id/follow',
-      '$base/$plural/unfollow',
-      '$base/$plural/follow',
-      '$base/$plural/$id',
-      '$base/$singular/$id/follow',
-      '$base/$singular/$id/unfollow',
-      '$base/$singular/unfollow',
-      '$base/$singular/follow',
-      '$base/$singular/$id',
-      '$base/follows',
-    ];
-    final urls = follow ? followUrls : unfollowUrls;
-
-    List<Map<String, dynamic>> payloadsFor(bool targetFollow) => <Map<String, dynamic>>[
-          {'entity_type': singular, 'entity_id': id, 'follow': targetFollow},
-          {'entity_type': singular, 'entity_id': id, 'action': targetFollow ? 'follow' : 'unfollow'},
-          {'type': singular, 'id': id, 'follow': targetFollow},
-          {'type': singular, 'id': id, 'action': targetFollow ? 'follow' : 'unfollow'},
-          {'${singular}_id': id, 'follow': targetFollow},
-          {'${singular}_id': id, 'action': targetFollow ? 'follow' : 'unfollow'},
-          {'id': id, 'follow': targetFollow},
-          {'id': id, 'action': targetFollow ? 'follow' : 'unfollow'},
-        ];
-
-    for (final u in urls) {
-      try {
-        final uri = Uri.parse(u);
-        final payloads = payloadsFor(follow);
-
-        // Try POST variants first (most common in edge-function APIs).
-        for (final payload in payloads) {
-          final postRes =
-              await http.post(uri, headers: headers, body: jsonEncode(payload));
-          if (postRes.statusCode == 200 ||
-              postRes.statusCode == 201 ||
-              postRes.statusCode == 204) {
-            return true;
-          }
-        }
-
-        // Try method-specific fallback for unfollow.
-        if (!follow) {
-          for (final payload in payloadsFor(false)) {
-            final delRes =
-                await http.delete(uri, headers: headers, body: jsonEncode(payload));
-            if (delRes.statusCode == 200 ||
-                delRes.statusCode == 201 ||
-                delRes.statusCode == 204) {
-              return true;
-            }
-          }
-        }
-      } catch (_) {}
+    final action = follow ? 'follow' : 'unfollow';
+    final uri = Uri.parse('$base/$plural/$id/$action');
+    try {
+      final res = await http.post(uri, headers: headers);
+      return res.statusCode == 200 ||
+          res.statusCode == 201 ||
+          res.statusCode == 204;
+    } catch (_) {
+      return false;
     }
-    return false;
   }
 }

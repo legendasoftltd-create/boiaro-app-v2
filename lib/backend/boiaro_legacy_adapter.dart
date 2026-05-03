@@ -237,6 +237,7 @@ class BoiaroLegacyAdapter {
       '_id': a['id']?.toString() ?? '',
       'name': a['name'] ?? '',
       'image': img,
+      'followed': a['followed'] == true,
       'description': a['bio'] ?? '',
       'facebook_url': '',
       'instagram_url': '',
@@ -251,6 +252,7 @@ class BoiaroLegacyAdapter {
       '_id': p['id']?.toString() ?? '',
       'name': p['name'] ?? '',
       'image': logo,
+      'followed': p['followed'] == true,
       'description': p['description'] ?? '',
       'facebook_url': '',
       'instagram_url': '',
@@ -265,6 +267,7 @@ class BoiaroLegacyAdapter {
       '_id': n['id']?.toString() ?? '',
       'name': n['name'] ?? '',
       'image': img,
+      'followed': n['followed'] == true,
       'description': n['bio'] ?? '',
       'facebook_url': '',
       'instagram_url': '',
@@ -358,7 +361,45 @@ class BoiaroLegacyAdapter {
           '',
       'profile_id': profile['id']?.toString() ?? '',
       'roles': account['roles'],
+      'genre': profile['genre']?.toString() ?? '',
+      'specialty': profile['specialty']?.toString() ?? '',
+      'experience': profile['experience']?.toString() ?? '',
+      'website_url': profile['website_url']?.toString() ?? '',
+      'facebook_url': profile['facebook_url']?.toString() ?? '',
+      'instagram_url': profile['instagram_url']?.toString() ?? '',
+      'youtube_url': profile['youtube_url']?.toString() ?? '',
+      'portfolio_url': profile['portfolio_url']?.toString() ?? '',
     };
+  }
+
+  /// Parses `avatar_url` from `POST /profile/upload-image` (root, `data`, or nested profile).
+  static String avatarUrlFromUploadResponse(dynamic jsonBody) {
+    String? norm(String? s) {
+      final t = (s ?? '').trim();
+      if (t.isEmpty || t == 'null' || t == 'undefined') return null;
+      return t;
+    }
+
+    String? fromMap(Map<String, dynamic> m) {
+      return norm(m['avatar_url']?.toString());
+    }
+
+    if (jsonBody is Map) {
+      final root = Map<String, dynamic>.from(jsonBody);
+      final u = fromMap(root);
+      if (u != null) return u;
+      final data = root['data'];
+      if (data is Map) {
+        final du = fromMap(Map<String, dynamic>.from(data));
+        if (du != null) return du;
+        final prof = data['profile'];
+        if (prof is Map) {
+          final pu = fromMap(Map<String, dynamic>.from(prof));
+          if (pu != null) return pu;
+        }
+      }
+    }
+    return '';
   }
 
   static Map<String, dynamic> legacyUserFromAuthUser(

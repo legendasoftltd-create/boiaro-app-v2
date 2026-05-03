@@ -94,6 +94,8 @@ export '/pages/home_pages/payment_method_page/payment_method_page_widget.dart'
     show PaymentMethodPageWidget;
 export '/pages/profile_screens/purchase_history_page/purchase_history_page_widget.dart'
     show PurchaseHistoryPageWidget;
+export '/pages/profile_screens/orders_page/orders_page_widget.dart'
+    show OrdersPageWidget;
 export '/pages/profile_screens/purchase_history_page/purchase_history_page_model.dart'
     show PurchaseHistoryPageModel;
 export '/pages/latest_screen/new_books_page_widget.dart'
