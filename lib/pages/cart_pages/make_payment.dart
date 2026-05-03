@@ -14,6 +14,13 @@ class MakeCheckOutScreen extends StatefulWidget {
   final String jwtToken;
   final String userId;
   final String? couponCode;
+  final double? couponDiscount;
+  final String? appliedCouponId;
+  final String? shippingMethodId;
+  final String? shippingMethodName;
+  final String? shippingCarrier;
+  final double? shippingCost;
+  final String? estimatedDeliveryDays;
   final Map<String, dynamic>? shippingAddress;
   final String selectedPaymentMethod;
 
@@ -24,6 +31,13 @@ class MakeCheckOutScreen extends StatefulWidget {
     required this.jwtToken,
     required this.userId,
     this.couponCode,
+    this.couponDiscount,
+    this.appliedCouponId,
+    this.shippingMethodId,
+    this.shippingMethodName,
+    this.shippingCarrier,
+    this.shippingCost,
+    this.estimatedDeliveryDays,
     this.shippingAddress,
     this.selectedPaymentMethod = 'online',
   }) : super(key: key);
@@ -59,6 +73,13 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
       final response = await _checkoutController.initiatePayment(
         widget.cartLines,
         couponCode: widget.couponCode,
+        couponDiscount: widget.couponDiscount,
+        appliedCouponId: widget.appliedCouponId,
+        shippingMethodId: widget.shippingMethodId,
+        shippingMethodName: widget.shippingMethodName,
+        shippingCarrier: widget.shippingCarrier,
+        shippingCost: widget.shippingCost,
+        estimatedDeliveryDays: widget.estimatedDeliveryDays,
         shippingAddress: widget.shippingAddress,
         paymentMethod: widget.selectedPaymentMethod,
       );
@@ -234,18 +255,20 @@ class CheckoutController {
     return {'name': name, 'address': addr, 'phone': phone};
   }
 
-  // Initiate payment (BoiAro v2: POST /orders → POST /payments/initiate)
   Future<Map<String, dynamic>> initiatePayment(
     List<CartItem> cartLines, {
     String? couponCode,
+    double? couponDiscount,
+    String? appliedCouponId,
+    String? shippingMethodId,
+    String? shippingMethodName,
+    String? shippingCarrier,
+    double? shippingCost,
+    String? estimatedDeliveryDays,
     Map<String, dynamic>? shippingAddress,
     String paymentMethod = 'online',
   }) async {
     try {
-      if (couponCode != null && couponCode.isNotEmpty) {
-        log('CheckoutController: coupon codes are not applied (v2 API has no coupon endpoint).');
-      }
-
       if (cartLines.isEmpty) {
         return {'success': 0, 'message': 'Cart is empty'};
       }
@@ -268,6 +291,8 @@ class CheckoutController {
               'book_id': c.id.trim(),
               'format': _formatForApi(c.type),
               'quantity': c.quantity,
+              'price': c.discountedPrice,
+              'book_title': c.name,
             },
           )
           .toList();
@@ -315,21 +340,31 @@ class CheckoutController {
         };
       }
 
+      final subtotal = cartLines.fold(0.0, (sum, item) => sum + (item.discountedPrice * item.quantity));
+      final grandTotal = (subtotal - (couponDiscount ?? 0.0)) + (shippingCost ?? 0.0);
+
       final body = <String, dynamic>{
         'items': items,
         'payment_method': normalizedPaymentMethod,
+        'grand_total': grandTotal,
+        if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
+        if (couponDiscount != null && couponDiscount > 0) 'coupon_discount': couponDiscount,
+        if (appliedCouponId != null && appliedCouponId.isNotEmpty) 'applied_coupon_id': appliedCouponId,
+        if (shippingMethodId != null && shippingMethodId.isNotEmpty) 'shipping_method_id': shippingMethodId,
+        if (shippingMethodName != null && shippingMethodName.isNotEmpty) 'shipping_method_name': shippingMethodName,
+        if (shippingCarrier != null && shippingCarrier.isNotEmpty) 'shipping_carrier': shippingCarrier,
+        if (shippingCost != null) 'shipping_cost': shippingCost,
+        if (estimatedDeliveryDays != null && estimatedDeliveryDays.isNotEmpty) 'estimated_delivery_days': estimatedDeliveryDays,
       };
 
-      final ship = _v2Shipping(shippingAddress);
-      if (_needsShipping(cartLines)) {
-        if (ship == null) {
-          return {
-            'success': 0,
-            'message':
-                'Shipping address is required for hardcopy (name, phone, full address).',
-          };
-        }
-        body['shipping_address'] = ship;
+      if (_needsShipping(cartLines) && shippingAddress != null) {
+        body['shipping_name'] = shippingAddress['fullName'] ?? shippingAddress['name'] ?? '';
+        body['shipping_phone'] = shippingAddress['phone'] ?? '';
+        body['shipping_address'] = shippingAddress['addressLine1'] ?? shippingAddress['address'] ?? '';
+        body['shipping_city'] = shippingAddress['city'] ?? '';
+        body['shipping_district'] = shippingAddress['city'] ?? ''; // District often same as city in this context
+        body['shipping_area'] = shippingAddress['state'] ?? '';
+        body['shipping_zip'] = shippingAddress['postalCode'] ?? '';
       }
 
       final orderRes = await http.post(

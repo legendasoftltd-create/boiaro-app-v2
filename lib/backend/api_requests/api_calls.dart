@@ -556,6 +556,9 @@ class EbookGroup {
   static BookReadingEndApiCall bookReadingEndApiCall = BookReadingEndApiCall();
   static BookReadingProgressApiCall bookReadingProgressApiCall =
       BookReadingProgressApiCall();
+  static GetCouponApiCall getCouponApiCall = GetCouponApiCall();
+  static ValidateCouponApiCall validateCouponApiCall = ValidateCouponApiCall();
+  static GetOrdersApiCall getOrdersApiCall = GetOrdersApiCall();
 }
 
 class SocialLoginCall {
@@ -567,6 +570,7 @@ class SocialLoginCall {
     String? provider,
     String? providerId,
     String? accessToken,
+    String? idToken,
     String? registrationToken,
     String? deviceId,
   }) async {
@@ -586,11 +590,14 @@ class SocialLoginCall {
     }
     final tokenForServer =
         (accessToken ?? '').trim().isNotEmpty ? accessToken!.trim() : '';
-    if (tokenForServer.isEmpty) {
+    final idTokenForServer =
+        (idToken ?? '').trim().isNotEmpty ? idToken!.trim() : '';
+        
+    if (tokenForServer.isEmpty && idTokenForServer.isEmpty) {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
           success: 0,
-          message: 'Social access token is required.',
+          message: 'Social token is required.',
           extra: const {'error': 1},
         ),
         {},
@@ -600,8 +607,10 @@ class SocialLoginCall {
     final baseUrl = EbookGroup.getBaseUrl();
     final endpoint = isGoogle ? 'auth/social/google' : 'auth/social/facebook';
     final body = BoiaroLegacyAdapter.jsonEncodeBody({
-      'access_token': tokenForServer,
-      'accessToken': tokenForServer,
+      if (tokenForServer.isNotEmpty) 'access_token': tokenForServer,
+      if (tokenForServer.isNotEmpty) 'accessToken': tokenForServer,
+      if (idTokenForServer.isNotEmpty) 'id_token': idTokenForServer,
+      if (idTokenForServer.isNotEmpty) 'idToken': idTokenForServer,
       if ((registrationToken ?? '').trim().isNotEmpty)
         'registrationToken': registrationToken!.trim(),
       if ((deviceId ?? '').trim().isNotEmpty) 'deviceId': deviceId!.trim(),
@@ -5130,6 +5139,85 @@ class GetFeaturedBooksByCategoryApiCall {
         response,
         r'''$.data.message''',
       ));
+}
+
+class GetCouponApiCall {
+  Future<ApiCallResponse> call({
+    String code = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetCoupon',
+      apiUrl: '${baseUrl}coupons/$code',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(''),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ValidateCouponApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+    String code = '',
+    double totalAmount = 0.0,
+    bool hasHardcopy = false,
+    bool hasEbook = false,
+    bool hasAudiobook = false,
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final body = json.encode({
+      'code': code,
+      'total_amount': totalAmount,
+      'has_hardcopy': hasHardcopy,
+      'has_ebook': hasEbook,
+      'has_audiobook': hasAudiobook,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'ValidateCoupon',
+      apiUrl: '${baseUrl}coupons/validate',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetOrdersApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetOrders',
+      apiUrl: '${baseUrl}orders',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
 }
 
 /// End Ebook Group Code

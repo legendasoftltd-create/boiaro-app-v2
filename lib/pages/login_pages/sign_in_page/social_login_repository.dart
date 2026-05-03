@@ -62,10 +62,17 @@ class SocialLoginRepository {
         return null;
       }
 
+      // 1. Get ID Token for Identity (used by Supabase Auth)
       final googleAuth = await googleUser.authentication;
-      final token = (googleAuth.idToken ?? '').trim();
-      if (token.isEmpty) {
-        debugPrint('Google sign in error: missing access token');
+      final idToken = (googleAuth.idToken ?? '').trim();
+
+      // 2. Get Access Token for Authorization (optional if backend only needs idToken, but we send both)
+      final authClient = await googleUser.authorizationClient
+          .authorizeScopes(['email', 'profile']);
+      final accessToken = (authClient.accessToken ?? '').trim();
+      
+      if (idToken.isEmpty && accessToken.isEmpty) {
+        debugPrint('Google sign in error: missing both idToken and accessToken');
         return null;
       }
       final String? deviceId = FFAppState().deviceId;
@@ -78,7 +85,8 @@ class SocialLoginRepository {
         username: googleUser.displayName ?? '',
         provider: 'google',
         providerId: googleUser.id,
-        accessToken: token,
+        accessToken: accessToken,
+        idToken: idToken,
         registrationToken: fcmToken,
         deviceId: deviceId,
       );

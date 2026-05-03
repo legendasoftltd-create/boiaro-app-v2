@@ -10,6 +10,7 @@ import '/app_constants.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/providers/cart_provider.dart';
 import '/app_state.dart';
+import '/backend/api_requests/api_calls.dart';
 
 class CheckoutPageWidget extends StatefulWidget {
   const CheckoutPageWidget({super.key});
@@ -45,7 +46,11 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   String? _selectedDistrictName;
   bool _selectedDistrictIsDhaka = false;
   String? _selectedShippingMethodId;
+  String? _selectedShippingMethodName;
+  String? _selectedShippingCarrier;
+  String? _estimatedDeliveryDays;
   double _shippingCost = 0.0;
+  String? _appliedCouponId;
 
   @override
   void initState() {
@@ -76,25 +81,62 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       _isApplyingCoupon = true;
       _couponErrorMessage = null;
     });
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Coupon API is not available in BoiAro v2 yet. This build uses mock (no discount).',
-        ),
-      ),
-    );
-    setState(() {
-      _appliedCouponCode = code;
-      _discountAmount = 0.0;
-      _couponErrorMessage = null;
-      _isApplyingCoupon = false;
-    });
+
+    try {
+      final cart = Provider.of<CartProvider>(context, listen: false);
+      final hasHardcopy = _hasHardcopy(cart);
+      final hasEbook = cart.items.values
+          .any((item) => (item.type).toLowerCase().contains('ebook'));
+      final hasAudiobook = cart.items.values
+          .any((item) => (item.type).toLowerCase().contains('audio'));
+
+      final response = await EbookGroup.validateCouponApiCall.call(
+        token: FFAppState().token,
+        code: code,
+        totalAmount: cartTotalAfterBookDiscounts,
+        hasHardcopy: hasHardcopy,
+        hasEbook: hasEbook,
+        hasAudiobook: hasAudiobook,
+      );
+
+      if (response.succeeded) {
+        final jb = response.jsonBody;
+        if (jb is Map && jb['valid'] == true) {
+          setState(() {
+            _appliedCouponCode = jb['code']?.toString() ?? code;
+            _appliedCouponId = jb['coupon_id']?.toString();
+            _discountAmount = (jb['discount_amount'] as num).toDouble();
+            _couponErrorMessage = null;
+            _isApplyingCoupon = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Coupon applied successfully!')),
+          );
+        } else {
+          setState(() {
+            _couponErrorMessage = jb is Map ? jb['message']?.toString() ?? 'Invalid coupon' : 'Invalid coupon';
+            _isApplyingCoupon = false;
+          });
+        }
+      } else {
+        setState(() {
+          final jb = response.jsonBody;
+          _couponErrorMessage = jb is Map ? jb['message']?.toString() ?? 'Failed to apply coupon' : 'Failed to apply coupon';
+          _isApplyingCoupon = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _couponErrorMessage = 'An error occurred: $e';
+        _isApplyingCoupon = false;
+      });
+    }
   }
 
   void _removeCoupon() {
     setState(() {
       _appliedCouponCode = null;
+      _appliedCouponId = null;
       _discountAmount = 0.0;
       _couponErrorMessage = null;
       _couponController.clear();
@@ -212,6 +254,9 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
         : double.tryParse(baseCostRaw.toString()) ?? 0.0;
     setState(() {
       _shippingCost = baseCost;
+      _selectedShippingMethodName = selected['name']?.toString();
+      _selectedShippingCarrier = selected['description']?.toString() ?? selected['carrier']?.toString();
+      _estimatedDeliveryDays = selected['delivery_days']?.toString();
       _isCalculatingShipping = false;
     });
   }
@@ -1169,6 +1214,13 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                         jwtToken: FFAppState().token,
                         userId: FFAppState().userId,
                         couponCode: _appliedCouponCode,
+                        couponDiscount: _discountAmount,
+                        appliedCouponId: _appliedCouponId,
+                        shippingMethodId: _selectedShippingMethodId,
+                        shippingMethodName: _selectedShippingMethodName,
+                        shippingCarrier: _selectedShippingCarrier,
+                        shippingCost: _shippingCost,
+                        estimatedDeliveryDays: _estimatedDeliveryDays,
                         shippingAddress: shippingAddress,
                         selectedPaymentMethod: selectedPaymentMethod,
                       ),
