@@ -3633,7 +3633,7 @@ class GetreviewApiCall {
 
   List<String>? date(dynamic response) => (getJsonField(
         response,
-        r'''$.data.bookReviewDetails[:].reviews[:].date''',
+        r'''$.data.bookReviewDetails[0].reviews[:].date''',
         true,
       ) as List?)
           ?.withoutNulls
@@ -3642,7 +3642,7 @@ class GetreviewApiCall {
           .toList();
   List<double>? rating(dynamic response) => (getJsonField(
         response,
-        r'''$.data.bookReviewDetails[:].reviews[:].rating''',
+        r'''$.data.bookReviewDetails[0].reviews[:].rating''',
         true,
       ) as List?)
           ?.withoutNulls
@@ -3673,7 +3673,7 @@ class GetreviewApiCall {
       ));
   List? reviewsList(dynamic response) => getJsonField(
         response,
-        r'''$.data.bookReviewDetails[:].reviews''',
+        r'''$.data.bookReviewDetails[0].reviews''',
         true,
       ) as List?;
   String? message(dynamic response) => castToType<String>(getJsonField(

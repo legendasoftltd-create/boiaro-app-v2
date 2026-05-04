@@ -3,8 +3,6 @@ import 'package:a_i_ebook_app/flutter_flow/flutter_flow_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Result class for social login operations
@@ -51,8 +49,9 @@ class SocialLoginRepository {
 
   SocialLoginRepository() {
     _googleSignIn.initialize(
+      // Web OAuth 2.0 client ID (project: 37005664714, name: Boiaro)
       serverClientId:
-          '961638140230-6pp8ubuhsisl4jje5l18cub3c2sakomd.apps.googleusercontent.com',
+          '37005664714-ouo8u0aquc5cefrglf8n46j2t28g7c71.apps.googleusercontent.com',
     );
   }
 
@@ -60,7 +59,10 @@ class SocialLoginRepository {
     try {
       final GoogleSignInAccount? googleUser =
           await _googleSignIn.authenticate();
+      print('Google user: $googleUser');
+
       if (googleUser == null) {
+        print('Google sign in: user is null (cancelled or failed)');
         return null;
       }
 
@@ -72,45 +74,40 @@ class SocialLoginRepository {
       final authClient = await googleUser.authorizationClient
           .authorizeScopes(['email', 'profile']);
       final accessToken = (authClient.accessToken ?? '').trim();
-      
+
+      print('idToken empty: ${idToken.isEmpty}, accessToken empty: ${accessToken.isEmpty}');
+
       if (idToken.isEmpty && accessToken.isEmpty) {
-        debugPrint('Google sign in error: missing both idToken and accessToken');
+        print('Google sign in error: missing both idToken and accessToken');
         return null;
-      }
-      
-      // 3. Authenticate with Firebase Auth
-      String? firebaseToken;
-      try {
-        final credential = GoogleAuthProvider.credential(
-          idToken: idToken.isNotEmpty ? idToken : null,
-          accessToken: accessToken.isNotEmpty ? accessToken : null,
-        );
-        final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-        firebaseToken = await userCredential.user?.getIdToken();
-        debugPrint('Successfully authenticated with Firebase Auth.');
-      } catch (e) {
-        debugPrint('Firebase Auth Error: $e');
-        // If Firebase auth fails (e.g. audience mismatch), we continue to legacy backend.
       }
 
       final String? deviceId = FFAppState().deviceId;
       final String? fcmToken = FFAppState().tokenFcm;
 
-      return EbookGroup.socialLoginCall.call(
+      print('Calling Social Login API with provider: google');
+      print('accessToken length: ${accessToken.length}, idToken length: ${idToken.length}');
+      final response = await EbookGroup.socialLoginCall.call(
         email: googleUser.email,
         firstname: googleUser.displayName?.split(' ').first ?? '',
         lastname: googleUser.displayName?.split(' ').last ?? '',
         username: googleUser.displayName ?? '',
         provider: 'google',
         providerId: googleUser.id,
-        // If Firebase token exists, we pass it as the access token, or keep Google's token
-        accessToken: firebaseToken ?? accessToken,
-        idToken: idToken,
+        // Send only accessToken — backend verifies via Google tokeninfo API (no audience check).
+        // Do NOT send idToken as its audience is now the new Web client ID
+        // which the backend hasn't been updated to accept yet.
+        accessToken: accessToken.isNotEmpty ? accessToken : idToken,
+        idToken: null, // intentionally omitted to avoid audience mismatch
         registrationToken: fcmToken,
         deviceId: deviceId,
       );
-    } catch (error) {
-      debugPrint('Google sign in error: $error');
+      print('Social Login API Result: ${response.statusCode}');
+      print('Social Login API Body: ${response.jsonBody}');
+      return response;
+    } catch (error, stacktrace) {
+      print('Google sign in error: $error');
+      print('Google sign in error: $stacktrace');
       return null;
     }
   }
@@ -211,6 +208,20 @@ class SocialLoginRepository {
         registrationToken: fcmToken,
         deviceId: deviceId,
       );
+
+      debugPrint('Social Login API Result: ${response.statusCode}');
+      debugPrint('Social Login API Body: ${response.jsonBody}');
+
+      if (EbookGroup.socialLoginCall.success(response.jsonBody ?? '') == 1) {
+        debugPrint('Facebook Login Success');
+      } else {
+        debugPrint('Facebook Login Failed');
+        debugPrint('API Success Code: ${EbookGroup.socialLoginCall.success(response.jsonBody ?? '')}');
+        final message = EbookGroup.socialLoginCall.message(
+          response.jsonBody ?? '',
+        );
+        debugPrint('API Message: $message');
+      }
 
       // Cache the email for future logins if userId is available
       if (userId != null) {

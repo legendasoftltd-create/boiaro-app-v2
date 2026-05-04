@@ -453,95 +453,7 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                            
                                             }).divide(
                                                 SizedBox(height: 16.0)),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                      16, 12, 16, 8),
-                                              child: Text(
-                                                'Comments',
-                                                style:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium,
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                      16, 0, 16, 12),
-                                              child: Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: TextFormField(
-                                                      controller:
-                                                          _commentController,
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        hintText:
-                                                            'Write a comment...',
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  ElevatedButton(
-                                                    onPressed: _isPostingComment
-                                                        ? null
-                                                        : () async {
-                                                            final txt =
-                                                                _commentController
-                                                                    .text
-                                                                    .trim();
-                                                            if (txt.isEmpty) {
-                                                              return;
-                                                            }
-                                                            if (!FFAppState()
-                                                                .isLogin) {
-                                                              context.pushNamed(
-                                                                  SignInPageWidget
-                                                                      .routeName);
-                                                              return;
-                                                            }
-                                                            safeSetState(() =>
-                                                                _isPostingComment =
-                                                                    true);
-                                                            final postRes =
-                                                                await EbookGroup
-                                                                    .addcommentApiCall
-                                                                    .call(
-                                                              bookId:
-                                                                  widget.bookId,
-                                                              comment: txt,
-                                                              token: FFAppState()
-                                                                  .token,
-                                                            );
-                                                            ScaffoldMessenger.of(
-                                                                    context)
-                                                                .showSnackBar(
-                                                              SnackBar(
-                                                                content: Text(
-                                                                  EbookGroup
-                                                                          .addcommentApiCall
-                                                                          .message(
-                                                                              postRes.jsonBody) ??
-                                                                      'Done',
-                                                                ),
-                                                              ),
-                                                            );
-                                                            _commentController
-                                                                .clear();
-                                                            if (mounted) {
-                                                              safeSetState(() {
-                                                                _isPostingComment =
-                                                                    false;
-                                                              });
-                                                            }
-                                                          },
-                                                    child: Text(_isPostingComment
-                                                        ? '...'
-                                                        : 'Post'),
-                                                  )
-                                                ],
-                                              ),
-                                            ),
+                                           
                                             FutureBuilder<ApiCallResponse>(
                                               future: EbookGroup
                                                   .getbookcommentsApiCall
@@ -565,12 +477,14 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                                     padding:
                                                         const EdgeInsets.fromLTRB(
                                                             16, 0, 16, 0),
-                                                    child: Text(
-                                                      'No comments yet',
-                                                      style:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .bodyMedium,
+                                                    child: Center(
+                                                      child: Text(
+                                                        'No Reviews yet',
+                                                        style:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .bodyMedium,
+                                                      ),
                                                     ),
                                                   );
                                                 }

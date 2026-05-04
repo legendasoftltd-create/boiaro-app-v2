@@ -375,6 +375,7 @@ class _BookReviewBottomSheetWidgetState
                     width: 24.0,
                     height: 24.0,
                     fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
                   ),
                 ),
               ),
