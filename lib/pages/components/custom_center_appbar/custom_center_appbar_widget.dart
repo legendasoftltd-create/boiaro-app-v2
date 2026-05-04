@@ -169,6 +169,10 @@ class _CustomCenterAppbarWidgetState extends State<CustomCenterAppbarWidget> {
                                 'assets/images/add_ic.svg',
                                 fit: BoxFit.contain,
                                 alignment: Alignment(0.0, 0.0),
+                                colorFilter: ColorFilter.mode(
+                                  FlutterFlowTheme.of(context).primaryText,
+                                  BlendMode.srcIn,
+                                ),
                               ),
                             ),
                           ),

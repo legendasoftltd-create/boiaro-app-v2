@@ -1,4 +1,4 @@
-﻿import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '/app_constants.dart';
 import '/backend/api_requests/api_calls.dart';
@@ -62,6 +62,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   int? _walletCoinBalance;
   bool _isDownloadingEbook = false;
   bool _isBookmarkBusy = false;
+  bool _isEbookDownloaded = false;
 
   @override
   void initState() {
@@ -73,9 +74,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         await _checkIfPurchased();
         await _loadBookmarkStatus();
         await _refreshWalletCoinBalance();
+        await _checkDownloadStatus();
       }
       safeSetState(() {});
     });
+  }
+
+  Future<void> _checkDownloadStatus() async {
+    final d = await LocalDownloadService.getDownloadByBookId(widget.id ?? '');
+    if (mounted) {
+      safeSetState(() {
+        _isEbookDownloaded = d != null;
+      });
+    }
   }
 
   Future<void> _loadBookmarkStatus() async {
@@ -750,6 +761,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required Map<String, dynamic>? audiobookFormat,
     required Map<String, dynamic>? hardcopyFormat,
     required dynamic responseJson,
+    bool forceBuy = false,
   }) async {
     if (tab == BookMasterFormatTab.ebook) {
       _lastEbookAuthError = false;
@@ -795,12 +807,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
       if (hasAccess) {
         await actions.showCustomToastBottom(
-            'Unable to fetch ebook URL. Please try again.');
+            'Access Denied. Please login and try again.');
         return;
       }
 
       final previewUrl = _extractEbookPreviewUrlFromDetails(responseJson);
-      if (previewUrl != null && previewUrl.trim().isNotEmpty) {
+      if (!forceBuy && previewUrl != null && previewUrl.trim().isNotEmpty) {
         await _openBook(
           path: previewUrl,
           bookName: '$bookName (Preview)',
@@ -965,6 +977,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         remoteUrl: url,
       );
       await actions.showCustomToastBottom('Book downloaded successfully');
+      await _checkDownloadStatus();
     } catch (_) {
       await actions.showCustomToastBottom('Download failed');
     } finally {
@@ -1338,6 +1351,15 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           selectedLabel = 'Hardcopy';
         }
         final previewPercent = _previewPercent(selectedFormat);
+        final ebookPrice = _formatPrice(ebookFormat);
+        final hasEbookAccess = _hasLocalFormatAccess(
+          bookId: bookId,
+          format: 'ebook',
+          isFree: isBookFree,
+          price: ebookPrice,
+        );
+        final isEbookPremium = !isBookFree && ebookPrice > 0;
+
         final showPreviewBadge = activeTab != BookMasterFormatTab.hardcopy &&
             !_hasLocalFormatAccess(
               bookId: bookId,
@@ -1546,8 +1568,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               ),
                                             ),
                                           ),
-                                          //   ],
-                                          // ),
                                         ],
                                       ),
                                     ),
@@ -2328,161 +2348,558 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               ],
                                             ),
                                           ),
-                                        if (showPreviewBadge)
-                                          Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 10.0),
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 6),
-                                                decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .primaryBackground,
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                  border: Border.all(
-                                                    color:
+                                        if (activeTab == BookMasterFormatTab.ebook)
+                                          Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (!hasEbookAccess)
+                                                // Premium & Not Owned -> Row with Preview and Buy Now
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.max,
+                                                  children: [
+                                                    Expanded(
+                                                      child: FFButtonWidget(
+                                                        onPressed: () =>
+                                                            _handleMasterAction(
+                                                          tab: activeTab,
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          authorName:
+                                                              authorName,
+                                                          isBookFree:
+                                                              isBookFree,
+                                                          ebookFormat:
+                                                              ebookFormat,
+                                                          audiobookFormat:
+                                                              audiobookFormat,
+                                                          hardcopyFormat:
+                                                              hardcopyFormat,
+                                                          responseJson:
+                                                              bookDetailspageGetbookdetailsApiResponse
+                                                                  .jsonBody,
+                                                          forceBuy: false,
+                                                        ),
+                                                        text:
+                                                            'Preview ($previewPercent%)',
+                                                        icon: Icon(
+                                                          Icons
+                                                              .menu_book_rounded,
+                                                          color: Colors.white,
+                                                        ),
+                                                        options:
+                                                            FFButtonOptions(
+                                                          height: 48,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .primary,
+                                                          textStyle:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .titleSmall
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                  ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: FFButtonWidget(
+                                                        onPressed: () =>
+                                                            _handleMasterAction(
+                                                          tab: activeTab,
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          authorName:
+                                                              authorName,
+                                                          isBookFree:
+                                                              isBookFree,
+                                                          ebookFormat:
+                                                              ebookFormat,
+                                                          audiobookFormat:
+                                                              audiobookFormat,
+                                                          hardcopyFormat:
+                                                              hardcopyFormat,
+                                                          responseJson:
+                                                              bookDetailspageGetbookdetailsApiResponse
+                                                                  .jsonBody,
+                                                          forceBuy: true,
+                                                        ),
+                                                        text: 'Buy Now',
+                                                        icon: Icon(
+                                                          Icons
+                                                              .shopping_cart_rounded,
+                                                          color: Colors.white,
+                                                        ),
+                                                        options:
+                                                            FFButtonOptions(
+                                                          height: 48,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .primary,
+                                                          textStyle:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .titleSmall
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                  ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
+                                              else if (_isEbookDownloaded)
+                                                // Owned/Free & Already Downloaded -> Only Read Now
+                                                FFButtonWidget(
+                                                  onPressed: () =>
+                                                      _handleMasterAction(
+                                                    tab: activeTab,
+                                                    bookId: bookId,
+                                                    bookName: bookName,
+                                                    bookImage: bookImage,
+                                                    authorName: authorName,
+                                                    isBookFree: isBookFree,
+                                                    ebookFormat: ebookFormat,
+                                                    audiobookFormat:
+                                                        audiobookFormat,
+                                                    hardcopyFormat:
+                                                        hardcopyFormat,
+                                                    responseJson:
+                                                        bookDetailspageGetbookdetailsApiResponse
+                                                            .jsonBody,
+                                                  ),
+                                                  text: 'Read Now',
+                                                  icon: Icon(
+                                                    Icons.menu_book_rounded,
+                                                    color: Colors.white,
+                                                  ),
+                                                  options: FFButtonOptions(
+                                                    width: double.infinity,
+                                                    height: 48,
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .primary,
+                                                    textStyle:
                                                         FlutterFlowTheme.of(
                                                                 context)
-                                                            .primary
-                                                            .withOpacity(0.3),
+                                                            .titleSmall
+                                                            .override(
+                                                              fontFamily:
+                                                                  'SF Pro Display',
+                                                              color:
+                                                                  Colors.white,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              letterSpacing:
+                                                                  0.0,
+                                                            ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
                                                   ),
-                                                ),
-                                                child: Text(
-                                                  'Preview $previewPercent%',
-                                                  style: FlutterFlowTheme.of(
-                                                          context)
-                                                      .bodySmall
-                                                      .override(
-                                                        fontFamily:
-                                                            'SF Pro Display',
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        letterSpacing: 0.0,
+                                                )
+                                              else
+                                                // Owned/Free & Not Downloaded -> Row with Read and Download
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.max,
+                                                  children: [
+                                                    Expanded(
+                                                      child: FFButtonWidget(
+                                                        onPressed: () =>
+                                                            _handleMasterAction(
+                                                          tab: activeTab,
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          authorName:
+                                                              authorName,
+                                                          isBookFree:
+                                                              isBookFree,
+                                                          ebookFormat:
+                                                              ebookFormat,
+                                                          audiobookFormat:
+                                                              audiobookFormat,
+                                                          hardcopyFormat:
+                                                              hardcopyFormat,
+                                                          responseJson:
+                                                              bookDetailspageGetbookdetailsApiResponse
+                                                                  .jsonBody,
+                                                        ),
+                                                        text: 'Read Now',
+                                                        icon: Icon(
+                                                          Icons
+                                                              .menu_book_rounded,
+                                                          color: Colors.white,
+                                                        ),
+                                                        options:
+                                                            FFButtonOptions(
+                                                          height: 48,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .primary,
+                                                          textStyle:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .titleSmall
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                  ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                        ),
                                                       ),
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: FFButtonWidget(
+                                                        onPressed:
+                                                            _isDownloadingEbook
+                                                                ? null
+                                                                : () async {
+                                                                    await _downloadEbookForOffline(
+                                                                      bookId:
+                                                                          bookId,
+                                                                      bookName:
+                                                                          bookName,
+                                                                      bookImage:
+                                                                          bookImage,
+                                                                      authorName:
+                                                                          authorName,
+                                                                      isBookFree:
+                                                                          isBookFree,
+                                                                    );
+                                                                  },
+                                                        text: _isDownloadingEbook
+                                                            ? '...'
+                                                            : 'Download',
+                                                        icon: Icon(
+                                                          Icons
+                                                              .download_rounded,
+                                                          color: Colors.white,
+                                                        ),
+                                                        options:
+                                                            FFButtonOptions(
+                                                          height: 48,
+                                                          color: FlutterFlowTheme.of(context)
+                                                              .primary,
+                                                          textStyle:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .titleSmall
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                  ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              ),
-                                            ),
-                                          ),
-                                        FFButtonWidget(
-                                          onPressed: () => _handleMasterAction(
-                                            tab: activeTab,
-                                            bookId: bookId,
-                                            bookName: bookName,
-                                            bookImage: bookImage,
-                                            authorName: authorName,
-                                            isBookFree: isBookFree,
-                                            ebookFormat: ebookFormat,
-                                            audiobookFormat: audiobookFormat,
-                                            hardcopyFormat: hardcopyFormat,
-                                            responseJson:
-                                                bookDetailspageGetbookdetailsApiResponse
-                                                    .jsonBody,
-                                          ),
-                                          text: activeTab == BookMasterFormatTab.ebook
-                                              ? (_hasLocalFormatAccess(
+                                            ],
+                                          )
+                                        else
+                                            Builder(builder: (context) {
+                                              if (activeTab ==
+                                                  BookMasterFormatTab
+                                                      .audiobook) {
+                                                final hasAudioAccess =
+                                                    _hasLocalFormatAccess(
+                                                  bookId: bookId,
+                                                  format: 'audiobook',
+                                                  isFree: isBookFree,
+                                                  price: _formatPrice(
+                                                      audiobookFormat),
+                                                );
+                                                if (hasAudioAccess) {
+                                                  return FFButtonWidget(
+                                                    onPressed: () =>
+                                                        _handleMasterAction(
+                                                      tab: activeTab,
                                                       bookId: bookId,
-                                                      format: 'ebook',
-                                                      isFree: isBookFree,
-                                                      price: _formatPrice(ebookFormat))
-                                                  ? 'Read Now'
-                                                  : 'Read Preview')
-                                              : activeTab == BookMasterFormatTab.audiobook
-                                                  ? (_hasLocalFormatAccess(
-                                                          bookId: bookId,
-                                                          format: 'audiobook',
-                                                          isFree: isBookFree,
-                                                          price: _formatPrice(audiobookFormat))
-                                                      ? 'Listen Now'
-                                                      : 'Listen Preview')
-                                                  : (_hasLocalFormatAccess(
-                                                          bookId: bookId,
-                                                          format: 'hardcopy',
-                                                          isFree: isBookFree,
-                                                          price: _formatPrice(hardcopyFormat))
+                                                      bookName: bookName,
+                                                      bookImage: bookImage,
+                                                      authorName: authorName,
+                                                      isBookFree: isBookFree,
+                                                      ebookFormat: ebookFormat,
+                                                      audiobookFormat:
+                                                          audiobookFormat,
+                                                      hardcopyFormat:
+                                                          hardcopyFormat,
+                                                      responseJson:
+                                                          bookDetailspageGetbookdetailsApiResponse
+                                                              .jsonBody,
+                                                    ),
+                                                    text: 'Listen Now',
+                                                    icon: Icon(
+                                                      Icons.headphones_rounded,
+                                                      color: Colors.white,
+                                                    ),
+                                                    options: FFButtonOptions(
+                                                      width: double.infinity,
+                                                      height: 48,
+                                                      color:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .primary,
+                                                      textStyle:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .titleSmall
+                                                              .override(
+                                                                fontFamily:
+                                                                    'SF Pro Display',
+                                                                color: Colors
+                                                                    .white,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                letterSpacing:
+                                                                    0.0,
+                                                              ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              10),
+                                                    ),
+                                                  );
+                                                } else {
+                                                  // Premium Audiobook -> Row with Preview and Buy
+                                                  return Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.max,
+                                                    children: [
+                                                      Expanded(
+                                                        child: FFButtonWidget(
+                                                          onPressed: () =>
+                                                              _handleMasterAction(
+                                                            tab: activeTab,
+                                                            bookId: bookId,
+                                                            bookName: bookName,
+                                                            bookImage:
+                                                                bookImage,
+                                                            authorName:
+                                                                authorName,
+                                                            isBookFree:
+                                                                isBookFree,
+                                                            ebookFormat:
+                                                                ebookFormat,
+                                                            audiobookFormat:
+                                                                audiobookFormat,
+                                                            hardcopyFormat:
+                                                                hardcopyFormat,
+                                                            responseJson:
+                                                                bookDetailspageGetbookdetailsApiResponse
+                                                                    .jsonBody,
+                                                            forceBuy: false,
+                                                          ),
+                                                          text:
+                                                              'Listen Preview ($previewPercent%)',
+                                                          icon: Icon(
+                                                            Icons
+                                                                .headphones_rounded,
+                                                            color: Colors.white,
+                                                          ),
+                                                          options:
+                                                              FFButtonOptions(
+                                                            height: 48,
+                                                            color:
+                                                                FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .secondaryText,
+                                                            textStyle:
+                                                                FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .titleSmall
+                                                                    .override(
+                                                                      fontFamily:
+                                                                          'SF Pro Display',
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      letterSpacing:
+                                                                          0.0,
+                                                                    ),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        10),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 12),
+                                                      Expanded(
+                                                        child: FFButtonWidget(
+                                                          onPressed: () =>
+                                                              _handleMasterAction(
+                                                            tab: activeTab,
+                                                            bookId: bookId,
+                                                            bookName: bookName,
+                                                            bookImage:
+                                                                bookImage,
+                                                            authorName:
+                                                                authorName,
+                                                            isBookFree:
+                                                                isBookFree,
+                                                            ebookFormat:
+                                                                ebookFormat,
+                                                            audiobookFormat:
+                                                                audiobookFormat,
+                                                            hardcopyFormat:
+                                                                hardcopyFormat,
+                                                            responseJson:
+                                                                bookDetailspageGetbookdetailsApiResponse
+                                                                    .jsonBody,
+                                                            forceBuy: true,
+                                                          ),
+                                                          text: 'Buy Now',
+                                                          icon: Icon(
+                                                            Icons
+                                                                .shopping_cart_rounded,
+                                                            color: Colors.white,
+                                                          ),
+                                                          options:
+                                                              FFButtonOptions(
+                                                            height: 48,
+                                                            color:
+                                                                FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .primary,
+                                                            textStyle:
+                                                                FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .titleSmall
+                                                                    .override(
+                                                                      fontFamily:
+                                                                          'SF Pro Display',
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      letterSpacing:
+                                                                          0.0,
+                                                                    ),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        10),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  );
+                                                }
+                                              } else {
+                                                // Hardcopy logic
+                                                final hasHardcopyAccess =
+                                                    _hasLocalFormatAccess(
+                                                  bookId: bookId,
+                                                  format: 'hardcopy',
+                                                  isFree: isBookFree,
+                                                  price: _formatPrice(
+                                                      hardcopyFormat),
+                                                );
+                                                return FFButtonWidget(
+                                                  onPressed: () =>
+                                                      _handleMasterAction(
+                                                    tab: activeTab,
+                                                    bookId: bookId,
+                                                    bookName: bookName,
+                                                    bookImage: bookImage,
+                                                    authorName: authorName,
+                                                    isBookFree: isBookFree,
+                                                    ebookFormat: ebookFormat,
+                                                    audiobookFormat:
+                                                        audiobookFormat,
+                                                    hardcopyFormat:
+                                                        hardcopyFormat,
+                                                    responseJson:
+                                                        bookDetailspageGetbookdetailsApiResponse
+                                                            .jsonBody,
+                                                  ),
+                                                  text: hasHardcopyAccess
                                                       ? 'View Orders'
-                                                      : 'Buy Hardcopy'),
-                                          icon: Icon(
-                                            activeTab ==
-                                                    BookMasterFormatTab.ebook
-                                                ? Icons.menu_book_rounded
-                                                : activeTab ==
-                                                        BookMasterFormatTab
-                                                            .audiobook
-                                                    ? Icons.headphones_rounded
-                                                    : Icons.shopping_bag_rounded,
-                                            color: Colors.white,
-                                          ),
-                                          options: FFButtonOptions(
-                                            width: double.infinity,
-                                            height: 48,
-                                            color: FlutterFlowTheme.of(context)
-                                                .primary,
-                                            textStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .titleSmall
-                                                    .override(
-                                                      fontFamily:
-                                                          'SF Pro Display',
-                                                      color: Colors.white,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      letterSpacing: 0.0,
-                                                    ),
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                        if (activeTab ==
-                                            BookMasterFormatTab.ebook)
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 8.0),
-                                            child: FFButtonWidget(
-                                              onPressed: _isDownloadingEbook
-                                                  ? null
-                                                  : () async {
-                                                      await _downloadEbookForOffline(
-                                                        bookId: bookId,
-                                                        bookName: bookName,
-                                                        bookImage: bookImage,
-                                                        authorName: authorName,
-                                                        isBookFree: isBookFree,
-                                                      );
-                                                    },
-                                              text: _isDownloadingEbook
-                                                  ? 'Downloading...'
-                                                  : 'Download',
-                                              icon: const Icon(
-                                                Icons.download_rounded,
-                                                color: Colors.white,
-                                              ),
-                                              options: FFButtonOptions(
-                                                width: double.infinity,
-                                                height: 44,
-                                                color: FlutterFlowTheme.of(context)
-                                                    .secondaryText,
-                                                textStyle: FlutterFlowTheme.of(
-                                                        context)
-                                                    .titleSmall
-                                                    .override(
-                                                      fontFamily:
-                                                          'SF Pro Display',
-                                                      color: Colors.white,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      letterSpacing: 0.0,
-                                                    ),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                            ),
-                                          ),
+                                                      : 'Buy Hardcopy',
+                                                  icon: Icon(
+                                                    Icons.shopping_bag_rounded,
+                                                    color: Colors.white,
+                                                  ),
+                                                  options: FFButtonOptions(
+                                                    width: double.infinity,
+                                                    height: 48,
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .primary,
+                                                    textStyle:
+                                                        FlutterFlowTheme.of(
+                                                                context)
+                                                            .titleSmall
+                                                            .override(
+                                                              fontFamily:
+                                                                  'SF Pro Display',
+                                                              color:
+                                                                  Colors.white,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              letterSpacing:
+                                                                  0.0,
+                                                            ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                );
+                                              }
+                                            }),
                                       ],
                                     ),
                                   ),
@@ -2779,20 +3196,29 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                       '';
 
                                   // Extract narrator from audiobook format
-                                  final narratorObj =
+                                  final narratorRaw =
                                       audiobookFormat?['narrators'] ??
                                           audiobookFormat?['narrator'];
-                                  final narName = narratorObj is Map
-                                      ? narratorObj['name']?.toString() ?? ''
-                                      : '';
-                                  final narImage = narratorObj is Map
-                                      ? narratorObj['avatar_url']
-                                              ?.toString() ??
-                                          ''
-                                      : '';
-                                  final narId = narratorObj is Map
-                                      ? narratorObj['id']?.toString() ?? ''
-                                      : '';
+                                  final narratorObj = (narratorRaw is List &&
+                                          narratorRaw.isNotEmpty)
+                                      ? narratorRaw.first
+                                      : (narratorRaw is Map
+                                          ? narratorRaw
+                                          : null);
+
+                                  final narName =
+                                      narratorObj?['name']?.toString() ?? '';
+                                  final narImageRaw =
+                                      narratorObj?['avatar_url']?.toString() ??
+                                          '';
+                                  final narImage = narImageRaw.isEmpty
+                                      ? ''
+                                      : (narImageRaw.startsWith('http')
+                                          ? narImageRaw
+                                          : '${FFAppConstants.imageUrl}$narImageRaw');
+                                  final narId =
+                                      narratorObj?['id']?.toString() ?? '';
+
                                   final publisherName =
                                       getJsonField(
                                         bookDetailspageGetbookdetailsApiResponse
@@ -2804,20 +3230,22 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                       getJsonField(
                                         bookDetailspageGetbookdetailsApiResponse
                                             .jsonBody,
-                                        r'''$.data.bookDetails[0].publisher.logo_url''',
+                                        r'''$.data.bookDetails[0].publisher.image''',
                                       )?.toString() ??
                                           '';
                                   final publisherId =
                                       getJsonField(
                                         bookDetailspageGetbookdetailsApiResponse
                                             .jsonBody,
-                                        r'''$.data.bookDetails[0].publisher.id''',
+                                        r'''$.data.bookDetails[0].publisher._id''',
                                       )?.toString() ??
                                           '';
                                   final publisherImage = publisherImageRaw
-                                          .startsWith('http')
-                                      ? publisherImageRaw
-                                      : '${FFAppConstants.imageUrl}$publisherImageRaw';
+                                          .isEmpty
+                                      ? ''
+                                      : (publisherImageRaw.startsWith('http')
+                                          ? publisherImageRaw
+                                          : '${FFAppConstants.imageUrl}$publisherImageRaw');
                                   return Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -3375,10 +3803,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                                 CachedNetworkImage(
                                                                               fadeInDuration: Duration(milliseconds: 200),
                                                                               fadeOutDuration: Duration(milliseconds: 200),
-                                                                              imageUrl: '${FFAppConstants.imageUrl}${getJsonField(
-                                                                                reviewListItem,
-                                                                                r'''$.userDetails.image''',
-                                                                              ).toString()}',
+                                                                              imageUrl: () {
+                                                                                final img = getJsonField(
+                                                                                  reviewListItem,
+                                                                                  r'''$.userDetails.image''',
+                                                                                )?.toString() ?? '';
+                                                                                if (img.isEmpty) return '';
+                                                                                return img.startsWith('http')
+                                                                                    ? img
+                                                                                    : '${FFAppConstants.imageUrl}$img';
+                                                                              }(),
                                                                               fit: BoxFit.cover,
                                                                               errorWidget: (context, error, stackTrace) => Image.asset(
                                                                                 'assets/images/error_image.png',
@@ -3836,7 +4270,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   .fromSTEB(
                                                       16.0, 0.0, 0.0, 16.0),
                                               child: Text(
-                                                'More books by this author',
+                                                'You might also like',
                                                 textAlign: TextAlign.start,
                                                 style:
                                                     FlutterFlowTheme.of(context)

@@ -742,11 +742,19 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                       FFAppState().update(() {});
                                       context.safePop();
                                     } else {
-                                      await actions.showCustomToastBottom(
-                                        EbookGroup.socialLoginCall.message(
-                                          (response?.jsonBody ?? ''),
-                                        )!,
-                                      );
+                                      print('Google Login UI Handler: response is ${response == null ? 'NULL' : 'NOT NULL'}');
+                                      if (response != null) {
+                                        print('API Success Code: ${EbookGroup.socialLoginCall.success(response.jsonBody ?? '')}');
+                                        final message = EbookGroup.socialLoginCall.message(
+                                          response.jsonBody ?? '',
+                                        );
+                                        print('API Message: $message');
+                                        if (message != null) {
+                                          await actions.showCustomToastBottom(message);
+                                        }
+                                      } else {
+                                        print('Sign-in was cancelled by user or encountered a local error.');
+                                      }
                                     }
                                   },
                                   child: Container(

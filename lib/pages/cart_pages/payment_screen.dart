@@ -107,17 +107,17 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                     }
                   },
                 ),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: Text(
-                    _currentUrl.isEmpty ? widget.url : _currentUrl,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
+                // Container(
+                //   width: double.infinity,
+                //   padding: EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
+                //   color: Theme.of(context).scaffoldBackgroundColor,
+                //   child: Text(
+                //     _currentUrl.isEmpty ? widget.url : _currentUrl,
+                //     maxLines: 2,
+                //     overflow: TextOverflow.ellipsis,
+                //     style: Theme.of(context).textTheme.bodySmall,
+                //   ),
+                // ),
               ],
             ),
           ),
