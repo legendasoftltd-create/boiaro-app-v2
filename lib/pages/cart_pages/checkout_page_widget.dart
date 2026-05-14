@@ -31,7 +31,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressLine1Controller = TextEditingController();
   final TextEditingController _addressLine2Controller = TextEditingController();
-  final TextEditingController _thanaController = TextEditingController();
+
   final TextEditingController _postalCodeController = TextEditingController();
   String? _appliedCouponCode;
   String? _couponErrorMessage;
@@ -51,6 +51,9 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   String? _estimatedDeliveryDays;
   double _shippingCost = 0.0;
   String? _appliedCouponId;
+  List<Map<String, dynamic>> _areas = [];
+  Map<String, dynamic>? _selectedArea;
+  bool _isLoadingAreas = false;
 
   @override
   void initState() {
@@ -64,7 +67,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     _phoneController.dispose();
     _addressLine1Controller.dispose();
     _addressLine2Controller.dispose();
-    _thanaController.dispose();
+
     _postalCodeController.dispose();
     super.dispose();
   }
@@ -294,8 +297,53 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       if (_districts.isNotEmpty && (_selectedDistrictName ?? '').isEmpty) {
         _selectedDistrictName = _districts.first['name']?.toString();
         _selectedDistrictIsDhaka = _districts.first['is_dhaka_area'] == true;
+        if (_selectedDistrictName != null) {
+          _fetchAreas(_selectedDistrictName!);
+        }
       }
     });
+  }
+
+  Future<void> _fetchAreas(String districtName) async {
+    setState(() {
+      _isLoadingAreas = true;
+      _areas = [];
+      _selectedArea = null;
+    });
+    try {
+      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/shipping/redx/areas?district_name=$districtName');
+      final res = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        if (FFAppState().token.isNotEmpty)
+          'Authorization': 'Bearer ${FFAppState().token}',
+      });
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw Exception('Areas failed (${res.statusCode})');
+      }
+      final decoded = jsonDecode(res.body);
+      final raw = decoded is List
+          ? decoded
+          : (decoded is Map ? decoded['areas'] : null);
+      final areas = <Map<String, dynamic>>[];
+      if (raw is List) {
+        for (final a in raw.whereType<Map>()) {
+          final m = Map<String, dynamic>.from(a);
+          areas.add({
+            'id': m['id'],
+            'name': m['name']?.toString() ?? '',
+          });
+        }
+      }
+      setState(() {
+        _areas = areas;
+      });
+    } catch (e) {
+      debugPrint('Error fetching areas: $e');
+    } finally {
+      setState(() {
+        _isLoadingAreas = false;
+      });
+    }
   }
 
   /// Shape expected by [CheckoutController] / v2 `shipping_address` (fullName-style keys OK).
@@ -305,12 +353,10 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     final addressLine1 = _addressLine1Controller.text.trim();
     final city = (_selectedDistrictName ?? '').trim();
     final postalCode = _postalCodeController.text.trim();
-    final state = _thanaController.text.trim();
     if (fullName.isEmpty ||
         phone.isEmpty ||
         addressLine1.isEmpty ||
-        city.isEmpty ||
-        state.isEmpty) {
+        city.isEmpty) {
       return null;
     }
     return {
@@ -319,9 +365,10 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       'addressLine1': addressLine1,
       'addressLine2': _addressLine2Controller.text.trim(),
       'city': city,
-      'state': state,
       'postalCode': postalCode,
       'country': 'Bangladesh',
+      'shipping_area': _selectedArea?['name'],
+      'shipping_area_id': _selectedArea?['id'],
     };
   }
 
@@ -466,10 +513,51 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                 _selectedDistrictName = v;
                 _selectedDistrictIsDhaka = district['is_dhaka_area'] == true;
               });
+              _fetchAreas(v);
               await _fetchShippingMethods();
               await _calculateShippingCost();
             },
           ),
+          if (_isLoadingAreas)
+             Padding(
+               padding: const EdgeInsets.only(top: 8.0),
+               child: Row(
+                 children: [
+                   SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                   SizedBox(width: 8),
+                   Text('Loading areas...', style: FlutterFlowTheme.of(context).bodySmall),
+                 ],
+               ),
+             ),
+          if (!_isLoadingAreas && _areas.isNotEmpty) ...[
+            SizedBox(height: 8.0),
+            DropdownButtonFormField<Map<String, dynamic>>(
+              value: _selectedArea,
+              decoration: InputDecoration(
+                labelText: 'Area',
+                hintText: 'Select area (e.g. Dhanmondi)',
+                filled: true,
+                fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                isDense: true,
+              ),
+              items: _areas
+                  .map(
+                    (a) => DropdownMenuItem<Map<String, dynamic>>(
+                      value: a,
+                      child: Text(a['name']?.toString() ?? ''),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) {
+                setState(() {
+                  _selectedArea = v;
+                });
+              },
+            ),
+          ],
           SizedBox(height: 6.0),
           Text(
             _selectedDistrictIsDhaka ? 'Delivery Zone: Dhaka area' : 'Delivery Zone: Outside Dhaka',
@@ -478,12 +566,6 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                 ),
           ),
         ],
-        SizedBox(height: 8.0),
-        _buildAddressField(
-          controller: _thanaController,
-          label: 'Thana',
-          hintText: 'e.g. Dhanmondi',
-        ),
         SizedBox(height: 8.0),
         _buildAddressField(
           controller: _addressLine1Controller,

@@ -2,18 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>37005664714-fkqqk9p67hkbqml28tgq3vfjo2nikjtj.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.37005664714-fkqqk9p67hkbqml28tgq3vfjo2nikjtj</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>37005664714-0ss34adbmrvnosrqfe9qtduu0qou6lvi.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyBVK6GdSYdRzOAvmnc4uRj0bRLZH_3Q-9A</string>
+	<string>AIzaSyAeAtPWrE9lvnqU9R8z9X0DUaFwcG6s40k</string>
 	<key>GCM_SENDER_ID</key>
-	<string>299024357634</string>
+	<string>37005664714</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.boiaro.app</string>
 	<key>PROJECT_ID</key>
-	<string>a-i-ebook-app-nth7ef</string>
+	<string>boiaro</string>
 	<key>STORAGE_BUCKET</key>
-	<string>a-i-ebook-app-nth7ef.appspot.com</string>
+	<string>boiaro.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,8 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:299024357634:ios:db3ffb61138bf80eaaca1b</string>
-	<key>DATABASE_URL</key>
-	<string>https://a-i-ebook-app-nth7ef-default-rtdb.firebaseio.com</string>
+	<string>1:37005664714:ios:e30cce7ab846ca876e2f33</string>
 </dict>
 </plist>

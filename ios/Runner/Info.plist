@@ -47,7 +47,7 @@
         <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-        <string>fb893488806736240</string>
+        <string>fb1107222701362204</string>
         </array>
         </dict>
     </array>
@@ -55,9 +55,9 @@
     <true/>
 
 	<key>FacebookAppID</key>
-	<string>893488806736240</string>
+	<string>1107222701362204</string>
 	<key>FacebookClientToken</key>
-	<string>20166a09915e3e4c03bb6c4632931c25</string>
+	<string>2e69f0944977c1702d11c745449c2e1c</string>
 	<key>FacebookDisplayName</key>
 	<string>Boi Aro</string>
 

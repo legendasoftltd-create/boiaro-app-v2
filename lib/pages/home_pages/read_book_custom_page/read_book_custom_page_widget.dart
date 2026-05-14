@@ -1,5 +1,4 @@
 import 'package:epub_reader_kit/epub_reader_kit.dart';
-
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
@@ -48,6 +47,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   final scaffoldKey = GlobalKey<ScaffoldState>();
   ScaffoldMessengerState? _scaffoldMessenger;
   bool _isPreparingReader = true;
+  // ignore: unused_field
   bool _isOpeningEpub = false;
   String? _epubError;
   bool _nativeEpubLaunchInProgress = false;
@@ -264,6 +264,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       final bookId = (widget.id ?? '').trim();
       if (bookId.isNotEmpty) {
         await ReadingReportService.instance.startSession(bookId: bookId);
+        // Pre-load TTS context into native layer so the in-reader ⚙ button
+        // can open Premium settings without a Flutter round-trip.
+        unawaited(EpubReaderService.ttsSetContext(
+          bookId   : bookId,
+          apiBase  : FFAppConstants.mobileApiBaseUrl,
+          authToken: FFAppState().token,
+        ));
         await _applyNativeEpubProgress(0, force: true);
         _nativeEpubPageSub?.cancel();
         _lastNativeProgressSent = 0;
@@ -303,11 +310,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   void dispose() {
     _nativeEpubPageSub?.cancel();
     _nativeEpubPageSub = null;
+
     WidgetsBinding.instance.removeObserver(this);
     _model.dispose();
 
     super.dispose();
   }
+
 
   @override
   Widget build(BuildContext context) {

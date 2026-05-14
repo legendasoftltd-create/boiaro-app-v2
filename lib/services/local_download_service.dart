@@ -186,4 +186,27 @@ class LocalDownloadService {
     final encoded = jsonEncode(updated.map((e) => e.toMap()).toList());
     await prefs.setString(_downloadsKey, encoded);
   }
+
+  static Future<void> deleteDownloadByBookId(String bookId) async {
+    final normalizedBookId = bookId.trim();
+    if (normalizedBookId.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final all = await getAllDownloads();
+
+    final remaining = <LocalDownloadedBook>[];
+    for (final item in all) {
+      if (item.bookId == normalizedBookId) {
+        final file = File(item.localPath);
+        if (file.existsSync()) {
+          await file.delete();
+        }
+        continue;
+      }
+      remaining.add(item);
+    }
+
+    final encoded = jsonEncode(remaining.map((e) => e.toMap()).toList());
+    await prefs.setString(_downloadsKey, encoded);
+  }
 }

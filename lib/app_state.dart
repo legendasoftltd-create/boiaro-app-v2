@@ -151,7 +151,8 @@ class FFAppState extends ChangeNotifier {
           prefs.getString('ff_countryCodeEdit') ?? _countryCodeEdit;
     });
     _safeInit(() {
-      _watchedAdBooks = prefs.getStringList('ff_watchedAdBooks') ?? _watchedAdBooks;
+      _watchedAdBooks =
+          prefs.getStringList('ff_watchedAdBooks') ?? _watchedAdBooks;
     });
     _safeInit(() {
       _lastAdShownAtMillis =
@@ -226,6 +227,7 @@ class FFAppState extends ChangeNotifier {
     }
     return _token;
   }
+
   set token(String value) {
     _token = value;
     prefs.setString('ff_token', value);
@@ -243,6 +245,7 @@ class FFAppState extends ChangeNotifier {
     }
     return _refreshToken;
   }
+
   set refreshToken(String value) {
     _refreshToken = value;
     prefs.setString('ff_refreshToken', value);
@@ -821,6 +824,23 @@ class FFAppState extends ChangeNotifier {
   void clearGetHomepageCacheCache() => _getHomepageCacheManager.clear();
   void clearGetHomepageCacheCacheKey(String? uniqueKey) =>
       _getHomepageCacheManager.clearRequest(uniqueKey);
+
+  final _getCategorySectionsCacheManager =
+      FutureRequestManager<ApiCallResponse>();
+  Future<ApiCallResponse> getCategorySectionsCache({
+    String? uniqueQueryKey,
+    bool? overrideCache,
+    required Future<ApiCallResponse> Function() requestFn,
+  }) =>
+      _getCategorySectionsCacheManager.performRequest(
+        uniqueQueryKey: uniqueQueryKey,
+        overrideCache: overrideCache,
+        requestFn: requestFn,
+      );
+  void clearGetCategorySectionsCacheCache() =>
+      _getCategorySectionsCacheManager.clear();
+  void clearGetCategorySectionsCacheCacheKey(String? uniqueKey) =>
+      _getCategorySectionsCacheManager.clearRequest(uniqueKey);
 
   final _getNewBooksCacheManager = FutureRequestManager<ApiCallResponse>();
   Future<ApiCallResponse> getNewBooksCache({

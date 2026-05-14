@@ -1,5 +1,6 @@
 import 'package:a_i_ebook_app/pages/home_pages/home_page/image_slider.dart';
 
+import '/backend/boiaro_legacy_adapter.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -52,7 +53,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
   final animationsMap = <String, AnimationInfo>{};
   HomeBookFilter _selectedFilter = HomeBookFilter.all;
 
-  String get _homepageCacheKey => 'homepage_${_selectedApiType().isEmpty ? 'all' : _selectedApiType()}';
+  String get _homepageCacheKey =>
+      'homepage_${_selectedApiType().isEmpty ? 'all' : _selectedApiType()}';
 
   String _normalizeTypeValue(dynamic type) {
     if (type == null) {
@@ -154,7 +156,17 @@ class _HomePageWidgetState extends State<HomePageWidget>
         '';
   }
 
-  List<dynamic> _pickHomeSectionBooks(List<dynamic> books, {int limit = 3}) {
+  ApiCallResponse _emptyCategorySectionsResponse() {
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        extra: const {'categorySections': <dynamic>[]},
+      ),
+      const {},
+      200,
+    );
+  }
+
+  List<dynamic> _pickHomeSectionBooks(List<dynamic> books) {
     return _filterBooks(books);
   }
 
@@ -499,7 +511,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                           ),
                     ),
                     Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 6.0, 0.0, 8.0),
+                      padding:
+                          EdgeInsetsDirectional.fromSTEB(0.0, 6.0, 0.0, 8.0),
                       child: Text(
                         subtitleText,
                         maxLines: 1,
@@ -525,14 +538,16 @@ class _HomePageWidgetState extends State<HomePageWidget>
                           ),
                     ),
                     Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(0.0, 6.0, 0.0, 0.0),
+                      padding:
+                          EdgeInsetsDirectional.fromSTEB(0.0, 6.0, 0.0, 0.0),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(999.0),
                         child: LinearProgressIndicator(
                           value: safeProgress,
                           minHeight: 4.0,
-                          backgroundColor:
-                              FlutterFlowTheme.of(context).primaryText.withValues(alpha: .1),
+                          backgroundColor: FlutterFlowTheme.of(context)
+                              .primaryText
+                              .withValues(alpha: .1),
                           valueColor: AlwaysStoppedAnimation<Color>(
                             FlutterFlowTheme.of(context).primary,
                           ),
@@ -585,8 +600,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                       child: Icon(
                         typeIcon,
                         size: 12.0,
-                        color:
-                            FlutterFlowTheme.of(context).primaryBackground,
+                        color: FlutterFlowTheme.of(context).primaryBackground,
                       ),
                     ),
                   ),
@@ -726,7 +740,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                       mainAxisSize: MainAxisSize.max,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                      Expanded(
+                        Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.max,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -771,79 +785,84 @@ class _HomePageWidgetState extends State<HomePageWidget>
                           ).animateOnPageLoad(
                               animationsMap['columnOnPageLoadAnimation']!),
                         ),
-                      SizedBox(width: 16),
-                      SizedBox(
-                        width: 180,
-                        height: 36,
-                        child: InkWell(
-                          splashColor: Colors.transparent,
-                          focusColor: Colors.transparent,
-                          hoverColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                          onTap: () async {
-                            context.pushNamed(SearchPageWidget.routeName);
-                          },
-                        child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                          border: Border.all(color: FlutterFlowTheme.of(context).shadowColor),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     blurRadius: 16.0,
-                          //     color: FlutterFlowTheme.of(context).shadowColor,
-                          //     offset: Offset(
-                          //       0.0,
-                          //       4.0,
-                          //     ),
-                          //   )
-                          // ],
-                          borderRadius: BorderRadius.circular(8.0),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(0.0),
-                                child: SvgPicture.asset(
-                                  'assets/images/search.svg',
-                                  width: 24.0,
-                                  height: 24.0,
-                                  fit: BoxFit.cover,
-                                  color: FlutterFlowTheme.of(context)
-                                            .secondaryText,
-                                ),
+                        SizedBox(width: 16),
+                        SizedBox(
+                          width: 180,
+                          height: 36,
+                          child: InkWell(
+                            splashColor: Colors.transparent,
+                            focusColor: Colors.transparent,
+                            hoverColor: Colors.transparent,
+                            highlightColor: Colors.transparent,
+                            onTap: () async {
+                              context.pushNamed(SearchPageWidget.routeName);
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context)
+                                    .secondaryBackground,
+                                border: Border.all(
+                                    color: FlutterFlowTheme.of(context)
+                                        .shadowColor),
+                                // boxShadow: [
+                                //   BoxShadow(
+                                //     blurRadius: 16.0,
+                                //     color: FlutterFlowTheme.of(context).shadowColor,
+                                //     offset: Offset(
+                                //       0.0,
+                                //       4.0,
+                                //     ),
+                                //   )
+                                // ],
+                                borderRadius: BorderRadius.circular(8.0),
                               ),
-                              Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(
-                                    16.0, 0.0, 0.0, 0.0),
-                                child: Text(
-                                  FFLocalizations.of(context).getText('search_hint'),
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(0.0),
+                                      child: SvgPicture.asset(
+                                        'assets/images/search.svg',
+                                        width: 24.0,
+                                        height: 24.0,
+                                        fit: BoxFit.cover,
                                         color: FlutterFlowTheme.of(context)
                                             .secondaryText,
-                                        fontSize: 16.0,
-                                        letterSpacing: 0.0,
-                                        lineHeight: 1.5,
                                       ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          16.0, 0.0, 0.0, 0.0),
+                                      child: Text(
+                                        FFLocalizations.of(context)
+                                            .getText('search_hint'),
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .secondaryText,
+                                              fontSize: 16.0,
+                                              letterSpacing: 0.0,
+                                              lineHeight: 1.5,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                                                ),
-                                          ),
-                      ),
-                      SizedBox(
+                        SizedBox(
                           width: 8,
                         ),
-                      InkWell(
+                        InkWell(
                           splashColor: Colors.transparent,
                           focusColor: Colors.transparent,
                           hoverColor: Colors.transparent,
@@ -879,7 +898,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                 width: 22.0,
                                 height: 22.0,
                                 fit: BoxFit.cover,
-                                colorFilter: ColorFilter.mode(FlutterFlowTheme.of(context).primaryText, BlendMode.srcIn),
+                                colorFilter: ColorFilter.mode(
+                                    FlutterFlowTheme.of(context).primaryText,
+                                    BlendMode.srcIn),
                               ),
                             ),
                           ),
@@ -975,164 +996,193 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     child: _buildFormatToggle(context),
                   ),
                 ],
-                  Expanded(
-                    child: FutureBuilder<ApiCallResponse>(
-                      future: Future.value(_emptyFavouriteResponse()).then((result) {
-                        _model.apiRequestCompleted1 = true;
-                        return result;
-                      }),
-                      builder: (context, snapshot) {
-                        // Customize what your widget looks like when it's loading.
-                        if (!snapshot.hasData) {
-                          return HomeShimmerWidget();
-                        }
-                        final containerGetFavouriteBookResponse =
-                            snapshot.data!;
+                Expanded(
+                  child: FutureBuilder<ApiCallResponse>(
+                    future:
+                        Future.value(_emptyFavouriteResponse()).then((result) {
+                      _model.apiRequestCompleted1 = true;
+                      return result;
+                    }),
+                    builder: (context, snapshot) {
+                      // Customize what your widget looks like when it's loading.
+                      if (!snapshot.hasData) {
+                        return HomeShimmerWidget();
+                      }
+                      final containerGetFavouriteBookResponse = snapshot.data!;
 
-                        return Container(
-                          width: double.infinity,
-                          height: double.infinity,
-                          decoration: BoxDecoration(),
-                          child: FutureBuilder<ApiCallResponse>(
-                            future: FFAppState()
-                                .getHomepageCache(
-                              uniqueQueryKey: _homepageCacheKey,
-                              requestFn: () =>
-                                  EbookGroup.getHomepageApiCall.call(
-                                token: FFAppState().token,
-                                type: _selectedApiType(),
-                              ),
-                            )
-                                .then((result) {
-                              _model.apiRequestCompleted2 = true;
-                              return result;
-                            }),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) {
-                                return HomeShimmerWidget();
-                              }
-                              final containerHomepageResponse = snapshot.data!;
+                      return Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        decoration: BoxDecoration(),
+                        child: FutureBuilder<ApiCallResponse>(
+                          future: FFAppState()
+                              .getHomepageCache(
+                            uniqueQueryKey: _homepageCacheKey,
+                            requestFn: () => EbookGroup.getHomepageApiCall.call(
+                              token: FFAppState().token,
+                              type: _selectedApiType(),
+                            ),
+                          )
+                              .then((result) {
+                            _model.apiRequestCompleted2 = true;
+                            return result;
+                          }),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) {
+                              return HomeShimmerWidget();
+                            }
+                            final containerHomepageResponse = snapshot.data!;
 
-                              return Container(
-                                width: double.infinity,
-                                height: double.infinity,
-                                decoration: BoxDecoration(),
-                                child: Builder(
-                                  builder: (context) {
-                                    return Container(
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      decoration: BoxDecoration(),
-                                      child: Builder(
-                                        builder: (context) {
-                                          return Container(
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            decoration: BoxDecoration(),
-                                            child: Builder(
-                                              builder: (context) {
-                                                return Container(
-                                                  width: double.infinity,
-                                                  height: double.infinity,
-                                                  decoration: BoxDecoration(),
-                                                  child: Builder(
-                                                    builder: (context) {
-                                                      if (EbookGroup
+                            return Container(
+                              width: double.infinity,
+                              height: double.infinity,
+                              decoration: BoxDecoration(),
+                              child: Builder(
+                                builder: (context) {
+                                  return Container(
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    decoration: BoxDecoration(),
+                                    child: Builder(
+                                      builder: (context) {
+                                        return Container(
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          decoration: BoxDecoration(),
+                                          child: Builder(
+                                            builder: (context) {
+                                              return Container(
+                                                width: double.infinity,
+                                                height: double.infinity,
+                                                decoration: BoxDecoration(),
+                                                child: Builder(
+                                                  builder: (context) {
+                                                    if (EbookGroup
+                                                            .getHomepageApiCall
+                                                            .success(
+                                                          containerHomepageResponse
+                                                              .jsonBody,
+                                                        ) ==
+                                                        2) {
+                                                      return Align(
+                                                        alignment:
+                                                            AlignmentDirectional(
+                                                                0.0, 0.0),
+                                                        child: Padding(
+                                                          padding:
+                                                              EdgeInsetsDirectional
+                                                                  .fromSTEB(
+                                                                      16.0,
+                                                                      0.0,
+                                                                      16.0,
+                                                                      0.0),
+                                                          child: Text(
+                                                            valueOrDefault<
+                                                                String>(
+                                                              EbookGroup
                                                                   .getHomepageApiCall
-                                                                  .success(
+                                                                  .message(
                                                                 containerHomepageResponse
                                                                     .jsonBody,
-                                                              ) ==
-                                                              2) {
-                                                        return Align(
-                                                          alignment:
-                                                              AlignmentDirectional(
-                                                                  0.0, 0.0),
-                                                          child: Padding(
-                                                            padding:
-                                                                EdgeInsetsDirectional
-                                                                    .fromSTEB(
-                                                                        16.0,
-                                                                        0.0,
-                                                                        16.0,
-                                                                        0.0),
-                                                            child: Text(
-                                                              valueOrDefault<
-                                                                  String>(
-                                                                EbookGroup
-                                                                    .getHomepageApiCall
-                                                                    .message(
-                                                                  containerHomepageResponse
-                                                                      .jsonBody,
-                                                                ),
-                                                                'Message',
                                                               ),
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              style: FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .bodyMedium
-                                                                  .override(
-                                                                    fontFamily:
-                                                                        'SF Pro Display',
-                                                                    fontSize:
-                                                                        18.0,
-                                                                    letterSpacing:
-                                                                        0.0,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                    lineHeight:
-                                                                        1.5,
-                                                                  ),
+                                                              'Message',
                                                             ),
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                            style: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .bodyMedium
+                                                                .override(
+                                                                  fontFamily:
+                                                                      'SF Pro Display',
+                                                                  fontSize:
+                                                                      18.0,
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  lineHeight:
+                                                                      1.5,
+                                                                ),
                                                           ),
-                                                        );
-                                                      } else {
-                                                        return _buildHomepageContent(
-                                                          homepageJson:
-                                                              containerHomepageResponse
-                                                                  .jsonBody,
-                                                          favouriteJson:
-                                                              containerGetFavouriteBookResponse
-                                                                  .jsonBody,
-                                                        );
-                                                      }
-                                                    },
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
+                                                        ),
+                                                      );
+                                                    } else {
+                                                      return FutureBuilder<
+                                                          ApiCallResponse>(
+                                                        future: FFAppState()
+                                                            .getCategorySectionsCache(
+                                                          uniqueQueryKey:
+                                                              'category_sections',
+                                                          requestFn: () =>
+                                                              EbookGroup
+                                                                  .getCategorySectionsApiCall
+                                                                  .call(
+                                                            token: FFAppState()
+                                                                .token,
+                                                          ),
+                                                        ),
+                                                        initialData:
+                                                            _emptyCategorySectionsResponse(),
+                                                        builder: (context,
+                                                            categorySnapshot) {
+                                                          final categorySections = EbookGroup
+                                                                  .getCategorySectionsApiCall
+                                                                  .categorySectionsList(
+                                                                    categorySnapshot
+                                                                        .data
+                                                                        ?.jsonBody,
+                                                                  )
+                                                                  ?.toList() ??
+                                                              [];
+                                                          return _buildHomepageContent(
+                                                            homepageJson:
+                                                                containerHomepageResponse
+                                                                    .jsonBody,
+                                                            favouriteJson:
+                                                                containerGetFavouriteBookResponse
+                                                                    .jsonBody,
+                                                            categorySections:
+                                                                categorySections,
+                                                          );
+                                                        },
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
-                ].addToStart(SizedBox(height: 24.0)),
-              );
-            } else {
-              return Align(
-                alignment: AlignmentDirectional(0.0, 0.0),
-                child: Lottie.asset(
-                  'assets/jsons/No_Wifi.json',
-                  width: 150.0,
-                  height: 150.0,
-                  fit: BoxFit.contain,
-                  animate: true,
                 ),
-              );
-            }
-          },
-        ),
+              ].addToStart(SizedBox(height: 24.0)),
+            );
+          } else {
+            return Align(
+              alignment: AlignmentDirectional(0.0, 0.0),
+              child: Lottie.asset(
+                'assets/jsons/No_Wifi.json',
+                width: 150.0,
+                height: 150.0,
+                fit: BoxFit.contain,
+                animate: true,
+              ),
+            );
+          }
+        },
+      ),
     );
 
     if (widget.embeddedAudiobookMode) {
@@ -1148,12 +1198,11 @@ class _HomePageWidgetState extends State<HomePageWidget>
   Widget _buildContinueReadingSection() {
     return Builder(
       builder: (context) {
-        final showEbookResume = _allowsEbook &&
-            FFAppState().homePageLiveReadBook.trim().isNotEmpty;
-        final showAudioResume =
-            (_selectedFilter == HomeBookFilter.all ||
+        final showEbookResume =
+            _allowsEbook && FFAppState().homePageLiveReadBook.trim().isNotEmpty;
+        final showAudioResume = (_selectedFilter == HomeBookFilter.all ||
                 _selectedFilter == HomeBookFilter.audiobook) &&
-                FFAppState().homePageLastAudioBookId.isNotEmpty;
+            FFAppState().homePageLastAudioBookId.isNotEmpty;
 
         if (!showEbookResume && !showAudioResume) {
           return const SizedBox.shrink();
@@ -1255,7 +1304,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                               'audiobook': {
                                 'id': FFAppState().homePageLastAudioBookId,
                                 'title': FFAppState().homePageLastAudioBookName,
-                                'image': FFAppState().homePageLastAudioBookImage,
+                                'image':
+                                    FFAppState().homePageLastAudioBookImage,
                               },
                             },
                           );
@@ -1324,10 +1374,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
   }
 
   Widget _buildSliderSection(dynamic homepageJson) {
-    final sliders =
-        EbookGroup.getHomepageApiCall.sliderDetailsList(homepageJson)
-                ?.toList() ??
-            [];
+    final sliders = EbookGroup.getHomepageApiCall
+            .sliderDetailsList(homepageJson)
+            ?.toList() ??
+        [];
     if (sliders.isNotEmpty) {
       return BannerSlider(
         sliderItems: sliders,
@@ -1415,7 +1465,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     'category_${getJsonField(item, r'''$._id''').toString()}',
                   ),
                   icon:
-                      '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.icon''').toString()}',
+                      '${FFAppConstants.webUrl}${getJsonField(item, r'''$.icon''').toString()}',
                   name: getJsonField(item, r'''$.name''').toString(),
                   isSmall: true,
                   onMainTap: () async {
@@ -1444,7 +1494,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
   }
 
   Widget _buildAuthorsSection(dynamic homepageJson) {
-    final items = (EbookGroup.getHomepageApiCall.authorDetailsList(homepageJson)
+    final items = (EbookGroup.getHomepageApiCall
+                .authorDetailsList(homepageJson)
                 ?.toList() ??
             [])
         .take(4)
@@ -1475,7 +1526,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                 ),
                 updateCallback: () => safeSetState(() {}),
                 child: CategoryComponentWidget(
-                  key: Key('author_${getJsonField(item, r'''$._id''').toString()}'),
+                  key: Key(
+                      'author_${getJsonField(item, r'''$._id''').toString()}'),
                   icon:
                       '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.image''').toString()}',
                   name: getJsonField(item, r'''$.name''').toString(),
@@ -1533,7 +1585,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
               ),
             ),
             Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 16.0, 0.0),
+              padding:
+                  const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 16.0, 0.0),
               child: InkWell(
                 splashColor: Colors.transparent,
                 focusColor: Colors.transparent,
@@ -1609,8 +1662,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                   errorWidget: (_, __, ___) => Container(
                                     width: 72,
                                     height: 72,
-                                    color: FlutterFlowTheme.of(context)
-                                        .alternate,
+                                    color:
+                                        FlutterFlowTheme.of(context).alternate,
                                     child: Icon(
                                       Icons.person,
                                       color: FlutterFlowTheme.of(context)
@@ -1699,8 +1752,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     ),
                     isPurchased: _model.purchasedBookIds.contains(id),
                     bookType: _resolveBookType(item),
-                    indicator:
-                        (index == _model.popularIndex) && (_model.isPopular == true),
+                    indicator: (index == _model.popularIndex) &&
+                        (_model.isPopular == true),
                     width: 280.0,
                     isFav: functions.checkFavOrNot(
                           EbookGroup.getFavouriteBookCall
@@ -1757,8 +1810,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                   ),
                 ),
               );
-            }).addToStart(const SizedBox(width: 5)).addToEnd(
-                const SizedBox(width: 5)),
+            })
+                .addToStart(const SizedBox(width: 5))
+                .addToEnd(const SizedBox(width: 5)),
           ),
         ),
       ],
@@ -1768,6 +1822,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
   Widget _buildHomepageContent({
     required dynamic homepageJson,
     required dynamic favouriteJson,
+    required List<dynamic> categorySections,
   }) {
     final newBooks =
         EbookGroup.getHomepageApiCall.newBookList(homepageJson)?.toList() ?? [];
@@ -1775,14 +1830,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
             .trendingBookList(homepageJson)
             ?.toList() ??
         [];
-    final popularBooks = EbookGroup.getHomepageApiCall
-            .popularBookList(homepageJson)
-            ?.toList() ??
-        [];
-    final freeBooks = EbookGroup.getHomepageApiCall
-            .freeBookList(homepageJson)
-            ?.toList() ??
-        [];
+    final popularBooks =
+        EbookGroup.getHomepageApiCall.popularBookList(homepageJson)?.toList() ??
+            [];
+    final freeBooks =
+        EbookGroup.getHomepageApiCall.freeBookList(homepageJson)?.toList() ??
+            [];
     final topTen = EbookGroup.getHomepageApiCall
             .topTenMostReadList(homepageJson)
             ?.toList() ??
@@ -1791,10 +1844,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
             .becauseYouReadList(homepageJson)
             ?.toList() ??
         [];
-    final editorsPick = EbookGroup.getHomepageApiCall
-            .editorsPickList(homepageJson)
-            ?.toList() ??
-        [];
+    final editorsPick =
+        EbookGroup.getHomepageApiCall.editorsPickList(homepageJson)?.toList() ??
+            [];
     final popularAudiobooks = EbookGroup.getHomepageApiCall
             .popularAudiobookList(homepageJson)
             ?.toList() ??
@@ -1815,6 +1867,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         safeSetState(() {
           FFAppState().clearGetFavouriteBookCacheCache();
           FFAppState().clearGetHomepageCacheCache();
+          FFAppState().clearGetCategorySectionsCacheCache();
           _model.apiRequestCompleted1 = false;
           _model.apiRequestCompleted2 = false;
         });
@@ -1839,7 +1892,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                 NewBooksPageWidget.routeName,
                 queryParameters: {
                   'type': serializeParam(_selectedApiType(), ParamType.String),
-                  'title': serializeParam(_selectedNewTitle(), ParamType.String),
+                  'title':
+                      serializeParam(_selectedNewTitle(), ParamType.String),
                 }.withoutNulls,
               );
             },
@@ -1854,8 +1908,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                 TrendingBooksPageWidget.routeName,
                 queryParameters: {
                   'type': serializeParam(_selectedApiType(), ParamType.String),
-                  'title':
-                      serializeParam(_selectedTrendingTitle(), ParamType.String),
+                  'title': serializeParam(
+                      _selectedTrendingTitle(), ParamType.String),
                 }.withoutNulls,
               );
             },
@@ -1950,6 +2004,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
                 );
               },
             ),
+          _buildDynamicCategorySections(
+            sections: categorySections,
+            favouriteJson: favouriteJson,
+          ),
         ],
       ),
     );
@@ -2004,8 +2062,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     ).toString(),
                     id: id,
                     isPurchased: _model.purchasedBookIds.contains(id),
-                    authorsName: getJsonField(item, r'''$.author.name''')
-                        .toString(),
+                    authorsName:
+                        getJsonField(item, r'''$.author.name''').toString(),
                     isFav: functions.checkFavOrNot(
                           EbookGroup.getFavouriteBookCall
                               .favouriteBookDetailsList(favouriteJson)
@@ -2064,6 +2122,71 @@ class _HomePageWidgetState extends State<HomePageWidget>
         ),
       ],
     );
+  }
+
+  String _categorySectionTitle(dynamic section) {
+    final title =
+        getJsonField(section, r'''$.title''')?.toString().trim() ?? '';
+    if (title.isNotEmpty && title.toLowerCase() != 'null') {
+      return title;
+    }
+    return getJsonField(section, r'''$.category.name''')?.toString().trim() ??
+        '';
+  }
+
+  Future<void> _openCategorySection(dynamic section) async {
+    final categoryId =
+        getJsonField(section, r'''$.category_id''')?.toString().trim() ?? '';
+    if (categoryId.isEmpty) {
+      return;
+    }
+    context.pushNamed(
+      GetBookByCategoryPageWidget.routeName,
+      queryParameters: {
+        'id': serializeParam(categoryId, ParamType.String),
+        'name':
+            serializeParam(_categorySectionTitle(section), ParamType.String),
+      }.withoutNulls,
+    );
+  }
+
+  Widget _buildDynamicCategorySections({
+    required List<dynamic> sections,
+    required dynamic favouriteJson,
+  }) {
+    final widgets = <Widget>[];
+    for (final section in sections) {
+      final title = _categorySectionTitle(section);
+      final books =
+          (getJsonField(section, r'''$.books''', true) as List?)?.toList() ??
+              [];
+      if (title.isEmpty || books.isEmpty) {
+        continue;
+      }
+      final picked = _pickHomeSectionBooks(books);
+      if (picked.isEmpty) {
+        continue;
+      }
+      final sectionId = getJsonField(section, r'''$.id''')?.toString().trim();
+      final fallbackCategoryId =
+          getJsonField(section, r'''$.category_id''')?.toString().trim() ?? '';
+      widgets.add(
+        _buildBookStripSection(
+          title: title,
+          sectionKey:
+              'category_section_${sectionId?.isNotEmpty == true ? sectionId : fallbackCategoryId}',
+          books: books,
+          favouriteJson: favouriteJson,
+          onViewAll: fallbackCategoryId.isEmpty
+              ? null
+              : () => _openCategorySection(section),
+        ),
+      );
+    }
+    if (widgets.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(children: widgets);
   }
 
   Widget _buildHomeLibraryPromo() {

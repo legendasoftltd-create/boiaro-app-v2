@@ -363,7 +363,8 @@ class CheckoutController {
         body['shipping_address'] = shippingAddress['addressLine1'] ?? shippingAddress['address'] ?? '';
         body['shipping_city'] = shippingAddress['city'] ?? '';
         body['shipping_district'] = shippingAddress['city'] ?? ''; // District often same as city in this context
-        body['shipping_area'] = shippingAddress['state'] ?? '';
+        body['shipping_area'] = shippingAddress['shipping_area'] ?? shippingAddress['state'] ?? '';
+        body['shipping_area_id'] = shippingAddress['shipping_area_id'];
         body['shipping_zip'] = shippingAddress['postalCode'] ?? '';
       }
 

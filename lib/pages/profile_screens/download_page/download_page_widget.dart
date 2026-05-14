@@ -27,6 +27,7 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoading = true;
   List<LocalDownloadedBook> _downloads = [];
+  final Set<String> _deletingBookIds = <String>{};
 
   @override
   void initState() {
@@ -63,6 +64,56 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
         'image': serializeParam(item.image, ParamType.String),
       }.withoutNulls,
     );
+  }
+
+  Future<void> _deleteDownloadedBook(LocalDownloadedBook item) async {
+    final shouldDelete = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Delete download'),
+            content: Text('Remove "${item.name}" from this device?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: FlutterFlowTheme.of(dialogContext).error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!shouldDelete || !mounted) return;
+
+    safeSetState(() {
+      _deletingBookIds.add(item.bookId);
+    });
+
+    try {
+      await LocalDownloadService.deleteDownloadByBookId(item.bookId);
+      await actions.showCustomToastBottom('Download deleted');
+      await _loadDownloads();
+    } catch (_) {
+      await actions.showCustomToastBottom('Failed to delete download');
+      if (!mounted) return;
+      safeSetState(() {
+        _deletingBookIds.remove(item.bookId);
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    safeSetState(() {
+      _deletingBookIds.remove(item.bookId);
+    });
   }
 
   @override
@@ -125,8 +176,12 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                   const EdgeInsets.fromLTRB(16, 16, 16, 24),
                               itemBuilder: (context, index) {
                                 final item = _downloads[index];
+                                final isDeleting =
+                                    _deletingBookIds.contains(item.bookId);
                                 return InkWell(
-                                  onTap: () => _openDownloadedBook(item),
+                                  onTap: isDeleting
+                                      ? null
+                                      : () => _openDownloadedBook(item),
                                   child: Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
@@ -235,12 +290,51 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        Icon(
-                                          Icons.arrow_forward_ios,
-                                          color: FlutterFlowTheme.of(context)
-                                              .secondaryText,
-                                          size: 14,
-                                        ),
+                                        isDeleting
+                                            ? SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                          Color>(
+                                                    FlutterFlowTheme.of(context)
+                                                        .primary,
+                                                  ),
+                                                ),
+                                              )
+                                            : PopupMenuButton<String>(
+                                                icon: Icon(
+                                                  Icons.more_vert,
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .secondaryText,
+                                                  size: 20,
+                                                ),
+                                                onSelected: (value) async {
+                                                  if (value == 'delete') {
+                                                    await _deleteDownloadedBook(
+                                                        item);
+                                                  }
+                                                },
+                                                itemBuilder: (context) => [
+                                                  const PopupMenuItem<String>(
+                                                    value: 'delete',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.delete_outline,
+                                                          size: 18,
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Text('Delete'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                       ],
                                     ),
                                   ),

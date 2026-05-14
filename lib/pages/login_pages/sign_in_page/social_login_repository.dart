@@ -49,7 +49,7 @@ class SocialLoginRepository {
 
   SocialLoginRepository() {
     _googleSignIn.initialize(
-      // Web OAuth 2.0 client ID (project: 37005664714, name: Boiaro)
+      // Web OAuth 2.0 client ID (project: boiaro, number: 37005664714)
       serverClientId:
           '37005664714-ouo8u0aquc5cefrglf8n46j2t28g7c71.apps.googleusercontent.com',
     );
@@ -87,6 +87,7 @@ class SocialLoginRepository {
 
       print('Calling Social Login API with provider: google');
       print('accessToken length: ${accessToken.length}, idToken length: ${idToken.length}');
+      print('accessToken : ${accessToken}, idToken : ${idToken}');
       final response = await EbookGroup.socialLoginCall.call(
         email: googleUser.email,
         firstname: googleUser.displayName?.split(' ').first ?? '',
@@ -97,8 +98,9 @@ class SocialLoginRepository {
         // Send only accessToken — backend verifies via Google tokeninfo API (no audience check).
         // Do NOT send idToken as its audience is now the new Web client ID
         // which the backend hasn't been updated to accept yet.
-        accessToken: accessToken.isNotEmpty ? accessToken : idToken,
-        idToken: null, // intentionally omitted to avoid audience mismatch
+        // accessToken: accessToken.isNotEmpty ? accessToken : idToken,
+        accessToken: accessToken,
+        idToken: idToken,
         registrationToken: fcmToken,
         deviceId: deviceId,
       );

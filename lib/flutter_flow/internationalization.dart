@@ -53,7 +53,7 @@ class FFLocalizations {
       'featured_narrators_title': 'Featured Narrators',
       'home_app_promo_title': 'Your library, always with you',
       'home_app_promo_body':
-          'Read offline, sync progress, and enjoy premium audiobooks — same spirit as boiarov2.blocknots.com.',
+          'Read offline, sync progress, and enjoy premium audiobooks — same spirit as Boiaro',
       'slider_editors_choice': 'Editor\'s Choice',
       'slider_read_ebook': 'Read eBook',
       'slider_listen_now': 'Listen Now',

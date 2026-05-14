@@ -12,9 +12,9 @@ abstract class FFAppConstants {
   static const String baseApiUrl = mobileApiBaseUrl;
 
   /// v2 APIs return full `https://` URLs; keep these empty so `${bookImagesUrl}${image}` resolves to the full URL.
-  static const String imageUrl = webUrl;
-  static const String bookImagesUrl = webUrl;
-  static const String sliderImagesUrl = webUrl;
+  static const String imageUrl = '';
+  static const String bookImagesUrl = '';
+  static const String sliderImagesUrl = '';
   static const String audiobookAudioUrl = webUrl;
   static const String audiobookPreviewAudioUrl = webUrl;
   static const String audiobookAudioPreviewUrl = webUrl;

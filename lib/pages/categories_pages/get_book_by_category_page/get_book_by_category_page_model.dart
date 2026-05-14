@@ -1,7 +1,7 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
-import '/pages/components/main_book_component/main_book_component_widget.dart';
+import '/pages/components/list_main_container_component/list_main_container_component_widget.dart';
 import '/pages/empty_components/no_categories_yet/no_categories_yet_widget.dart';
 import '/index.dart';
 import 'dart:async';
@@ -23,13 +23,14 @@ class GetBookByCategoryPageModel
   // Model for CustomCenterAppbar component.
   late CustomCenterAppbarModel customCenterAppbarModel;
   Completer<ApiCallResponse>? apiRequestCompleter2;
-  // Models for MainBookComponent dynamic component.
-  late FlutterFlowDynamicModels<MainBookComponentModel> mainBookComponentModels;
-  // Stores action output result for [Backend Call - API (RemoveFavouritebook)] action in MainBookComponent widget.
+  // Models for ListMainContainerComponent dynamic component.
+  late FlutterFlowDynamicModels<ListMainContainerComponentModel>
+      listMainContainerComponentModels;
+  // Stores action output result for [Backend Call - API (RemoveFavouritebook)] action in ListMainContainerComponent widget.
   ApiCallResponse? getPopularDetete;
   bool apiRequestCompleted1 = false;
   String? apiRequestLastUniqueKey1;
-  // Stores action output result for [Backend Call - API (AddFavouriteBookApi)] action in MainBookComponent widget.
+  // Stores action output result for [Backend Call - API (AddFavouriteBookApi)] action in ListMainContainerComponent widget.
   ApiCallResponse? getPopularAdd;
   // Model for NoCategoriesYet component.
   late NoCategoriesYetModel noCategoriesYetModel;
@@ -38,15 +39,15 @@ class GetBookByCategoryPageModel
   void initState(BuildContext context) {
     customCenterAppbarModel =
         createModel(context, () => CustomCenterAppbarModel());
-    mainBookComponentModels =
-        FlutterFlowDynamicModels(() => MainBookComponentModel());
+    listMainContainerComponentModels =
+        FlutterFlowDynamicModels(() => ListMainContainerComponentModel());
     noCategoriesYetModel = createModel(context, () => NoCategoriesYetModel());
   }
 
   @override
   void dispose() {
     customCenterAppbarModel.dispose();
-    mainBookComponentModels.dispose();
+    listMainContainerComponentModels.dispose();
     noCategoriesYetModel.dispose();
   }
 
