@@ -1,4 +1,5 @@
 import 'package:epub_reader_kit/epub_reader_kit.dart';
+import 'package:epubx/epubx.dart' as epubx;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
@@ -220,8 +221,12 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       return sourcePath;
     }
 
-    final tempDir = await getTemporaryDirectory();
-    final cacheDir = Directory(p.join(tempDir.path, 'native_epub_cache'));
+    // Use getApplicationDocumentsDirectory (getFilesDir on Android) instead of
+    // getTemporaryDirectory (getCacheDir). The native epub_reader_kit / Readium
+    // plugin cannot reliably access files from the Android cache/temp directory,
+    // but the app's documents directory is always accessible by native code.
+    final docsDir = await getApplicationDocumentsDirectory();
+    final cacheDir = Directory(p.join(docsDir.path, 'native_epub_cache'));
     if (!cacheDir.existsSync()) {
       await cacheDir.create(recursive: true);
     }
@@ -229,19 +234,123 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     final uri = Uri.parse(sourcePath);
     final ext = p.extension(uri.path).toLowerCase();
     final safeExt = ext.isEmpty ? '.epub' : ext;
-    final fileName =
-        'book_${widget.id ?? DateTime.now().millisecondsSinceEpoch}$safeExt';
+    final bookId = widget.id ?? 'unknown';
+
+    // ── KEY FIX: timestamp-based unique filename ──────────────────────────────
+    // The epub_reader_kit plugin has its own SQLite DB keyed by sourceKey
+    // (= the local file path). If we reuse the same filename, the plugin finds
+    // the OLD stale DB entry and calls readerRepository.open() on it — which
+    // fails with "Could not open publication" because the stored Readium
+    // publication data no longer matches the new epub content.
+    //
+    // Fix: embed a timestamp in the filename so every download gets a UNIQUE
+    // path → unique sourceKey → plugin always does a fresh import.
+    // ─────────────────────────────────────────────────────────────────────────
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final fileName = 'book_${bookId}_$timestamp$safeExt';
     final cachedFile = File(p.join(cacheDir.path, fileName));
 
-    if (!cachedFile.existsSync() || cachedFile.lengthSync() == 0) {
-      final response = await http.get(uri);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException(
-          'Failed to download EPUB (${response.statusCode})',
-          uri: uri,
+    // Clean up any previous timestamped epub files for this book to avoid
+    // filling the user's storage over time.
+    try {
+      for (final f in cacheDir.listSync()) {
+        if (f is File) {
+          final name = p.basename(f.path);
+          if (name.startsWith('book_${bookId}_') && name.endsWith(safeExt) &&
+              f.path != cachedFile.path) {
+            await f.delete();
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Add a cache-busting query param to defeat CDN / proxy caches,
+    // BUT skip it for pre-signed URLs (e.g. AWS S3) because those have a
+    // cryptographic signature over their exact query parameters — adding any
+    // extra param invalidates the signature and causes a 403 error.
+    final isPresigned = uri.queryParameters.containsKey('X-Amz-Signature') ||
+        uri.queryParameters.containsKey('Signature');
+    final fetchUri = isPresigned
+        ? uri
+        : uri.replace(queryParameters: {
+            ...uri.queryParameters,
+            '_cb': timestamp.toString(),
+          });
+
+    final response = await http.get(fetchUri);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw HttpException(
+        'Failed to download EPUB (${response.statusCode})',
+        uri: uri,
+      );
+    }
+
+    final bytes = response.bodyBytes;
+
+    // Validate ZIP/PK magic bytes — every valid epub is a zip archive.
+    if (bytes.length < 4 ||
+        bytes[0] != 0x50 || // 'P'
+        bytes[1] != 0x4B) { // 'K'
+      final preview = bytes.length > 200
+          ? String.fromCharCodes(bytes.sublist(0, 200))
+          : String.fromCharCodes(bytes);
+      throw Exception(
+        'Downloaded file is not a valid EPUB (${bytes.length} bytes). '
+        'Server may have returned an error page: $preview',
+      );
+    }
+
+    await cachedFile.writeAsBytes(bytes, flush: true);
+
+    // Pre-validate the epub structure using epubx before handing to the
+    // native Readium reader.  Readium returns the opaque error
+    // "No navigator supports this publication" when the epub has structural
+    // issues (broken TOC, missing manifest entries, invalid OPF, etc.).
+    // Catching it here gives the admin a precise, actionable diagnosis.
+    try {
+      final book = await epubx.EpubReader.readBook(bytes);
+      final hasContent = (book.Chapters?.isNotEmpty == true) ||
+          (book.Content?.Html?.isNotEmpty == true);
+      if (!hasContent) {
+        await cachedFile.delete();
+        throw Exception(
+          'This book has no readable content.\n'
+          'The EPUB file may be empty or corrupted.\n'
+          'Please ask support to re-upload a valid EPUB.',
         );
       }
-      await cachedFile.writeAsBytes(response.bodyBytes, flush: true);
+    } catch (e) {
+      final msg = e.toString();
+
+      // Re-throw errors we already constructed above.
+      if (msg.contains('no readable content') ||
+          msg.contains('not a valid EPUB')) {
+        rethrow;
+      }
+
+      // Specific diagnosis for the most common structural epub errors.
+      final userMsg = () {
+        if (msg.contains('TOC') || msg.contains('manifest')) {
+          return 'This book has a broken Table of Contents — '
+              'a TOC entry references a file that does not exist '
+              'inside the EPUB package.\n'
+              'Technical detail: $msg\n'
+              'Please ask support to re-upload a correctly '
+              'formatted EPUB file.';
+        }
+        if (msg.contains('OPF') || msg.contains('container')) {
+          return 'This book is missing its package descriptor (OPF/container).\n'
+              'The file may not be a real EPUB (e.g. a PDF renamed to .epub).\n'
+              'Technical detail: $msg\n'
+              'Please ask support to re-upload a valid EPUB.';
+        }
+        return 'This book file is not a valid EPUB.\n'
+            'Technical detail: $msg\n'
+            'Please ask support to re-upload the book.';
+      }();
+
+      await cachedFile.delete();
+      throw Exception(userMsg);
     }
 
     _openedEpubSource = 'local:${cachedFile.path}';

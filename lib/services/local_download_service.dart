@@ -140,6 +140,12 @@ class LocalDownloadService {
     final savePath = p.join(downloadDir.path, '${bookId}_book$extension');
     final file = File(savePath);
 
+    // Delete any stale cached file before downloading so backend updates
+    // are always reflected (prevents old epub/pdf from being served).
+    if (file.existsSync()) {
+      await file.delete();
+    }
+
     await _dio.download(
       resolvedRemoteUrl,
       savePath,
@@ -163,6 +169,18 @@ class LocalDownloadService {
     );
     await _upsertDownload(item);
     return item;
+  }
+
+  /// Returns true if the book is already downloaded BUT the backend URL has
+  /// changed — meaning the cached file is stale and needs a re-download.
+  static Future<bool> isRemoteUrlChanged({
+    required String bookId,
+    required String newRemoteUrl,
+  }) async {
+    final existing = await getDownloadByBookId(bookId);
+    if (existing == null) return false;
+    final resolvedNew = _resolveRemoteUrl(newRemoteUrl);
+    return resolvedNew.isNotEmpty && existing.remoteUrl != resolvedNew;
   }
 
   static Future<void> _upsertDownload(LocalDownloadedBook item) async {

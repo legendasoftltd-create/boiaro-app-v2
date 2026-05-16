@@ -36,7 +36,21 @@ class EpubReaderWidget {
       List<int> bytes;
       
       if (filePath.startsWith('http')) {
-        final response = await http.get(Uri.parse(filePath));
+        // Add a cache-busting param so CDN/proxy caches never serve a stale epub
+        // after the backend file has been updated.
+        // EXCEPTION: pre-signed URLs (AWS S3 etc.) have a cryptographic signature
+        // over their exact query params — adding extra params causes a 403 error.
+        // Pre-signed URLs are already unique per-request, so no busting needed.
+        final uri = Uri.parse(filePath);
+        final isPresigned = uri.queryParameters.containsKey('X-Amz-Signature') ||
+            uri.queryParameters.containsKey('Signature');
+        final fetchUri = isPresigned
+            ? uri
+            : uri.replace(queryParameters: {
+                ...uri.queryParameters,
+                '_cb': DateTime.now().millisecondsSinceEpoch.toString(),
+              });
+        final response = await http.get(fetchUri);
         bytes = response.bodyBytes;
       } else if (filePath.startsWith('assets/')) {
         final data = await rootBundle.load(filePath);
