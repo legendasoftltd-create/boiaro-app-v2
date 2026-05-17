@@ -53,7 +53,19 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
 
   void _tryShowAd() {
     Navigator.pop(context);
-    widget.onWatchAd();
+    if (AdManager.isAdLoaded) {
+      AdManager.showRewardedAd(
+        context: context,
+        onRewardEarned: () {
+          widget.onWatchAd();
+        },
+        onAdFailed: () {
+          widget.onWatchAd(); // fallback if ad fails to show
+        },
+      );
+    } else {
+      widget.onWatchAd(); // fallback if ad wasn't loaded but timer finished
+    }
   }
 
   @override
@@ -197,8 +209,8 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                 FFButtonWidget(
                   onPressed: _isLoadingAd ? null : () {
                     if (AdManager.isAdLoaded) {
-                      Navigator.pop(context);
-                      widget.onWatchAd();
+                      _timer?.cancel();
+                      _tryShowAd();
                     } else {
                       setState(() {
                         _isLoadingAd = true;
@@ -212,8 +224,8 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                             _isLoadingAd = false;
                           });
                           if (AdManager.isAdLoaded) {
-                            Navigator.pop(context);
-                            widget.onWatchAd();
+                            _timer?.cancel();
+                            _tryShowAd();
                           }
                         }
                       });

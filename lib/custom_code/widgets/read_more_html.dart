@@ -36,9 +36,40 @@ class ReadMoreHtml extends StatefulWidget {
 class _ReadMoreHtmlState extends State<ReadMoreHtml> {
   bool _isExpanded = false;
 
+  String _cleanContent(String content) {
+    // Unescape both raw double-slashed backslash sequences and normal escapes
+    content = content.replaceAll('\\r\\n', '\n');
+    content = content.replaceAll('\\n', '\n');
+    content = content.replaceAll('\\r', '\n');
+    
+    content = content.replaceAll(r'\r\n', '\n');
+    content = content.replaceAll(r'\n', '\n');
+    content = content.replaceAll(r'\r', '\n');
+    
+    content = content.replaceAll('\r\n', '\n');
+    content = content.replaceAll('\r', '\n');
+
+    // Clean up escaped quotes
+    content = content.replaceAll('\\"', '"');
+    content = content.replaceAll("\\'", "'");
+    content = content.replaceAll(r'\"', '"');
+    content = content.replaceAll(r"\'", "'");
+
+    // Replace literal backslash-escaped characters
+    content = content.replaceAll(r'\\', '\\');
+
+    // Format newlines into HTML breaks for HtmlWidget if this doesn't already contain block HTML tags
+    if (!content.contains('<p>') && !content.contains('<br>') && !content.contains('</div>') && !content.contains('<br />')) {
+      content = content.replaceAll('\n', '<br />');
+    }
+    
+    return content;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final content = widget.htmlContent ?? '';
+    final rawContent = widget.htmlContent ?? '';
+    final content = _cleanContent(rawContent);
     final maxLength = widget.maxLength ?? content.length;
 
     return Column(

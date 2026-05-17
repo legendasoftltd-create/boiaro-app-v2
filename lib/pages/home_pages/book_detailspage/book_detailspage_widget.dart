@@ -18,6 +18,7 @@ import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import '/providers/cart_provider.dart';
 import '/services/local_download_service.dart';
+import '/custom_code/ad_manager.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -801,14 +802,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         }
 
         if (isEbookFree) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) => custom_widgets.AdRewardDialog(
-              bookImage: bookImage,
-              onWatchAd: performRead,
-            ),
-          );
+          final canShowAd = await AdManager.canShowAd();
+          if (canShowAd) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => custom_widgets.AdRewardDialog(
+                bookImage: bookImage,
+                onWatchAd: performRead,
+              ),
+            );
+          } else {
+            performRead();
+          }
         } else {
           performRead();
         }
@@ -827,7 +833,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         return;
       }
 
-      final previewUrl = _extractEbookPreviewUrlFromDetails(responseJson);
+      final previewUrl = _extractEbookPreviewUrlFromDetails(responseJson) ?? url;
       if (!forceBuy && previewUrl != null && previewUrl.trim().isNotEmpty) {
         await _openBook(
           path: previewUrl,
@@ -1007,14 +1013,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
 
     if (isBookFree) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => custom_widgets.AdRewardDialog(
-          bookImage: bookImage,
-          onWatchAd: performDownload,
-        ),
-      );
+      final canShowAd = await AdManager.canShowAd();
+      if (canShowAd) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => custom_widgets.AdRewardDialog(
+            bookImage: bookImage,
+            onWatchAd: performDownload,
+          ),
+        );
+      } else {
+        performDownload();
+      }
     } else {
       performDownload();
     }
