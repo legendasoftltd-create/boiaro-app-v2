@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/foundation.dart';
@@ -29,6 +30,31 @@ class TtsVoice {
         name: json['name']?.toString() ?? '',
         label: json['label']?.toString() ?? '',
         lang: json['lang']?.toString() ?? 'bn',
+      );
+}
+
+/// Represents an ambient background track.
+class TtsAmbientTrack {
+  final String id;
+  final String name;
+  final String label;
+  final String emoji;
+  final String url;
+
+  const TtsAmbientTrack({
+    required this.id,
+    required this.name,
+    required this.label,
+    required this.emoji,
+    required this.url,
+  });
+
+  factory TtsAmbientTrack.fromJson(Map<String, dynamic> json) => TtsAmbientTrack(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        label: json['label']?.toString() ?? '',
+        emoji: json['emoji']?.toString() ?? '',
+        url: json['url']?.toString() ?? '',
       );
 }
 
@@ -84,6 +110,12 @@ class TtsService extends ChangeNotifier {
   TtsVoice? _selectedVoice;
   TtsVoice? get selectedVoice => _selectedVoice;
 
+  List<TtsAmbientTrack> _ambientTracks = [];
+  List<TtsAmbientTrack> get ambientTracks => _ambientTracks;
+
+  TtsAmbientTrack? _selectedAmbientTrack;
+  TtsAmbientTrack? get selectedAmbientTrack => _selectedAmbientTrack;
+
   double _speechRate = 0.5;
   double get speechRate => _speechRate;
 
@@ -93,6 +125,7 @@ class TtsService extends ChangeNotifier {
   // ── Internal ───────────────────────────────────────────────────────────────
   final FlutterTts _deviceTts = FlutterTts();
   final AudioPlayer _premiumPlayer = AudioPlayer();
+  final AudioPlayer _ambientPlayer = AudioPlayer();
   bool _deviceTtsInitialized = false;
 
   Map<String, String> get _authHeaders => {
@@ -161,6 +194,28 @@ class TtsService extends ChangeNotifier {
       }
     } catch (e) {
       log('TTS fetchVoices error: $e');
+    }
+  }
+
+  /// GET /tts/ambient-tracks
+  Future<void> fetchAmbientTracks() async {
+    try {
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/tts/ambient-tracks');
+      final res = await http.get(uri);
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final raw = body['tracks'];
+        if (raw is List) {
+          _ambientTracks = raw
+              .whereType<Map<String, dynamic>>()
+              .map((v) => TtsAmbientTrack.fromJson(v))
+              .toList();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      log('TTS fetchAmbientTracks error: $e');
     }
   }
 
@@ -264,6 +319,27 @@ class TtsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> selectAmbientTrack(TtsAmbientTrack? track) async {
+    if (_selectedAmbientTrack?.id == track?.id) return;
+    _selectedAmbientTrack = track;
+    notifyListeners();
+
+    if (track == null) {
+      await _ambientPlayer.stop();
+    } else {
+      try {
+        await _ambientPlayer.setUrl(track.url);
+        await _ambientPlayer.setLoopMode(LoopMode.one);
+        await _ambientPlayer.setVolume(0.25); // Subtle background
+        if (_isPlaying) {
+          await _ambientPlayer.play();
+        }
+      } catch (e) {
+        log('Ambient track error: $e');
+      }
+    }
+  }
+
   Future<void> setSpeechRate(double rate) async {
     _speechRate = rate.clamp(0.1, 1.0);
     await _deviceTts.setSpeechRate(_speechRate);
@@ -278,9 +354,17 @@ class TtsService extends ChangeNotifier {
     required int paragraphIndex,
   }) async {
     if (text.trim().isEmpty) return;
-    await stop();
+    // We stop TTS players but keep ambient if it's the same track
+    await _deviceTts.stop();
+    await _premiumPlayer.stop();
+
     _error = null;
     _currentParagraphIndex = paragraphIndex;
+
+    // Start ambient if selected and not playing
+    if (_selectedAmbientTrack != null && !_ambientPlayer.playing) {
+      unawaited(_ambientPlayer.play());
+    }
 
     if (_mode == TtsMode.device) {
       await _speakDevice(text);
@@ -333,6 +417,7 @@ class TtsService extends ChangeNotifier {
   Future<void> stop() async {
     await _deviceTts.stop();
     await _premiumPlayer.stop();
+    await _ambientPlayer.stop();
     _isPlaying = false;
     _isLoading = false;
     _currentParagraphIndex = -1;
@@ -345,6 +430,7 @@ class TtsService extends ChangeNotifier {
     } else {
       await _premiumPlayer.pause();
     }
+    await _ambientPlayer.pause();
     _isPlaying = false;
     notifyListeners();
   }
@@ -353,6 +439,7 @@ class TtsService extends ChangeNotifier {
   void dispose() {
     _deviceTts.stop();
     _premiumPlayer.dispose();
+    _ambientPlayer.dispose();
     super.dispose();
   }
 }

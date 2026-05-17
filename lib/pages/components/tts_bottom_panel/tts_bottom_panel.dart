@@ -51,9 +51,10 @@ class _TtsBottomPanelState extends State<TtsBottomPanel> {
     super.initState();
     _paragraphIndex = widget.initialParagraphIndex;
     final svc = TtsService.instance;
-    // Fetch voices & check access in parallel
+    // Fetch voices, check access, and fetch ambient tracks in parallel
     Future.wait([
       if (svc.voices.isEmpty) svc.fetchVoices(),
+      if (svc.ambientTracks.isEmpty) svc.fetchAmbientTracks(),
       svc.checkAccess(widget.bookId),
     ]).then((_) {
       if (mounted) setState(() => _accessLoaded = true);
@@ -114,6 +115,7 @@ class _TtsBottomPanelState extends State<TtsBottomPanel> {
                 if (svc.mode == TtsMode.premium) ...[
                   _buildPremiumSection(svc),
                 ],
+                _buildAmbientSection(svc),
                 _buildSpeedRow(svc),
                 _buildParagraphNav(svc),
                 _buildPlaybackControls(svc),
@@ -318,6 +320,52 @@ class _TtsBottomPanelState extends State<TtsBottomPanel> {
                           ),
                     ),
                   ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmbientSection(TtsService svc) {
+    if (svc.ambientTracks.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Background Sound',
+              style: FlutterFlowTheme.of(context)
+                  .bodySmall
+                  .override(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 42,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: svc.ambientTracks.length + 1,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                if (i == 0) {
+                  final selected = svc.selectedAmbientTrack == null;
+                  return _AmbientOption(
+                    label: 'None',
+                    emoji: '🔇',
+                    selected: selected,
+                    onTap: () => svc.selectAmbientTrack(null),
+                  );
+                }
+                final track = svc.ambientTracks[i - 1];
+                final selected = svc.selectedAmbientTrack?.id == track.id;
+                return _AmbientOption(
+                  label: track.label,
+                  emoji: track.emoji,
+                  selected: selected,
+                  onTap: () => svc.selectAmbientTrack(track),
                 );
               },
             ),
@@ -540,6 +588,58 @@ class _NavBtn extends StatelessWidget {
               ? FlutterFlowTheme.of(context).primaryText
               : Colors.grey.shade300),
       iconSize: 28,
+    );
+  }
+}
+
+class _AmbientOption extends StatelessWidget {
+  final String label;
+  final String emoji;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AmbientOption({
+    required this.label,
+    required this.emoji,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? FlutterFlowTheme.of(context).primary
+              : FlutterFlowTheme.of(context).primaryBackground,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? FlutterFlowTheme.of(context).primary
+                : FlutterFlowTheme.of(context).alternate,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: FlutterFlowTheme.of(context).bodySmall.override(
+                    color: selected
+                        ? Colors.white
+                        : FlutterFlowTheme.of(context).primaryText,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

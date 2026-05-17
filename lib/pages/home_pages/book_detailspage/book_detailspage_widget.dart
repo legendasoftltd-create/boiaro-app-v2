@@ -790,12 +790,28 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       url ??= _extractEbookUrlFromDetails(responseJson);
 
       if (hasAccess && url != null && url.trim().isNotEmpty) {
-        await _openBook(
-          path: url,
-          bookName: bookName,
-          bookImage: bookImage,
-          authorName: authorName,
-        );
+        final finalUrl = url;
+        void performRead() async {
+          await _openBook(
+            path: finalUrl,
+            bookName: bookName,
+            bookImage: bookImage,
+            authorName: authorName,
+          );
+        }
+
+        if (isEbookFree) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => custom_widgets.AdRewardDialog(
+              bookImage: bookImage,
+              onWatchAd: performRead,
+            ),
+          );
+        } else {
+          performRead();
+        }
         return;
       }
 
@@ -955,33 +971,52 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       return;
     }
     safeSetState(() => _isDownloadingEbook = true);
-    try {
-      final hasAccess = isBookFree ||
-          await _hasFormatAccess(bookId: bookId, format: 'ebook');
-      if (!hasAccess) {
-        await actions.showCustomToastBottom(
-            'Buy or unlock ebook before download');
-        return;
+    final hasAccess = isBookFree ||
+        await _hasFormatAccess(bookId: bookId, format: 'ebook');
+    safeSetState(() => _isDownloadingEbook = false);
+
+    if (!hasAccess) {
+      await actions.showCustomToastBottom(
+          'Buy or unlock ebook before download');
+      return;
+    }
+
+    void performDownload() async {
+      safeSetState(() => _isDownloadingEbook = true);
+      try {
+        String? url = await _fetchEbookSignedUrl(bookId);
+        url ??= await _fetchEbookSignedUrlGuestAware(bookId);
+        if (url == null || url.trim().isEmpty) {
+          await actions.showCustomToastBottom('Unable to fetch download URL');
+          return;
+        }
+        await LocalDownloadService.downloadBook(
+          bookId: bookId,
+          name: bookName,
+          image: bookImage,
+          author: authorName,
+          remoteUrl: url,
+        );
+        await actions.showCustomToastBottom('Book downloaded successfully');
+        await _checkDownloadStatus();
+      } catch (_) {
+        await actions.showCustomToastBottom('Download failed');
+      } finally {
+        if (mounted) safeSetState(() => _isDownloadingEbook = false);
       }
-      String? url = await _fetchEbookSignedUrl(bookId);
-      url ??= await _fetchEbookSignedUrlGuestAware(bookId);
-      if (url == null || url.trim().isEmpty) {
-        await actions.showCustomToastBottom('Unable to fetch download URL');
-        return;
-      }
-      await LocalDownloadService.downloadBook(
-        bookId: bookId,
-        name: bookName,
-        image: bookImage,
-        author: authorName,
-        remoteUrl: url,
+    }
+
+    if (isBookFree) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => custom_widgets.AdRewardDialog(
+          bookImage: bookImage,
+          onWatchAd: performDownload,
+        ),
       );
-      await actions.showCustomToastBottom('Book downloaded successfully');
-      await _checkDownloadStatus();
-    } catch (_) {
-      await actions.showCustomToastBottom('Download failed');
-    } finally {
-      if (mounted) safeSetState(() => _isDownloadingEbook = false);
+    } else {
+      performDownload();
     }
   }
 
