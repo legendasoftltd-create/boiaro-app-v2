@@ -458,6 +458,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               'author',
               ParamType.String,
             ),
+            isPreviewMode: params.getParam(
+              'isPreviewMode',
+              ParamType.bool,
+            ) ?? false,
+            previewPercent: params.getParam(
+              'previewPercent',
+              ParamType.int,
+            ) ?? 100,
           ),
         ),
         FFRoute(

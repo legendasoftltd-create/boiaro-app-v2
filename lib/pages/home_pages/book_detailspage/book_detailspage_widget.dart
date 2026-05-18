@@ -203,6 +203,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required String bookName,
     required String bookImage,
     required String authorName,
+    bool isPreviewMode = false,
+    int previewPercent = 100,
   }) async {
     if (_isOpeningReader) return;
     safeSetState(() => _isOpeningReader = true);
@@ -216,6 +218,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           'name': serializeParam(bookName, ParamType.String),
           'author': serializeParam(authorName, ParamType.String),
           'image': serializeParam(bookImage, ParamType.String),
+          'isPreviewMode': serializeParam(isPreviewMode, ParamType.bool),
+          'previewPercent': serializeParam(previewPercent, ParamType.int),
         }.withoutNulls,
       );
     } catch (e) {
@@ -266,11 +270,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   }
 
   int _previewPercent(Map<String, dynamic>? format) {
+    const defaultPercent = 15;
     final raw = format?['preview_percentage'];
-    if (raw is num) return raw.toInt();
-    final parsed = int.tryParse('${raw ?? ''}');
-    if (parsed == null || parsed <= 0) return 15;
-    return parsed;
+    final v = raw is num
+        ? raw.toInt()
+        : int.tryParse('${raw ?? ''}') ?? 0;
+    if (v <= 0) return defaultPercent;
+    return v.clamp(1, 50); // never 0, never above 50%
   }
 
   bool _hasLocalFormatAccess({
@@ -624,6 +630,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required String authorName,
     required bool hasFullAccess,
     int previewPercent = 15,
+    bool forceIsPreviewMode = false,
   }) async {
     final tracks = await _fetchAudioTracks(bookId);
     final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
@@ -639,6 +646,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
     final chapters = <Map<String, dynamic>>[];
     Map<String, dynamic> urlsMap = const <String, dynamic>{};
+    // Always fetch authenticated batch URLs when the user is logged in,
+    // regardless of preview mode — preview just limits how many we show.
     if (hasFullAccess && FFAppState().isLogin) {
       final batch = await _fetchBatchAudioUrls(bookId);
       final rawUrls = batch['urls'];
@@ -647,13 +656,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
     }
 
-    final previewCount = hasFullAccess
-        ? effectiveTracks.length
-        : (((effectiveTracks.length * (previewPercent / 100)).ceil())
-              .clamp(1, effectiveTracks.length));
+    // forceIsPreviewMode overrides hasFullAccess for track-count limiting.
+    // URL fetching (above) still uses hasFullAccess so signed URLs work.
+    final limitTracks = forceIsPreviewMode || !hasFullAccess;
+    final previewCount = limitTracks
+        ? (((effectiveTracks.length * (previewPercent / 100)).ceil())
+              .clamp(1, effectiveTracks.length))
+        : effectiveTracks.length;
+
     for (var i = 0; i < effectiveTracks.length; i++) {
+      // Stop adding tracks once preview limit is reached
+      if (limitTracks && i >= previewCount) break;
+
       final track = effectiveTracks[i];
-      final isTrackPreview = track['is_preview'] == true || i < previewCount;
       final trackNumber = (track['track_number'] is num)
           ? (track['track_number'] as num).toInt()
           : (i + 1);
@@ -670,22 +685,15 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         trackNumber: trackNumber,
         authRequired: hasFullAccess && FFAppState().isLogin,
       );
-      if (signedUrl == null || signedUrl.isEmpty) {
-        if (!hasFullAccess && !isTrackPreview) {
-          continue;
-        }
-        continue;
-      }
-      if (!hasFullAccess && !isTrackPreview) {
-        continue;
-      }
+      if (signedUrl == null || signedUrl.isEmpty) continue;
+
       chapters.add({
         'title': track['title']?.toString() ?? 'Track $trackNumber',
         'file': signedUrl,
         'track_number': trackNumber,
         'duration': track['duration']?.toString() ?? '',
-        'isLocked': hasFullAccess ? false : !isTrackPreview,
-        'isPreview': !hasFullAccess ? true : (track['is_preview'] == true),
+        'isLocked': false,
+        'isPreview': limitTracks,
       });
     }
 
@@ -698,7 +706,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       return false;
     }
 
-    if (!hasFullAccess) {
+    final isPreviewMode = forceIsPreviewMode || !hasFullAccess;
+
+    if (isPreviewMode) {
       await actions.showCustomToastBottom(
           'Preview limit: $previewPercent%. Buy or unlock to listen full audiobook.');
     }
@@ -714,6 +724,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           'image': bookImage,
           'author': {'name': authorName},
           'chapters': chapters,
+          'isPreviewMode': isPreviewMode,
+          'previewPercent': previewPercent,
         },
         'chapter': chapters.first,
       },
@@ -763,7 +775,63 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required Map<String, dynamic>? hardcopyFormat,
     required dynamic responseJson,
     bool forceBuy = false,
+    bool forcePreview = false,
   }) async {
+    // --- FORCE PREVIEW: always open in preview mode, ignore purchase status ---
+    // Uses the same URL/tracks as Read Now but enforces the preview % limit
+    // on the client (native epub reader / audio player).
+    if (forcePreview) {
+      if (tab == BookMasterFormatTab.ebook) {
+        if (ebookFormat == null || ebookFormat['is_available'] == false) {
+          await actions.showCustomToastBottom('eBook format is not available');
+          return;
+        }
+        final safePercent = _previewPercent(ebookFormat); // 1–50, default 15
+
+        // Fetch URL exactly the same way Read Now does
+        String? url;
+        if (FFAppState().isLogin) {
+          url = await _fetchEbookSignedUrl(bookId);
+        }
+        url ??= await _fetchEbookSignedUrlGuestAware(bookId);
+        url ??= _extractEbookUrlFromDetails(responseJson);
+
+        if (url == null || url.trim().isEmpty) {
+          await actions.showCustomToastBottom('Unable to load book for preview');
+          return;
+        }
+        await _openBook(
+          path: url,
+          bookName: '$bookName (Preview)',
+          bookImage: bookImage,
+          authorName: authorName,
+          isPreviewMode: true,
+          previewPercent: safePercent,
+        );
+        return;
+      }
+      if (tab == BookMasterFormatTab.audiobook) {
+        if (audiobookFormat == null || audiobookFormat['is_available'] == false) {
+          await actions.showCustomToastBottom('Audiobook format is not available');
+          return;
+        }
+        final safePercent = _previewPercent(audiobookFormat);
+        // hasFullAccess=true fetches authenticated track URLs (same as Listen Now)
+        // isPreviewMode is forced true so the player enforces the limit
+        await _openAudiobookPlayerFromV2(
+          bookId: bookId,
+          bookName: bookName,
+          bookImage: bookImage,
+          authorName: authorName,
+          hasFullAccess: FFAppState().isLogin,
+          previewPercent: safePercent,
+          forceIsPreviewMode: true,
+        );
+        return;
+      }
+    }
+    // -------------------------------------------------------------------------
+
     if (tab == BookMasterFormatTab.ebook) {
       _lastEbookAuthError = false;
       if (ebookFormat == null || ebookFormat['is_available'] == false) {
@@ -840,9 +908,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           bookName: '$bookName (Preview)',
           bookImage: bookImage,
           authorName: authorName,
+          isPreviewMode: true,
+          previewPercent: ebookPreviewPercent,
         );
-        await actions.showCustomToastBottom(
-            'Preview limit: $ebookPreviewPercent%. Buy or unlock to read full book.');
         return;
       }
 
@@ -2436,7 +2504,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           responseJson:
                                                               bookDetailspageGetbookdetailsApiResponse
                                                                   .jsonBody,
-                                                          forceBuy: false,
+                                                          forcePreview: true,
                                                         ),
                                                         text:
                                                             'Preview ($previewPercent%)',
@@ -2793,7 +2861,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             responseJson:
                                                                 bookDetailspageGetbookdetailsApiResponse
                                                                     .jsonBody,
-                                                            forceBuy: false,
+                                                            forcePreview: true,
                                                           ),
                                                           text:
                                                               'Listen Preview ($previewPercent%)',

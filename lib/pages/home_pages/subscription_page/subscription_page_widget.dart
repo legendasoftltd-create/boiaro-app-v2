@@ -298,22 +298,56 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                                                     16.0,
                                                                     0.0,
                                                                     16.0,
-                                                                    24.0),
-                                                        child: Text(
-                                                          'Full access to all free and premium content in different plan choose your plan on your requirement.',
-                                                          textAlign:
-                                                              TextAlign.center,
-                                                          style: FlutterFlowTheme
-                                                                  .of(context)
-                                                              .bodyMedium
-                                                              .override(
-                                                                fontFamily:
-                                                                    'SF Pro Display',
-                                                                fontSize: 17.0,
-                                                                letterSpacing:
-                                                                    0.0,
-                                                                lineHeight: 1.5,
+                                                                    12.0),
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .center,
+                                                          children: [
+                                                            Text(
+                                                              'Choose your plan',
+                                                              textAlign:
+                                                                  TextAlign.center,
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .titleMedium
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    fontSize:
+                                                                        22.0,
+                                                                    fontWeight:
+                                                                        FontWeight.w700,
+                                                                  ),
+                                                            ),
+                                                            Padding(
+                                                              padding:
+                                                                  EdgeInsetsDirectional
+                                                                      .fromSTEB(
+                                                                          0.0,
+                                                                          8.0,
+                                                                          0.0,
+                                                                          0.0),
+                                                              child: Text(
+                                                                'Get full access to all free and premium content by selecting the right subscription for you.',
+                                                                textAlign:
+                                                                    TextAlign.center,
+                                                                style: FlutterFlowTheme
+                                                                        .of(context)
+                                                                    .bodyMedium
+                                                                    .override(
+                                                                      fontFamily:
+                                                                          'SF Pro Display',
+                                                                      fontSize:
+                                                                          15.0,
+                                                                      letterSpacing:
+                                                                          0.0,
+                                                                      lineHeight:
+                                                                          1.6,
+                                                                    ),
                                                               ),
+                                                            ),
+                                                          ],
                                                         ).animateOnPageLoad(
                                                             animationsMap[
                                                                 'textOnPageLoadAnimation']!),
@@ -613,239 +647,236 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                                               crossAxisAlignment:
                                                                   CrossAxisAlignment
                                                                       .start,
-                                                              children: List.generate(
-                                                                      planList
-                                                                          .length,
-                                                                      (planListIndex) {
-                                                                final planListItem =
-                                                                    planList[
-                                                                        planListIndex];
-                                                                return Padding(
+                                                              children: [
+                                                                Padding(
                                                                   padding: EdgeInsetsDirectional
                                                                       .fromSTEB(
                                                                           16.0,
                                                                           0.0,
                                                                           16.0,
+                                                                          16.0),
+                                                                  child: Text(
+                                                                    'Available plans',
+                                                                    style: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .titleMedium
+                                                                        .override(
+                                                                          fontFamily:
+                                                                              'SF Pro Display',
+                                                                          fontSize:
+                                                                              20.0,
+                                                                          fontWeight:
+                                                                              FontWeight.w700,
+                                                                        ),
+                                                                  ),
+                                                                ),
+                                                                ...List.generate(
+                                                                  planList.length,
+                                                                  (planListIndex) {
+                                                                    final planListItem =
+                                                                        planList[planListIndex];
+                                                                    final isSelected =
+                                                                        _model.subsIndex ==
+                                                                            planListIndex;
+                                                                    final planPrice =
+                                                                        getJsonField(
+                                                                      planListItem,
+                                                                      r'''$.price''',
+                                                                    ).toString();
+                                                                    final planName =
+                                                                        getJsonField(
+                                                                      planListItem,
+                                                                      r'''$.name''',
+                                                                    ).toString();
+                                                                    final planDuration =
+                                                                        getJsonField(
+                                                                      planListItem,
+                                                                      r'''$.duration''',
+                                                                    ).toString();
+                                                                    final planDurationTerm =
+                                                                        getJsonField(
+                                                                      planListItem,
+                                                                      r'''$.duration_in_terms''',
+                                                                    ).toString();
+
+                                                                    return Padding(
+                                                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                                                          16.0,
+                                                                          0.0,
+                                                                          16.0,
                                                                           0.0),
-                                                                  child:
-                                                                      InkWell(
-                                                                    splashColor:
-                                                                        Colors
-                                                                            .transparent,
-                                                                    focusColor:
-                                                                        Colors
-                                                                            .transparent,
-                                                                    hoverColor:
-                                                                        Colors
-                                                                            .transparent,
-                                                                    highlightColor:
-                                                                        Colors
-                                                                            .transparent,
-                                                                    onTap:
-                                                                        () async {
-                                                                      FFAppState()
+                                                                      child: InkWell(
+                                                                        onTap:
+                                                                            () async {
+                                                                          FFAppState()
                                                                               .subscriptionId =
-                                                                          getJsonField(
-                                                                        planListItem,
-                                                                        r'''$._id''',
-                                                                      ).toString();
-                                                                      FFAppState()
-                                                                          .update(
+                                                                              getJsonField(
+                                                                                planListItem,
+                                                                                r'''$._id''',
+                                                                              ).toString();
+                                                                          FFAppState()
+                                                                              .update(
+                                                                                  () {});
+                                                                          _model.subDetail =
+                                                                              planListItem;
+                                                                          _model.subsIndex =
+                                                                              planListIndex;
+                                                                          safeSetState(
                                                                               () {});
-                                                                      _model.subDetail =
-                                                                          planListItem;
-                                                                      _model.subsIndex =
-                                                                          planListIndex;
-                                                                      safeSetState(
-                                                                          () {});
-                                                                    },
-                                                                    child:
-                                                                        Container(
-                                                                      width: double
-                                                                          .infinity,
-                                                                      decoration:
-                                                                          BoxDecoration(
-                                                                        color: FlutterFlowTheme.of(context)
-                                                                            .primaryBackground,
-                                                                        boxShadow: [
-                                                                          BoxShadow(
-                                                                            blurRadius:
-                                                                                16.0,
-                                                                            color:
-                                                                                Color(0x14000014),
-                                                                            offset:
-                                                                                Offset(
-                                                                              0.0,
-                                                                              4.0,
-                                                                            ),
-                                                                          )
-                                                                        ],
+                                                                        },
                                                                         borderRadius:
-                                                                            BorderRadius.circular(12.0),
-                                                                      ),
-                                                                      child:
-                                                                          Padding(
-                                                                        padding:
-                                                                            EdgeInsets.all(16.0),
+                                                                            BorderRadius.circular(18.0),
                                                                         child:
-                                                                            Row(
-                                                                          mainAxisSize:
-                                                                              MainAxisSize.max,
-                                                                          children: [
-                                                                            Expanded(
-                                                                              child: Column(
-                                                                                mainAxisSize: MainAxisSize.max,
-                                                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                                                children: [
-                                                                                  Text(
-                                                                                    getJsonField(
-                                                                                      planListItem,
-                                                                                      r'''$.name''',
-                                                                                    ).toString(),
-                                                                                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                                          fontFamily: 'SF Pro Display',
-                                                                                          fontSize: 18.0,
-                                                                                          letterSpacing: 0.0,
-                                                                                          fontWeight: FontWeight.w600,
-                                                                                          lineHeight: 1.5,
-                                                                                        ),
-                                                                                  ),
-                                                                                  Row(
-                                                                                    mainAxisSize: MainAxisSize.max,
+                                                                            AnimatedContainer(
+                                                                          duration:
+                                                                              const Duration(milliseconds: 220),
+                                                                          width:
+                                                                              double.infinity,
+                                                                          decoration:
+                                                                              BoxDecoration(
+                                                                            color: isSelected
+                                                                                ? FlutterFlowTheme.of(context).primary.withOpacity(0.12)
+                                                                                : FlutterFlowTheme.of(context).secondaryBackground,
+                                                                            border: Border.all(
+                                                                              color: isSelected
+                                                                                  ? FlutterFlowTheme.of(context).primary
+                                                                                  : const Color(0xFFDDE2E9),
+                                                                              width: 1.2,
+                                                                            ),
+                                                                            borderRadius:
+                                                                                BorderRadius.circular(18.0),
+                                                                            boxShadow: [
+                                                                              BoxShadow(
+                                                                                blurRadius: 16.0,
+                                                                                color: Colors.black.withOpacity(0.04),
+                                                                                offset: const Offset(0, 8),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                          child:
+                                                                              Padding(
+                                                                            padding: const EdgeInsets.all(20.0),
+                                                                            child: Row(
+                                                                              crossAxisAlignment:
+                                                                                  CrossAxisAlignment.start,
+                                                                              children: [
+                                                                                Expanded(
+                                                                                  child: Column(
+                                                                                    crossAxisAlignment:
+                                                                                        CrossAxisAlignment.start,
                                                                                     children: [
-                                                                                      custom_widgets.GetCurrencySymbool(
-                                                                                        width: 15.0,
-                                                                                        height: 20.0,
-                                                                                        isSimbool: EbookGroup.currencyApiCall.currency(
-                                                                                          containerCurrencyApiResponse.jsonBody,
-                                                                                        ),
-                                                                                        color: FlutterFlowTheme.of(context).primaryText,
-                                                                                        fontSize: 17.0,
-                                                                                      ),
-                                                                                      Padding(
-                                                                                        padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 0.0),
-                                                                                        child: RichText(
-                                                                                          textScaler: MediaQuery.of(context).textScaler,
-                                                                                          text: TextSpan(
-                                                                                            children: [
-                                                                                              TextSpan(
-                                                                                                text: '',
-                                                                                                style: TextStyle(
-                                                                                                  color: FlutterFlowTheme.of(context).primaryText,
-                                                                                                  fontSize: 17.0,
-                                                                                                ),
+                                                                                      Row(
+                                                                                        crossAxisAlignment:
+                                                                                            CrossAxisAlignment.center,
+                                                                                        children: [
+                                                                                          Expanded(
+                                                                                            child: Text(
+                                                                                              planName,
+                                                                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                                    fontFamily: 'SF Pro Display',
+                                                                                                    fontSize: 18.0,
+                                                                                                    fontWeight:
+                                                                                                        FontWeight.w700,
+                                                                                                  ),
+                                                                                            ),
+                                                                                          ),
+                                                                                          if (isSelected)
+                                                                                            Container(
+                                                                                              decoration: BoxDecoration(
+                                                                                                color: FlutterFlowTheme.of(context).primary,
+                                                                                                borderRadius:
+                                                                                                    BorderRadius.circular(8.0),
                                                                                               ),
-                                                                                              TextSpan(
-                                                                                                text: valueOrDefault<String>(
-                                                                                                  functions.convertToTwoDigitDecimal(getJsonField(
-                                                                                                    planListItem,
-                                                                                                    r'''$.price''',
-                                                                                                  ).toString()),
-                                                                                                  '15',
-                                                                                                ),
-                                                                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                              padding: const EdgeInsets.symmetric(
+                                                                                                  horizontal: 10.0, vertical: 6.0),
+                                                                                              child: Text(
+                                                                                                'Selected',
+                                                                                                style: FlutterFlowTheme.of(context).bodySmall.override(
                                                                                                       fontFamily: 'SF Pro Display',
-                                                                                                      color: FlutterFlowTheme.of(context).primaryText,
-                                                                                                      fontSize: 17.0,
-                                                                                                      letterSpacing: 0.0,
-                                                                                                      fontWeight: FontWeight.normal,
+                                                                                                      color: FlutterFlowTheme.of(context).primaryBackground,
+                                                                                                      fontWeight: FontWeight.w600,
+                                                                                                      fontSize: 12.0,
                                                                                                     ),
                                                                                               ),
-                                                                                              TextSpan(
-                                                                                                text: '  ( ',
-                                                                                                style: TextStyle(
-                                                                                                  color: FlutterFlowTheme.of(context).primaryText,
-                                                                                                  fontWeight: FontWeight.normal,
-                                                                                                  fontSize: 17.0,
+                                                                                            ),
+                                                                                        ],
+                                                                                      ),
+                                                                                      const SizedBox(height: 14.0),
+                                                                                      Row(
+                                                                                        crossAxisAlignment:
+                                                                                            CrossAxisAlignment.center,
+                                                                                        children: [
+                                                                                          if (planPrice != '0')
+                                                                                            Padding(
+                                                                                              padding: const EdgeInsets.only(right: 8.0),
+                                                                                              child: custom_widgets.GetCurrencySymbool(
+                                                                                                width: 18.0,
+                                                                                                height: 22.0,
+                                                                                                isSimbool: EbookGroup.currencyApiCall.currency(
+                                                                                                  containerCurrencyApiResponse.jsonBody,
                                                                                                 ),
+                                                                                                color: FlutterFlowTheme.of(context).primaryText,
+                                                                                                fontSize: 18.0,
                                                                                               ),
-                                                                                              TextSpan(
-                                                                                                text: getJsonField(
-                                                                                                  planListItem,
-                                                                                                  r'''$.duration''',
-                                                                                                ).toString(),
-                                                                                                style: TextStyle(
-                                                                                                  color: FlutterFlowTheme.of(context).primaryText,
-                                                                                                  fontSize: 17.0,
-                                                                                                ),
-                                                                                              ),
-                                                                                              TextSpan(
-                                                                                                text: ' ',
-                                                                                                style: TextStyle(),
-                                                                                              ),
-                                                                                              TextSpan(
-                                                                                                text: getJsonField(
-                                                                                                  planListItem,
-                                                                                                  r'''$.duration_in_terms''',
-                                                                                                ).toString(),
-                                                                                                style: TextStyle(
-                                                                                                  color: FlutterFlowTheme.of(context).primaryText,
-                                                                                                  fontSize: 17.0,
-                                                                                                ),
-                                                                                              ),
-                                                                                              TextSpan(
-                                                                                                text: ' )',
-                                                                                                style: TextStyle(
-                                                                                                  color: FlutterFlowTheme.of(context).primaryText,
-                                                                                                  fontSize: 17.0,
-                                                                                                ),
-                                                                                              )
-                                                                                            ],
-                                                                                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                            ),
+                                                                                          Text(
+                                                                                            planPrice == '0' ? 'Free' : functions.convertToTwoDigitDecimal(planPrice),
+                                                                                            style: FlutterFlowTheme.of(context).titleSmall.override(
                                                                                                   fontFamily: 'SF Pro Display',
-                                                                                                  fontSize: 17.0,
-                                                                                                  letterSpacing: 0.0,
+                                                                                                  fontSize: 20.0,
+                                                                                                  fontWeight: FontWeight.w700,
                                                                                                 ),
                                                                                           ),
-                                                                                          maxLines: 1,
+                                                                                          const SizedBox(width: 6.0),
+                                                                                          if (planPrice != '0')
+                                                                                            Text(
+                                                                                              '/ ${planDuration.isNotEmpty ? planDuration : '1'} ${planDurationTerm.isNotEmpty ? planDurationTerm : 'day'}',
+                                                                                              style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                                                                    fontFamily: 'SF Pro Display',
+                                                                                                    color: FlutterFlowTheme.of(context).secondaryText,
+                                                                                                  ),
+                                                                                            ),
+                                                                                        ],
+                                                                                      ),
+                                                                                      const SizedBox(height: 12.0),
+                                                                                      Container(
+                                                                                        decoration: BoxDecoration(
+                                                                                          color: FlutterFlowTheme.of(context).primary.withOpacity(0.08),
+                                                                                          borderRadius: BorderRadius.circular(12.0),
+                                                                                        ),
+                                                                                        padding: const EdgeInsets.symmetric(
+                                                                                            horizontal: 12.0, vertical: 8.0),
+                                                                                        child: Text(
+                                                                                          '$planDuration $planDurationTerm',
+                                                                                          style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                                                                fontFamily: 'SF Pro Display',
+                                                                                                color: FlutterFlowTheme.of(context).primary,
+                                                                                              ),
                                                                                         ),
                                                                                       ),
                                                                                     ],
                                                                                   ),
-                                                                                ].divide(SizedBox(height: 12.0)),
-                                                                              ),
+                                                                                ),
+                                                                                const SizedBox(width: 16.0),
+                                                                                Icon(
+                                                                                  isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                                                                  color: isSelected
+                                                                                      ? FlutterFlowTheme.of(context).primary
+                                                                                      : FlutterFlowTheme.of(context).secondaryText,
+                                                                                  size: 24.0,
+                                                                                ),
+                                                                              ],
                                                                             ),
-                                                                            Padding(
-                                                                              padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 0.0, 0.0),
-                                                                              child: Builder(
-                                                                                builder: (context) {
-                                                                                  if (_model.subsIndex == planListIndex) {
-                                                                                    return ClipRRect(
-                                                                                      borderRadius: BorderRadius.circular(0.0),
-                                                                                      child: SvgPicture.asset(
-                                                                                        'assets/images/Radiofill_button.svg',
-                                                                                        width: 24.0,
-                                                                                        height: 24.0,
-                                                                                        fit: BoxFit.cover,
-                                                                                      ),
-                                                                                    );
-                                                                                  } else {
-                                                                                    return ClipRRect(
-                                                                                      borderRadius: BorderRadius.circular(0.0),
-                                                                                      child: SvgPicture.asset(
-                                                                                        'assets/images/Radio_button.svg',
-                                                                                        width: 24.0,
-                                                                                        height: 24.0,
-                                                                                        fit: BoxFit.cover,
-                                                                                      ),
-                                                                                    );
-                                                                                  }
-                                                                                },
-                                                                              ),
-                                                                            ),
-                                                                          ],
+                                                                          ),
                                                                         ),
                                                                       ),
-                                                                    ),
-                                                                  ),
-                                                                );
-                                                              })
-                                                                  .divide(SizedBox(
-                                                                      height:
-                                                                          16.0))
-                                                                  .addToEnd(SizedBox(
-                                                                      height:
-                                                                          16.0)),
+                                                                    );
+                                                                  },
+                                                                ).addToEnd(
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            16.0)),
+                                                              ],
                                                             ).animateOnPageLoad(
                                                                 animationsMap[
                                                                     'columnOnPageLoadAnimation']!);

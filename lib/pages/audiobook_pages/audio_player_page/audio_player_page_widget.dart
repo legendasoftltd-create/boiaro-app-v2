@@ -35,6 +35,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   AudiobookAudioHandler? _handler;
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<MediaItem?>? _mediaItemSub;
+  StreamSubscription<PlaybackState>? _playbackStateSub;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   List<Map<String, dynamic>> _chapters = [];
@@ -44,6 +45,9 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   Timer? _sleepTimer;
   String _sleepLabel = 'Off';
   int _lastPersistedSecond = -1;
+  bool _isPreviewMode = false;
+  int _previewPercent = 100;
+  bool _previewLimitShown = false;
 
   final animationsMap = {
     'imageOnPageLoadAnimation': AnimationInfo(
@@ -71,6 +75,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   void initState() {
     super.initState();
     _model = createModel(context, () => AudioPlayerPageModel());
+    _isPreviewMode = widget.audiobook['isPreviewMode'] == true;
+    _previewPercent = (widget.audiobook['previewPercent'] as num?)?.toInt() ?? 100;
     _initializeChapters();
     _persistAudiobookMeta();
     _initAudio();
@@ -88,6 +94,9 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   Future<void> _initAudio() async {
     final handler = await AudioPlaybackService.handler;
     _handler = handler;
+    if (_isPreviewMode) {
+      _playbackStateSub = handler.playbackState.listen(_onPlaybackState);
+    }
     _positionSub = AudioService.position.listen((pos) {
       if (!mounted) {
         return;
@@ -123,10 +132,54 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     }
   }
 
+  void _onPlaybackState(PlaybackState state) {
+    if (!mounted || _previewLimitShown) return;
+    if (state.processingState == AudioProcessingState.completed) {
+      if (_currentIndex >= _chapters.length - 1) {
+        _previewLimitShown = true;
+        _handler?.pause();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showPreviewLimitDialog();
+        });
+      }
+    }
+  }
+
+  void _showPreviewLimitDialog() {
+    final bookName = widget.audiobook['name']?.toString() ??
+        widget.audiobook['title']?.toString() ??
+        'this audiobook';
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Preview Ended'),
+        content: Text(
+          'You\'ve reached the $_previewPercent% preview limit for "$bookName". '
+          'Purchase the full audiobook to keep listening.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.safePop();
+            },
+            child: const Text('Buy Now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _positionSub?.cancel();
     _mediaItemSub?.cancel();
+    _playbackStateSub?.cancel();
     _sleepTimer?.cancel();
     _model.dispose();
     super.dispose();
@@ -480,6 +533,17 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // DEBUG STRIP — remove after confirming values are correct
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  color: Colors.red.shade900,
+                  child: Text(
+                    'DEBUG | isPreviewMode=$_isPreviewMode | previewPercent=$_previewPercent% | chapters=${_chapters.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
                 // Album Art
                 Expanded(
                   child: Padding(
@@ -532,7 +596,35 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                   ],
                 ),
 
-                SizedBox(height: 48),
+                SizedBox(height: 16),
+
+                if (_isPreviewMode)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock_outline_rounded, color: Colors.orange, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Preview ($_previewPercent%) — Buy to unlock full audiobook',
+                          style: TextStyle(
+                            color: Colors.orange.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                SizedBox(height: 16),
 
                 // Progress Bar
                 Column(
@@ -679,13 +771,21 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                       },
                     ),
                     IconButton(
-                      icon: Icon(Icons.skip_next_rounded, color: FlutterFlowTheme.of(context).primaryText, size: 36),
-                      onPressed: () {
-                        if (_chapters.isNotEmpty &&
-                            _currentIndex < _chapters.length - 1) {
-                          _playChapterAt(_currentIndex + 1);
-                        }
-                      },
+                      icon: Icon(
+                        Icons.skip_next_rounded,
+                        color: (_isPreviewMode && _currentIndex >= _chapters.length - 1)
+                            ? FlutterFlowTheme.of(context).secondaryText
+                            : FlutterFlowTheme.of(context).primaryText,
+                        size: 36,
+                      ),
+                      onPressed: (_isPreviewMode && _currentIndex >= _chapters.length - 1)
+                          ? null
+                          : () {
+                              if (_chapters.isNotEmpty &&
+                                  _currentIndex < _chapters.length - 1) {
+                                _playChapterAt(_currentIndex + 1);
+                              }
+                            },
                     ),
                   ],
                 ),

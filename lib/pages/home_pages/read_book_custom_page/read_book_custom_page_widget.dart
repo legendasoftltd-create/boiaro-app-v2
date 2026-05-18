@@ -25,6 +25,8 @@ class ReadBookCustomPageWidget extends StatefulWidget {
     required this.name,
     required this.image,
     this.author,
+    this.isPreviewMode = false,
+    this.previewPercent = 100,
   });
 
   final String? pdf;
@@ -32,6 +34,8 @@ class ReadBookCustomPageWidget extends StatefulWidget {
   final String? name;
   final String? image;
   final String? author;
+  final bool isPreviewMode;
+  final int previewPercent;
 
   static String routeName = 'ReadBookCustomPage';
   static String routePath = '/readBookCustomPage';
@@ -56,6 +60,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   StreamSubscription<int>? _nativeEpubPageSub;
   int _lastNativeProgressSent = -1;
   String? _openedEpubSource;
+  bool _previewLimitShown = false;
 
   bool get _isEpub => (widget.pdf ?? '').toLowerCase().trim().contains('.epub');
 
@@ -357,6 +362,34 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     return cachedFile.path;
   }
 
+  void _showPreviewLimitDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Preview Ended'),
+        content: Text(
+          'You\'ve reached the ${widget.previewPercent}% preview limit for '
+          '"${widget.name ?? 'this book'}". '
+          'Purchase the full book to continue reading.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).maybePop();
+            },
+            child: const Text('Buy Now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openEpubWithPlugin() async {
     final sourcePath = _resolveBookPath(widget.pdf ?? '');
     if (sourcePath.isEmpty || !mounted) {
@@ -388,6 +421,12 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
           _lastNativeProgressSent = percent;
           unawaited(_applyNativeEpubProgress(percent, force: true));
           _showDebugSnack('READING NATIVE EPUB PROGRESS: $percent%');
+          if (widget.isPreviewMode && !_previewLimitShown && percent >= widget.previewPercent) {
+            _previewLimitShown = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _showPreviewLimitDialog();
+            });
+          }
         });
         _nativeEpubLaunchInProgress = true;
         _nativeEpubWentBackground = false;
@@ -396,6 +435,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       final path = await _prepareNativeEpubPath(sourcePath);
       final opened = await EpubReaderService.readBook(
         filePath: path,
+        previewPercent: widget.isPreviewMode ? widget.previewPercent : 100,
       );
       if (!opened) {
         throw Exception('Failed to open EPUB reader');

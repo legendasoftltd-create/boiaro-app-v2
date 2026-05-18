@@ -35,6 +35,13 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
 
   AudiobookAudioHandler() {
     _player.playbackEventStream.map(_transformEvent).pipe(playbackState);
+    // Update media item duration once the player determines it (async for streams)
+    _player.durationStream.listen((duration) {
+      final current = mediaItem.value;
+      if (current != null && duration != null && duration > Duration.zero) {
+        mediaItem.add(current.copyWith(duration: duration));
+      }
+    });
   }
 
   Future<void> _ensureSession() async {
