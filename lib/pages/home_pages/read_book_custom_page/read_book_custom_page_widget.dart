@@ -5,6 +5,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
+import '/services/progress_sync_service.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -96,12 +97,14 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
 
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      FFAppState().homePageLiveReadBook = widget.image!;
-      FFAppState().homePageBookId = widget.id!;
-      FFAppState().homePageBookName = widget.name!;
-      FFAppState().homePageBookPdf = widget.pdf!;
-      FFAppState().homePageBookAuthor = widget.author ?? '';
-      FFAppState().update(() {});
+      if (!widget.isPreviewMode) {
+        FFAppState().homePageLiveReadBook = widget.image!;
+        FFAppState().homePageBookId = widget.id!;
+        FFAppState().homePageBookName = widget.name!;
+        FFAppState().homePageBookPdf = widget.pdf!;
+        FFAppState().homePageBookAuthor = widget.author ?? '';
+        FFAppState().update(() {});
+      }
     });
 
     if (_isEpub && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
@@ -201,6 +204,9 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     final bookId = (widget.id ?? '').trim();
     if (bookId.isEmpty) return;
     final bounded = percent.clamp(0, 100);
+    if (bounded <= 0) {
+      return;
+    }
     await ReadingProgressService.upsertProgress(
       bookId: bookId,
       percent: bounded.toDouble(),
@@ -209,9 +215,16 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       author: widget.author ?? '',
       contentType: 'ebook',
     );
-    FFAppState().homePageCurrentPdfIndex = bounded;
-    FFAppState().homePageTotalPdfPageIndex = 100;
-    FFAppState().update(() {});
+    if (!widget.isPreviewMode) {
+      FFAppState().homePageCurrentPdfIndex = bounded;
+      FFAppState().homePageTotalPdfPageIndex = 100;
+      FFAppState().update(() {});
+    }
+    await ProgressSyncService.saveReadingProgress(
+      bookId: bookId,
+      currentPage: bounded,
+      totalPages: 100,
+    );
     await ReadingReportService.instance.updateProgress(
       percentage: bounded,
       force: force,
@@ -413,9 +426,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
           apiBase  : FFAppConstants.mobileApiBaseUrl,
           authToken: FFAppState().token,
         ));
-        await _applyNativeEpubProgress(0, force: true);
         _nativeEpubPageSub?.cancel();
-        _lastNativeProgressSent = 0;
+        _lastNativeProgressSent = -1;
         _nativeEpubPageSub = EpubReaderService.onPageChanged.listen((percent) {
           if (percent == _lastNativeProgressSent) return;
           _lastNativeProgressSent = percent;

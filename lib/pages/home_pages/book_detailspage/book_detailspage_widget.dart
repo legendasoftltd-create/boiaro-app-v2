@@ -238,6 +238,27 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
   }
 
+  Future<List<String>> _previewSeenBooks() async {
+    final items = FFAppState().prefs.getStringList('ff_preview_seen_books');
+    return items ?? <String>[];
+  }
+
+  Future<void> _markPreviewSeen(String bookId) async {
+    final normalized = bookId.trim();
+    if (normalized.isEmpty) return;
+    final current = await _previewSeenBooks();
+    if (current.contains(normalized)) return;
+    await FFAppState().prefs
+        .setStringList('ff_preview_seen_books', [...current, normalized]);
+  }
+
+  Future<bool> _hasSeenPreview(String bookId) async {
+    final normalized = bookId.trim();
+    if (normalized.isEmpty) return false;
+    final current = await _previewSeenBooks();
+    return current.contains(normalized);
+  }
+
   List<Map<String, dynamic>> _formatsFromResponse(dynamic responseJson) {
     final raw =
         getJsonField(responseJson, r'''$.data.bookDetails[0].formats''');
@@ -881,6 +902,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               .showCustomToastBottom('Unable to load book for preview');
           return;
         }
+        await _markPreviewSeen(bookId);
         await _openBook(
           path: url,
           bookName: '$bookName (Preview)',
@@ -901,6 +923,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         final safePercent = _previewPercent(audiobookFormat);
         // hasFullAccess=true fetches authenticated track URLs (same as Listen Now)
         // isPreviewMode is forced true so the player enforces the limit
+        await _markPreviewSeen(bookId);
         await _openAudiobookPlayerFromV2(
           bookId: bookId,
           bookName: bookName,
@@ -979,11 +1002,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
 
       if (hasAccess) {
+         context.pushNamed(SignInPageWidget.routeName);
         await actions.showCustomToastBottom(
             'Access Denied. Please login and try again.');
         return;
       }
-
       final previewUrl =
           _extractEbookPreviewUrlFromDetails(responseJson) ?? url;
       if (previewUrl != null && previewUrl.trim().isNotEmpty) {

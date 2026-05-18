@@ -2,6 +2,7 @@ import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/services/audio_playback_service.dart';
+import '/services/progress_sync_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -47,6 +48,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   bool _isPreviewMode = false;
   int _previewPercent = 100;
   bool _previewLimitShown = false;
+  RemoteListeningProgress? _remoteListeningProgress;
 
   final animationsMap = {
     'imageOnPageLoadAnimation': AnimationInfo(
@@ -94,6 +96,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   Future<void> _initAudio() async {
     final handler = await AudioPlaybackService.handler;
     _handler = handler;
+    final bookId = _bookId();
+    if (bookId.isNotEmpty) {
+      _remoteListeningProgress =
+          await ProgressSyncService.fetchListeningProgress(bookId);
+      _applyRemoteListeningStart(_remoteListeningProgress);
+    }
     if (_isPreviewMode) {
       _playbackStateSub = handler.playbackState.listen(_onPlaybackState);
     }
@@ -120,24 +128,64 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       audiobook: widget.audiobook,
       chapter: _currentChapter ?? widget.chapter,
     );
+    await _restoreSavedAudioPosition(handler);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  String _bookId() {
+    return (widget.audiobook['id'] ??
+            widget.audiobook['_id'] ??
+            getJsonField(widget.audiobook, r'''$._id''') ??
+            '')
+        .toString()
+        .trim();
+  }
+
+  void _applyRemoteListeningStart(RemoteListeningProgress? remote) {
+    if (remote == null || !remote.hasProgress) {
+      return;
+    }
+    final targetIndex = _chapters.indexWhere((chapter) {
+      final chapterTrack =
+          int.tryParse((chapter['track_number'] ?? '').toString()) ??
+              (_chapters.indexOf(chapter) + 1);
+      return chapterTrack == remote.currentTrack;
+    });
+    if (targetIndex >= 0) {
+      _currentIndex = targetIndex;
+      _currentChapter = _chapters[targetIndex];
+    }
+  }
+
+  Future<void> _restoreSavedAudioPosition(AudiobookAudioHandler handler) async {
+    final remote = _remoteListeningProgress;
+    if (remote != null && remote.hasProgress) {
+      if (remote.positionSeconds > 0) {
+        await handler.seek(Duration(seconds: remote.positionSeconds));
+      }
+      return;
+    }
+
     final isSameBook = widget.audiobook['id']?.toString() ==
             FFAppState().homePageLastAudioBookId ||
         widget.audiobook['_id']?.toString() ==
             FFAppState().homePageLastAudioBookId;
-    if (isSameBook) {
-      final savedSec = FFAppState().homePageLastAudioPositionSec;
-      if (savedSec > 0) {
-        final lastTrack =
-            FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
-        final currentTrack =
-            (_currentChapter?['track_number'] ?? (_currentIndex + 1));
-        if ('$currentTrack' == '$lastTrack') {
-          await handler.seek(Duration(seconds: savedSec));
-        }
-      }
+    if (!isSameBook) {
+      return;
     }
-    if (mounted) {
-      setState(() {});
+    final savedSec = FFAppState().homePageLastAudioPositionSec;
+    if (savedSec <= 0) {
+      return;
+    }
+    final lastTrack =
+        FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
+    final currentTrack =
+        int.tryParse((_currentChapter?['track_number'] ?? '').toString()) ??
+            (_currentIndex + 1);
+    if (currentTrack == lastTrack) {
+      await handler.seek(Duration(seconds: savedSec));
     }
   }
 
@@ -388,6 +436,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   }
 
   void _persistAudiobookProgress(Duration position) {
+    final bookId = _bookId();
     final totalSeconds = _duration.inSeconds;
     if (totalSeconds <= 0) {
       return;
@@ -403,8 +452,19 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     FFAppState().homePageLastAudioDurationSec = totalSeconds;
     FFAppState().homePageLastAudioProgress = progress;
     final trackNum = _currentChapter?['track_number'] ?? (_currentIndex + 1);
-    FFAppState().prefs.setInt('ff_homePageLastAudioTrackNumber',
-        int.tryParse(trackNum.toString()) ?? (_currentIndex + 1));
+    final parsedTrackNum =
+        int.tryParse(trackNum.toString()) ?? (_currentIndex + 1);
+    FFAppState()
+        .prefs
+        .setInt('ff_homePageLastAudioTrackNumber', parsedTrackNum);
+    if (bookId.isNotEmpty) {
+      unawaited(ProgressSyncService.saveListeningProgress(
+        bookId: bookId,
+        trackNumber: parsedTrackNum,
+        positionSeconds: currentSeconds,
+        totalSeconds: totalSeconds,
+      ));
+    }
   }
 
   Future<void> _setSpeed(double speed) async {

@@ -33,6 +33,7 @@ import 'speech_player_bar.dart';
 import 'bijoy_converter.dart';
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
+import '/services/progress_sync_service.dart';
 
 class FlutterPdfViewWidget extends StatefulWidget {
   const FlutterPdfViewWidget({
@@ -107,6 +108,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
   Timer? _progressHeartbeatTimer;
   bool _hasEndedForBackground = false;
   ScaffoldMessengerState? _scaffoldMessenger;
+  bool _initialProgressLoaded = false;
 
   // Auto-scroll timers
   Timer? _autoScrollTimer; // For interval-based auto-scroll
@@ -162,53 +164,81 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
     _currentEpubContentNotifier.addListener(_onContentChanged);
 
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<PdfViewerProvider>();
-      // Generate book ID from file path
-      _currentBookId =
-          PdfViewerTextOperations.generateBookId(_resolvedFilePath);
-      // Load highlights and bookmarks for this book
-      provider.loadHighlights(_currentBookId!);
-      provider.loadBookmarks(_currentBookId!);
-
-      PdfViewerHelpers.determineReaderType(_resolvedFilePath, provider);
-      provider.setCurrentPage(1);
-      PdfViewerHelpers.getInitialBrightness(provider);
-      ReadingReportService.instance.setDebugListener(_onReadingDebug);
-      unawaited(_startReadingSession());
-      _startProgressHeartbeat();
-      if (provider.readerType == ReaderType.epub) {
-        EpubReaderWidget.loadEpubBook(
-          _resolvedFilePath,
-          provider,
-          context,
-          (index) => EpubReaderWidget.loadEpubChapter(
-            provider,
-            index,
-            _currentEpubContentNotifier,
-            _epubScrollController,
-            onOriginalContentReady: (originalHtml) {
-              // Store original HTML for position tracking
-              _originalChapterHtml = originalHtml;
-              // Apply search highlights if there's an active search
-              if (provider.epubSearchText != null &&
-                  provider.epubSearchText!.isNotEmpty) {
-                Future.delayed(const Duration(milliseconds: 200), () {
-                  _applyEpubSearchHighlights(provider);
-                });
-              }
-            },
-          ),
-        );
-      }
-      ScreenProtector.protectDataLeakageOn();
-
-      // Initialize auto-scroll after a delay to ensure content is loaded
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        if (mounted && provider.readerType == ReaderType.epub) {
-          _startAutoScroll(provider);
-        }
-      });
+      unawaited(_bootstrapReader());
     });
+  }
+
+  Future<void> _bootstrapReader() async {
+    if (!mounted) return;
+    final provider = context.read<PdfViewerProvider>();
+    await _loadInitialProgress(provider);
+    if (!mounted) return;
+
+    _currentBookId = PdfViewerTextOperations.generateBookId(_resolvedFilePath);
+    provider.loadHighlights(_currentBookId!);
+    provider.loadBookmarks(_currentBookId!);
+
+    PdfViewerHelpers.determineReaderType(_resolvedFilePath, provider);
+    if (provider.currentPage <= 0) {
+      provider.setCurrentPage(1);
+    }
+    PdfViewerHelpers.getInitialBrightness(provider);
+    ReadingReportService.instance.setDebugListener(_onReadingDebug);
+    unawaited(_startReadingSession());
+    _startProgressHeartbeat();
+    if (provider.readerType == ReaderType.epub) {
+      EpubReaderWidget.loadEpubBook(
+        _resolvedFilePath,
+        provider,
+        context,
+        (index) => EpubReaderWidget.loadEpubChapter(
+          provider,
+          index,
+          _currentEpubContentNotifier,
+          _epubScrollController,
+          onOriginalContentReady: (originalHtml) {
+            _originalChapterHtml = originalHtml;
+            if (provider.epubSearchText != null &&
+                provider.epubSearchText!.isNotEmpty) {
+              Future.delayed(const Duration(milliseconds: 200), () {
+                _applyEpubSearchHighlights(provider);
+              });
+            }
+          },
+        ),
+        initialChapterIndex: (provider.currentPage - 1).clamp(0, 1000000),
+      );
+    }
+    ScreenProtector.protectDataLeakageOn();
+
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted && provider.readerType == ReaderType.epub) {
+        _startAutoScroll(provider);
+      }
+    });
+  }
+
+  Future<void> _loadInitialProgress(PdfViewerProvider provider) async {
+    if (_initialProgressLoaded) {
+      return;
+    }
+    _initialProgressLoaded = true;
+    final bookId = (widget.bookId ?? FFAppState().homePageBookId).trim();
+    if (bookId.isEmpty) {
+      return;
+    }
+    final remote = await ProgressSyncService.fetchReadingProgress(bookId);
+    if (!remote.hasProgress) {
+      return;
+    }
+    final currentPage = remote.currentPage <= 0 ? 1 : remote.currentPage;
+    provider.setCurrentPage(currentPage);
+    FFAppState().homePageCurrentPdfIndex = currentPage;
+    if (remote.totalPages > 0) {
+      FFAppState().homePageTotalPdfPageIndex = remote.totalPages;
+      FFAppState().totalPages = remote.totalPages;
+    }
+    FFAppState().update(() {});
   }
 
   @override
@@ -470,12 +500,23 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
     if (bookId.isNotEmpty) {
       final name = (widget.namePage ?? FFAppState().homePageBookName).trim();
       final imageUrl = FFAppState().homePageLiveReadBook.trim();
+      final totalPages = provider.readerType == ReaderType.pdf
+          ? (FFAppState().totalPages <= 0 ? 1 : FFAppState().totalPages)
+          : (provider.epubChapters.isEmpty ? 1 : provider.epubChapters.length);
+      final currentPage = provider.readerType == ReaderType.pdf
+          ? provider.currentPage.clamp(1, totalPages)
+          : (provider.currentEpubChapterIndex + 1).clamp(1, totalPages);
       unawaited(ReadingProgressService.upsertProgress(
         bookId: bookId,
         percent: percent.toDouble(),
         name: name,
         imageUrl: imageUrl,
         contentType: provider.readerType == ReaderType.epub ? 'ebook' : 'ebook',
+      ));
+      unawaited(ProgressSyncService.saveReadingProgress(
+        bookId: bookId,
+        currentPage: currentPage,
+        totalPages: totalPages,
       ));
     }
     await ReadingReportService.instance.updateProgress(

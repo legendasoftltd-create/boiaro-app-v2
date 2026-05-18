@@ -1494,7 +1494,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
     return Builder(
       builder: (context) {
         final showEbookResume =
-            _allowsEbook && FFAppState().homePageLiveReadBook.trim().isNotEmpty;
+            _allowsEbook &&
+            FFAppState().homePageLiveReadBook.trim().isNotEmpty &&
+            FFAppState().homePageCurrentPdfIndex > 0;
         final showAudioResume = (_selectedFilter == HomeBookFilter.all ||
                 _selectedFilter == HomeBookFilter.audiobook) &&
             FFAppState().homePageLastAudioBookId.isNotEmpty;

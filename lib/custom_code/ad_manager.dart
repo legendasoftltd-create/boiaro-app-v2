@@ -34,7 +34,18 @@ class AdManager {
 
   static Future<void> initialize() async {
     await MobileAds.instance.initialize();
-    // Don't load ad immediately to save requests
+    loadRewardedAd();
+  }
+
+  static Future<bool> ensureAdLoaded({
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    if (_isAdLoaded) return true;
+    loadRewardedAd();
+    try {
+      await waitForAd().timeout(timeout);
+    } catch (_) {}
+    return _isAdLoaded;
   }
   static Future<bool> canShowAd() async {
     try {
@@ -122,6 +133,9 @@ class AdManager {
           if (_adCompleter != null && !_adCompleter!.isCompleted) {
             _adCompleter!.completeError(error);
           }
+          Future.delayed(const Duration(seconds: 15), () {
+            loadRewardedAd();
+          });
         },
       ),
     );
@@ -143,12 +157,13 @@ class AdManager {
           if (isRewardEarned) {
             onRewardEarned();
           }
-          // Don't auto-reload here, wait for next request
+          loadRewardedAd();
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
           ad.dispose();
           _rewardedInterstitialAd = null;
           _isAdLoaded = false;
+          loadRewardedAd();
           if (onAdFailed != null) onAdFailed();
         },
       );

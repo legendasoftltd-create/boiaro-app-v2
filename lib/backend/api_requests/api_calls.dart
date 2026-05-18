@@ -3113,7 +3113,17 @@ class GetsubscriptionplanApiCall {
         'duration': m['duration_days'],
         'duration_in_terms': 'days',
       };
-    }).toList();
+    }).toList()
+          ..sort((a, b) {
+            final featuredA = a['is_featured'] == true ? 1 : 0;
+            final featuredB = b['is_featured'] == true ? 1 : 0;
+            if (featuredA != featuredB) {
+              return featuredB.compareTo(featuredA);
+            }
+            final left = castToType<int>(a['sort_order']) ?? 0;
+            final right = castToType<int>(b['sort_order']) ?? 0;
+            return left.compareTo(right);
+          });
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
           extra: {'subscriptionDetails': plans}),
@@ -3253,29 +3263,38 @@ class UsersubscriptionApiCall {
     String? paymentstatus = '',
     String? paymentdate = '',
     String? price = '',
+    String? couponCode = '',
+    double? couponDiscount,
     String? token = '',
   }) async {
-    final baseUrl = EbookGroup.getBaseUrl(
-      token: token,
-    );
+    final baseUrl = EbookGroup.getBaseUrl();
+    final normalizedMethod = (paymentmode ?? '').trim().toLowerCase();
+    final paymentMethod = switch (normalizedMethod) {
+      'sslcommerz' => 'sslcommerz',
+      'bkash' => 'bkash',
+      'nagad' => 'nagad',
+      'demo' => 'demo',
+      'free' => 'demo',
+      _ => 'demo',
+    };
 
-    final ffApiRequestBody = '''
-{
-  "userId": "${userId}",
-  "subscriptionplanId": "${subscriptionplanId}",
-  "paymentmode": "${paymentmode}",
-  "transactionId": "${transactionId}",
-  "paymentstatus": "${paymentstatus}",
-  "paymentdate": "${paymentdate}",
-  "price": "${price}"
-}''';
-    return ApiManager.instance.makeApiCall(
+    final payload = <String, dynamic>{
+      'plan_id': subscriptionplanId,
+      'payment_method': paymentMethod,
+    };
+    if ((couponCode ?? '').trim().isNotEmpty) {
+      payload['coupon_code'] = couponCode!.trim();
+    }
+    if ((couponDiscount ?? 0) > 0) {
+      payload['coupon_discount'] = couponDiscount;
+    }
+    final ffApiRequestBody = jsonEncode(payload);
+
+    final res = await ApiManager.instance.makeApiCall(
       callName: 'UsersubscriptionApi',
-      apiUrl: '${baseUrl}usersubscription',
+      apiUrl: '${baseUrl}subscriptions/subscribe',
       callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-      },
+      headers: _boiaroAuthHeaders(token),
       params: {},
       body: ffApiRequestBody,
       bodyType: BodyType.JSON,
@@ -3285,6 +3304,25 @@ class UsersubscriptionApiCall {
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        extra: {
+          'message': body['message'] ?? 'Subscription created',
+          'success': 1,
+          'subscriptionDetails': body['subscription'],
+        },
+      ),
+      res.headers,
+      res.statusCode,
     );
   }
 
@@ -3326,7 +3364,29 @@ class UsersubscriptionrecordApiCall {
             ? body['subscriptions'] as List
             : const <dynamic>[])
         .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
+        .map((e) {
+          final m = Map<String, dynamic>.from(e);
+          final plan = m['plan'];
+          final normalizedPlan = plan is Map
+              ? <String, dynamic>{
+                  ...Map<String, dynamic>.from(plan),
+                  'duration': plan['duration_days'],
+                  'duration_in_terms': 'days',
+                }
+              : <String, dynamic>{};
+          return <String, dynamic>{
+            ...m,
+            '_id': m['id'],
+            'userId': m['user_id'],
+            'subscriptionplanId':
+                m['plan_id'] ?? normalizedPlan['id'] ?? normalizedPlan['_id'],
+            'paymentmode': m['payment_method'],
+            'paymentstatus': m['status'],
+            'paymentdate': m['created_at'],
+            'price': m['amount_paid'],
+            'subscription_plans': normalizedPlan,
+          };
+        })
         .toList();
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
@@ -3418,7 +3478,7 @@ class UsersubscriptionvalidityApiCall {
     final baseUrl = EbookGroup.getBaseUrl();
     final res = await ApiManager.instance.makeApiCall(
       callName: 'UsersubscriptionvalidityApi',
-      apiUrl: '${baseUrl}subscriptions/my',
+      apiUrl: '${baseUrl}subscriptions/active',
       callType: ApiCallType.GET,
       headers: _boiaroAuthHeaders(token),
       params: {},
@@ -3434,10 +3494,12 @@ class UsersubscriptionvalidityApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final list = body['subscriptions'];
-    if (list is! List || list.isEmpty || list.first is! Map) {
+    final active = body['subscription'];
+    if (active is! Map) {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'No active subscription',
           extra: {
             'subscriptionDetails': <String, dynamic>{'daysLeft': 0}
           },
@@ -3446,13 +3508,13 @@ class UsersubscriptionvalidityApiCall {
         res.statusCode,
       );
     }
-    final first = Map<String, dynamic>.from(list.first as Map);
+    final first = Map<String, dynamic>.from(active);
     final endDateRaw = (first['end_date'] ?? '').toString();
     final endDate = DateTime.tryParse(endDateRaw);
     final now = DateTime.now().toUtc();
     final daysLeft =
         endDate == null ? 0 : endDate.difference(now).inDays.clamp(0, 9999);
-    final plan = first['subscription_plans'];
+    final plan = first['plan'];
     final normalizedPlan = plan is Map
         ? <String, dynamic>{
             ...Map<String, dynamic>.from(plan),
@@ -3466,6 +3528,10 @@ class UsersubscriptionvalidityApiCall {
           'subscriptionDetails': {
             'daysLeft': daysLeft,
             'expirationDate': endDateRaw,
+            'amountPaid': first['amount_paid'],
+            'couponCode': first['coupon_code'],
+            'discountAmount': first['discount_amount'],
+            'paymentMethod': first['payment_method'],
             'subscriptionplanDetails': normalizedPlan,
           },
         },
@@ -3506,6 +3572,41 @@ class UsersubscriptionvalidityApiCall {
   String? duration(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.subscriptionDetails.subscriptionplanDetails.duration''',
+      ));
+  String? description(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.subscriptionDetails.subscriptionplanDetails.description''',
+      ));
+  List<String>? features(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.subscriptionDetails.subscriptionplanDetails.features''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
+  String? amountPaid(dynamic response) {
+    final raw = getJsonField(
+      response,
+      r'''$.data.subscriptionDetails.amountPaid''',
+    );
+    return raw == null ? null : raw.toString();
+  }
+  String? couponCode(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.subscriptionDetails.couponCode''',
+      ));
+  String? discountAmount(dynamic response) {
+    final raw = getJsonField(
+      response,
+      r'''$.data.subscriptionDetails.discountAmount''',
+    );
+    return raw == null ? null : raw.toString();
+  }
+  String? paymentMethod(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.subscriptionDetails.paymentMethod''',
       ));
 }
 

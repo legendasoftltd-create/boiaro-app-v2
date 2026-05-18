@@ -28,9 +28,8 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
   @override
   void initState() {
     super.initState();
-    // Start loading the ad as soon as the dialog appears
-    print('AdRewardDialog: Start initial ad load...');
-    AdManager.loadRewardedAd();
+    print('AdRewardDialog: waiting for preloaded ad...');
+    unawaited(AdManager.ensureAdLoaded());
     _startTimer();
   }
 
@@ -51,9 +50,10 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
     });
   }
 
-  void _tryShowAd() {
+  Future<void> _tryShowAd() async {
     Navigator.pop(context);
-    if (AdManager.isAdLoaded) {
+    final isLoaded = await AdManager.ensureAdLoaded();
+    if (isLoaded) {
       AdManager.showRewardedAd(
         context: context,
         onRewardEarned: () {
@@ -210,23 +210,20 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                   onPressed: _isLoadingAd ? null : () {
                     if (AdManager.isAdLoaded) {
                       _timer?.cancel();
-                      _tryShowAd();
+                      unawaited(_tryShowAd());
                     } else {
                       setState(() {
                         _isLoadingAd = true;
                       });
                       print('AdRewardDialog: Button clicked, requesting ad...');
-                      AdManager.loadRewardedAd();
-                      // Wait a bit then check again
-                      Timer(Duration(seconds: 2), () {
-                        if (mounted) {
-                          setState(() {
-                            _isLoadingAd = false;
-                          });
-                          if (AdManager.isAdLoaded) {
-                            _timer?.cancel();
-                            _tryShowAd();
-                          }
+                      AdManager.ensureAdLoaded().then((loaded) {
+                        if (!mounted) return;
+                        setState(() {
+                          _isLoadingAd = false;
+                        });
+                        if (loaded) {
+                          _timer?.cancel();
+                          unawaited(_tryShowAd());
                         }
                       });
                     }

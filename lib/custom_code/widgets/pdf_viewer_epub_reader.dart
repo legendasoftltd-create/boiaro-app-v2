@@ -23,8 +23,9 @@ class EpubReaderWidget {
     String? filePath,
     PdfViewerProvider provider,
     BuildContext context,
-    Function loadEpubChapter,
-  ) async {
+    Function loadEpubChapter, {
+    int initialChapterIndex = 0,
+  }) async {
     if (filePath == null || filePath.isEmpty) {
       log('Invalid EPUB path');
       return;
@@ -71,7 +72,9 @@ class EpubReaderWidget {
       provider.setEpubChapters(chapters);
 
       if (chapters.isNotEmpty) {
-        loadEpubChapter(0);
+        final safeInitialIndex =
+            initialChapterIndex.clamp(0, chapters.length - 1);
+        loadEpubChapter(safeInitialIndex);
       }
     } catch (e, stacktrace) {
       log('Error loading EPUB: $e stacktrace $stacktrace');

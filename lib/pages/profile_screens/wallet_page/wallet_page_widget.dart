@@ -51,15 +51,8 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
 
     if (!AdManager.isAdLoaded) {
       await actions.showCustomToastBottom('Loading Ad... Please wait a second.');
-      AdManager.loadRewardedAd();
-      
-      int attempts = 0;
-      while (!AdManager.isAdLoaded && attempts < 6) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        attempts++;
-      }
-      
-      if (!AdManager.isAdLoaded) {
+      final loaded = await AdManager.ensureAdLoaded();
+      if (!loaded) {
         await actions.showCustomToastBottom('Failed to load ad. Please try again.');
         return;
       }
