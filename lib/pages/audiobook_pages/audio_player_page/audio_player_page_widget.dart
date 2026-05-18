@@ -106,6 +106,18 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       audiobook: widget.audiobook,
       chapter: _currentChapter ?? widget.chapter,
     );
+    final isSameBook = widget.audiobook['id']?.toString() == FFAppState().homePageLastAudioBookId ||
+                       widget.audiobook['_id']?.toString() == FFAppState().homePageLastAudioBookId;
+    if (isSameBook) {
+      final savedSec = FFAppState().homePageLastAudioPositionSec;
+      if (savedSec > 0) {
+        final lastTrack = FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
+        final currentTrack = (_currentChapter?['track_number'] ?? (_currentIndex + 1));
+        if ('$currentTrack' == '$lastTrack') {
+          await handler.seek(Duration(seconds: savedSec));
+        }
+      }
+    }
     if (mounted) {
       setState(() {});
     }
@@ -204,7 +216,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     final imageUrl = _resolveBookImage(imageValue?.toString());
     FFAppState().homePageLastAudioBookId = id?.toString() ?? '';
     FFAppState().homePageLastAudioBookName = name?.toString() ?? '';
-    FFAppState().homePageLastAudioBookAuthor = author?.toString() ?? '';
+    FFAppState().homePageLastAudioBookAuthor = _stringValue(author, fallback: '');
     FFAppState().homePageLastAudioBookImage = imageUrl;
   }
 
@@ -224,6 +236,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     FFAppState().homePageLastAudioPositionSec = currentSeconds;
     FFAppState().homePageLastAudioDurationSec = totalSeconds;
     FFAppState().homePageLastAudioProgress = progress;
+    final trackNum = _currentChapter?['track_number'] ?? (_currentIndex + 1);
+    FFAppState().prefs.setInt('ff_homePageLastAudioTrackNumber', int.tryParse(trackNum.toString()) ?? (_currentIndex + 1));
   }
 
   Future<void> _setSpeed(double speed) async {

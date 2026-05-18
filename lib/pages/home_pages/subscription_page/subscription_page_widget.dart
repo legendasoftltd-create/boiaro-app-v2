@@ -324,7 +324,15 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                                             containerUsersubscriptionvalidityApiResponse
                                                                 .jsonBody,
                                                           ) ==
-                                                          1)
+                                                          1 &&
+                                                          (EbookGroup
+                                                                  .usersubscriptionvalidityApiCall
+                                                                  .daysLeft(
+                                                                containerUsersubscriptionvalidityApiResponse
+                                                                    .jsonBody,
+                                                              ) ??
+                                                              0) >
+                                                              0)
                                                         Container(
                                                           width:
                                                               double.infinity,
@@ -342,12 +350,13 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                                                 return Builder(
                                                                   builder:
                                                                       (context) {
-                                                                    if (EbookGroup
+                                                                    if ((EbookGroup
                                                                             .usersubscriptionvalidityApiCall
                                                                             .daysLeft(
                                                                           containerUsersubscriptionvalidityApiResponse
                                                                               .jsonBody,
-                                                                        )! >
+                                                                        ) ??
+                                                                        0) >
                                                                         0) {
                                                                       return Padding(
                                                                         padding: EdgeInsetsDirectional.fromSTEB(
@@ -577,7 +586,15 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                                             containerUsersubscriptionvalidityApiResponse
                                                                 .jsonBody,
                                                           ) ==
-                                                          0)
+                                                          0 ||
+                                                          (EbookGroup
+                                                                  .usersubscriptionvalidityApiCall
+                                                                  .daysLeft(
+                                                                containerUsersubscriptionvalidityApiResponse
+                                                                    .jsonBody,
+                                                              ) ??
+                                                              0) <=
+                                                              0)
                                                         Builder(
                                                           builder: (context) {
                                                             final planList = EbookGroup
@@ -838,13 +855,7 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                                   ),
                                                 ),
                                               ),
-                                              if (EbookGroup
-                                                      .usersubscriptionvalidityApiCall
-                                                      .success(
-                                                    containerUsersubscriptionvalidityApiResponse
-                                                        .jsonBody,
-                                                  ) ==
-                                                  0)
+                                              if (EbookGroup.usersubscriptionvalidityApiCall.success(containerUsersubscriptionvalidityApiResponse.jsonBody,) == 0 || (EbookGroup.usersubscriptionvalidityApiCall.daysLeft(containerUsersubscriptionvalidityApiResponse.jsonBody) ?? 0) <= 0)
                                                 Padding(
                                                   padding: EdgeInsetsDirectional
                                                       .fromSTEB(20.0, 12.0,

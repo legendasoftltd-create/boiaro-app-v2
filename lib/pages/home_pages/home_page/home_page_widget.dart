@@ -1,4 +1,6 @@
 import 'package:a_i_ebook_app/pages/home_pages/home_page/image_slider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import '/backend/boiaro_legacy_adapter.dart';
 import '/backend/api_requests/api_calls.dart';
@@ -49,6 +51,242 @@ class _HomePageWidgetState extends State<HomePageWidget>
   late HomePageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isAudiobookLoading = false;
+
+  Map<String, String> _apiHeaders({required bool authRequired}) {
+    final h = <String, String>{
+      'apikey': FFAppConstants.supabaseAnonApiKey,
+      'Content-Type': 'application/json',
+    };
+    if (authRequired && FFAppState().token.trim().isNotEmpty) {
+      h['Authorization'] = 'Bearer ${FFAppState().token}';
+    }
+    return h;
+  }
+
+  Future<Map<String, dynamic>?> _postV2(
+    String path, {
+    required Map<String, dynamic> body,
+    required bool authRequired,
+  }) async {
+    try {
+      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/$path');
+      final res = await http.post(
+        uri,
+        headers: _apiHeaders(authRequired: authRequired),
+        body: jsonEncode(body),
+      );
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> _hasFormatAccess({
+    required String bookId,
+    required String format,
+  }) async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) {
+      return false;
+    }
+    final body = await _postV2(
+      'access/check',
+      body: {'book_id': bookId, 'format': format},
+      authRequired: true,
+    );
+    return body?['has_access'] == true;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchAudioTracks(String bookId) async {
+    try {
+      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
+      final res = await http.get(
+        uri,
+        headers: _apiHeaders(authRequired: false),
+      );
+      if (res.statusCode != 200) return const [];
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) return const [];
+      final raw = decoded['tracks'];
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<Map<String, dynamic>> _fetchBatchAudioUrls(String bookId) async {
+    final body = await _postV2(
+      'content/batch-audio-urls',
+      body: {'book_id': bookId},
+      authRequired: true,
+    );
+    if (body is Map<String, dynamic>) {
+      return body;
+    }
+    return <String, dynamic>{};
+  }
+
+  Future<String?> _fetchAudioTrackSignedUrl({
+    required String bookId,
+    required int trackNumber,
+    required bool authRequired,
+  }) async {
+    final body = await _postV2(
+      'content/audio-url',
+      body: {'book_id': bookId, 'track_number': trackNumber},
+      authRequired: authRequired,
+    );
+    return body?['signed_url']?.toString();
+  }
+
+  Future<Map<String, dynamic>?> _fallbackAudioTrack(String bookId) async {
+    final guestUrl = await _fetchAudioTrackSignedUrl(
+      bookId: bookId,
+      trackNumber: 1,
+      authRequired: false,
+    );
+    final authUrl = guestUrl ??
+        (FFAppState().isLogin
+            ? await _fetchAudioTrackSignedUrl(
+                bookId: bookId,
+                trackNumber: 1,
+                authRequired: true,
+              )
+            : null);
+    if (authUrl == null || authUrl.isEmpty) return null;
+    return <String, dynamic>{
+      'track_number': 1,
+      'title': 'Episode 1',
+      'duration': '',
+      'is_preview': true,
+      'signed_url': authUrl,
+    };
+  }
+
+  Future<void> _resumeAudiobookPlayer({
+    required String bookId,
+    required String bookName,
+    required String bookImage,
+    required String authorName,
+  }) async {
+    if (_isAudiobookLoading) return;
+    setState(() {
+      _isAudiobookLoading = true;
+    });
+
+    try {
+      final hasAccess = FFAppState().isLogin &&
+          await _hasFormatAccess(bookId: bookId, format: 'audiobook');
+
+      final tracks = await _fetchAudioTracks(bookId);
+      final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
+      if (effectiveTracks.isEmpty) {
+        final fallback = await _fallbackAudioTrack(bookId);
+        if (fallback != null) {
+          effectiveTracks.add(fallback);
+        } else {
+          await actions.showCustomToastBottom('No tracks available');
+          return;
+        }
+      }
+
+      final chapters = <Map<String, dynamic>>[];
+      Map<String, dynamic> urlsMap = const <String, dynamic>{};
+      if (hasAccess && FFAppState().isLogin) {
+        final batch = await _fetchBatchAudioUrls(bookId);
+        final rawUrls = batch['urls'];
+        if (rawUrls is Map) {
+          urlsMap = Map<String, dynamic>.from(rawUrls);
+        }
+      }
+
+      final previewPercent = 15;
+      final previewCount = hasAccess
+          ? effectiveTracks.length
+          : (((effectiveTracks.length * (previewPercent / 100)).ceil())
+                .clamp(1, effectiveTracks.length));
+
+      for (var i = 0; i < effectiveTracks.length; i++) {
+        final track = effectiveTracks[i];
+        final isTrackPreview = track['is_preview'] == true || i < previewCount;
+        final trackNumber = (track['track_number'] is num)
+            ? (track['track_number'] as num).toInt()
+            : (i + 1);
+        String? signedUrl;
+        if (urlsMap.isNotEmpty) {
+          final candidate = urlsMap['$trackNumber'];
+          if (candidate is Map) {
+            signedUrl = candidate['signed_url']?.toString();
+          }
+        }
+        signedUrl ??= track['signed_url']?.toString();
+        signedUrl ??= await _fetchAudioTrackSignedUrl(
+          bookId: bookId,
+          trackNumber: trackNumber,
+          authRequired: hasAccess && FFAppState().isLogin,
+        );
+        if (signedUrl == null || signedUrl.isEmpty) {
+          continue;
+        }
+        if (!hasAccess && !isTrackPreview) {
+          continue;
+        }
+        chapters.add({
+          'title': track['title']?.toString() ?? 'Track $trackNumber',
+          'file': signedUrl,
+          'track_number': trackNumber,
+          'duration': track['duration']?.toString() ?? '',
+          'isLocked': hasAccess ? false : !isTrackPreview,
+          'isPreview': !hasAccess ? true : (track['is_preview'] == true),
+        });
+      }
+
+      if (chapters.isEmpty) {
+        await actions.showCustomToastBottom(
+          hasAccess
+              ? 'Unable to load audiobook tracks'
+              : 'No preview tracks available',
+        );
+        return;
+      }
+
+      final lastTrackNum = FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
+      Map<String, dynamic> startChapter = chapters.first;
+      final matchedIndex = chapters.indexWhere(
+          (c) => (c['track_number']?.toString() ?? '') == '$lastTrackNum');
+      if (matchedIndex >= 0) {
+        startChapter = chapters[matchedIndex];
+      }
+
+      await context.pushNamed(
+        AudioPlayerPageWidget.routeName,
+        extra: <String, dynamic>{
+          'audiobook': {
+            '_id': bookId,
+            'id': bookId,
+            'name': bookName,
+            'title': bookName,
+            'image': bookImage,
+            'author': {'name': authorName},
+            'chapters': chapters,
+          },
+          'chapter': startChapter,
+        },
+      );
+    } catch (_) {
+      await actions.showCustomToastBottom('Failed to load audiobook');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAudiobookLoading = false;
+        });
+      }
+    }
+  }
 
   final animationsMap = <String, AnimationInfo>{};
   HomeBookFilter _selectedFilter = HomeBookFilter.all;
@@ -464,8 +702,25 @@ class _HomePageWidgetState extends State<HomePageWidget>
     required double progressValue,
     required String imageUrl,
     required VoidCallback onTap,
+    bool isLoading = false,
   }) {
-    final trimmedAuthor = bookAuthor.trim();
+    String cleanAuthor(String author) {
+      var s = author.trim();
+      if (s.startsWith('{') && s.endsWith('}')) {
+        s = s.substring(1, s.length - 1).trim();
+      }
+      if (s.startsWith('name:')) {
+        s = s.substring(5).trim();
+      } else if (s.contains('name:')) {
+        final index = s.indexOf('name:');
+        s = s.substring(index + 5).trim();
+        if (s.contains(',')) {
+          s = s.split(',')[0].trim();
+        }
+      }
+      return s;
+    }
+    final trimmedAuthor = cleanAuthor(bookAuthor);
     final trimmedType = bookType.trim();
     final subtitleText = trimmedAuthor.isNotEmpty && trimmedType.isNotEmpty
         ? '$trimmedAuthor • $trimmedType'
@@ -483,7 +738,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
       focusColor: Colors.transparent,
       hoverColor: Colors.transparent,
       highlightColor: Colors.transparent,
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Container(
         decoration: BoxDecoration(
           color: FlutterFlowTheme.of(context).primary.withValues(alpha: .15),
@@ -585,25 +840,47 @@ class _HomePageWidgetState extends State<HomePageWidget>
                             ),
                           ),
                   ),
-                  Positioned(
-                    right: 4.0,
-                    bottom: 4.0,
-                    child: Container(
-                      width: 18.0,
-                      height: 18.0,
-                      decoration: BoxDecoration(
-                        color: FlutterFlowTheme.of(context)
-                            .primaryText
-                            .withValues(alpha: .85),
-                        borderRadius: BorderRadius.circular(6.0),
+                  if (isLoading)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: .5),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20.0,
+                            height: 20.0,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                FlutterFlowTheme.of(context).primary,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      child: Icon(
-                        typeIcon,
-                        size: 12.0,
-                        color: FlutterFlowTheme.of(context).primaryBackground,
+                    )
+                  else
+                    Positioned(
+                      right: 4.0,
+                      bottom: 4.0,
+                      child: Container(
+                        width: 18.0,
+                        height: 18.0,
+                        decoration: BoxDecoration(
+                          color: FlutterFlowTheme.of(context)
+                              .primaryText
+                              .withValues(alpha: .85),
+                          borderRadius: BorderRadius.circular(6.0),
+                        ),
+                        child: Icon(
+                          typeIcon,
+                          size: 12.0,
+                          color: FlutterFlowTheme.of(context).primaryBackground,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ],
@@ -1297,17 +1574,13 @@ class _HomePageWidgetState extends State<HomePageWidget>
                         progressLabel: audioProgressLabel,
                         progressValue: FFAppState().homePageLastAudioProgress,
                         imageUrl: FFAppState().homePageLastAudioBookImage,
+                        isLoading: _isAudiobookLoading,
                         onTap: () async {
-                          context.pushNamed(
-                            AudiobookDetailsPageWidget.routeName,
-                            extra: <String, dynamic>{
-                              'audiobook': {
-                                'id': FFAppState().homePageLastAudioBookId,
-                                'title': FFAppState().homePageLastAudioBookName,
-                                'image':
-                                    FFAppState().homePageLastAudioBookImage,
-                              },
-                            },
+                          await _resumeAudiobookPlayer(
+                            bookId: FFAppState().homePageLastAudioBookId,
+                            bookName: FFAppState().homePageLastAudioBookName,
+                            bookImage: FFAppState().homePageLastAudioBookImage,
+                            authorName: FFAppState().homePageLastAudioBookAuthor,
                           );
                         },
                       ).animateOnPageLoad(
@@ -1433,7 +1706,6 @@ class _HomePageWidgetState extends State<HomePageWidget>
                 .categoryDetailsList(homepageJson)
                 ?.toList() ??
             [])
-        .take(4)
         .toList();
     if (items.isEmpty) {
       return const SizedBox.shrink();
@@ -1447,42 +1719,48 @@ class _HomePageWidgetState extends State<HomePageWidget>
             context.pushNamed(CategoriesScreenWidget.routeName);
           },
         ).animateOnPageLoad(animationsMap['rowOnPageLoadAnimation1']!),
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
-          child: Wrap(
-            spacing: 16.0,
-            runSpacing: 16.0,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
             children: List.generate(items.length, (index) {
               final item = items[index];
-              return wrapWithModel(
-                model: _model.categoryComponentModels1.getModel(
-                  getJsonField(item, r'''$.name''').toString(),
-                  index,
+              return Padding(
+                padding: EdgeInsets.only(
+                  right: index == items.length - 1 ? 0.0 : 16.0,
                 ),
-                updateCallback: () => safeSetState(() {}),
-                child: CategoryComponentWidget(
-                  key: Key(
-                    'category_${getJsonField(item, r'''$._id''').toString()}',
+                child: wrapWithModel(
+                  model: _model.categoryComponentModels1.getModel(
+                    getJsonField(item, r'''$.name''').toString(),
+                    index,
                   ),
-                  icon:
-                      '${FFAppConstants.webUrl}${getJsonField(item, r'''$.icon''').toString()}',
-                  name: getJsonField(item, r'''$.name''').toString(),
-                  isSmall: true,
-                  onMainTap: () async {
-                    context.pushNamed(
-                      GetBookByCategoryPageWidget.routeName,
-                      queryParameters: {
-                        'id': serializeParam(
-                          getJsonField(item, r'''$._id''').toString(),
-                          ParamType.String,
-                        ),
-                        'name': serializeParam(
-                          getJsonField(item, r'''$.name''').toString(),
-                          ParamType.String,
-                        ),
-                      }.withoutNulls,
-                    );
-                  },
+                  updateCallback: () => safeSetState(() {}),
+                  child: CategoryComponentWidget(
+                    key: Key(
+                      'category_${getJsonField(item, r'''$._id''').toString()}',
+                    ),
+                    icon:
+                        '${FFAppConstants.webUrl}${getJsonField(item, r'''$.icon''').toString()}',
+                    name: getJsonField(item, r'''$.name''').toString(),
+                    isSmall: true,
+                    onMainTap: () async {
+                      context.pushNamed(
+                        GetBookByCategoryPageWidget.routeName,
+                        queryParameters: {
+                          'id': serializeParam(
+                            getJsonField(item, r'''$._id''').toString(),
+                            ParamType.String,
+                          ),
+                          'name': serializeParam(
+                            getJsonField(item, r'''$.name''').toString(),
+                            ParamType.String,
+                          ),
+                        }.withoutNulls,
+                      );
+                    },
+                  ),
                 ),
               ).animateOnPageLoad(
                   animationsMap['categoryComponentOnPageLoadAnimation']!);
@@ -1498,7 +1776,6 @@ class _HomePageWidgetState extends State<HomePageWidget>
                 .authorDetailsList(homepageJson)
                 ?.toList() ??
             [])
-        .take(4)
         .toList();
     if (items.isEmpty) {
       return const SizedBox.shrink();
@@ -1512,45 +1789,52 @@ class _HomePageWidgetState extends State<HomePageWidget>
             context.pushNamed(BestAuthorPageWidget.routeName);
           },
         ).animateOnPageLoad(animationsMap['rowOnPageLoadAnimation3']!),
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
-          child: Wrap(
-            spacing: 16.0,
-            runSpacing: 16.0,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
             children: List.generate(items.length, (index) {
               final item = items[index];
-              return wrapWithModel(
-                model: _model.categoryComponentModels2.getModel(
-                  getJsonField(item, r'''$.name''').toString(),
-                  index,
+              return Padding(
+                padding: EdgeInsets.only(
+                  right: index == items.length - 1 ? 0.0 : 16.0,
                 ),
-                updateCallback: () => safeSetState(() {}),
-                child: CategoryComponentWidget(
-                  key: Key(
-                      'author_${getJsonField(item, r'''$._id''').toString()}'),
-                  icon:
-                      '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.image''').toString()}',
-                  name: getJsonField(item, r'''$.name''').toString(),
-                  isSmall: true,
-                  onMainTap: () async {
-                    context.pushNamed(
-                      AboutAuthorPageWidget.routeName,
-                      queryParameters: {
-                        'name': serializeParam(
-                          getJsonField(item, r'''$.name''').toString(),
-                          ParamType.String,
-                        ),
-                        'authorImage': serializeParam(
-                          '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.image''').toString()}',
-                          ParamType.String,
-                        ),
-                        'authorId': serializeParam(
-                          getJsonField(item, r'''$._id''').toString(),
-                          ParamType.String,
-                        ),
-                      }.withoutNulls,
-                    );
-                  },
+                child: wrapWithModel(
+                  model: _model.categoryComponentModels2.getModel(
+                    getJsonField(item, r'''$.name''').toString(),
+                    index,
+                  ),
+                  updateCallback: () => safeSetState(() {}),
+                  child: CategoryComponentWidget(
+                    key: Key(
+                      'author_${getJsonField(item, r'''$._id''').toString()}',
+                    ),
+                    icon:
+                        '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.image''').toString()}',
+                    name: getJsonField(item, r'''$.name''').toString(),
+                    isSmall: true,
+                    onMainTap: () async {
+                      context.pushNamed(
+                        AboutAuthorPageWidget.routeName,
+                        queryParameters: {
+                          'name': serializeParam(
+                            getJsonField(item, r'''$.name''').toString(),
+                            ParamType.String,
+                          ),
+                          'authorImage': serializeParam(
+                            '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.image''').toString()}',
+                            ParamType.String,
+                          ),
+                          'authorId': serializeParam(
+                            getJsonField(item, r'''$._id''').toString(),
+                            ParamType.String,
+                          ),
+                        }.withoutNulls,
+                      );
+                    },
+                  ),
                 ),
               );
             }),

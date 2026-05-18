@@ -100,7 +100,7 @@ String capitalizeFirst(String input) {
 
 String convertToTwoDigitDecimal(String numberStr) {
   // Round the number to 2 decimal places
-  double number = double.parse(numberStr);
+  final number = double.tryParse(numberStr) ?? 0.0;
   return number.toStringAsFixed(2);
 }
 

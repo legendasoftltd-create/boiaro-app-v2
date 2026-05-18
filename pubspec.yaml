@@ -134,6 +134,7 @@ dev_dependencies:
   lints:
   flutter_test:
     sdk: flutter
+  flutter_native_splash: ^2.4.0
 
 
 flutter_launcher_icons:
@@ -144,6 +145,14 @@ flutter_launcher_icons:
   image_path: 'assets/images/app_launcher_icon.png'
   adaptive_icon_background: '#46764e'
   adaptive_icon_foreground: 'assets/images/adaptive_foreground_icon.png'
+
+
+flutter_native_splash:
+  background_image: "assets/images/splash.jpg"
+  fullscreen: true
+  android_12:
+    background_image: "assets/images/splash.jpg"
+    fullscreen: true
 
 
 # For information on the generic Dart part of this file, see the

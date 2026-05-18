@@ -279,7 +279,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required bool isFree,
     required double price,
   }) {
-    if (isFree || price <= 0) return true;
+    if (price <= 0) return true;
     return _purchasedFormatKeys
         .contains('${bookId.toLowerCase()}::${format.toLowerCase().trim()}');
   }
@@ -912,6 +912,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         if (!opened && !FFAppState().isLogin && !isAudiobookFree) {
           context.pushNamed(SignInPageWidget.routeName);
         }
+        return;
+      }
+      if (!forceBuy) {
+        await _openAudiobookPlayerFromV2(
+          bookId: bookId,
+          bookName: bookName,
+          bookImage: bookImage,
+          authorName: authorName,
+          hasFullAccess: false,
+          previewPercent: audiobookPreviewPercent,
+        );
         return;
       }
       if (FFAppState().isLogin && audiobookCoinPrice > 0) {
