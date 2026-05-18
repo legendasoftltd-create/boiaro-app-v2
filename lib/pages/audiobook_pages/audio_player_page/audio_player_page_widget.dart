@@ -2,7 +2,6 @@ import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/services/audio_playback_service.dart';
-import '/app_constants.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -76,7 +75,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     super.initState();
     _model = createModel(context, () => AudioPlayerPageModel());
     _isPreviewMode = widget.audiobook['isPreviewMode'] == true;
-    _previewPercent = (widget.audiobook['previewPercent'] as num?)?.toInt() ?? 100;
+    _previewPercent =
+        (widget.audiobook['previewPercent'] as num?)?.toInt() ?? 100;
     _initializeChapters();
     _persistAudiobookMeta();
     _initAudio();
@@ -101,8 +101,13 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       if (!mounted) {
         return;
       }
-      setState(() => _position = pos);
-      _persistAudiobookProgress(pos);
+      final cappedPosition = _capPreviewPosition(pos);
+      if (cappedPosition != pos) {
+        _handler?.seek(cappedPosition);
+      }
+      setState(() => _position = cappedPosition);
+      _persistAudiobookProgress(cappedPosition);
+      _maybeHandlePreviewBoundary(cappedPosition);
     });
     _mediaItemSub = handler.mediaItem.listen((item) {
       if (!mounted) {
@@ -115,13 +120,17 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       audiobook: widget.audiobook,
       chapter: _currentChapter ?? widget.chapter,
     );
-    final isSameBook = widget.audiobook['id']?.toString() == FFAppState().homePageLastAudioBookId ||
-                       widget.audiobook['_id']?.toString() == FFAppState().homePageLastAudioBookId;
+    final isSameBook = widget.audiobook['id']?.toString() ==
+            FFAppState().homePageLastAudioBookId ||
+        widget.audiobook['_id']?.toString() ==
+            FFAppState().homePageLastAudioBookId;
     if (isSameBook) {
       final savedSec = FFAppState().homePageLastAudioPositionSec;
       if (savedSec > 0) {
-        final lastTrack = FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
-        final currentTrack = (_currentChapter?['track_number'] ?? (_currentIndex + 1));
+        final lastTrack =
+            FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
+        final currentTrack =
+            (_currentChapter?['track_number'] ?? (_currentIndex + 1));
         if ('$currentTrack' == '$lastTrack') {
           await handler.seek(Duration(seconds: savedSec));
         }
@@ -134,14 +143,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
 
   void _onPlaybackState(PlaybackState state) {
     if (!mounted || _previewLimitShown) return;
-    if (state.processingState == AudioProcessingState.completed) {
-      if (_currentIndex >= _chapters.length - 1) {
-        _previewLimitShown = true;
-        _handler?.pause();
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _showPreviewLimitDialog();
-        });
-      }
+    if (_isPreviewMode) {
+      _maybeHandlePreviewBoundary(_position);
     }
   }
 
@@ -194,16 +197,20 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
         return {
           'title': chapter['title'] ?? chapter['name'] ?? 'Chapter',
           'file': chapter['file'] ?? chapter['audio'],
+          'track_number': chapter['track_number'],
           'isLocked': chapter['isLocked'] ?? chapter['is_locked'] ?? false,
           'isPreview': chapter['isPreview'] ?? chapter['is_preview'] ?? false,
+          'previewFraction': chapter['previewFraction'] ?? 1.0,
           'raw': chapter,
         };
       }
       return {
         'title': 'Chapter',
         'file': chapter?.toString(),
+        'track_number': null,
         'isLocked': false,
         'isPreview': false,
+        'previewFraction': 1.0,
         'raw': chapter,
       };
     }).toList();
@@ -247,6 +254,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       _currentChapter = _chapters[index];
       _position = Duration.zero;
       _duration = Duration.zero;
+      _previewLimitShown = false;
     });
     _persistAudiobookMeta();
     await handler.playChapter(
@@ -269,8 +277,114 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     final imageUrl = _resolveBookImage(imageValue?.toString());
     FFAppState().homePageLastAudioBookId = id?.toString() ?? '';
     FFAppState().homePageLastAudioBookName = name?.toString() ?? '';
-    FFAppState().homePageLastAudioBookAuthor = _stringValue(author, fallback: '');
+    FFAppState().homePageLastAudioBookAuthor =
+        _stringValue(author, fallback: '');
     FFAppState().homePageLastAudioBookImage = imageUrl;
+  }
+
+  double _currentPreviewFraction() {
+    if (!_isPreviewMode) {
+      return 1.0;
+    }
+    final raw = _currentChapter?['previewFraction'];
+    if (raw is num) {
+      final value = raw.toDouble().clamp(0.0, 1.0);
+      if (value > 0.0 && value < 1.0) {
+        return value;
+      }
+      if (value == 0.0) {
+        return 0.0;
+      }
+      if (_chapters.length > 1) {
+        return 1.0;
+      }
+    }
+    if (_currentIndex == 0 && _chapters.length == 1) {
+      return (_previewPercent / 100).clamp(0.0, 1.0);
+    }
+    return 1.0;
+  }
+
+  Duration? _currentPreviewLimit() {
+    if (!_isPreviewMode || _duration <= Duration.zero) {
+      return null;
+    }
+    final fraction = _currentPreviewFraction();
+    if (fraction >= 1.0) {
+      return null;
+    }
+    final limitedMs = (_duration.inMilliseconds * fraction)
+        .floor()
+        .clamp(0, _duration.inMilliseconds);
+    return Duration(milliseconds: limitedMs);
+  }
+
+  Duration _effectiveDuration() {
+    return _currentPreviewLimit() ?? _duration;
+  }
+
+  Duration _capPreviewPosition(Duration position) {
+    if (position.isNegative) {
+      return Duration.zero;
+    }
+    final limit = _currentPreviewLimit();
+    if (limit != null && position > limit) {
+      return limit;
+    }
+    return position;
+  }
+
+  Future<void> _seekTo(Duration position) async {
+    final target = _capPreviewPosition(position);
+    if (mounted) {
+      setState(() => _position = target);
+    }
+    await _handler?.seek(target);
+    _maybeHandlePreviewBoundary(target);
+  }
+
+  void _clearPersistedAudiobookProgress() {
+    FFAppState().homePageLastAudioBookId = '';
+    FFAppState().homePageLastAudioBookName = '';
+    FFAppState().homePageLastAudioBookAuthor = '';
+    FFAppState().homePageLastAudioBookImage = '';
+    FFAppState().homePageLastAudioPositionSec = 0;
+    FFAppState().homePageLastAudioDurationSec = 0;
+    FFAppState().homePageLastAudioProgress = 0.0;
+    FFAppState().prefs.setInt('ff_homePageLastAudioTrackNumber', 1);
+  }
+
+  Future<void> _finishPreviewSession(Duration limit) async {
+    if (_previewLimitShown) {
+      return;
+    }
+    _previewLimitShown = true;
+    if (mounted && _position != limit) {
+      setState(() => _position = limit);
+    }
+    _clearPersistedAudiobookProgress();
+    if (!mounted) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showPreviewLimitDialog();
+      }
+    });
+  }
+
+  void _maybeHandlePreviewBoundary(Duration position) {
+    if (!_isPreviewMode || _previewLimitShown) {
+      return;
+    }
+    final limit = _currentPreviewLimit();
+    if (limit == null || limit <= Duration.zero) {
+      return;
+    }
+    if (position < limit) {
+      return;
+    }
+    unawaited(_finishPreviewSession(limit));
   }
 
   void _persistAudiobookProgress(Duration position) {
@@ -284,13 +398,13 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       return;
     }
     _lastPersistedSecond = currentSeconds;
-    final progress =
-        (currentSeconds / totalSeconds).clamp(0.0, 1.0).toDouble();
+    final progress = (currentSeconds / totalSeconds).clamp(0.0, 1.0).toDouble();
     FFAppState().homePageLastAudioPositionSec = currentSeconds;
     FFAppState().homePageLastAudioDurationSec = totalSeconds;
     FFAppState().homePageLastAudioProgress = progress;
     final trackNum = _currentChapter?['track_number'] ?? (_currentIndex + 1);
-    FFAppState().prefs.setInt('ff_homePageLastAudioTrackNumber', int.tryParse(trackNum.toString()) ?? (_currentIndex + 1));
+    FFAppState().prefs.setInt('ff_homePageLastAudioTrackNumber',
+        int.tryParse(trackNum.toString()) ?? (_currentIndex + 1));
   }
 
   Future<void> _setSpeed(double speed) async {
@@ -334,7 +448,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                 .map((speed) => ListTile(
                       title: Text('${speed.toStringAsFixed(2)}x'),
                       trailing: _speed == speed
-                          ? Icon(Icons.check, color: FlutterFlowTheme.of(context).primary)
+                          ? Icon(Icons.check,
+                              color: FlutterFlowTheme.of(context).primary)
                           : null,
                       onTap: () async {
                         Navigator.pop(context);
@@ -407,8 +522,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
               final label = entry.key;
               return ListTile(
                 title: Text(label),
-                trailing: _sleepLabel == label || _sleepLabel == label.replaceAll(' min', 'm')
-                    ? Icon(Icons.check, color: FlutterFlowTheme.of(context).primary)
+                trailing: _sleepLabel == label ||
+                        _sleepLabel == label.replaceAll(' min', 'm')
+                    ? Icon(Icons.check,
+                        color: FlutterFlowTheme.of(context).primary)
                     : null,
                 onTap: () {
                   Navigator.pop(context);
@@ -492,7 +609,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
           getJsonField(widget.audiobook, r'''$.narrators.name'''),
       fallback: 'Author',
     );
+    final bookName = _stringValue(
+      widget.audiobook['title'] ?? widget.audiobook['name'],
+      fallback: '',
+    );
     final coverImage = _resolveBookImage(widget.audiobook['image']?.toString());
+    final effectiveDuration = _effectiveDuration();
 
     return GestureDetector(
       onTap: () {
@@ -506,7 +628,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
           backgroundColor: Colors.transparent,
           automaticallyImplyLeading: false,
           leading: IconButton(
-            icon: Icon(Icons.keyboard_arrow_down_rounded, color: FlutterFlowTheme.of(context).primaryText, size: 30),
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                color: FlutterFlowTheme.of(context).primaryText, size: 30),
             onPressed: () => context.safePop(),
           ),
           title: Text(
@@ -519,98 +642,155 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
           ),
           actions: [
             IconButton(
-              icon: Icon(Icons.more_vert_rounded, color: FlutterFlowTheme.of(context).primaryText),
+              icon: Icon(Icons.more_vert_rounded,
+                  color: FlutterFlowTheme.of(context).primaryText),
               onPressed: () {},
             ),
           ],
           centerTitle: true,
           elevation: 0,
         ),
-        body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.0),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment(0.0, 0.65),
+              colors: [
+                FlutterFlowTheme.of(context).primary.withValues(alpha: 0.10),
+                FlutterFlowTheme.of(context).primaryBackground,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.0),
             child: Column(
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // DEBUG STRIP — remove after confirming values are correct
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  color: Colors.red.shade900,
-                  child: Text(
-                    'DEBUG | isPreviewMode=$_isPreviewMode | previewPercent=$_previewPercent% | chapters=${_chapters.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 10),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
                 // Album Art
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32.0),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24.0),
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: 40.0,
-                            color: Colors.black.withOpacity(0.5),
-                            offset: Offset(0, 20),
-                          )
-                        ],
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Center(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final availH = constraints.maxHeight;
+                          final idealW = (MediaQuery.of(context).size.width - 40) * 0.85;
+                          final idealH = idealW * 1.5;
+                          final coverH = idealH.clamp(0.0, availH);
+                          final coverW = coverH * (2.0 / 3.0);
+                          return SizedBox(
+                            width: coverW,
+                            height: coverH,
+                            child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  blurRadius: 48.0,
+                                  color: Colors.black.withValues(alpha: 0.45),
+                                  offset: Offset(0, 24),
+                                  spreadRadius: 4,
+                                ),
+                                BoxShadow(
+                                  blurRadius: 24.0,
+                                  color: FlutterFlowTheme.of(context)
+                                      .primary
+                                      .withValues(alpha: 0.2),
+                                  offset: Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20.0),
+                              child: Image.network(
+                                coverImage,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
+                                  child: Icon(
+                                    Icons.library_books_rounded,
+                                    size: 64,
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryText,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          );
+                        },
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24.0),
-                        child: Image.network(
-                          coverImage,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ).animateOnPageLoad(animationsMap['imageOnPageLoadAnimation']!),
-                  ),
+                    ),
+                  ).animateOnPageLoad(
+                      animationsMap['imageOnPageLoadAnimation']!),
                 ),
 
-                // Title and Author
+                // Book name + Chapter + Author
                 Column(
                   children: [
+                    if (bookName.isNotEmpty && bookName != chapterTitle) ...[
+                      Text(
+                        bookName.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FlutterFlowTheme.of(context).bodySmall.override(
+                              fontFamily: 'SF Pro Display',
+                              color: FlutterFlowTheme.of(context).primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.5,
+                            ),
+                      ),
+                      SizedBox(height: 4),
+                    ],
                     Text(
                       chapterTitle,
                       textAlign: TextAlign.center,
-                      style: FlutterFlowTheme.of(context).headlineSmall.override(
-                            fontFamily: 'SF Pro Display',
-                            color: FlutterFlowTheme.of(context).primaryText,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                          ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          FlutterFlowTheme.of(context).headlineSmall.override(
+                                fontFamily: 'SF Pro Display',
+                                color: FlutterFlowTheme.of(context).primaryText,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: 4),
                     Text(
                       authorName,
                       style: FlutterFlowTheme.of(context).bodyMedium.override(
                             fontFamily: 'SF Pro Display',
                             color: FlutterFlowTheme.of(context).secondaryText,
-                            fontSize: 16,
+                            fontSize: 13,
                           ),
                     ),
                   ],
                 ),
 
-                SizedBox(height: 16),
+                SizedBox(height: 8),
 
                 if (_isPreviewMode)
                   Container(
                     margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.orange.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                      border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.lock_outline_rounded, color: Colors.orange, size: 14),
+                        Icon(Icons.lock_outline_rounded,
+                            color: Colors.orange, size: 14),
                         const SizedBox(width: 6),
                         Text(
                           'Preview ($_previewPercent%) — Buy to unlock full audiobook',
@@ -624,39 +804,47 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                     ),
                   ),
 
-                SizedBox(height: 16),
+                SizedBox(height: 6),
 
                 // Progress Bar
                 Column(
                   children: [
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        trackHeight: 4,
-                        thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
-                        overlayShape: RoundSliderOverlayShape(overlayRadius: 14),
+                        trackHeight: 5,
+                        thumbShape:
+                            RoundSliderThumbShape(enabledThumbRadius: 7),
+                        overlayShape:
+                            RoundSliderOverlayShape(overlayRadius: 16),
                         activeTrackColor: FlutterFlowTheme.of(context).primary,
-                        inactiveTrackColor: FlutterFlowTheme.of(context).gray200,
+                        inactiveTrackColor:
+                            FlutterFlowTheme.of(context).gray200,
                         thumbColor: FlutterFlowTheme.of(context).primary,
-                        overlayColor: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
+                        overlayColor: FlutterFlowTheme.of(context)
+                            .primary
+                            .withValues(alpha: 0.12),
                       ),
                       child: Slider(
-                        value: (_duration.inMilliseconds > 0)
+                        value: (effectiveDuration.inMilliseconds > 0)
                             ? _position.inMilliseconds
                                 .toDouble()
-                                .clamp(0, _duration.inMilliseconds.toDouble())
+                                .clamp(0,
+                                    effectiveDuration.inMilliseconds.toDouble())
                                 .toDouble()
                             : 0.0,
                         min: 0,
-                        max: _duration.inMilliseconds > 0
-                            ? _duration.inMilliseconds.toDouble()
+                        max: effectiveDuration.inMilliseconds > 0
+                            ? effectiveDuration.inMilliseconds.toDouble()
                             : 1.0,
                         onChanged: (val) {
                           setState(() {
-                            _position = Duration(milliseconds: val.toInt());
+                            _position = _capPreviewPosition(
+                              Duration(milliseconds: val.toInt()),
+                            );
                           });
                         },
                         onChangeEnd: (val) {
-                          _handler?.seek(Duration(milliseconds: val.toInt()));
+                          _seekTo(Duration(milliseconds: val.toInt()));
                         },
                       ),
                     ),
@@ -667,11 +855,17 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                         children: [
                           Text(
                             _formatDuration(_position),
-                            style: TextStyle(color: FlutterFlowTheme.of(context).secondaryText, fontSize: 12),
+                            style: TextStyle(
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
+                                fontSize: 12),
                           ),
                           Text(
-                            _formatDuration(_duration),
-                            style: TextStyle(color: FlutterFlowTheme.of(context).secondaryText, fontSize: 12),
+                            _formatDuration(effectiveDuration),
+                            style: TextStyle(
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
+                                fontSize: 12),
                           ),
                         ],
                       ),
@@ -679,27 +873,31 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                   ],
                 ),
 
-                SizedBox(height: 32),
+                SizedBox(height: 14),
 
                 // Playback Controls
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
-                      icon: Icon(Icons.skip_previous_rounded, color: FlutterFlowTheme.of(context).primaryText, size: 36),
+                      icon: Icon(Icons.skip_previous_rounded,
+                          color: FlutterFlowTheme.of(context).primaryText,
+                          size: 30),
                       onPressed: () {
                         if (_chapters.isNotEmpty && _currentIndex > 0) {
                           _playChapterAt(_currentIndex - 1);
                         } else {
-                          _handler?.seek(Duration.zero);
+                          _seekTo(Duration.zero);
                         }
                       },
                     ),
                     IconButton(
-                      icon: Icon(Icons.replay_10_rounded, color: FlutterFlowTheme.of(context).primaryText, size: 36),
+                      icon: Icon(Icons.replay_10_rounded,
+                          color: FlutterFlowTheme.of(context).primaryText,
+                          size: 30),
                       onPressed: () {
                         final target = _position - Duration(seconds: 10);
-                        _handler?.seek(target.isNegative ? Duration.zero : target);
+                        _seekTo(target.isNegative ? Duration.zero : target);
                       },
                     ),
                     // Play/Pause Button
@@ -709,7 +907,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                         final state = snapshot.data;
                         final isPlaying = state?.playing ?? false;
                         final processingState = state?.processingState;
-                        final isLoading = processingState == AudioProcessingState.loading ||
+                        final isLoading = processingState ==
+                                AudioProcessingState.loading ||
                             processingState == AudioProcessingState.buffering;
                         return InkWell(
                           onTap: () {
@@ -723,8 +922,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                             }
                           },
                           child: Container(
-                            width: 72,
-                            height: 72,
+                            width: 64,
+                            height: 64,
                             decoration: BoxDecoration(
                               color: FlutterFlowTheme.of(context).primary,
                               shape: BoxShape.circle,
@@ -733,7 +932,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                                   blurRadius: 20.0,
                                   color: FlutterFlowTheme.of(context)
                                       .primary
-                                      .withOpacity(0.3),
+                                      .withValues(alpha: 0.3),
                                   offset: Offset(0, 10),
                                 )
                               ],
@@ -757,28 +956,32 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                                         ? Icons.pause_rounded
                                         : Icons.play_arrow_rounded,
                                     color: Colors.white,
-                                    size: 40,
+                                    size: 34,
                                   ),
                           ),
                         );
                       },
                     ),
                     IconButton(
-                      icon: Icon(Icons.forward_10_rounded, color: FlutterFlowTheme.of(context).primaryText, size: 36),
+                      icon: Icon(Icons.forward_10_rounded,
+                          color: FlutterFlowTheme.of(context).primaryText,
+                          size: 30),
                       onPressed: () {
                         final target = _position + Duration(seconds: 10);
-                        _handler?.seek(target);
+                        _seekTo(target);
                       },
                     ),
                     IconButton(
                       icon: Icon(
                         Icons.skip_next_rounded,
-                        color: (_isPreviewMode && _currentIndex >= _chapters.length - 1)
+                        color: (_isPreviewMode &&
+                                _currentIndex >= _chapters.length - 1)
                             ? FlutterFlowTheme.of(context).secondaryText
                             : FlutterFlowTheme.of(context).primaryText,
-                        size: 36,
+                        size: 30,
                       ),
-                      onPressed: (_isPreviewMode && _currentIndex >= _chapters.length - 1)
+                      onPressed: (_isPreviewMode &&
+                              _currentIndex >= _chapters.length - 1)
                           ? null
                           : () {
                               if (_chapters.isNotEmpty &&
@@ -790,11 +993,18 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                   ],
                 ),
 
-                SizedBox(height: 48),
+                SizedBox(height: 10),
 
                 // Bottom Icons Row
-                Padding(
-                  padding: EdgeInsets.only(bottom: 24.0),
+                Container(
+                  margin: EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: FlutterFlowTheme.of(context)
+                        .secondaryBackground
+                        .withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -813,7 +1023,9 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                       _buildBottomAction(
                         context,
                         Icons.timer_outlined,
-                        _sleepLabel == 'Off' ? 'Sleep Timer' : 'Sleep $_sleepLabel',
+                        _sleepLabel == 'Off'
+                            ? 'Sleep Timer'
+                            : 'Sleep $_sleepLabel',
                         onTap: _showSleepTimerSheet,
                       ),
                     ],
@@ -821,6 +1033,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                 ),
               ],
             ),
+          ),
           ),
         ),
       ),

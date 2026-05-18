@@ -346,10 +346,16 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
       }
     }
     final out = <Map<String, dynamic>>[];
+    final previewTrackCount =
+        _v2Tracks.where((t) => t['is_preview'] == true).length;
+    final previewPercent = _v2Tracks.isEmpty
+        ? 15
+        : ((previewTrackCount / _v2Tracks.length) * 100).round().clamp(1, 100);
     for (var i = 0; i < _v2Tracks.length; i++) {
       final t = _v2Tracks[i];
-      final trackNumber =
-          (t['track_number'] is num) ? (t['track_number'] as num).toInt() : i + 1;
+      final trackNumber = (t['track_number'] is num)
+          ? (t['track_number'] as num).toInt()
+          : i + 1;
       final isPreview = t['is_preview'] == true;
       if (!hasAccess && !isPreview) continue;
       final signed = await _audioSignedUrl(trackNumber);
@@ -360,9 +366,15 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
         'track_number': trackNumber,
         'isLocked': false,
         'isPreview': isPreview,
+        'previewFraction': 1.0,
         'file': signed,
         'raw': t,
       });
+    }
+    if (!hasAccess && out.isNotEmpty) {
+      for (final chapter in out) {
+        chapter['previewPercent'] = previewPercent;
+      }
     }
     return out;
   }
@@ -393,6 +405,10 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
         'audiobook': {
           ...audiobook,
           'chapters': chapters,
+          'isPreviewMode': !hasAccess,
+          'previewPercent': chapters.isNotEmpty
+              ? (chapters.first['previewPercent'] as int?) ?? 15
+              : 15,
         },
         'chapter': startChapter,
       },
@@ -409,11 +425,10 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
             response.jsonBody ?? '',
           ) ==
           1) {
-        _purchasedBookIds =
-            EbookGroup.userBookPurchaseRecordsApiCall.bookId(
-                  response.jsonBody ?? '',
-                ) ??
-                [];
+        _purchasedBookIds = EbookGroup.userBookPurchaseRecordsApiCall.bookId(
+              response.jsonBody ?? '',
+            ) ??
+            [];
         _isPurchased = _purchasedBookIds.contains(_bookId);
         if (mounted) {
           safeSetState(() {});
@@ -502,8 +517,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     return null;
   }
 
-  num? _calculateOfferPrice(dynamic price, dynamic discountAmount,
-      dynamic discountPercentage) {
+  num? _calculateOfferPrice(
+      dynamic price, dynamic discountAmount, dynamic discountPercentage) {
     final priceNum = _toNum(price);
     if (priceNum == null) {
       return null;
@@ -539,32 +554,31 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     return text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
   }
 
-    Map<String, dynamic> _normalizeBookDetails(
-        dynamic bookDetails, Map<String, dynamic> fallback) {
-      final imagePath =
-          getJsonField(bookDetails, r'''$.image''') ?? fallback['image'];
-      final price = getJsonField(bookDetails, r'''$.price''') ?? fallback['price'];
+  Map<String, dynamic> _normalizeBookDetails(
+      dynamic bookDetails, Map<String, dynamic> fallback) {
+    final imagePath =
+        getJsonField(bookDetails, r'''$.image''') ?? fallback['image'];
+    final price =
+        getJsonField(bookDetails, r'''$.price''') ?? fallback['price'];
     final discountAmount = getJsonField(bookDetails, r'''$.discount_amount''');
     final discountPercentage =
         getJsonField(bookDetails, r'''$.discount_percentage''');
     final offerPrice =
         _calculateOfferPrice(price, discountAmount, discountPercentage) ??
             fallback['offerPrice'];
-      final rating =
-          _toNum(getJsonField(bookDetails, r'''$.averageRating''')) ??
-              _toNum(fallback['rating']) ??
-              0;
-      final previewAudio =
-          getJsonField(bookDetails, r'''$.preview_audio''') ??
-          getJsonField(bookDetails, r'''$.previewAudio''') ??
-          fallback['preview_audio'] ??
-          fallback['previewAudio'];
-      final reviewsList = getJsonField(bookDetails, r'''$.reviews''', true);
-      return {
-        'id': getJsonField(bookDetails, r'''$._id''')?.toString() ??
-            fallback['id'] ??
-            fallback['_id'] ??
-            '',
+    final rating = _toNum(getJsonField(bookDetails, r'''$.averageRating''')) ??
+        _toNum(fallback['rating']) ??
+        0;
+    final previewAudio = getJsonField(bookDetails, r'''$.preview_audio''') ??
+        getJsonField(bookDetails, r'''$.previewAudio''') ??
+        fallback['preview_audio'] ??
+        fallback['previewAudio'];
+    final reviewsList = getJsonField(bookDetails, r'''$.reviews''', true);
+    return {
+      'id': getJsonField(bookDetails, r'''$._id''')?.toString() ??
+          fallback['id'] ??
+          fallback['_id'] ??
+          '',
       'title': getJsonField(bookDetails, r'''$.name''')?.toString() ??
           fallback['title'] ??
           fallback['name'] ??
@@ -572,9 +586,10 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
       'author': getJsonField(bookDetails, r'''$.author.name''')?.toString() ??
           fallback['author'] ??
           '',
-      'category': getJsonField(bookDetails, r'''$.category.name''')?.toString() ??
-          fallback['category'] ??
-          '',
+      'category':
+          getJsonField(bookDetails, r'''$.category.name''')?.toString() ??
+              fallback['category'] ??
+              '',
       'image': _resolveBookImage(imagePath?.toString()),
       'price': _toNum(price) ?? fallback['price'],
       'offerPrice': offerPrice,
@@ -583,23 +598,23 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
       'language': getJsonField(bookDetails, r'''$.language''')?.toString() ??
           fallback['language'] ??
           '',
-        'description': _sanitizeText(
-          getJsonField(bookDetails, r'''$.description''') ??
-              fallback['description'],
-        ),
-        'previewAudio': previewAudio,
-        'raw': bookDetails ?? fallback,
-      };
-    }
+      'description': _sanitizeText(
+        getJsonField(bookDetails, r'''$.description''') ??
+            fallback['description'],
+      ),
+      'previewAudio': previewAudio,
+      'raw': bookDetails ?? fallback,
+    };
+  }
 
   List<Map<String, dynamic>> _normalizeChapters(
     dynamic bookDetails,
     List<dynamic> fallback, {
     required bool hasAccess,
   }) {
-    final rawChapters = (getJsonField(bookDetails, r'''$.chapters''', true) ??
-            fallback)
-        .toList();
+    final rawChapters =
+        (getJsonField(bookDetails, r'''$.chapters''', true) ?? fallback)
+            .toList();
     final List<Map<String, dynamic>> chapters = [];
     for (var i = 0; i < rawChapters.length; i++) {
       final chapter = rawChapters[i];
@@ -626,8 +641,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     return chapters;
   }
 
-  List<Map<String, dynamic>> _normalizeRelatedBooks(
-      ApiCallResponse? response) {
+  List<Map<String, dynamic>> _normalizeRelatedBooks(ApiCallResponse? response) {
     if (response == null) {
       return [];
     }
@@ -673,8 +687,9 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
             ? EbookGroup.getbookdetailsApiCall
                 .bookDetails(snapshot.data!.jsonBody)
             : null;
-        final details =
-            (detailsList != null && detailsList.isNotEmpty) ? detailsList.first : null;
+        final details = (detailsList != null && detailsList.isNotEmpty)
+            ? detailsList.first
+            : null;
         // Hydrate UUID from details when route payload did not contain a usable id.
         final detailBookId = _extractBookIdFromDetails(details);
         if (detailBookId.isNotEmpty && detailBookId != _bookId) {
@@ -695,9 +710,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
         final audiobookCoinPrice = _audiobookCoinPrice(details, fallback);
         final isFreeAccess = accessType.contains('free') || basePrice <= 0;
         final hasAccess = isFreeAccess || _isPurchased || _hasAudioAccess;
-        final priceLabel = basePrice <= 0
-            ? 'Free'
-            : '৳${book['offerPrice'] ?? book['price']}';
+        final priceLabel =
+            basePrice <= 0 ? 'Free' : '৳${book['offerPrice'] ?? book['price']}';
         var chapters = _v2Tracks.isNotEmpty
             ? _v2Tracks.asMap().entries.map((entry) {
                 final i = entry.key;
@@ -760,12 +774,13 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
             backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
             body: CustomScrollView(
               slivers: [
-            // Premium Silver App Bar with Cover Image
-            SliverAppBar(
+                // Premium Silver App Bar with Cover Image
+                SliverAppBar(
                   expandedHeight: 400.0,
                   floating: false,
                   pinned: true,
-                  backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+                  backgroundColor:
+                      FlutterFlowTheme.of(context).secondaryBackground,
                   automaticallyImplyLeading: false,
                   leading: Padding(
                     padding: EdgeInsets.all(8.0),
@@ -776,7 +791,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                           color: Colors.black.withOpacity(0.3),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.chevron_left_rounded, color: Colors.white, size: 30),
+                        child: Icon(Icons.chevron_left_rounded,
+                            color: Colors.white, size: 30),
                       ),
                     ),
                   ),
@@ -789,7 +805,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                          icon: Icon(Icons.share_rounded,
+                              color: Colors.white, size: 20),
                           onPressed: () async {
                             await SharePlus.instance.share(
                               ShareParams(
@@ -846,24 +863,26 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 context.pushNamed(SignInPageWidget.routeName);
                                 return;
                               }
-                              final cart =
-                                  Provider.of<CartProvider>(context, listen: false);
+                              final cart = Provider.of<CartProvider>(context,
+                                  listen: false);
                               cart.addItem(
                                 _bookId,
                                 book['title']?.toString() ?? '',
                                 book['image']?.toString() ?? '',
                                 basePrice,
-                                discountAmount:
-                                    _toNum(getJsonField(details, r'''$.discount_amount'''))?.toDouble(),
+                                discountAmount: _toNum(getJsonField(
+                                        details, r'''$.discount_amount'''))
+                                    ?.toDouble(),
                                 discountPercentage: _toNum(getJsonField(
-                                    details, r'''$.discount_percentage'''))?.toDouble(),
+                                        details, r'''$.discount_percentage'''))
+                                    ?.toDouble(),
                                 type: 'audiobook',
                                 coinPrice: audiobookCoinPrice > 0
                                     ? audiobookCoinPrice
                                     : null,
                               );
-                              await actions.showCustomToastBottom(
-                                  'Added to cart!');
+                              await actions
+                                  .showCustomToastBottom('Added to cart!');
                             },
                           ),
                         ),
@@ -892,42 +911,47 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                             ),
                           ),
                         ),
-                          // Preview Label on Cover
-                          Center(
-                            child: InkWell(
-                              onTap: () async {
-                                await _openAudioPlayerFromV2(
-                                  audiobook: Map<String, dynamic>.from(book),
-                                  hasAccess: false,
-                                  startTrackNumber: 1,
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(30),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(color: Colors.white.withOpacity(0.3)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 24),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Preview',
-                                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                        fontFamily: 'SF Pro Display',
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                        // Preview Label on Cover
+                        Center(
+                          child: InkWell(
+                            onTap: () async {
+                              await _openAudioPlayerFromV2(
+                                audiobook: Map<String, dynamic>.from(book),
+                                hasAccess: false,
+                                startTrackNumber: 1,
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(30),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.play_circle_fill_rounded,
+                                      color: Colors.white, size: 24),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Preview',
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodyMedium
+                                        .override(
+                                          fontFamily: 'SF Pro Display',
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
+                        ),
                       ],
                     ),
                   ),
@@ -949,7 +973,9 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 children: [
                                   Text(
                                     book['title'] ?? 'Title',
-                                    style: FlutterFlowTheme.of(context).headlineMedium.override(
+                                    style: FlutterFlowTheme.of(context)
+                                        .headlineMedium
+                                        .override(
                                           fontFamily: 'SF Pro Display',
                                           fontWeight: FontWeight.bold,
                                           fontSize: 26,
@@ -958,13 +984,20 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                   SizedBox(height: 8),
                                   Row(
                                     children: [
-                                      Icon(Icons.person_pin_circle_outlined, color: FlutterFlowTheme.of(context).primary, size: 18),
+                                      Icon(Icons.person_pin_circle_outlined,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primary,
+                                          size: 18),
                                       SizedBox(width: 4),
                                       Text(
                                         book['author'] ?? 'Author Name',
-                                        style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
                                               fontFamily: 'SF Pro Display',
-                                              color: FlutterFlowTheme.of(context).primary,
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primary,
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -978,16 +1011,22 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
+                                    color: FlutterFlowTheme.of(context)
+                                        .primary
+                                        .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     book['category'] ?? 'Fiction',
-                                    style: FlutterFlowTheme.of(context).bodySmall.override(
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodySmall
+                                        .override(
                                           fontFamily: 'SF Pro Display',
-                                          color: FlutterFlowTheme.of(context).primary,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primary,
                                           fontWeight: FontWeight.bold,
                                         ),
                                   ),
@@ -995,9 +1034,12 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 SizedBox(height: 12),
                                 Text(
                                   priceLabel,
-                                  style: FlutterFlowTheme.of(context).headlineSmall.override(
+                                  style: FlutterFlowTheme.of(context)
+                                      .headlineSmall
+                                      .override(
                                         fontFamily: 'SF Pro Display',
-                                        color: FlutterFlowTheme.of(context).primary,
+                                        color: FlutterFlowTheme.of(context)
+                                            .primary,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 22,
                                       ),
@@ -1013,7 +1055,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                         Container(
                           padding: EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: FlutterFlowTheme.of(context).secondaryBackground,
+                            color: FlutterFlowTheme.of(context)
+                                .secondaryBackground,
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
@@ -1032,11 +1075,14 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                 'Review ($reviewsCount)',
                               ),
                               _buildStatItem(context, 'Audio', 'Book'),
-                              _buildStatItem(context, Icons.bookmark_border_rounded, 'Wishlist'),
-                              _buildStatItem(context, '${chapters.length}', 'Chapters'),
+                              _buildStatItem(context,
+                                  Icons.bookmark_border_rounded, 'Wishlist'),
+                              _buildStatItem(
+                                  context, '${chapters.length}', 'Chapters'),
                             ],
                           ),
-                        ).animateOnPageLoad(animationsMap['containerOnPageLoadAnimation1']!),
+                        ).animateOnPageLoad(
+                            animationsMap['containerOnPageLoadAnimation1']!),
 
                         SizedBox(height: 32),
 
@@ -1047,13 +1093,14 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                               : () async {
                                   if (hasAccess) {
                                     await _openAudioPlayerFromV2(
-                                      audiobook: Map<String, dynamic>.from(book),
+                                      audiobook:
+                                          Map<String, dynamic>.from(book),
                                       hasAccess: true,
                                     );
                                   } else {
                                     if (!FFAppState().isLogin) {
-                                      context
-                                          .pushNamed(SignInPageWidget.routeName);
+                                      context.pushNamed(
+                                          SignInPageWidget.routeName);
                                       return;
                                     }
                                     if (audiobookCoinPrice > 0) {
@@ -1082,9 +1129,13 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                       book['image']?.toString() ?? '',
                                       basePrice,
                                       discountAmount: _toNum(getJsonField(
-                                          details, r'''$.discount_amount'''))?.toDouble(),
+                                              details,
+                                              r'''$.discount_amount'''))
+                                          ?.toDouble(),
                                       discountPercentage: _toNum(getJsonField(
-                                          details, r'''$.discount_percentage'''))?.toDouble(),
+                                              details,
+                                              r'''$.discount_percentage'''))
+                                          ?.toDouble(),
                                       type: 'audiobook',
                                       coinPrice: audiobookCoinPrice > 0
                                           ? audiobookCoinPrice
@@ -1107,7 +1158,9 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: FlutterFlowTheme.of(context).primary.withOpacity(0.3),
+                                  color: FlutterFlowTheme.of(context)
+                                      .primary
+                                      .withOpacity(0.3),
                                   blurRadius: 12,
                                   offset: Offset(0, 6),
                                 )
@@ -1116,7 +1169,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.headphones_rounded, color: Colors.white, size: 24),
+                                Icon(Icons.headphones_rounded,
+                                    color: Colors.white, size: 24),
                                 SizedBox(width: 12),
                                 Text(
                                   hasAccess
@@ -1124,7 +1178,9 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                       : (audiobookCoinPrice > 0
                                           ? 'Unlock with Coins'
                                           : 'Buy Now'),
-                                  style: FlutterFlowTheme.of(context).titleMedium.override(
+                                  style: FlutterFlowTheme.of(context)
+                                      .titleMedium
+                                      .override(
                                         fontFamily: 'SF Pro Display',
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
@@ -1140,10 +1196,11 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                         // Chapters Section
                         Text(
                           'Chapters',
-                          style: FlutterFlowTheme.of(context).titleLarge.override(
-                                fontFamily: 'SF Pro Display',
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              FlutterFlowTheme.of(context).titleLarge.override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                         SizedBox(height: 16),
                         ListView.builder(
@@ -1168,18 +1225,23 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                         // Description
                         Text(
                           'Description',
-                          style: FlutterFlowTheme.of(context).titleLarge.override(
-                                fontFamily: 'SF Pro Display',
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              FlutterFlowTheme.of(context).titleLarge.override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                         SizedBox(height: 12),
                         Text(
-                          description.isNotEmpty ? description
+                          description.isNotEmpty
+                              ? description
                               : 'No description available.',
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          style: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .override(
                                 fontFamily: 'SF Pro Display',
-                                color: FlutterFlowTheme.of(context).secondaryText,
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
                                 lineHeight: 1.5,
                               ),
                         ),
@@ -1336,13 +1398,13 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                               SizedBox(width: 4),
                                               Text(
                                                 rating.toString(),
-                                                style: FlutterFlowTheme.of(
-                                                        context)
-                                                    .bodySmall
-                                                    .override(
-                                                      fontFamily:
-                                                          'SF Pro Display',
-                                                    ),
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodySmall
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                        ),
                                               ),
                                             ],
                                           ),
@@ -1359,8 +1421,9 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                             .bodyMedium
                                             .override(
                                               fontFamily: 'SF Pro Display',
-                                              color: FlutterFlowTheme.of(context)
-                                                  .secondaryText,
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .secondaryText,
                                             ),
                                       ),
                                     ],
@@ -1410,7 +1473,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                       width: 24,
                                       height: 24,
                                       child: CircularProgressIndicator(
-                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
                                           FlutterFlowTheme.of(context).primary,
                                         ),
                                         strokeWidth: 3,
@@ -1442,7 +1506,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                   scrollDirection: Axis.horizontal,
                                   itemCount: filtered.length,
                                   itemBuilder: (context, index) =>
-                                      _buildRelatedBookComponent(filtered[index]),
+                                      _buildRelatedBookComponent(
+                                          filtered[index]),
                                 ),
                               );
                             },
@@ -1461,7 +1526,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                             final filtered = books
                                 .where((item) => item['id'] != book['id'])
                                 .toList();
-                            if (!snapshot.hasData ) {
+                            if (!snapshot.hasData) {
                               return SizedBox(
                                 height: 120,
                                 child: Center(
@@ -1532,7 +1597,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                 ),
           )
         else if (value is IconData)
-          Icon(value, color: FlutterFlowTheme.of(context).primaryText, size: 24),
+          Icon(value,
+              color: FlutterFlowTheme.of(context).primaryText, size: 24),
         SizedBox(height: 4),
         Text(
           label,
@@ -1557,8 +1623,8 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     return InkWell(
       onTap: () async {
         if (isLocked) {
-          await actions.showCustomToastBottom(
-              'Please purchase to unlock this chapter');
+          await actions
+              .showCustomToastBottom('Please purchase to unlock this chapter');
           return;
         }
         final startTrack = chapter['track_number'];
@@ -1690,5 +1756,4 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
       ),
     );
   }
-
 }

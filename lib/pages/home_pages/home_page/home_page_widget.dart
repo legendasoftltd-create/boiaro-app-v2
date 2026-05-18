@@ -99,7 +99,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
   Future<List<Map<String, dynamic>>> _fetchAudioTracks(String bookId) async {
     try {
-      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
       final res = await http.get(
         uri,
         headers: _apiHeaders(authRequired: false),
@@ -205,10 +206,16 @@ class _HomePageWidgetState extends State<HomePageWidget>
       }
 
       final previewPercent = 15;
+      final rawPreviewTracks = effectiveTracks.length * (previewPercent / 100);
+      final fullPreviewTracks =
+          hasAccess ? effectiveTracks.length : rawPreviewTracks.floor();
+      final hasPartialPreviewTrack = !hasAccess &&
+          rawPreviewTracks > fullPreviewTracks &&
+          fullPreviewTracks < effectiveTracks.length;
       final previewCount = hasAccess
           ? effectiveTracks.length
-          : (((effectiveTracks.length * (previewPercent / 100)).ceil())
-                .clamp(1, effectiveTracks.length));
+          : (fullPreviewTracks + (hasPartialPreviewTrack ? 1 : 0))
+              .clamp(1, effectiveTracks.length);
 
       for (var i = 0; i < effectiveTracks.length; i++) {
         final track = effectiveTracks[i];
@@ -235,6 +242,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
         if (!hasAccess && !isTrackPreview) {
           continue;
         }
+        final isPartialPreviewTrack =
+            !hasAccess && hasPartialPreviewTrack && i == (previewCount - 1);
+        final previewFraction = isPartialPreviewTrack
+            ? (rawPreviewTracks - fullPreviewTracks).clamp(0.0, 1.0)
+            : 1.0;
+
         chapters.add({
           'title': track['title']?.toString() ?? 'Track $trackNumber',
           'file': signedUrl,
@@ -242,6 +255,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
           'duration': track['duration']?.toString() ?? '',
           'isLocked': hasAccess ? false : !isTrackPreview,
           'isPreview': !hasAccess ? true : (track['is_preview'] == true),
+          'previewFraction': previewFraction,
         });
       }
 
@@ -254,7 +268,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
         return;
       }
 
-      final lastTrackNum = FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
+      final lastTrackNum =
+          FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
       Map<String, dynamic> startChapter = chapters.first;
       final matchedIndex = chapters.indexWhere(
           (c) => (c['track_number']?.toString() ?? '') == '$lastTrackNum');
@@ -273,6 +288,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
             'image': bookImage,
             'author': {'name': authorName},
             'chapters': chapters,
+            'isPreviewMode': !hasAccess,
+            'previewPercent': previewPercent,
           },
           'chapter': startChapter,
         },
@@ -720,6 +737,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
       }
       return s;
     }
+
     final trimmedAuthor = cleanAuthor(bookAuthor);
     final trimmedType = bookType.trim();
     final subtitleText = trimmedAuthor.isNotEmpty && trimmedType.isNotEmpty
@@ -1580,7 +1598,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
                             bookId: FFAppState().homePageLastAudioBookId,
                             bookName: FFAppState().homePageLastAudioBookName,
                             bookImage: FFAppState().homePageLastAudioBookImage,
-                            authorName: FFAppState().homePageLastAudioBookAuthor,
+                            authorName:
+                                FFAppState().homePageLastAudioBookAuthor,
                           );
                         },
                       ).animateOnPageLoad(

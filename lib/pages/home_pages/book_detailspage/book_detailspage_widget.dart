@@ -95,7 +95,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     final bid = (widget.id ?? '').trim();
     if (bid.isEmpty) return;
     try {
-      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bid/bookmark');
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bid/bookmark');
       final res = await http.get(uri, headers: _apiHeaders(authRequired: true));
       if (res.statusCode != 200) return;
       final decoded = jsonDecode(res.body);
@@ -122,7 +123,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     safeSetState(() => _model.isFavoriteLoading = true);
     try {
       final target = !(_model.isFavorite == true);
-      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bid/bookmark');
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bid/bookmark');
       final res = await http.post(
         uri,
         headers: _apiHeaders(authRequired: true),
@@ -130,9 +132,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       );
       if (res.statusCode >= 200 && res.statusCode < 300) {
         _model.isFavorite = target;
-        await actions.showCustomToastBottom(target ? FFAppState().favText : FFAppState().unFavText);
+        await actions.showCustomToastBottom(
+            target ? FFAppState().favText : FFAppState().unFavText);
       }
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       _isBookmarkBusy = false;
       if (mounted) {
         safeSetState(() => _model.isFavoriteLoading = false);
@@ -169,7 +173,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           }
           if (bookId != null &&
               bookId.isNotEmpty &&
-              (format == 'ebook' || format == 'audiobook' || format == 'hardcopy')) {
+              (format == 'ebook' ||
+                  format == 'audiobook' ||
+                  format == 'hardcopy')) {
             keys.add('${bookId.toLowerCase()}::$format');
           }
         }
@@ -232,9 +238,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
   }
 
-
   List<Map<String, dynamic>> _formatsFromResponse(dynamic responseJson) {
-    final raw = getJsonField(responseJson, r'''$.data.bookDetails[0].formats''');
+    final raw =
+        getJsonField(responseJson, r'''$.data.bookDetails[0].formats''');
     if (raw is! List) return const <Map<String, dynamic>>[];
     return raw
         .whereType<Map>()
@@ -272,9 +278,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   int _previewPercent(Map<String, dynamic>? format) {
     const defaultPercent = 15;
     final raw = format?['preview_percentage'];
-    final v = raw is num
-        ? raw.toInt()
-        : int.tryParse('${raw ?? ''}') ?? 0;
+    final v = raw is num ? raw.toInt() : int.tryParse('${raw ?? ''}') ?? 0;
     if (v <= 0) return defaultPercent;
     return v.clamp(1, 50); // never 0, never above 50%
   }
@@ -342,7 +346,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
   Future<String?> _fetchEbookSignedUrl(String bookId) async {
     try {
-      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/content/ebook-url');
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/content/ebook-url');
       final res = await http.post(
         uri,
         headers: _apiHeaders(authRequired: true),
@@ -433,7 +438,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   Future<String?> _fetchEbookSignedUrlGuestAware(String bookId) async {
     // Try guest first for free items; fall back to auth when logged in.
     try {
-      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/content/ebook-url');
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/content/ebook-url');
       final guestRes = await http.post(
         uri,
         headers: _apiHeaders(authRequired: false),
@@ -451,7 +457,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
   Future<List<Map<String, dynamic>>> _fetchAudioTracks(String bookId) async {
     try {
-      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
       final res = await http.get(
         uri,
         headers: _apiHeaders(authRequired: false),
@@ -659,9 +666,15 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     // forceIsPreviewMode overrides hasFullAccess for track-count limiting.
     // URL fetching (above) still uses hasFullAccess so signed URLs work.
     final limitTracks = forceIsPreviewMode || !hasFullAccess;
+    final rawPreviewTracks = effectiveTracks.length * (previewPercent / 100);
+    final fullPreviewTracks =
+        limitTracks ? rawPreviewTracks.floor() : effectiveTracks.length;
+    final hasPartialPreviewTrack = limitTracks &&
+        rawPreviewTracks > fullPreviewTracks &&
+        fullPreviewTracks < effectiveTracks.length;
     final previewCount = limitTracks
-        ? (((effectiveTracks.length * (previewPercent / 100)).ceil())
-              .clamp(1, effectiveTracks.length))
+        ? (fullPreviewTracks + (hasPartialPreviewTrack ? 1 : 0))
+            .clamp(1, effectiveTracks.length)
         : effectiveTracks.length;
 
     for (var i = 0; i < effectiveTracks.length; i++) {
@@ -687,6 +700,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       );
       if (signedUrl == null || signedUrl.isEmpty) continue;
 
+      final isPartialPreviewTrack =
+          limitTracks && hasPartialPreviewTrack && i == (previewCount - 1);
+      final previewFraction = isPartialPreviewTrack
+          ? (rawPreviewTracks - fullPreviewTracks).clamp(0.0, 1.0)
+          : 1.0;
+
       chapters.add({
         'title': track['title']?.toString() ?? 'Track $trackNumber',
         'file': signedUrl,
@@ -694,6 +713,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         'duration': track['duration']?.toString() ?? '',
         'isLocked': false,
         'isPreview': limitTracks,
+        'previewFraction': previewFraction,
       });
     }
 
@@ -763,6 +783,67 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     );
   }
 
+  Future<void> _handleBuyNow({
+    required BookMasterFormatTab tab,
+    required String bookId,
+    required String bookName,
+    required String bookImage,
+    required Map<String, dynamic>? ebookFormat,
+    required Map<String, dynamic>? audiobookFormat,
+    required Map<String, dynamic>? hardcopyFormat,
+  }) async {
+    if (tab == BookMasterFormatTab.ebook) {
+      if (ebookFormat == null || ebookFormat['is_available'] == false) {
+        await actions.showCustomToastBottom(
+            'eBook format is not available for this book');
+        return;
+      }
+      await _addToCartAndCheckout(
+        bookId: bookId,
+        bookName: bookName,
+        bookImage: bookImage,
+        price: _formatPrice(ebookFormat),
+        type: 'ebook',
+        coinPrice: _formatCoinPrice(ebookFormat) > 0
+            ? _formatCoinPrice(ebookFormat)
+            : null,
+      );
+      return;
+    }
+
+    if (tab == BookMasterFormatTab.audiobook) {
+      if (audiobookFormat == null || audiobookFormat['is_available'] == false) {
+        await actions.showCustomToastBottom(
+            'Audiobook format is not available for this book');
+        return;
+      }
+      await _addToCartAndCheckout(
+        bookId: bookId,
+        bookName: bookName,
+        bookImage: bookImage,
+        price: _formatPrice(audiobookFormat),
+        type: 'audiobook',
+        coinPrice: _formatCoinPrice(audiobookFormat) > 0
+            ? _formatCoinPrice(audiobookFormat)
+            : null,
+      );
+      return;
+    }
+
+    if (hardcopyFormat == null || hardcopyFormat['is_available'] == false) {
+      await actions.showCustomToastBottom(
+          'Hardcopy format is not available for this book');
+      return;
+    }
+    await _addToCartAndCheckout(
+      bookId: bookId,
+      bookName: bookName,
+      bookImage: bookImage,
+      price: _formatPrice(hardcopyFormat),
+      type: 'hardcopy',
+    );
+  }
+
   Future<void> _handleMasterAction({
     required BookMasterFormatTab tab,
     required String bookId,
@@ -774,7 +855,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required Map<String, dynamic>? audiobookFormat,
     required Map<String, dynamic>? hardcopyFormat,
     required dynamic responseJson,
-    bool forceBuy = false,
     bool forcePreview = false,
   }) async {
     // --- FORCE PREVIEW: always open in preview mode, ignore purchase status ---
@@ -797,7 +877,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         url ??= _extractEbookUrlFromDetails(responseJson);
 
         if (url == null || url.trim().isEmpty) {
-          await actions.showCustomToastBottom('Unable to load book for preview');
+          await actions
+              .showCustomToastBottom('Unable to load book for preview');
           return;
         }
         await _openBook(
@@ -811,8 +892,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         return;
       }
       if (tab == BookMasterFormatTab.audiobook) {
-        if (audiobookFormat == null || audiobookFormat['is_available'] == false) {
-          await actions.showCustomToastBottom('Audiobook format is not available');
+        if (audiobookFormat == null ||
+            audiobookFormat['is_available'] == false) {
+          await actions
+              .showCustomToastBottom('Audiobook format is not available');
           return;
         }
         final safePercent = _previewPercent(audiobookFormat);
@@ -901,8 +984,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         return;
       }
 
-      final previewUrl = _extractEbookPreviewUrlFromDetails(responseJson) ?? url;
-      if (!forceBuy && previewUrl != null && previewUrl.trim().isNotEmpty) {
+      final previewUrl =
+          _extractEbookPreviewUrlFromDetails(responseJson) ?? url;
+      if (previewUrl != null && previewUrl.trim().isNotEmpty) {
         await _openBook(
           path: previewUrl,
           bookName: '$bookName (Preview)',
@@ -962,7 +1046,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         return;
       }
       final audiobookPrice = _formatPrice(audiobookFormat);
-      final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
       final audiobookPreviewPercent = _previewPercent(audiobookFormat);
       final isAudiobookFree = isBookFree || audiobookPrice <= 0;
       final hasAccess = isAudiobookFree ||
@@ -982,43 +1065,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         }
         return;
       }
-      if (!forceBuy) {
-        await _openAudiobookPlayerFromV2(
-          bookId: bookId,
-          bookName: bookName,
-          bookImage: bookImage,
-          authorName: authorName,
-          hasFullAccess: false,
-          previewPercent: audiobookPreviewPercent,
-        );
-        return;
-      }
-      if (FFAppState().isLogin && audiobookCoinPrice > 0) {
-        final unlocked = await _confirmAndUnlockWithCoins(
-          bookName: bookName,
-          bookId: bookId,
-          format: 'audiobook',
-          coinCost: audiobookCoinPrice,
-        );
-        if (unlocked) {
-          await _openAudiobookPlayerFromV2(
-            bookId: bookId,
-            bookName: bookName,
-            bookImage: bookImage,
-            authorName: authorName,
-            hasFullAccess: true,
-            previewPercent: audiobookPreviewPercent,
-          );
-          return;
-        }
-      }
-      await _addToCartAndCheckout(
+      await _openAudiobookPlayerFromV2(
         bookId: bookId,
         bookName: bookName,
         bookImage: bookImage,
-        price: audiobookPrice,
-        type: 'audiobook',
-        coinPrice: audiobookCoinPrice > 0 ? audiobookCoinPrice : null,
+        authorName: authorName,
+        hasFullAccess: false,
+        previewPercent: audiobookPreviewPercent,
       );
       return;
     }
@@ -1056,13 +1109,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       return;
     }
     safeSetState(() => _isDownloadingEbook = true);
-    final hasAccess = isBookFree ||
-        await _hasFormatAccess(bookId: bookId, format: 'ebook');
+    final hasAccess =
+        isBookFree || await _hasFormatAccess(bookId: bookId, format: 'ebook');
     safeSetState(() => _isDownloadingEbook = false);
 
     if (!hasAccess) {
-      await actions.showCustomToastBottom(
-          'Buy or unlock ebook before download');
+      await actions
+          .showCustomToastBottom('Buy or unlock ebook before download');
       return;
     }
 
@@ -1118,8 +1171,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     if (_tracksLoading || _tracks != null) return;
     if (mounted) safeSetState(() => _tracksLoading = true);
     try {
-      final uri = Uri.parse(
-          '${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
       final res =
           await http.get(uri, headers: _apiHeaders(authRequired: false));
       if (res.statusCode == 200) {
@@ -1343,9 +1396,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                   subtitle: dur.isNotEmpty
                       ? Text(
                           dur,
-                          style: FlutterFlowTheme.of(context).bodySmall.override(
+                          style: FlutterFlowTheme.of(context)
+                              .bodySmall
+                              .override(
                                 fontFamily: 'SF Pro Display',
-                                color: FlutterFlowTheme.of(context).secondaryText,
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
                                 fontSize: 11.0,
                                 letterSpacing: 0.0,
                               ),
@@ -1789,8 +1845,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             error,
                                                             stackTrace) =>
                                                         Icon(
-                                                     Icons.photo_outlined,
-                                                     color: FlutterFlowTheme.of(context).primaryText.withValues(alpha: 0.4),
+                                                      Icons.photo_outlined,
+                                                      color:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .primaryText
+                                                              .withValues(
+                                                                  alpha: 0.4),
                                                       size: 120.0,
                                                     ),
                                                   ),
@@ -1870,8 +1931,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           .jsonBody,
                                                       r'''$.data.bookDetails[0].slug''',
                                                     )
-                                                    ?.toString()
-                                                    .replaceAll('-', ' ') ??
+                                                        ?.toString()
+                                                        .replaceAll('-', ' ') ??
                                                     '';
                                                 if (titleEn.isEmpty) {
                                                   return const SizedBox
@@ -1892,10 +1953,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         .override(
                                                           fontFamily:
                                                               'SF Pro Display',
-                                                          color:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .secondaryText,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .secondaryText,
                                                           fontSize: 12.0,
                                                           letterSpacing: 0.0,
                                                         ),
@@ -1906,27 +1966,26 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               // Author name
                                               Text(
                                                 'By ${EbookGroup.getbookdetailsApiCall.authorName(
-                                                  bookDetailspageGetbookdetailsApiResponse
-                                                      .jsonBody,
-                                                ) ?? ''}',
+                                                      bookDetailspageGetbookdetailsApiResponse
+                                                          .jsonBody,
+                                                    ) ?? ''}',
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: FlutterFlowTheme.of(
-                                                        context)
-                                                    .bodyMedium
-                                                    .override(
-                                                      fontFamily:
-                                                          'SF Pro Display',
-                                                      color:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
                                                               .secondaryText,
-                                                      fontSize: 13.0,
-                                                      letterSpacing: 0.0,
-                                                      fontWeight:
-                                                          FontWeight.normal,
-                                                      lineHeight: 1.3,
-                                                    ),
+                                                          fontSize: 13.0,
+                                                          letterSpacing: 0.0,
+                                                          fontWeight:
+                                                              FontWeight.normal,
+                                                          lineHeight: 1.3,
+                                                        ),
                                               ),
                                               SizedBox(height: 12.0),
 
@@ -1976,10 +2035,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         .override(
                                                           fontFamily:
                                                               'SF Pro Display',
-                                                          color:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .secondaryText,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .secondaryText,
                                                           fontSize: 12.0,
                                                           letterSpacing: 0.0,
                                                         ),
@@ -1994,65 +2052,67 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   // Add to Wishlist button
                                                   Expanded(
                                                     child: OutlinedButton.icon(
-                                                      onPressed: _toggleBookmarkStatus,
-                                                      icon: _model
-                                                                  .isFavoriteLoading ==
-                                                              true
-                                                          ? SizedBox(
-                                                              width: 14,
-                                                              height: 14,
-                                                              child:
-                                                                  CircularProgressIndicator(
-                                                                strokeWidth: 2,
-                                                                valueColor: AlwaysStoppedAnimation(
-                                                                    FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .primary),
-                                                              ),
-                                                            )
-                                                          : Icon(
-                                                              _model.isFavorite!
-                                                                  ? Icons
-                                                                      .favorite
-                                                                  : Icons
-                                                                      .favorite_border,
-                                                              size: 16.0,
-                                                              color: FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .primary,
-                                                            ),
+                                                      onPressed:
+                                                          _toggleBookmarkStatus,
+                                                      icon:
+                                                          _model.isFavoriteLoading ==
+                                                                  true
+                                                              ? SizedBox(
+                                                                  width: 14,
+                                                                  height: 14,
+                                                                  child:
+                                                                      CircularProgressIndicator(
+                                                                    strokeWidth:
+                                                                        2,
+                                                                    valueColor:
+                                                                        AlwaysStoppedAnimation(
+                                                                            FlutterFlowTheme.of(context).primary),
+                                                                  ),
+                                                                )
+                                                              : Icon(
+                                                                  _model.isFavorite!
+                                                                      ? Icons
+                                                                          .favorite
+                                                                      : Icons
+                                                                          .favorite_border,
+                                                                  size: 16.0,
+                                                                  color: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .primary,
+                                                                ),
                                                       label: Text(
                                                         _model.isFavorite!
                                                             ? 'Wishlisted'
                                                             : 'Wishlist',
-                                                        style: FlutterFlowTheme
-                                                                .of(context)
-                                                            .bodySmall
-                                                            .override(
-                                                              fontFamily:
-                                                                  'SF Pro Display',
-                                                              color: FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .primary,
-                                                              fontSize: 12.0,
-                                                              letterSpacing:
-                                                                  0.0,
-                                                            ),
+                                                        style:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .bodySmall
+                                                                .override(
+                                                                  fontFamily:
+                                                                      'SF Pro Display',
+                                                                  color: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .primary,
+                                                                  fontSize:
+                                                                      12.0,
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                ),
                                                       ),
                                                       style: OutlinedButton
                                                           .styleFrom(
                                                         side: BorderSide(
-                                                          color:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .primary
-                                                                  .withOpacity(
-                                                                      0.5),
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .primary
+                                                              .withOpacity(0.5),
                                                         ),
-                                                        padding: const EdgeInsets
-                                                            .symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 8),
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 8),
                                                         shape:
                                                             RoundedRectangleBorder(
                                                           borderRadius:
@@ -2062,10 +2122,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       ),
                                                     ),
                                                   ),
-                                                  
                                                 ],
                                               ),
-                                             
                                             ],
                                           ),
                                         ),
@@ -2076,10 +2134,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 // ── Format switch buttons + selected format details ──
                                 if (availableTabs.isNotEmpty)
                                   Padding(
-                                    padding: const EdgeInsetsDirectional.fromSTEB(
-                                        16.0, 0.0, 16.0, 20.0),
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            16.0, 0.0, 16.0, 20.0),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Container(
                                           width: double.infinity,
@@ -2120,9 +2180,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               8),
                                                     ),
                                                     child: Opacity(
-                                                      opacity: ebookFormat == null
-                                                          ? 0.45
-                                                          : 1,
+                                                      opacity:
+                                                          ebookFormat == null
+                                                              ? 0.45
+                                                              : 1,
                                                       child: Text(
                                                         'eBook',
                                                         style: FlutterFlowTheme
@@ -2141,7 +2202,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w600,
-                                                              letterSpacing: 0.0,
+                                                              letterSpacing:
+                                                                  0.0,
                                                             ),
                                                       ),
                                                     ),
@@ -2176,10 +2238,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               8),
                                                     ),
                                                     child: Opacity(
-                                                      opacity: audiobookFormat ==
-                                                              null
-                                                          ? 0.45
-                                                          : 1,
+                                                      opacity:
+                                                          audiobookFormat ==
+                                                                  null
+                                                              ? 0.45
+                                                              : 1,
                                                       child: Text(
                                                         'Audiobook',
                                                         style: FlutterFlowTheme
@@ -2198,7 +2261,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w600,
-                                                              letterSpacing: 0.0,
+                                                              letterSpacing:
+                                                                  0.0,
                                                             ),
                                                       ),
                                                     ),
@@ -2233,10 +2297,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               8),
                                                     ),
                                                     child: Opacity(
-                                                      opacity: hardcopyFormat ==
-                                                              null
-                                                          ? 0.45
-                                                          : 1,
+                                                      opacity:
+                                                          hardcopyFormat == null
+                                                              ? 0.45
+                                                              : 1,
                                                       child: Text(
                                                         'Hardcopy',
                                                         style: FlutterFlowTheme
@@ -2255,7 +2319,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w600,
-                                                              letterSpacing: 0.0,
+                                                              letterSpacing:
+                                                                  0.0,
                                                             ),
                                                       ),
                                                     ),
@@ -2274,9 +2339,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                             borderRadius:
                                                 BorderRadius.circular(12),
                                             border: Border.all(
-                                              color: FlutterFlowTheme.of(context)
-                                                  .primary
-                                                  .withOpacity(0.15),
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primary
+                                                      .withOpacity(0.15),
                                             ),
                                           ),
                                           child: Padding(
@@ -2286,16 +2352,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               runSpacing: 8,
                                               children: [
                                                 Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                          horizontal: 10,
-                                                          vertical: 5),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 5),
                                                   decoration: BoxDecoration(
                                                     color: FlutterFlowTheme.of(
                                                             context)
                                                         .primary,
                                                     borderRadius:
-                                                        BorderRadius.circular(20),
+                                                        BorderRadius.circular(
+                                                            20),
                                                   ),
                                                   child: Text(
                                                     selectedLabel,
@@ -2313,16 +2380,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   ),
                                                 ),
                                                 Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                          horizontal: 10,
-                                                          vertical: 5),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 5),
                                                   decoration: BoxDecoration(
                                                     color: FlutterFlowTheme.of(
                                                             context)
                                                         .primaryBackground,
                                                     borderRadius:
-                                                        BorderRadius.circular(20),
+                                                        BorderRadius.circular(
+                                                            20),
                                                   ),
                                                   child: Text(
                                                     'Price: ৳${_formatPrice(selectedFormat).toStringAsFixed(_formatPrice(selectedFormat).truncateToDouble() == _formatPrice(selectedFormat) ? 0 : 2)}',
@@ -2341,13 +2409,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 if (selectedFormat?['pages'] !=
                                                     null)
                                                   Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 5),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5),
                                                     decoration: BoxDecoration(
-                                                      color: FlutterFlowTheme.of(
-                                                              context)
+                                                      color: FlutterFlowTheme
+                                                              .of(context)
                                                           .primaryBackground,
                                                       borderRadius:
                                                           BorderRadius.circular(
@@ -2355,8 +2423,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     ),
                                                     child: Text(
                                                       'Pages: ${selectedFormat?['pages']}',
-                                                      style: FlutterFlowTheme.of(
-                                                              context)
+                                                      style: FlutterFlowTheme
+                                                              .of(context)
                                                           .bodySmall
                                                           .override(
                                                             fontFamily:
@@ -2365,16 +2433,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           ),
                                                     ),
                                                   ),
-                                                if (selectedFormat?['duration'] !=
+                                                if (selectedFormat?[
+                                                        'duration'] !=
                                                     null)
                                                   Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 5),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5),
                                                     decoration: BoxDecoration(
-                                                      color: FlutterFlowTheme.of(
-                                                              context)
+                                                      color: FlutterFlowTheme
+                                                              .of(context)
                                                           .primaryBackground,
                                                       borderRadius:
                                                           BorderRadius.circular(
@@ -2382,8 +2451,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     ),
                                                     child: Text(
                                                       'Duration: ${selectedFormat?['duration']}',
-                                                      style: FlutterFlowTheme.of(
-                                                              context)
+                                                      style: FlutterFlowTheme
+                                                              .of(context)
                                                           .bodySmall
                                                           .override(
                                                             fontFamily:
@@ -2395,28 +2464,30 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 if (activeTab ==
                                                         BookMasterFormatTab
                                                             .hardcopy &&
-                                                    selectedFormat?['in_stock'] !=
+                                                    selectedFormat?[
+                                                            'in_stock'] !=
                                                         null)
                                                   Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 5),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5),
                                                     decoration: BoxDecoration(
-                                                      color: FlutterFlowTheme.of(
-                                                              context)
+                                                      color: FlutterFlowTheme
+                                                              .of(context)
                                                           .primaryBackground,
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               20),
                                                     ),
                                                     child: Text(
-                                                      selectedFormat?['in_stock'] ==
+                                                      selectedFormat?[
+                                                                  'in_stock'] ==
                                                               true
                                                           ? 'In stock (${selectedFormat?['stock_count'] ?? 0})'
                                                           : 'Out of stock',
-                                                      style: FlutterFlowTheme.of(
-                                                              context)
+                                                      style: FlutterFlowTheme
+                                                              .of(context)
                                                           .bodySmall
                                                           .override(
                                                             fontFamily:
@@ -2433,25 +2504,30 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                         if (FFAppState().isLogin)
                                           Container(
                                             width: double.infinity,
-                                            margin: const EdgeInsets.only(bottom: 10),
+                                            margin: const EdgeInsets.only(
+                                                bottom: 10),
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 12, vertical: 10),
                                             decoration: BoxDecoration(
-                                              color: FlutterFlowTheme.of(context)
-                                                  .secondaryBackground,
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .secondaryBackground,
                                               borderRadius:
                                                   BorderRadius.circular(10),
                                               border: Border.all(
-                                                color: FlutterFlowTheme.of(context)
-                                                    .alternate,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .alternate,
                                               ),
                                             ),
                                             child: Row(
                                               children: [
                                                 Icon(
-                                                  Icons.account_balance_wallet_rounded,
+                                                  Icons
+                                                      .account_balance_wallet_rounded,
                                                   size: 16,
-                                                  color: FlutterFlowTheme.of(context)
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
                                                       .primary,
                                                 ),
                                                 const SizedBox(width: 8),
@@ -2459,21 +2535,22 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   _walletCoinBalance == null
                                                       ? 'Available coins: --'
                                                       : 'Available coins: $_walletCoinBalance',
-                                                  style:
-                                                      FlutterFlowTheme.of(context)
-                                                          .bodyMedium
-                                                          .override(
-                                                            fontFamily:
-                                                                'SF Pro Display',
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            letterSpacing: 0.0,
-                                                          ),
+                                                  style: FlutterFlowTheme.of(
+                                                          context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        letterSpacing: 0.0,
+                                                      ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        if (activeTab == BookMasterFormatTab.ebook)
+                                        if (activeTab ==
+                                            BookMasterFormatTab.ebook)
                                           Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
@@ -2544,25 +2621,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     Expanded(
                                                       child: FFButtonWidget(
                                                         onPressed: () =>
-                                                            _handleMasterAction(
+                                                            _handleBuyNow(
                                                           tab: activeTab,
                                                           bookId: bookId,
                                                           bookName: bookName,
                                                           bookImage: bookImage,
-                                                          authorName:
-                                                              authorName,
-                                                          isBookFree:
-                                                              isBookFree,
                                                           ebookFormat:
                                                               ebookFormat,
                                                           audiobookFormat:
                                                               audiobookFormat,
                                                           hardcopyFormat:
                                                               hardcopyFormat,
-                                                          responseJson:
-                                                              bookDetailspageGetbookdetailsApiResponse
-                                                                  .jsonBody,
-                                                          forceBuy: true,
                                                         ),
                                                         text: 'Buy Now',
                                                         icon: Icon(
@@ -2630,21 +2699,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     color: FlutterFlowTheme.of(
                                                             context)
                                                         .primary,
-                                                    textStyle:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .titleSmall
-                                                            .override(
-                                                              fontFamily:
-                                                                  'SF Pro Display',
-                                                              color:
-                                                                  Colors.white,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                              letterSpacing:
-                                                                  0.0,
-                                                            ),
+                                                    textStyle: FlutterFlowTheme
+                                                            .of(context)
+                                                        .titleSmall
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          color: Colors.white,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          letterSpacing: 0.0,
+                                                        ),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             10),
@@ -2731,9 +2796,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                           isBookFree,
                                                                     );
                                                                   },
-                                                        text: _isDownloadingEbook
-                                                            ? '...'
-                                                            : 'Download',
+                                                        text:
+                                                            _isDownloadingEbook
+                                                                ? '...'
+                                                                : 'Download',
                                                         icon: Icon(
                                                           Icons
                                                               .download_rounded,
@@ -2742,7 +2808,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         options:
                                                             FFButtonOptions(
                                                           height: 48,
-                                                          color: FlutterFlowTheme.of(context)
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
                                                               .primary,
                                                           textStyle:
                                                               FlutterFlowTheme.of(
@@ -2770,208 +2837,18 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                             ],
                                           )
                                         else
-                                            Builder(builder: (context) {
-                                              if (activeTab ==
-                                                  BookMasterFormatTab
-                                                      .audiobook) {
-                                                final hasAudioAccess =
-                                                    _hasLocalFormatAccess(
-                                                  bookId: bookId,
-                                                  format: 'audiobook',
-                                                  isFree: isBookFree,
-                                                  price: _formatPrice(
-                                                      audiobookFormat),
-                                                );
-                                                if (hasAudioAccess) {
-                                                  return FFButtonWidget(
-                                                    onPressed: () =>
-                                                        _handleMasterAction(
-                                                      tab: activeTab,
-                                                      bookId: bookId,
-                                                      bookName: bookName,
-                                                      bookImage: bookImage,
-                                                      authorName: authorName,
-                                                      isBookFree: isBookFree,
-                                                      ebookFormat: ebookFormat,
-                                                      audiobookFormat:
-                                                          audiobookFormat,
-                                                      hardcopyFormat:
-                                                          hardcopyFormat,
-                                                      responseJson:
-                                                          bookDetailspageGetbookdetailsApiResponse
-                                                              .jsonBody,
-                                                    ),
-                                                    text: 'Listen Now',
-                                                    icon: Icon(
-                                                      Icons.headphones_rounded,
-                                                      color: Colors.white,
-                                                    ),
-                                                    options: FFButtonOptions(
-                                                      width: double.infinity,
-                                                      height: 48,
-                                                      color:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .primary,
-                                                      textStyle:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .titleSmall
-                                                              .override(
-                                                                fontFamily:
-                                                                    'SF Pro Display',
-                                                                color: Colors
-                                                                    .white,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                                letterSpacing:
-                                                                    0.0,
-                                                              ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              10),
-                                                    ),
-                                                  );
-                                                } else {
-                                                  // Premium Audiobook -> Row with Preview and Buy
-                                                  return Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.max,
-                                                    children: [
-                                                      Expanded(
-                                                        child: FFButtonWidget(
-                                                          onPressed: () =>
-                                                              _handleMasterAction(
-                                                            tab: activeTab,
-                                                            bookId: bookId,
-                                                            bookName: bookName,
-                                                            bookImage:
-                                                                bookImage,
-                                                            authorName:
-                                                                authorName,
-                                                            isBookFree:
-                                                                isBookFree,
-                                                            ebookFormat:
-                                                                ebookFormat,
-                                                            audiobookFormat:
-                                                                audiobookFormat,
-                                                            hardcopyFormat:
-                                                                hardcopyFormat,
-                                                            responseJson:
-                                                                bookDetailspageGetbookdetailsApiResponse
-                                                                    .jsonBody,
-                                                            forcePreview: true,
-                                                          ),
-                                                          text:
-                                                              'Listen Preview ($previewPercent%)',
-                                                          icon: Icon(
-                                                            Icons
-                                                                .headphones_rounded,
-                                                            color: Colors.white,
-                                                          ),
-                                                          options:
-                                                              FFButtonOptions(
-                                                            height: 48,
-                                                            color:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .secondaryText,
-                                                            textStyle:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .titleSmall
-                                                                    .override(
-                                                                      fontFamily:
-                                                                          'SF Pro Display',
-                                                                      color: Colors
-                                                                          .white,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w600,
-                                                                      letterSpacing:
-                                                                          0.0,
-                                                                    ),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        10),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 12),
-                                                      Expanded(
-                                                        child: FFButtonWidget(
-                                                          onPressed: () =>
-                                                              _handleMasterAction(
-                                                            tab: activeTab,
-                                                            bookId: bookId,
-                                                            bookName: bookName,
-                                                            bookImage:
-                                                                bookImage,
-                                                            authorName:
-                                                                authorName,
-                                                            isBookFree:
-                                                                isBookFree,
-                                                            ebookFormat:
-                                                                ebookFormat,
-                                                            audiobookFormat:
-                                                                audiobookFormat,
-                                                            hardcopyFormat:
-                                                                hardcopyFormat,
-                                                            responseJson:
-                                                                bookDetailspageGetbookdetailsApiResponse
-                                                                    .jsonBody,
-                                                            forceBuy: true,
-                                                          ),
-                                                          text: 'Buy Now',
-                                                          icon: Icon(
-                                                            Icons
-                                                                .shopping_cart_rounded,
-                                                            color: Colors.white,
-                                                          ),
-                                                          options:
-                                                              FFButtonOptions(
-                                                            height: 48,
-                                                            color:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .primary,
-                                                            textStyle:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .titleSmall
-                                                                    .override(
-                                                                      fontFamily:
-                                                                          'SF Pro Display',
-                                                                      color: Colors
-                                                                          .white,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w600,
-                                                                      letterSpacing:
-                                                                          0.0,
-                                                                    ),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        10),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  );
-                                                }
-                                              } else {
-                                                // Hardcopy logic
-                                                final hasHardcopyAccess =
-                                                    _hasLocalFormatAccess(
-                                                  bookId: bookId,
-                                                  format: 'hardcopy',
-                                                  isFree: isBookFree,
-                                                  price: _formatPrice(
-                                                      hardcopyFormat),
-                                                );
+                                          Builder(builder: (context) {
+                                            if (activeTab ==
+                                                BookMasterFormatTab.audiobook) {
+                                              final hasAudioAccess =
+                                                  _hasLocalFormatAccess(
+                                                bookId: bookId,
+                                                format: 'audiobook',
+                                                isFree: isBookFree,
+                                                price: _formatPrice(
+                                                    audiobookFormat),
+                                              );
+                                              if (hasAudioAccess) {
                                                 return FFButtonWidget(
                                                   onPressed: () =>
                                                       _handleMasterAction(
@@ -2990,11 +2867,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         bookDetailspageGetbookdetailsApiResponse
                                                             .jsonBody,
                                                   ),
-                                                  text: hasHardcopyAccess
-                                                      ? 'View Orders'
-                                                      : 'Buy Hardcopy',
+                                                  text: 'Listen Now',
                                                   icon: Icon(
-                                                    Icons.shopping_bag_rounded,
+                                                    Icons.headphones_rounded,
                                                     color: Colors.white,
                                                   ),
                                                   options: FFButtonOptions(
@@ -3003,28 +2878,196 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     color: FlutterFlowTheme.of(
                                                             context)
                                                         .primary,
-                                                    textStyle:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .titleSmall
-                                                            .override(
-                                                              fontFamily:
-                                                                  'SF Pro Display',
-                                                              color:
-                                                                  Colors.white,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                              letterSpacing:
-                                                                  0.0,
-                                                            ),
+                                                    textStyle: FlutterFlowTheme
+                                                            .of(context)
+                                                        .titleSmall
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          color: Colors.white,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          letterSpacing: 0.0,
+                                                        ),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             10),
                                                   ),
                                                 );
+                                              } else {
+                                                // Premium Audiobook -> Row with Preview and Buy
+                                                return Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.max,
+                                                  children: [
+                                                    Expanded(
+                                                      child: FFButtonWidget(
+                                                        onPressed: () =>
+                                                            _handleMasterAction(
+                                                          tab: activeTab,
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          authorName:
+                                                              authorName,
+                                                          isBookFree:
+                                                              isBookFree,
+                                                          ebookFormat:
+                                                              ebookFormat,
+                                                          audiobookFormat:
+                                                              audiobookFormat,
+                                                          hardcopyFormat:
+                                                              hardcopyFormat,
+                                                          responseJson:
+                                                              bookDetailspageGetbookdetailsApiResponse
+                                                                  .jsonBody,
+                                                          forcePreview: true,
+                                                        ),
+                                                        text:
+                                                            'Listen Preview ($previewPercent%)',
+                                                        icon: Icon(
+                                                          Icons
+                                                              .headphones_rounded,
+                                                          color: Colors.white,
+                                                        ),
+                                                        options:
+                                                            FFButtonOptions(
+                                                          height: 48,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .secondaryText,
+                                                          textStyle:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .titleSmall
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                  ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: FFButtonWidget(
+                                                        onPressed: () =>
+                                                            _handleBuyNow(
+                                                          tab: activeTab,
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          ebookFormat:
+                                                              ebookFormat,
+                                                          audiobookFormat:
+                                                              audiobookFormat,
+                                                          hardcopyFormat:
+                                                              hardcopyFormat,
+                                                        ),
+                                                        text: 'Buy Now',
+                                                        icon: Icon(
+                                                          Icons
+                                                              .shopping_cart_rounded,
+                                                          color: Colors.white,
+                                                        ),
+                                                        options:
+                                                            FFButtonOptions(
+                                                          height: 48,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .primary,
+                                                          textStyle:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .titleSmall
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'SF Pro Display',
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    letterSpacing:
+                                                                        0.0,
+                                                                  ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                );
                                               }
-                                            }),
+                                            } else {
+                                              // Hardcopy logic
+                                              final hasHardcopyAccess =
+                                                  _hasLocalFormatAccess(
+                                                bookId: bookId,
+                                                format: 'hardcopy',
+                                                isFree: isBookFree,
+                                                price: _formatPrice(
+                                                    hardcopyFormat),
+                                              );
+                                              return FFButtonWidget(
+                                                onPressed: () =>
+                                                    _handleMasterAction(
+                                                  tab: activeTab,
+                                                  bookId: bookId,
+                                                  bookName: bookName,
+                                                  bookImage: bookImage,
+                                                  authorName: authorName,
+                                                  isBookFree: isBookFree,
+                                                  ebookFormat: ebookFormat,
+                                                  audiobookFormat:
+                                                      audiobookFormat,
+                                                  hardcopyFormat:
+                                                      hardcopyFormat,
+                                                  responseJson:
+                                                      bookDetailspageGetbookdetailsApiResponse
+                                                          .jsonBody,
+                                                ),
+                                                text: hasHardcopyAccess
+                                                    ? 'View Orders'
+                                                    : 'Buy Hardcopy',
+                                                icon: Icon(
+                                                  Icons.shopping_bag_rounded,
+                                                  color: Colors.white,
+                                                ),
+                                                options: FFButtonOptions(
+                                                  width: double.infinity,
+                                                  height: 48,
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .primary,
+                                                  textStyle:
+                                                      FlutterFlowTheme.of(
+                                                              context)
+                                                          .titleSmall
+                                                          .override(
+                                                            fontFamily:
+                                                                'SF Pro Display',
+                                                            color: Colors.white,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            letterSpacing: 0.0,
+                                                          ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                              );
+                                            }
+                                          }),
                                       ],
                                     ),
                                   ),
@@ -3032,8 +3075,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                         BookMasterFormatTab.audiobook &&
                                     audiobookFormat != null)
                                   Padding(
-                                    padding: const EdgeInsetsDirectional.fromSTEB(
-                                        16.0, 0.0, 16.0, 12.0),
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            16.0, 0.0, 16.0, 12.0),
                                     child: _buildEpisodesInAudioTab(bookId),
                                   ),
                                 // Book Description Section
@@ -3304,21 +3348,20 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 ),
                                 // ── Author / Narrator / Publisher ──────────────────
                                 Builder(builder: (context) {
-                                  final aName = EbookGroup
-                                          .getbookdetailsApiCall
+                                  final aName = EbookGroup.getbookdetailsApiCall
                                           .authorName(
-                                            bookDetailspageGetbookdetailsApiResponse
-                                                .jsonBody,
-                                          ) ??
+                                        bookDetailspageGetbookdetailsApiResponse
+                                            .jsonBody,
+                                      ) ??
                                       '';
                                   final aImage =
                                       '${FFAppConstants.imageUrl}${EbookGroup.getbookdetailsApiCall.authorimage(bookDetailspageGetbookdetailsApiResponse.jsonBody) ?? ''}';
-                                  final aId = EbookGroup.getbookdetailsApiCall
-                                          .authorid(
+                                  final aId =
+                                      EbookGroup.getbookdetailsApiCall.authorid(
                                             bookDetailspageGetbookdetailsApiResponse
                                                 .jsonBody,
                                           ) ??
-                                      '';
+                                          '';
 
                                   // Extract narrator from audiobook format
                                   final narratorRaw =
@@ -3344,27 +3387,24 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                   final narId =
                                       narratorObj?['id']?.toString() ?? '';
 
-                                  final publisherName =
-                                      getJsonField(
+                                  final publisherName = getJsonField(
                                         bookDetailspageGetbookdetailsApiResponse
                                             .jsonBody,
                                         r'''$.data.bookDetails[0].publisher.name''',
                                       )?.toString() ??
-                                          '';
-                                  final publisherImageRaw =
-                                      getJsonField(
+                                      '';
+                                  final publisherImageRaw = getJsonField(
                                         bookDetailspageGetbookdetailsApiResponse
                                             .jsonBody,
                                         r'''$.data.bookDetails[0].publisher.image''',
                                       )?.toString() ??
-                                          '';
-                                  final publisherId =
-                                      getJsonField(
+                                      '';
+                                  final publisherId = getJsonField(
                                         bookDetailspageGetbookdetailsApiResponse
                                             .jsonBody,
                                         r'''$.data.bookDetails[0].publisher._id''',
                                       )?.toString() ??
-                                          '';
+                                      '';
                                   final publisherImage = publisherImageRaw
                                           .isEmpty
                                       ? ''
@@ -3449,7 +3489,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           onTap: () {
                                             if (publisherId.isNotEmpty) {
                                               context.pushNamed(
-                                                AboutPublisherPageWidget.routeName,
+                                                AboutPublisherPageWidget
+                                                    .routeName,
                                                 queryParameters: {
                                                   'name': serializeParam(
                                                       publisherName,
@@ -3468,14 +3509,14 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                         ),
 
                                       // Narrator audiobook card (price + play)
-                                     
                                     ],
                                   );
                                 }),
 
                                 // ── Episodes (tracks) section ──────────────────
                                 if (_showLegacyEpisodesSection() &&
-                                    activeTab == BookMasterFormatTab.audiobook &&
+                                    activeTab ==
+                                        BookMasterFormatTab.audiobook &&
                                     audiobookFormat != null)
                                   Builder(builder: (context) {
                                     // Trigger load on first render
@@ -3489,8 +3530,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     final trackCount = tracks.length;
 
                                     return Padding(
-                                      padding: const EdgeInsetsDirectional
-                                          .fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                      padding:
+                                          const EdgeInsetsDirectional.fromSTEB(
+                                              16.0, 0.0, 16.0, 0.0),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -3539,25 +3581,25 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           ),
                                           const SizedBox(height: 8.0),
 
-                                          if (!_tracksLoading && trackCount == 0)
+                                          if (!_tracksLoading &&
+                                              trackCount == 0)
                                             Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                       vertical: 8.0),
                                               child: Text(
                                                 'No episodes available.',
-                                                style: FlutterFlowTheme.of(
-                                                        context)
-                                                    .bodySmall
-                                                    .override(
-                                                      fontFamily:
-                                                          'SF Pro Display',
-                                                      color:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodySmall
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
                                                               .secondaryText,
-                                                      letterSpacing: 0.0,
-                                                    ),
+                                                          letterSpacing: 0.0,
+                                                        ),
                                               ),
                                             ),
 
@@ -3577,10 +3619,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   bottom: 4.0),
                                               child: Container(
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      FlutterFlowTheme.of(
-                                                              context)
-                                                          .secondaryBackground,
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .secondaryBackground,
                                                   borderRadius:
                                                       BorderRadius.circular(
                                                           8.0),
@@ -3616,17 +3657,15 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     maxLines: 2,
                                                     overflow:
                                                         TextOverflow.ellipsis,
-                                                    style:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .bodyMedium
-                                                            .override(
-                                                              fontFamily:
-                                                                  'SF Pro Display',
-                                                              fontSize: 14.0,
-                                                              letterSpacing:
-                                                                  0.0,
-                                                            ),
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily:
+                                                              'SF Pro Display',
+                                                          fontSize: 14.0,
+                                                          letterSpacing: 0.0,
+                                                        ),
                                                   ),
                                                   subtitle: dur.isNotEmpty
                                                       ? Text(
@@ -3651,8 +3690,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           padding:
                                                               const EdgeInsets
                                                                   .symmetric(
-                                                                  horizontal:
-                                                                      8,
+                                                                  horizontal: 8,
                                                                   vertical: 3),
                                                           decoration:
                                                               BoxDecoration(
@@ -3677,10 +3715,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       : Icon(
                                                           Icons.lock_outline,
                                                           size: 16,
-                                                          color:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .secondaryText,
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .secondaryText,
                                                         ),
                                                 ),
                                               ),
@@ -3930,13 +3967,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                               fadeOutDuration: Duration(milliseconds: 200),
                                                                               imageUrl: () {
                                                                                 final img = getJsonField(
-                                                                                  reviewListItem,
-                                                                                  r'''$.userDetails.image''',
-                                                                                )?.toString() ?? '';
+                                                                                      reviewListItem,
+                                                                                      r'''$.userDetails.image''',
+                                                                                    )?.toString() ??
+                                                                                    '';
                                                                                 if (img.isEmpty) return '';
-                                                                                return img.startsWith('http')
-                                                                                    ? img
-                                                                                    : '${FFAppConstants.imageUrl}$img';
+                                                                                return img.startsWith('http') ? img : '${FFAppConstants.imageUrl}$img';
                                                                               }(),
                                                                               fit: BoxFit.cover,
                                                                               errorWidget: (context, error, stackTrace) => Image.asset(
@@ -4447,9 +4483,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       //         .start,
                                                       // direction: Axis.horizontal,
                                                       // runAlignment:
-                                                          // WrapAlignment.start,
+                                                      // WrapAlignment.start,
                                                       verticalDirection:
-                                                          VerticalDirection.down,
+                                                          VerticalDirection
+                                                              .down,
                                                       // clipBehavior: Clip.none,
                                                       children: List.generate(
                                                           authorRelatedbookDetailslist
@@ -4469,7 +4506,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             authorRelatedbookDetailslistIndex,
                                                           ),
                                                           updateCallback: () =>
-                                                              safeSetState(() {}),
+                                                              safeSetState(
+                                                                  () {}),
                                                           child:
                                                               MainBookComponentWidget(
                                                             key: Key(
@@ -4504,7 +4542,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               authorRelatedbookDetailslistItem,
                                                               r'''$.price''',
                                                             ).toString(),
-                                                            bookType: getJsonField(
+                                                            bookType:
+                                                                getJsonField(
                                                               authorRelatedbookDetailslistItem,
                                                               r'''$.type''',
                                                             )?.toString(),
@@ -4566,19 +4605,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                       await EbookGroup
                                                                           .removeFavouritebookCall
                                                                           .call(
-                                                                    userId:
-                                                                        FFAppState()
-                                                                            .userId,
-                                                                    token:
-                                                                        FFAppState()
-                                                                            .token,
+                                                                    userId: FFAppState()
+                                                                        .userId,
+                                                                    token: FFAppState()
+                                                                        .token,
                                                                     bookId:
                                                                         getJsonField(
                                                                       authorRelatedbookDetailslistItem,
                                                                       r'''$._id''',
                                                                     ).toString(),
                                                                   );
-                                                    
+
                                                                   safeSetState(() =>
                                                                       _model.apiRequestCompleter1 =
                                                                           null);
@@ -4594,19 +4631,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                       await EbookGroup
                                                                           .addFavouriteBookApiCall
                                                                           .call(
-                                                                    userId:
-                                                                        FFAppState()
-                                                                            .userId,
-                                                                    token:
-                                                                        FFAppState()
-                                                                            .token,
+                                                                    userId: FFAppState()
+                                                                        .userId,
+                                                                    token: FFAppState()
+                                                                        .token,
                                                                     bookId:
                                                                         getJsonField(
                                                                       authorRelatedbookDetailslistItem,
                                                                       r'''$._id''',
                                                                     ).toString(),
                                                                   );
-                                                    
+
                                                                   safeSetState(() =>
                                                                       _model.apiRequestCompleter1 =
                                                                           null);
@@ -4618,7 +4653,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                         .favText,
                                                                   );
                                                                 }
-                                                    
+
                                                                 FFAppState()
                                                                     .clearGetFavouriteBookCacheCache();
                                                                 _model.isRelated =
@@ -4638,19 +4673,22 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                 FFAppState()
                                                                     .update(
                                                                         () {});
-                                                    
+
                                                                 context.pushNamed(
                                                                     SignInPageWidget
                                                                         .routeName);
                                                               }
-                                                    
-                                                              safeSetState(() {});
+
+                                                              safeSetState(
+                                                                  () {});
                                                             },
-                                                            isMainTap: () async {
+                                                            isMainTap:
+                                                                () async {
                                                               context.pushNamed(
                                                                 BookDetailspageWidget
                                                                     .routeName,
-                                                                queryParameters: {
+                                                                queryParameters:
+                                                                    {
                                                                   'name':
                                                                       serializeParam(
                                                                     getJsonField(
@@ -5105,4 +5143,3 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     );
   }
 }
-
