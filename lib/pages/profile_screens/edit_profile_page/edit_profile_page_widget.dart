@@ -152,6 +152,11 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
     );
     _model.textFieldFocusNode5 ??= FocusNode();
 
+    _model.textController6 ??= TextEditingController(
+      text: _userDetailStr(['phone']),
+    );
+    _model.textFieldFocusNode6 ??= FocusNode();
+
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
@@ -644,6 +649,31 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 validator: _model.textController5Validator
                                     .asValidator(context),
                               ),
+                              TextFormField(
+                                controller: _model.textController6,
+                                focusNode: _model.textFieldFocusNode6,
+                                autofocus: false,
+                                textInputAction: TextInputAction.done,
+                                obscureText: false,
+                                keyboardType: TextInputType.phone,
+                                decoration: _editFieldDecoration(
+                                  context,
+                                  labelText: 'Phone number (optional)',
+                                  hintText: '01XXXXXXXXX',
+                                ),
+                                style: FlutterFlowTheme.of(context)
+                                    .bodyMedium
+                                    .override(
+                                      fontFamily: 'SF Pro Display',
+                                      fontSize: 17.0,
+                                      letterSpacing: 0.0,
+                                      lineHeight: 1.5,
+                                    ),
+                                cursorColor:
+                                    FlutterFlowTheme.of(context).primary,
+                                validator: _model.textController6Validator
+                                    .asValidator(context),
+                              ),
                               // custom_widgets.CustomLabelCountryCodeEditWidget(
                               //   width: double.infinity,
                               //   height: 50.0,
@@ -697,7 +727,7 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                             image: _model.image == null || _model.image == ''
                                 ? _userDetailStr(['avatar_url', 'image'])
                                 : _model.image!,
-                            phone: FFAppState().phone,
+                            phone: _model.textController6?.text ?? FFAppState().phone,
                             countryCode: '+${FFAppState().countryCodeEdit}',
                             bio: _model.textController4?.text ?? '',
                             preferredLanguage:

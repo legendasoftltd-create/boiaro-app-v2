@@ -292,24 +292,26 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                         ),
                                   ).animateOnPageLoad(animationsMap[
                                       'textOnPageLoadAnimation1']!),
-                                  Text(
-                                    getJsonField(
-                                      FFAppState().userDetail,
-                                      r'''$.email''',
-                                    ).toString(),
-                                    textAlign: TextAlign.center,
-                                    style: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .override(
-                                          fontFamily: 'SF Pro Display',
-                                          color: FlutterFlowTheme.of(context)
-                                              .black40,
-                                          fontSize: 17.0,
-                                          letterSpacing: 0.0,
-                                          lineHeight: 1.5,
-                                        ),
-                                  ).animateOnPageLoad(animationsMap[
-                                      'textOnPageLoadAnimation2']!),
+                                  
+                                  // Text(
+                                  //   getJsonField(
+                                  //     FFAppState().userDetail,
+                                  //     r'''$.email''',
+                                  //   ).toString(),
+                                  //   textAlign: TextAlign.center,
+                                  //   style: FlutterFlowTheme.of(context)
+                                  //       .bodyMedium
+                                  //       .override(
+                                  //         fontFamily: 'SF Pro Display',
+                                  //         color: FlutterFlowTheme.of(context)
+                                  //             .black40,
+                                  //         fontSize: 17.0,
+                                  //         letterSpacing: 0.0,
+                                  //         lineHeight: 1.5,
+                                  //       ),
+                                  // ).animateOnPageLoad(animationsMap[
+                                  //     'textOnPageLoadAnimation2']!),
+                                  
                                   // if (getJsonField(
                                   //           FFAppState().userDetail,
                                   //           r'''$.referral_code''',

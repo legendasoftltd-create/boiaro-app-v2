@@ -8,6 +8,8 @@ export '/pages/login_pages/sign_in_page/sign_in_page_widget.dart'
     show SignInPageWidget;
 export '/pages/login_pages/sign_up_page/sign_up_page_widget.dart'
     show SignUpPageWidget;
+export '/pages/login_pages/phone_login_page/phone_login_page_widget.dart'
+    show PhoneLoginPageWidget;
 export '/pages/categories_pages/categories_screen/categories_screen_widget.dart'
     show CategoriesScreenWidget;
 export '/pages/categories_pages/sub_categories_screen/sub_categories_screen_widget.dart'

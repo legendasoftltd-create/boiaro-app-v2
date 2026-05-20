@@ -130,11 +130,9 @@ dependency_overrides:
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3
   flutter_lints:
-  image: ^4.5.4
   lints:
   flutter_test:
     sdk: flutter
-  flutter_native_splash: ^2.4.0
 
 
 flutter_launcher_icons:
@@ -147,12 +145,6 @@ flutter_launcher_icons:
   adaptive_icon_foreground: 'assets/images/adaptive_foreground_icon.png'
 
 
-flutter_native_splash:
-  background_image: "assets/images/splash.jpg"
-  fullscreen: true
-  android_12:
-    background_image: "assets/images/splash.jpg"
-    fullscreen: true
 
 
 # For information on the generic Dart part of this file, see the

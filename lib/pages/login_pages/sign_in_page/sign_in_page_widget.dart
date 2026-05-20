@@ -713,6 +713,52 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                               children: [
                                 GestureDetector(
                                   onTap: () async {
+                                    context.pushNamed(PhoneLoginPageWidget.routeName);
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.all(12),
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryBackground,
+                                      borderRadius: BorderRadius.circular(16.0),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: FlutterFlowTheme.of(context)
+                                              .shadowColor,
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        )
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.phone_outlined,
+                                          size: 28,
+                                          color: FlutterFlowTheme.of(context).primaryText,
+                                        ),
+                                        SizedBox(width: 10),
+                                        Text(
+                                          "Continue with Phone",
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodyMedium
+                                              .override(
+                                                fontFamily: 'SF Pro Display',
+                                                fontSize: 16.0,
+                                                letterSpacing: 0.0,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                GestureDetector(
+                                  onTap: () async {
                                     final socialLoginRepository =
                                         SocialLoginRepository();
                                     final response = await socialLoginRepository

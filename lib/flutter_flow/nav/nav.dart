@@ -72,6 +72,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => SignUpPageWidget(),
         ),
         FFRoute(
+          name: PhoneLoginPageWidget.routeName,
+          path: PhoneLoginPageWidget.routePath,
+          builder: (context, params) => PhoneLoginPageWidget(),
+        ),
+        FFRoute(
           name: CategoriesScreenWidget.routeName,
           path: CategoriesScreenWidget.routePath,
           builder: (context, params) => params.isEmpty

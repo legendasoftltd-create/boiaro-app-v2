@@ -411,18 +411,21 @@ class BoiaroLegacyAdapter {
     final first = parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : '';
     final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
     final image = profile is Map ? profile['avatar_url']?.toString() ?? '' : '';
+    final phone = profile is Map ? profile['phone']?.toString() ?? '' : '';
     return {
       'id': user['id']?.toString() ?? '',
       'firstname': first,
       'lastname': last,
       'username': displayName,
       'email': user['email']?.toString() ?? '',
-      'phone': '',
+      'phone': phone,
       'image': image,
       'country_code': '',
-      'referral_code': '',
+      'referral_code':
+          profile is Map ? profile['referral_code']?.toString() ?? '' : '',
       'profile_id': profile is Map ? profile['id']?.toString() ?? '' : '',
       'roles': user['roles'],
     };
   }
+
 }

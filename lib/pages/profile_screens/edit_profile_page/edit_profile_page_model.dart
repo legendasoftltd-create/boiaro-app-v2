@@ -49,6 +49,11 @@ class EditProfilePageModel extends FlutterFlowModel<EditProfilePageWidget> {
   TextEditingController? textController5;
   String? Function(BuildContext, String?)? textController5Validator;
 
+  // Phone number field
+  FocusNode? textFieldFocusNode6;
+  TextEditingController? textController6;
+  String? Function(BuildContext, String?)? textController6Validator;
+
   // Stores action output result for [Backend Call - API (UsereditprofileApi)] action in Button widget.
   ApiCallResponse? userEditFunction;
   // Stores action output result for [Backend Call - API (GetuserApi)] action in Button widget.
@@ -64,6 +69,7 @@ class EditProfilePageModel extends FlutterFlowModel<EditProfilePageWidget> {
     textController3Validator = noop;
     textController4Validator = noop;
     textController5Validator = noop;
+    textController6Validator = noop;
   }
 
   @override
@@ -79,5 +85,7 @@ class EditProfilePageModel extends FlutterFlowModel<EditProfilePageWidget> {
     textController4?.dispose();
     textFieldFocusNode5?.dispose();
     textController5?.dispose();
+    textFieldFocusNode6?.dispose();
+    textController6?.dispose();
   }
 }

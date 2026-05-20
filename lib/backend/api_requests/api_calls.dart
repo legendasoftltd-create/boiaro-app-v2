@@ -574,6 +574,145 @@ class EbookGroup {
   static GetCouponApiCall getCouponApiCall = GetCouponApiCall();
   static ValidateCouponApiCall validateCouponApiCall = ValidateCouponApiCall();
   static GetOrdersApiCall getOrdersApiCall = GetOrdersApiCall();
+  static PhoneSendOtpApiCall phoneSendOtpApiCall = PhoneSendOtpApiCall();
+  static PhoneVerifyOtpApiCall phoneVerifyOtpApiCall = PhoneVerifyOtpApiCall();
+}
+
+class PhoneSendOtpApiCall {
+  Future<ApiCallResponse> call({
+    String? phone = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'PhoneSendOtpApi',
+      apiUrl: '${baseUrl}auth/phone/send-otp',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(null),
+      params: {},
+      body: BoiaroLegacyAdapter.jsonEncodeBody({'phone': phone}),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (res.succeeded && body is Map && body['sent'] == true) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: 'OTP sent successfully',
+          extra: {'sent': true},
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(body, res.statusCode);
+  }
+
+  bool? sent(dynamic response) {
+    final s = getJsonField(response, r'''$.data.sent''');
+    if (s is bool) return s;
+    return null;
+  }
+
+  String? errorMessage(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+}
+
+class PhoneVerifyOtpApiCall {
+  Future<ApiCallResponse> call({
+    String? phone = '',
+    String? otp = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'PhoneVerifyOtpApi',
+      apiUrl: '${baseUrl}auth/phone/verify-otp',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(null),
+      params: {},
+      body: BoiaroLegacyAdapter.jsonEncodeBody({
+        'phone': phone,
+        'otp': otp,
+      }),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final access =
+        (body['access_token'] ?? body['accessToken'])?.toString();
+    if (access == null || access.isEmpty) {
+      return _v2Error(body, res.statusCode);
+    }
+    final Map<String, dynamic> user = body['user'] is Map
+        ? Map<String, dynamic>.from(body['user'] as Map)
+        : <String, dynamic>{};
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 1,
+        message: body['message']?.toString() ?? 'Login successful',
+        extra: {
+          'token': access,
+          'refresh_token':
+              (body['refresh_token'] ?? body['refreshToken'])?.toString() ?? '',
+          'expires_in': body['expires_in'],
+          'user_id':
+              body['user_id']?.toString() ?? user['id']?.toString() ?? '',
+          'userDetails': BoiaroLegacyAdapter.legacyUserFromAuthUser(user),
+        },
+      ),
+      res.headers,
+      res.statusCode,
+    );
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+  String? token(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.token''',
+      ));
+  String? refreshToken(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.refresh_token''',
+      ));
+  dynamic userDetails(dynamic response) => getJsonField(
+        response,
+        r'''$.data.userDetails''',
+      );
+  String? userId(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.userDetails.id''',
+      ));
 }
 
 class SocialLoginCall {

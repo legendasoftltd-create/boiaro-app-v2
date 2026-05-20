@@ -334,6 +334,13 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
                       label: 'Email',
                       child: _valueText(context, email, maxLines: 2),
                     ),
+                    if (_profileValue('phone').isNotEmpty)
+                      _infoCard(
+                        context: context,
+                        label: 'Phone number',
+                        child: _valueText(
+                            context, _profileValue('phone'), maxLines: 1),
+                      ),
                     _infoCard(
                       context: context,
                       label: 'Bio',
