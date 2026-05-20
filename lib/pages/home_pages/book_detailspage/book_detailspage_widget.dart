@@ -1947,44 +1947,45 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           lineHeight: 1.3,
                                                         ),
                                               ),
-                                              // English subtitle (title_en from v2)
-                                              Builder(builder: (context) {
-                                                final titleEn = getJsonField(
-                                                      bookDetailspageGetbookdetailsApiResponse
-                                                          .jsonBody,
-                                                      r'''$.data.bookDetails[0].slug''',
-                                                    )
-                                                        ?.toString()
-                                                        .replaceAll('-', ' ') ??
-                                                    '';
-                                                if (titleEn.isEmpty) {
-                                                  return const SizedBox
-                                                      .shrink();
-                                                }
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          top: 2.0),
-                                                  child: Text(
-                                                    titleEn,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: FlutterFlowTheme.of(
-                                                            context)
-                                                        .bodySmall
-                                                        .override(
-                                                          fontFamily:
-                                                              'SF Pro Display',
-                                                          color: FlutterFlowTheme
-                                                                  .of(context)
-                                                              .secondaryText,
-                                                          fontSize: 12.0,
-                                                          letterSpacing: 0.0,
-                                                        ),
-                                                  ),
-                                                );
-                                              }),
+                                              // // English subtitle (title_en from v2)
+                                              // Builder(builder: (context) {
+                                              //   final titleEn = getJsonField(
+                                              //         bookDetailspageGetbookdetailsApiResponse
+                                              //             .jsonBody,
+                                              //         r'''$.data.bookDetails[0].slug''',
+                                              //       )
+                                              //           ?.toString()
+                                              //           .replaceAll('-', ' ') ??
+                                              //       '';
+                                              //   if (titleEn.isEmpty) {
+                                              //     return const SizedBox
+                                              //         .shrink();
+                                              //   }
+                                              //   return Padding(
+                                              //     padding:
+                                              //         const EdgeInsets.only(
+                                              //             top: 2.0),
+                                              //     child: Text(
+                                              //       titleEn,
+                                              //       maxLines: 1,
+                                              //       overflow:
+                                              //           TextOverflow.ellipsis,
+                                              //       style: FlutterFlowTheme.of(
+                                              //               context)
+                                              //           .bodySmall
+                                              //           .override(
+                                              //             fontFamily:
+                                              //                 'SF Pro Display',
+                                              //             color: FlutterFlowTheme
+                                              //                     .of(context)
+                                              //                 .secondaryText,
+                                              //             fontSize: 12.0,
+                                              //             letterSpacing: 0.0,
+                                              //           ),
+                                              //     ),
+                                              //   );
+                                              // }),
+                                              
                                               SizedBox(height: 8.0),
                                               // Author name
                                               Text(

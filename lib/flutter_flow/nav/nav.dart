@@ -234,6 +234,42 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           ),
         ),
         FFRoute(
+          name: 'AuthorDeepLink',
+          path: '/author/:authorId',
+          builder: (context, params) => AboutAuthorPageWidget(
+            name: null,
+            authorImage: null,
+            authorId: params.getParam(
+              'authorId',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
+          name: 'NarratorDeepLink',
+          path: '/narrator/:narratorId',
+          builder: (context, params) => AboutNarratorPageWidget(
+            name: null,
+            narratorImage: null,
+            narratorId: params.getParam(
+              'narratorId',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
+          name: 'PublisherDeepLink',
+          path: '/publisher/:publisherId',
+          builder: (context, params) => AboutPublisherPageWidget(
+            name: null,
+            publisherImage: null,
+            publisherId: params.getParam(
+              'publisherId',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
           name: ReadBookPageWidget.routeName,
           path: ReadBookPageWidget.routePath,
           builder: (context, params) => ReadBookPageWidget(

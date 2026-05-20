@@ -193,7 +193,7 @@ class _BestAuthorPageWidgetState extends State<BestAuthorPageWidget> {
                                                             [];
 
                                                     return Wrap(
-                                                      spacing: 18.0,
+                                                      spacing: 16.0,
                                                       runSpacing: 16.0,
                                                       alignment:
                                                           WrapAlignment.start,
@@ -245,6 +245,7 @@ class _BestAuthorPageWidgetState extends State<BestAuthorPageWidget> {
                                                               authorDetailsListItem,
                                                               r'''$.name''',
                                                             ).toString(),
+                                                            isSmall: true,
                                                             onMainTap:
                                                                 () async {
                                                               context.pushNamed(

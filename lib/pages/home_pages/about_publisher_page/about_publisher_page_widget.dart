@@ -17,6 +17,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '/app_constants.dart';
 
 class AboutPublisherPageWidget extends StatefulWidget {
   const AboutPublisherPageWidget({
@@ -196,6 +198,16 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
+                  shareIcon: true,
+                  onTapShare: () async {
+                    await SharePlus.instance.share(
+                      ShareParams(
+                        uri: Uri.parse(
+                          "${FFAppConstants.webUrl}/publisher/${widget.publisherId}"
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               Expanded(
@@ -327,8 +339,8 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                           milliseconds: 200),
                                                       fadeOutDuration: Duration(
                                                           milliseconds: 200),
-                                                      imageUrl: widget
-                                                          .publisherImage!,
+                                                      imageUrl: (widget.publisherImage != null && widget.publisherImage!.isNotEmpty) ? widget.publisherImage! : '${FFAppConstants.imageUrl}${EbookGroup.getpublisherdetailsApiCall.image(containerGetpublisherdetailsApiResponse.jsonBody) ?? ""}',
+
                                                       fit: BoxFit.cover,
                                                       errorWidget: (context,
                                                               error,
@@ -361,7 +373,7 @@ class _AboutPublisherPageWidgetState extends State<AboutPublisherPageWidget> {
                                                           Text(
                                                             valueOrDefault<
                                                                 String>(
-                                                              widget.name,
+                                                              ((widget.name != null && widget.name!.isNotEmpty) ? widget.name! : EbookGroup.getpublisherdetailsApiCall.name(containerGetpublisherdetailsApiResponse.jsonBody) ?? "Name"),
                                                               'Name',
                                                             ),
                                                             textAlign:

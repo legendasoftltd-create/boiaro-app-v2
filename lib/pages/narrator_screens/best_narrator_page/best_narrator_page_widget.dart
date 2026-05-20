@@ -196,7 +196,7 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                                                             [];
 
                                                     return Wrap(
-                                                      spacing: 18.0,
+                                                      spacing: 16.0,
                                                       runSpacing: 16.0,
                                                       alignment:
                                                           WrapAlignment.start,
@@ -248,6 +248,7 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                                                               narratorDetailsListItem,
                                                               r'''$.name''',
                                                             ).toString(),
+                                                            isSmall: true,
                                                             onMainTap:
                                                                 () async {
                                                               context.pushNamed(

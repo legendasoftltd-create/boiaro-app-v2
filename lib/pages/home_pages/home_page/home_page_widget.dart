@@ -52,6 +52,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isAudiobookLoading = false;
+  bool _isEbookLoading = false;
 
   Map<String, String> _apiHeaders({required bool authRequired}) {
     final h = <String, String>{
@@ -166,6 +167,65 @@ class _HomePageWidgetState extends State<HomePageWidget>
       'is_preview': true,
       'signed_url': authUrl,
     };
+  }
+
+  Future<String?> _fetchEbookSignedUrl(String bookId) async {
+    try {
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/content/ebook-url');
+      final res = await http.post(
+        uri,
+        headers: _apiHeaders(authRequired: true),
+        body: jsonEncode({'book_id': bookId}),
+      );
+      final decoded = jsonDecode(res.body);
+      final body = decoded is Map<String, dynamic> ? decoded : null;
+      final url = _extractUrlFromBody(body);
+      if (url != null && url.trim().isNotEmpty) return url;
+    } catch (_) {}
+    return null;
+  }
+
+  Future<String?> _fetchEbookSignedUrlGuestAware(String bookId) async {
+    try {
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/content/ebook-url');
+      final guestRes = await http.post(
+        uri,
+        headers: _apiHeaders(authRequired: false),
+        body: jsonEncode({'book_id': bookId}),
+      );
+      final decoded = jsonDecode(guestRes.body);
+      final guestBody = decoded is Map<String, dynamic> ? decoded : null;
+      final guestUrl = _extractUrlFromBody(guestBody);
+      if (guestUrl != null && guestUrl.trim().isNotEmpty) return guestUrl;
+    } catch (_) {}
+    if (!FFAppState().isLogin) return null;
+    return _fetchEbookSignedUrl(bookId);
+  }
+
+  String? _extractUrlFromBody(Map<String, dynamic>? body) {
+    if (body == null) return null;
+    final direct = body['signed_url'] ??
+        body['url'] ??
+        body['ebook_url'] ??
+        body['file_url'] ??
+        body['pdf_url'];
+    if (direct != null && direct.toString().trim().isNotEmpty) {
+      return direct.toString().trim();
+    }
+    final nested = body['data'];
+    if (nested is Map) {
+      final nestedUrl = nested['signed_url'] ??
+          nested['url'] ??
+          nested['ebook_url'] ??
+          nested['file_url'] ??
+          nested['pdf_url'];
+      if (nestedUrl != null && nestedUrl.toString().trim().isNotEmpty) {
+        return nestedUrl.toString().trim();
+      }
+    }
+    return null;
   }
 
   Future<void> _resumeAudiobookPlayer({
@@ -1552,32 +1612,61 @@ class _HomePageWidgetState extends State<HomePageWidget>
                         progressLabel: ebookProgressLabel,
                         progressValue: ebookProgress,
                         imageUrl: FFAppState().homePageLiveReadBook,
+                        isLoading: _isEbookLoading,
                         onTap: () async {
-                          context.pushNamed(
-                            ReadBookCustomPageWidget.routeName,
-                            queryParameters: {
-                              'pdf': serializeParam(
-                                FFAppState().homePageBookPdf,
-                                ParamType.String,
-                              ),
-                              'id': serializeParam(
-                                FFAppState().homePageBookId,
-                                ParamType.String,
-                              ),
-                              'name': serializeParam(
-                                FFAppState().homePageBookName,
-                                ParamType.String,
-                              ),
-                              'author': serializeParam(
-                                FFAppState().homePageBookAuthor,
-                                ParamType.String,
-                              ),
-                              'image': serializeParam(
-                                FFAppState().homePageLiveReadBook,
-                                ParamType.String,
-                              ),
-                            }.withoutNulls,
-                          );
+                          if (_isEbookLoading) return;
+                          setState(() {
+                            _isEbookLoading = true;
+                          });
+                          try {
+                            final bookId = FFAppState().homePageBookId;
+                            String? freshUrl;
+                            if (FFAppState().isLogin) {
+                              freshUrl = await _fetchEbookSignedUrl(bookId);
+                            }
+                            freshUrl ??= await _fetchEbookSignedUrlGuestAware(bookId);
+                            if (freshUrl == null || freshUrl.trim().isEmpty) {
+                              await actions.showCustomToastBottom(
+                                  'Unable to load book link');
+                              return;
+                            }
+                            FFAppState().homePageBookPdf = freshUrl;
+                            FFAppState().update(() {});
+
+                            await context.pushNamed(
+                              ReadBookCustomPageWidget.routeName,
+                              queryParameters: {
+                                'pdf': serializeParam(
+                                  freshUrl,
+                                  ParamType.String,
+                                ),
+                                'id': serializeParam(
+                                  FFAppState().homePageBookId,
+                                  ParamType.String,
+                                ),
+                                'name': serializeParam(
+                                  FFAppState().homePageBookName,
+                                  ParamType.String,
+                                ),
+                                'author': serializeParam(
+                                  FFAppState().homePageBookAuthor,
+                                  ParamType.String,
+                                ),
+                                'image': serializeParam(
+                                  FFAppState().homePageLiveReadBook,
+                                  ParamType.String,
+                                ),
+                              }.withoutNulls,
+                            );
+                          } catch (_) {
+                            await actions.showCustomToastBottom('Failed to load book');
+                          } finally {
+                            if (mounted) {
+                              setState(() {
+                                _isEbookLoading = false;
+                              });
+                            }
+                          }
                         },
                       ).animateOnPageLoad(
                           animationsMap['containerOnPageLoadAnimation']!),
@@ -1874,129 +1963,61 @@ class _HomePageWidgetState extends State<HomePageWidget>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-              child: Text(
-                FFLocalizations.of(context).getText('featured_narrators_title'),
-                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      fontFamily: 'SF Pro Display',
-                      fontSize: 17.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-            ),
-            Padding(
-              padding:
-                  const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 16.0, 0.0),
-              child: InkWell(
-                splashColor: Colors.transparent,
-                focusColor: Colors.transparent,
-                hoverColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-                onTap: () async {
-                  context.pushNamed(BestNarratorPageWidget.routeName);
-                },
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(10, 0.0, 10, 0),
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).primary,
-                    borderRadius: BorderRadius.circular(12),
+        _buildSectionHeader(
+          FFLocalizations.of(context).getText('featured_narrators_title'),
+          onViewAll: () async {
+            context.pushNamed(BestNarratorPageWidget.routeName);
+          },
+        ).animateOnPageLoad(animationsMap['rowOnPageLoadAnimation3']!),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            children: List.generate(items.length, (index) {
+              final item = items[index];
+              return Padding(
+                padding: EdgeInsets.only(
+                  right: index == items.length - 1 ? 0.0 : 16.0,
+                ),
+                child: wrapWithModel(
+                  model: _model.categoryComponentModels3.getModel(
+                    getJsonField(item, r'''$.name''').toString(),
+                    index,
                   ),
-                  child: Text(
-                    FFLocalizations.of(context).getText('view_all'),
-                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 14.0,
-                          color: Colors.white,
-                          lineHeight: 1.5,
-                        ),
+                  updateCallback: () => safeSetState(() {}),
+                  child: CategoryComponentWidget(
+                    key: Key(
+                      'narrator_${getJsonField(item, r'''$._id''').toString()}',
+                    ),
+                    icon:
+                        '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.image''').toString()}',
+                    name: getJsonField(item, r'''$.name''').toString(),
+                    isSmall: true,
+                    onMainTap: () async {
+                      context.pushNamed(
+                        AboutNarratorPageWidget.routeName,
+                        queryParameters: {
+                          'name': serializeParam(
+                            getJsonField(item, r'''$.name''').toString(),
+                            ParamType.String,
+                          ),
+                          'narratorImage': serializeParam(
+                            '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.image''').toString()}',
+                            ParamType.String,
+                          ),
+                          'narratorId': serializeParam(
+                            getJsonField(item, r'''$._id''').toString(),
+                            ParamType.String,
+                          ),
+                        }.withoutNulls,
+                      );
+                    },
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final item in items)
-                  if (item is Map)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 12),
-                      child: InkWell(
-                        onTap: () async {
-                          context.pushNamed(
-                            AboutNarratorPageWidget.routeName,
-                            queryParameters: {
-                              'name': serializeParam(
-                                getJsonField(item, r'''$.name''').toString(),
-                                ParamType.String,
-                              ),
-                              'narratorImage': serializeParam(
-                                '${FFAppConstants.imageUrl}${getJsonField(item, r'''$.image''').toString()}',
-                                ParamType.String,
-                              ),
-                              'narratorId': serializeParam(
-                                getJsonField(item, r'''$._id''').toString(),
-                                ParamType.String,
-                              ),
-                            }.withoutNulls,
-                          );
-                        },
-                        child: SizedBox(
-                          width: 88,
-                          child: Column(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(40),
-                                child: CachedNetworkImage(
-                                  imageUrl: _resolveCoverUrl(
-                                    getJsonField(item, r'''$.image''')
-                                        .toString(),
-                                  ),
-                                  width: 72,
-                                  height: 72,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) => Container(
-                                    width: 72,
-                                    height: 72,
-                                    color:
-                                        FlutterFlowTheme.of(context).alternate,
-                                    child: Icon(
-                                      Icons.person,
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                getJsonField(item, r'''$.name''').toString(),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: FlutterFlowTheme.of(context)
-                                    .bodySmall
-                                    .override(
-                                      fontFamily: 'SF Pro Display',
-                                      fontSize: 12,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-              ],
-            ),
+              );
+            }),
           ),
         ),
       ],

@@ -15,6 +15,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '/app_constants.dart';
 import 'about_narrator_page_model.dart';
 export 'about_narrator_page_model.dart';
 
@@ -195,6 +197,16 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
+                  shareIcon: true,
+                  onTapShare: () async {
+                    await SharePlus.instance.share(
+                      ShareParams(
+                        uri: Uri.parse(
+                          "${FFAppConstants.webUrl}/narrator/${widget.narratorId}"
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               Expanded(
@@ -327,7 +339,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                       fadeOutDuration: Duration(
                                                           milliseconds: 200),
                                                       imageUrl:
-                                                          widget.narratorImage!,
+                                                          (widget.narratorImage != null && widget.narratorImage!.isNotEmpty) ? widget.narratorImage! : '${FFAppConstants.imageUrl}${EbookGroup.getnarratordetailsApiCall.image(containerGetauthordetailsApiResponse.jsonBody) ?? ""}',
                                                       fit: BoxFit.cover,
                                                       errorWidget: (context,
                                                               error,
@@ -360,7 +372,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                           Text(
                                                             valueOrDefault<
                                                                 String>(
-                                                              widget.name,
+                                                              ((widget.name != null && widget.name!.isNotEmpty) ? widget.name! : EbookGroup.getnarratordetailsApiCall.name(containerGetauthordetailsApiResponse.jsonBody) ?? "Name"),
                                                               'Name',
                                                             ),
                                                             textAlign:

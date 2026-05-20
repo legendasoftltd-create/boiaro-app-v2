@@ -200,7 +200,7 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                                                             [];
 
                                                     return Wrap(
-                                                      spacing: 18.0,
+                                                      spacing: 16.0,
                                                       runSpacing: 16.0,
                                                       alignment:
                                                           WrapAlignment.start,
@@ -252,6 +252,7 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                                                               publisherDetailsListItem,
                                                               r'''$.name''',
                                                             ).toString(),
+                                                            isSmall: true,
                                                             onMainTap:
                                                                 () async {
                                                               context.pushNamed(

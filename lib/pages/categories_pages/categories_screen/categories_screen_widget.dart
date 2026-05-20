@@ -209,7 +209,7 @@ class _CategoriesScreenWidgetState extends State<CategoriesScreenWidget>
                                                             [];
 
                                                     return Wrap(
-                                                      spacing: 18.0,
+                                                      spacing: 16.0,
                                                       runSpacing: 16.0,
                                                       alignment:
                                                           WrapAlignment.start,
@@ -261,6 +261,7 @@ class _CategoriesScreenWidgetState extends State<CategoriesScreenWidget>
                                                               categoryDetailsListItem,
                                                               r'''$.name''',
                                                             ).toString(),
+                                                            isSmall: true,
                                                             onMainTap:
                                                                 () async {
                                                               context.pushNamed(

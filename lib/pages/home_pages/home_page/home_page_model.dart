@@ -57,6 +57,9 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
   // Models for CategoryComponent dynamic component.
   late FlutterFlowDynamicModels<CategoryComponentModel>
       categoryComponentModels2;
+  // Models for CategoryComponent dynamic component.
+  late FlutterFlowDynamicModels<CategoryComponentModel>
+      categoryComponentModels3;
   // Models for ListMainContainerComponent dynamic component.
   late FlutterFlowDynamicModels<ListMainContainerComponentModel>
       listMainContainerComponentModels;
@@ -73,6 +76,8 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
         FlutterFlowDynamicModels(() => MainBookComponentModel());
     categoryComponentModels2 =
         FlutterFlowDynamicModels(() => CategoryComponentModel());
+    categoryComponentModels3 =
+        FlutterFlowDynamicModels(() => CategoryComponentModel());
     listMainContainerComponentModels =
         FlutterFlowDynamicModels(() => ListMainContainerComponentModel());
     featuredBooksComponentModels =
@@ -84,6 +89,7 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
     categoryComponentModels1.dispose();
     mainBookComponentModels.dispose();
     categoryComponentModels2.dispose();
+    categoryComponentModels3.dispose();
     listMainContainerComponentModels.dispose();
     featuredBooksComponentModels.dispose();
   }

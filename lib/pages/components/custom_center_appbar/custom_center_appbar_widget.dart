@@ -13,6 +13,8 @@ class CustomCenterAppbarWidget extends StatefulWidget {
     required this.addIcon,
     required this.onTapAdd,
     this.onBackPressed,
+    this.shareIcon,
+    this.onTapShare,
   }) : this.title = title ?? 'Title';
 
   final String title;
@@ -20,6 +22,8 @@ class CustomCenterAppbarWidget extends StatefulWidget {
   final bool? addIcon;
   final Future Function()? onTapAdd;
   final Future Function()? onBackPressed;
+  final bool? shareIcon;
+  final Future Function()? onTapShare;
   @override
   State<CustomCenterAppbarWidget> createState() =>
       _CustomCenterAppbarWidgetState();
@@ -174,6 +178,30 @@ class _CustomCenterAppbarWidgetState extends State<CustomCenterAppbarWidget> {
                                   BlendMode.srcIn,
                                 ),
                               ),
+                            ),
+                          ),
+                        );
+                      } else if (widget.shareIcon == true) {
+                        return InkWell(
+                          splashColor: Colors.transparent,
+                          focusColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          onTap: () async {
+                            await widget.onTapShare?.call();
+                          },
+                          child: Container(
+                            width: 40.0,
+                            height: 40.0,
+                            decoration: BoxDecoration(
+                              color: FlutterFlowTheme.of(context).lightGrey,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: AlignmentDirectional(0.0, 0.0),
+                            child: Icon(
+                              Icons.share,
+                              color: FlutterFlowTheme.of(context).primaryText,
+                              size: 20.0,
                             ),
                           ),
                         );
