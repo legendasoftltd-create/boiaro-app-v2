@@ -158,15 +158,30 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
                                 } else {
                                   return Builder(
                                     builder: (context) {
-                                      final notificationList =
-                                          EbookGroup.getnotificationApiCall
-                                                  .notificationDetails(
-                                                    containerGetnotificationApiResponse
-                                                        .jsonBody,
-                                                  )
-                                                  ?.toList() ??
-                                              [];
-                                      if (notificationList.isEmpty) {
+                                       final notificationList =
+                                           EbookGroup.getnotificationApiCall
+                                                   .notificationDetails(
+                                                     containerGetnotificationApiResponse
+                                                         .jsonBody,
+                                                   )
+                                                   ?.toList() ??
+                                               [];
+                                       if (notificationList.isNotEmpty) {
+                                         final List<String> notificationIds = notificationList
+                                             .where((e) => e is Map && e['id'] != null)
+                                             .map((e) => (e as Map)['id'].toString())
+                                             .where((id) => id.isNotEmpty)
+                                             .toList();
+                                         if (notificationIds.isNotEmpty) {
+                                           WidgetsBinding.instance.addPostFrameCallback((_) {
+                                             EbookGroup.readNotificationsApiCall.call(
+                                               ids: notificationIds,
+                                               token: FFAppState().token,
+                                             );
+                                           });
+                                         }
+                                       }
+                                       if (notificationList.isEmpty) {
                                         return Center(
                                           child: NoNotificationYetWidget(),
                                         );

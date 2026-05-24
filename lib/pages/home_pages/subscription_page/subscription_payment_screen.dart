@@ -63,11 +63,13 @@ class _SubscriptionPaymentScreenState
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       log('Subscription payment initiation (${response.statusCode}): $decoded');
 
-      final success =
-          decoded['success'] == 1 || decoded['success'] == true;
       final gatewayUrl = decoded['gateway_url']?.toString() ??
           decoded['GatewayPageURL']?.toString() ??
           decoded['url']?.toString();
+      final success = decoded['success'] == 1 ||
+          decoded['success'] == true ||
+          decoded['requires_payment'] == true ||
+          (gatewayUrl != null && gatewayUrl.isNotEmpty);
 
       if (success && gatewayUrl != null && gatewayUrl.isNotEmpty) {
         setState(() {

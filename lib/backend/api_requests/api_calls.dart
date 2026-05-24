@@ -576,6 +576,12 @@ class EbookGroup {
   static GetOrdersApiCall getOrdersApiCall = GetOrdersApiCall();
   static PhoneSendOtpApiCall phoneSendOtpApiCall = PhoneSendOtpApiCall();
   static PhoneVerifyOtpApiCall phoneVerifyOtpApiCall = PhoneVerifyOtpApiCall();
+  static RegisterNotificationTokenApiCall registerNotificationTokenApiCall =
+      RegisterNotificationTokenApiCall();
+  static UnregisterNotificationTokenApiCall unregisterNotificationTokenApiCall =
+      UnregisterNotificationTokenApiCall();
+  static ReadNotificationsApiCall readNotificationsApiCall =
+      ReadNotificationsApiCall();
 }
 
 class PhoneSendOtpApiCall {
@@ -2476,9 +2482,18 @@ class GetpublisherdetailsApiCall {
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
+    final id = Uri.encodeComponent((publisherId ?? '').trim());
+    if (id.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+            success: 0, message: 'publisherId required'),
+        {},
+        400,
+      );
+    }
     final res = await ApiManager.instance.makeApiCall(
       callName: 'GetpublisherdetailsApi',
-      apiUrl: '${baseUrl}publishers',
+      apiUrl: '${baseUrl}publishers/$id',
       callType: ApiCallType.GET,
       headers: _boiaroAuthHeaders(token),
       params: {},
@@ -2494,29 +2509,11 @@ class GetpublisherdetailsApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final raw = body['publishers'];
-    if (raw is! List) {
+    if (BoiaroLegacyAdapter.v2Error(body) != null) {
       return _v2Error(body, res.statusCode);
     }
-    final pid = (publisherId ?? '').trim();
-    Map<String, dynamic>? found;
-    for (final x in raw) {
-      if (x is Map && x['id']?.toString() == pid) {
-        found = Map<String, dynamic>.from(x);
-        break;
-      }
-    }
-    if (found == null) {
-      return ApiCallResponse(
-        BoiaroLegacyAdapter.legacyDataEnvelope(
-          success: 0,
-          message: 'Publisher not found',
-        ),
-        res.headers,
-        404,
-      );
-    }
-    final leg = BoiaroLegacyAdapter.legacyPublisherFromV2(found);
+    final leg = BoiaroLegacyAdapter.legacyPublisherFromV2(
+        Map<String, dynamic>.from(body));
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
         'publisherDetails': [leg],
@@ -2708,9 +2705,18 @@ class GetnarratordetailsApiCall {
     String? token = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
+    final id = Uri.encodeComponent((narratorId ?? '').trim());
+    if (id.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+            success: 0, message: 'narratorId required'),
+        {},
+        400,
+      );
+    }
     final res = await ApiManager.instance.makeApiCall(
       callName: 'GetnarratordetailsApi',
-      apiUrl: '${baseUrl}narrators',
+      apiUrl: '${baseUrl}narrators/$id',
       callType: ApiCallType.GET,
       headers: _boiaroAuthHeaders(token),
       params: {},
@@ -2726,29 +2732,11 @@ class GetnarratordetailsApiCall {
     if (!res.succeeded || body is! Map) {
       return _v2Error(body, res.statusCode);
     }
-    final raw = body['narrators'];
-    if (raw is! List) {
+    if (BoiaroLegacyAdapter.v2Error(body) != null) {
       return _v2Error(body, res.statusCode);
     }
-    final nid = (narratorId ?? '').trim();
-    Map<String, dynamic>? found;
-    for (final x in raw) {
-      if (x is Map && x['id']?.toString() == nid) {
-        found = Map<String, dynamic>.from(x);
-        break;
-      }
-    }
-    if (found == null) {
-      return ApiCallResponse(
-        BoiaroLegacyAdapter.legacyDataEnvelope(
-          success: 0,
-          message: 'Narrator not found',
-        ),
-        res.headers,
-        404,
-      );
-    }
-    final leg = BoiaroLegacyAdapter.legacyNarratorFromV2(found);
+    final leg = BoiaroLegacyAdapter.legacyNarratorFromV2(
+        Map<String, dynamic>.from(body));
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
         'narratorDetails': [leg],
@@ -3455,9 +3443,18 @@ class UsersubscriptionApiCall {
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
         extra: {
-          'message': body['message'] ?? 'Subscription created',
           'success': 1,
-          'subscriptionDetails': body['subscription'],
+          'message': body['message'] ?? 'Subscription created',
+          'requires_payment': body['requires_payment'] == true,
+          'gateway_url': body['gateway_url']?.toString() ?? '',
+          'subscription_id': body['subscription_id']?.toString() ?? '',
+          'transaction_id': body['transaction_id']?.toString() ?? '',
+          'subscriptionDetails': body['subscription'] ?? {
+            'id': body['subscription_id']?.toString() ?? '',
+            'transactionId': body['transaction_id']?.toString() ?? '',
+            'gatewayUrl': body['gateway_url']?.toString() ?? '',
+            'requiresPayment': body['requires_payment'] == true,
+          },
         },
       ),
       res.headers,
@@ -3472,6 +3469,22 @@ class UsersubscriptionApiCall {
   String? message(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.message''',
+      ));
+  bool? requiresPayment(dynamic response) => castToType<bool>(getJsonField(
+        response,
+        r'''$.data.requires_payment''',
+      ));
+  String? gatewayUrl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.gateway_url''',
+      ));
+  String? subscriptionId(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.subscription_id''',
+      ));
+  String? transactionId(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.transaction_id''',
       ));
 }
 
@@ -5162,6 +5175,149 @@ class GetnotificationApiCall {
           .map((x) => castToType<String>(x))
           .withoutNulls
           .toList();
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class RegisterNotificationTokenApiCall {
+  Future<ApiCallResponse> call({
+    String? tokenFcm = '',
+    String? platform = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'RegisterNotificationTokenApi',
+      apiUrl: '${baseUrl}notifications/register-token',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: BoiaroLegacyAdapter.jsonEncodeBody({
+        'token': tokenFcm,
+        'platform': platform,
+      }),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final jb = res.jsonBody;
+    if (res.succeeded) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: jb is Map ? (jb['message']?.toString() ?? 'Token registered') : 'Token registered',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(jb, res.statusCode);
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class UnregisterNotificationTokenApiCall {
+  Future<ApiCallResponse> call({
+    String? tokenFcm = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'UnregisterNotificationTokenApi',
+      apiUrl: '${baseUrl}notifications/register-token',
+      callType: ApiCallType.DELETE,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: BoiaroLegacyAdapter.jsonEncodeBody({
+        'token': tokenFcm,
+      }),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final jb = res.jsonBody;
+    if (res.succeeded) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: jb is Map ? (jb['message']?.toString() ?? 'Token unregistered') : 'Token unregistered',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(jb, res.statusCode);
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class ReadNotificationsApiCall {
+  Future<ApiCallResponse> call({
+    List<String>? ids,
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'ReadNotificationsApi',
+      apiUrl: '${baseUrl}notifications/read',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: BoiaroLegacyAdapter.jsonEncodeBody({
+        'ids': ids ?? const [],
+      }),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final jb = res.jsonBody;
+    if (res.succeeded) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: jb is Map ? (jb['message']?.toString() ?? 'Notifications marked as read') : 'Notifications marked as read',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(jb, res.statusCode);
+  }
+
   int? success(dynamic response) => castToType<int>(getJsonField(
         response,
         r'''$.data.success''',

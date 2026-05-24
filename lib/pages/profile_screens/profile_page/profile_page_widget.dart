@@ -1677,6 +1677,12 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                             },
                                             child: LogOutDialogWidget(
                                               onTapLogout: () async {
+                                                if (FFAppState().tokenFcm.isNotEmpty) {
+                                                  await EbookGroup.unregisterNotificationTokenApiCall.call(
+                                                    tokenFcm: FFAppState().tokenFcm,
+                                                    token: FFAppState().token,
+                                                  );
+                                                }
                                                 _model.signOutApi =
                                                     await EbookGroup
                                                         .signoutApiCall

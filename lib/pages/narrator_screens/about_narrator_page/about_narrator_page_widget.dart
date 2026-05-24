@@ -277,6 +277,24 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                     ),
                                   );
                                 } else {
+                                  final narratorList = EbookGroup.getnarratordetailsApiCall.narratorDetails(
+                                    containerGetauthordetailsApiResponse.jsonBody,
+                                  );
+                                  final narratorMap = narratorList != null && narratorList.isNotEmpty
+                                      ? Map<String, dynamic>.from(narratorList.first)
+                                      : null;
+                                  if (narratorMap != null && _followersCount == null) {
+                                    _followersCount = narratorMap['followers_count'] as int? ?? 0;
+                                    _isFollowing = narratorMap['followed'] == true;
+                                  }
+
+                                  final narratorName = (widget.name != null && widget.name!.isNotEmpty)
+                                      ? widget.name!
+                                      : (narratorMap?['name']?.toString() ?? 'Name');
+                                  final imageUrl = (widget.narratorImage != null && widget.narratorImage!.isNotEmpty)
+                                      ? widget.narratorImage!
+                                      : '${FFAppConstants.imageUrl}${narratorMap?['image'] ?? ""}';
+
                                   return RefreshIndicator(
                                     key: Key('RefreshIndicator_zhgjuy02'),
                                     color: FlutterFlowTheme.of(context).primary,
@@ -296,148 +314,177 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                       scrollDirection: Axis.vertical,
                                       children: [
                                         Padding(
-                                          padding:
-                                              EdgeInsetsDirectional.fromSTEB(
-                                                  16.0, 0.0, 16.0, 0.0),
+                                          padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
                                           child: Container(
                                             width: double.infinity,
                                             decoration: BoxDecoration(
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .primaryBackground,
+                                              color: FlutterFlowTheme.of(context).secondaryBackground,
+                                              borderRadius: BorderRadius.circular(16.0),
+                                              border: Border.all(
+                                                color: FlutterFlowTheme.of(context).alternate.withOpacity(0.4),
+                                                width: 1.0,
+                                              ),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  blurRadius: 16.0,
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .shadowColor,
-                                                  offset: Offset(
-                                                    0.0,
-                                                    4.0,
-                                                  ),
+                                                  blurRadius: 12.0,
+                                                  color: FlutterFlowTheme.of(context).shadowColor.withOpacity(0.05),
+                                                  offset: const Offset(0.0, 4.0),
                                                 )
                                               ],
-                                              borderRadius:
-                                                  BorderRadius.circular(12.0),
                                             ),
                                             child: Padding(
-                                              padding: EdgeInsets.all(16.0),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.max,
+                                              padding: const EdgeInsets.all(16.0),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Container(
-                                                    width: 80.0,
-                                                    height: 80.0,
-                                                    clipBehavior:
-                                                        Clip.antiAlias,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: CachedNetworkImage(
-                                                      fadeInDuration: Duration(
-                                                          milliseconds: 200),
-                                                      fadeOutDuration: Duration(
-                                                          milliseconds: 200),
-                                                      imageUrl:
-                                                          (widget.narratorImage != null && widget.narratorImage!.isNotEmpty) ? widget.narratorImage! : '${FFAppConstants.imageUrl}${EbookGroup.getnarratordetailsApiCall.image(containerGetauthordetailsApiResponse.jsonBody) ?? ""}',
-                                                      fit: BoxFit.cover,
-                                                      errorWidget: (context,
-                                                              error,
-                                                              stackTrace) =>
-                                                          Image.asset(
-                                                        'assets/images/error_image.png',
-                                                        fit: BoxFit.cover,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    child: Padding(
-                                                      padding:
-                                                          EdgeInsetsDirectional
-                                                              .fromSTEB(
-                                                                  12.0,
-                                                                  0.0,
-                                                                  0.0,
-                                                                  0.0),
-                                                      child: Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.max,
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceAround,
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            valueOrDefault<
-                                                                String>(
-                                                              ((widget.name != null && widget.name!.isNotEmpty) ? widget.name! : EbookGroup.getnarratordetailsApiCall.name(containerGetauthordetailsApiResponse.jsonBody) ?? "Name"),
-                                                              'Name',
+                                                  Row(
+                                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                                    children: [
+                                                      Container(
+                                                        width: 72.0,
+                                                        height: 72.0,
+                                                        decoration: BoxDecoration(
+                                                          shape: BoxShape.circle,
+                                                          border: Border.all(
+                                                            color: FlutterFlowTheme.of(context).primary.withOpacity(0.2),
+                                                            width: 2.0,
+                                                          ),
+                                                        ),
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.all(2.0),
+                                                          child: Container(
+                                                            clipBehavior: Clip.antiAlias,
+                                                            decoration: const BoxDecoration(
+                                                              shape: BoxShape.circle,
                                                             ),
-                                                            textAlign:
-                                                                TextAlign.start,
-                                                            maxLines: 2,
-                                                            style: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .bodyMedium
-                                                                .override(
-                                                                  fontFamily:
-                                                                      'SF Pro Display',
-                                                                  fontSize:
-                                                                      18.0,
-                                                                  letterSpacing:
-                                                                      0.0,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                  lineHeight:
-                                                                      1.5,
-                                                                ),
-                                                          ),
-                                                          Row(
-                                                            children: [
-                                                              OutlinedButton(
-                                                                onPressed: (!FollowService
-                                                                            .supportsFollowEndpoints ||
-                                                                        _isFollowLoading)
-                                                                    ? null
-                                                                    : _toggleFollow,
-                                                                child:
-                                                                    _isFollowLoading
-                                                                        ? const SizedBox(
-                                                                            width:
-                                                                                14,
-                                                                            height:
-                                                                                14,
-                                                                            child:
-                                                                                CircularProgressIndicator(
-                                                                              strokeWidth: 2,
-                                                                            ),
-                                                                          )
-                                                                        : Text(!FollowService.supportsFollowEndpoints
-                                                                            ? 'Coming soon'
-                                                                            : (_isFollowing
-                                                                                ? 'Following'
-                                                                                : 'Follow'),style: FlutterFlowTheme.of(context).bodyMedium),
+                                                            child: CachedNetworkImage(
+                                                              fadeInDuration: const Duration(milliseconds: 200),
+                                                              fadeOutDuration: const Duration(milliseconds: 200),
+                                                              imageUrl: imageUrl,
+                                                              fit: BoxFit.cover,
+                                                              errorWidget: (context, error, stackTrace) => Image.asset(
+                                                                'assets/images/error_image.png',
+                                                                fit: BoxFit.cover,
                                                               ),
-                                                              if (_followersCount !=
-                                                                  null) ...[
-                                                                const SizedBox(
-                                                                    width: 8),
-                                                                Text(
-                                                                  '${_followersCount!} followers',
-                                                                  style: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .bodySmall,
-                                                                ),
-                                                              ],
-                                                            ],
+                                                            ),
                                                           ),
-                                                        ].divide(SizedBox(
-                                                            height: 8.0)),
+                                                        ),
                                                       ),
-                                                    ),
+                                                      const SizedBox(width: 16.0),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            Text(
+                                                              narratorName,
+                                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                    fontFamily: 'SF Pro Display',
+                                                                    fontSize: 18.0,
+                                                                    letterSpacing: 0.0,
+                                                                    fontWeight: FontWeight.bold,
+                                                                    lineHeight: 1.3,
+                                                                  ),
+                                                              maxLines: 2,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                            const SizedBox(height: 6.0),
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                                                              decoration: BoxDecoration(
+                                                                color: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
+                                                                borderRadius: BorderRadius.circular(6.0),
+                                                              ),
+                                                              child: Text(
+                                                                'Narrator',
+                                                                style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                                      fontFamily: 'SF Pro Display',
+                                                                      color: FlutterFlowTheme.of(context).primary,
+                                                                      fontSize: 11.0,
+                                                                      fontWeight: FontWeight.w600,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 16.0),
+                                                  Divider(
+                                                    height: 1.0,
+                                                    thickness: 1.0,
+                                                    color: FlutterFlowTheme.of(context).alternate.withOpacity(0.4),
+                                                  ),
+                                                  const SizedBox(height: 16.0),
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Row(
+                                                        children: [
+                                                          _buildStatItem(
+                                                            context,
+                                                            label: 'Followers',
+                                                            value: _followersCount != null ? '$_followersCount' : '${narratorMap?['followers_count'] ?? 0}',
+                                                          ),
+                                                          const SizedBox(width: 24.0),
+                                                          _buildStatItem(
+                                                            context,
+                                                            label: 'Books',
+                                                            value: '${narratorMap?['books_count'] ?? 0}',
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      SizedBox(
+                                                        height: 38.0,
+                                                        width: 110.0,
+                                                        child: ElevatedButton(
+                                                          onPressed: (!FollowService.supportsFollowEndpoints || _isFollowLoading)
+                                                              ? null
+                                                              : _toggleFollow,
+                                                          style: ElevatedButton.styleFrom(
+                                                            backgroundColor: _isFollowing
+                                                                ? Colors.transparent
+                                                                : FlutterFlowTheme.of(context).primary,
+                                                            elevation: _isFollowing ? 0 : 2,
+                                                            side: _isFollowing
+                                                                ? BorderSide(
+                                                                    color: FlutterFlowTheme.of(context).alternate,
+                                                                    width: 1.5,
+                                                                  )
+                                                                : BorderSide.none,
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius: BorderRadius.circular(20.0),
+                                                            ),
+                                                            padding: EdgeInsets.zero,
+                                                          ),
+                                                          child: _isFollowLoading
+                                                              ? SizedBox(
+                                                                  width: 16.0,
+                                                                  height: 16.0,
+                                                                  child: CircularProgressIndicator(
+                                                                    strokeWidth: 2.0,
+                                                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                                                      _isFollowing
+                                                                          ? FlutterFlowTheme.of(context).primary
+                                                                          : Colors.white,
+                                                                    ),
+                                                                  ),
+                                                                )
+                                                              : Text(
+                                                                  _isFollowing ? 'Following' : 'Follow',
+                                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                        fontFamily: 'SF Pro Display',
+                                                                        color: _isFollowing
+                                                                            ? FlutterFlowTheme.of(context).secondaryText
+                                                                            : Colors.white,
+                                                                        fontSize: 13.0,
+                                                                        fontWeight: FontWeight.w600,
+                                                                      ),
+                                                                ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),
@@ -1166,6 +1213,32 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStatItem(BuildContext context, {required String label, required String value}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                fontFamily: 'SF Pro Display',
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 2.0),
+        Text(
+          label,
+          style: FlutterFlowTheme.of(context).bodySmall.override(
+                fontFamily: 'SF Pro Display',
+                color: FlutterFlowTheme.of(context).secondaryText,
+                fontSize: 12.0,
+              ),
+        ),
+      ],
     );
   }
 }

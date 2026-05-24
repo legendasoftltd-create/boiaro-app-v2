@@ -582,8 +582,16 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                     EbookGroup.signinApiCall.userDetails(
                                   (_model.loginApiFunction?.jsonBody ?? ''),
                                 );
-                                FFAppState().update(() {});
-                                if (FFAppState().favChange == true) {
+                                 FFAppState().update(() {});
+                                 if (FFAppState().tokenFcm.isNotEmpty) {
+                                   final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
+                                   EbookGroup.registerNotificationTokenApiCall.call(
+                                     tokenFcm: FFAppState().tokenFcm,
+                                     platform: platform,
+                                     token: FFAppState().token,
+                                   );
+                                 }
+                                 if (FFAppState().favChange == true) {
                                   _model.getFavourite = await EbookGroup
                                       .getFavouriteBookCall
                                       .call(
@@ -786,6 +794,14 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                           ) ??
                                           '';
                                       FFAppState().update(() {});
+                                      if (FFAppState().tokenFcm.isNotEmpty) {
+                                        final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
+                                        EbookGroup.registerNotificationTokenApiCall.call(
+                                          tokenFcm: FFAppState().tokenFcm,
+                                          platform: platform,
+                                          token: FFAppState().token,
+                                        );
+                                      }
                                       context.safePop();
                                     } else {
                                       print('Google Login UI Handler: response is ${response == null ? 'NULL' : 'NOT NULL'}');
@@ -901,6 +917,14 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                               ) ??
                                               '';
                                           FFAppState().update(() {});
+                                          if (FFAppState().tokenFcm.isNotEmpty) {
+                                            final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
+                                            EbookGroup.registerNotificationTokenApiCall.call(
+                                              tokenFcm: FFAppState().tokenFcm,
+                                              platform: platform,
+                                              token: FFAppState().token,
+                                            );
+                                          }
                                           context.safePop();
                                         } else {
                                           await actions.showCustomToastBottom(
@@ -941,6 +965,14 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                           ) ??
                                           '';
                                       FFAppState().update(() {});
+                                      if (FFAppState().tokenFcm.isNotEmpty) {
+                                        final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
+                                        EbookGroup.registerNotificationTokenApiCall.call(
+                                          tokenFcm: FFAppState().tokenFcm,
+                                          platform: platform,
+                                          token: FFAppState().token,
+                                        );
+                                      }
                                       context.safePop();
                                     } else {
                                       ScaffoldMessenger.of(context).showSnackBar(
