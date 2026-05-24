@@ -1,5 +1,6 @@
 import 'package:a_i_ebook_app/custom_code/widgets/app_update.dart';
 import 'package:a_i_ebook_app/pages/audiobook_pages/audiobook_page/audiobook_page_widget.dart';
+import 'package:a_i_ebook_app/services/presence_tracking_service.dart';
 
 import '/custom_code/actions/index.dart' as actions;
 import 'package:provider/provider.dart';
@@ -96,6 +97,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    PresenceTrackingService.instance.init();
 
     _appStateNotifier = AppStateNotifier.instance;
     _router = createRouter(_appStateNotifier);
@@ -125,7 +127,15 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp.router(
       // Use DevicePreview's locale and builder in debug mode
       locale: DevicePreview.locale(context) ?? _locale,
-      builder: DevicePreview.appBuilder,
+      builder: (context, child) {
+        return Listener(
+          onPointerDown: (_) {
+            PresenceTrackingService.instance.recordInteraction();
+          },
+          behavior: HitTestBehavior.translucent,
+          child: DevicePreview.appBuilder(context, child),
+        );
+      },
       debugShowCheckedModeBanner: false,
       title: 'Boi Aro',
       scrollBehavior: MyAppScrollBehavior(),

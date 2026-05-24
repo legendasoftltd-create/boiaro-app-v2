@@ -582,6 +582,8 @@ class EbookGroup {
       UnregisterNotificationTokenApiCall();
   static ReadNotificationsApiCall readNotificationsApiCall =
       ReadNotificationsApiCall();
+  static PresenceHeartbeatApiCall presenceHeartbeatApiCall =
+      PresenceHeartbeatApiCall();
 }
 
 class PhoneSendOtpApiCall {
@@ -5713,6 +5715,60 @@ class GetOrdersApiCall {
       alwaysAllowBody: false,
     );
   }
+}
+
+class PresenceHeartbeatApiCall {
+  Future<ApiCallResponse> call({
+    required String activityType,
+    required String sessionId,
+    String? bookId,
+    String? currentPage,
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final payload = <String, dynamic>{
+      'activity_type': activityType,
+      'session_id': sessionId,
+      if (bookId != null && bookId.isNotEmpty) 'book_id': bookId,
+      if (currentPage != null && currentPage.isNotEmpty) 'current_page': currentPage,
+    };
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'PresenceHeartbeatApi',
+      apiUrl: '${baseUrl}presence/heartbeat',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: BoiaroLegacyAdapter.jsonEncodeBody(payload),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final jb = res.jsonBody;
+    if (res.succeeded) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 1,
+          message: jb is Map ? (jb['message']?.toString() ?? 'Heartbeat sent') : 'Heartbeat sent',
+        ),
+        res.headers,
+        res.statusCode,
+      );
+    }
+    return _v2Error(jb, res.statusCode);
+  }
+
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
 }
 
 /// End Ebook Group Code

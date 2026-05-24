@@ -3,6 +3,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/services/audio_playback_service.dart';
 import '/services/progress_sync_service.dart';
+import '/services/presence_tracking_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -49,6 +50,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   int _previewPercent = 100;
   bool _previewLimitShown = false;
   RemoteListeningProgress? _remoteListeningProgress;
+  bool _isPlaying = false;
 
   final animationsMap = {
     'imageOnPageLoadAnimation': AnimationInfo(
@@ -102,9 +104,26 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
           await ProgressSyncService.fetchListeningProgress(bookId);
       _applyRemoteListeningStart(_remoteListeningProgress);
     }
-    if (_isPreviewMode) {
-      _playbackStateSub = handler.playbackState.listen(_onPlaybackState);
-    }
+    _playbackStateSub = handler.playbackState.listen((state) {
+      if (_isPreviewMode) {
+        _onPlaybackState(state);
+      }
+      _isPlaying = state.playing;
+      final bId = _bookId();
+      if (bId.isNotEmpty) {
+        if (_isPlaying) {
+          PresenceTrackingService.instance.updateActivity(
+            PresenceActivity.listening,
+            bookId: bId,
+            currentPage: _formatDurationPresence(_position),
+          );
+        } else {
+          PresenceTrackingService.instance.updateActivity(
+            PresenceActivity.browsing,
+          );
+        }
+      }
+    });
     _positionSub = AudioService.position.listen((pos) {
       if (!mounted) {
         return;
@@ -233,6 +252,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _playbackStateSub?.cancel();
     _sleepTimer?.cancel();
     _model.dispose();
+    PresenceTrackingService.instance.updateActivity(PresenceActivity.browsing);
     super.dispose();
   }
 
@@ -464,7 +484,22 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
         positionSeconds: currentSeconds,
         totalSeconds: totalSeconds,
       ));
+      if (_isPlaying) {
+        PresenceTrackingService.instance.updateActivity(
+          PresenceActivity.listening,
+          bookId: bookId,
+          currentPage: _formatDurationPresence(position),
+        );
+      }
     }
+  }
+
+  String _formatDurationPresence(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   Future<void> _setSpeed(double speed) async {

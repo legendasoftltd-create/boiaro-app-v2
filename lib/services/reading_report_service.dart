@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:a_i_ebook_app/services/presence_tracking_service.dart';
 
 class ReadingReportService {
+  
   ReadingReportService._();
   static final ReadingReportService instance = ReadingReportService._();
 
@@ -49,6 +51,11 @@ class ReadingReportService {
     _lastProgressAt = null;
     _notifyDebug(
         'READING START OK: bookId=$normalizedBookId sessionId=$sessionId');
+    PresenceTrackingService.instance.updateActivity(
+      PresenceActivity.reading,
+      bookId: normalizedBookId,
+      currentPage: 'Page 1',
+    );
   }
 
   Future<void> updateProgress({
@@ -86,6 +93,11 @@ class ReadingReportService {
     _lastPercentageSent = bounded;
     _notifyDebug(
         'READING PROGRESS OK: bookId=$bookId sessionId=${_sessionId ?? ''} percentage=$bounded');
+    PresenceTrackingService.instance.updateActivity(
+      PresenceActivity.reading,
+      bookId: bookId,
+      currentPage: 'Page $bounded',
+    );
   }
 
   Future<void> endSession() async {
@@ -105,6 +117,9 @@ class ReadingReportService {
     _bookId = null;
     _lastPercentageSent = -1;
     _lastProgressAt = null;
+    PresenceTrackingService.instance.updateActivity(
+      PresenceActivity.browsing,
+    );
   }
 
   String _createSessionId() {
