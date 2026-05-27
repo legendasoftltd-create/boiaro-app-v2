@@ -113,7 +113,7 @@ class _CategoryComponentWidgetState extends State<CategoryComponentWidget> {
                       maxLines: 1,
                       style: FlutterFlowTheme.of(context).bodyMedium.override(
                             fontFamily: 'SF Pro Display',
-                            fontSize: 15.0,
+                            fontSize: 13.0,
                             letterSpacing: 0.0,
                             fontWeight: FontWeight.normal,
                             lineHeight: 1.2,

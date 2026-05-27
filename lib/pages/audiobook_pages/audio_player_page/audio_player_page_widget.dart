@@ -4,12 +4,17 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/services/audio_playback_service.dart';
 import '/services/progress_sync_service.dart';
 import '/services/presence_tracking_service.dart';
+import '/services/tts_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:video_player/video_player.dart';
+import 'package:just_audio/just_audio.dart' show LoopMode, AudioPlayer;
 import 'dart:async';
 import 'audio_player_page_model.dart';
 export 'audio_player_page_model.dart';
+
 
 class AudioPlayerPageWidget extends StatefulWidget {
   const AudioPlayerPageWidget({
@@ -32,6 +37,17 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     with TickerProviderStateMixin {
   late AudioPlayerPageModel _model;
 
+  // Video Player state
+  bool _videoMode = false;
+  VideoPlayerController? _videoController;
+  bool _videoLoading = false;
+
+  // Ambient Sound player state
+  final AudioPlayer _ambientPlayer = AudioPlayer();
+  bool _ambientEnabled = false;
+  int _selectedAmbientIndex = 0;
+  double _ambientVolume = 0.3; // Default 30% background volume
+
   final scaffoldKey = GlobalKey<ScaffoldState>();
   AudiobookAudioHandler? _handler;
   StreamSubscription<Duration>? _positionSub;
@@ -51,6 +67,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   bool _previewLimitShown = false;
   RemoteListeningProgress? _remoteListeningProgress;
   bool _isPlaying = false;
+
 
   final animationsMap = {
     'imageOnPageLoadAnimation': AnimationInfo(
@@ -84,6 +101,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _initializeChapters();
     _persistAudiobookMeta();
     _initAudio();
+    _initAmbientPlayer();
+    _loadAmbientTracks();
   }
 
   void _initializeChapters() {
@@ -109,6 +128,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
         _onPlaybackState(state);
       }
       _isPlaying = state.playing;
+      _updateAmbientState();
       final bId = _bookId();
       if (bId.isNotEmpty) {
         if (_isPlaying) {
@@ -125,7 +145,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       }
     });
     _positionSub = AudioService.position.listen((pos) {
-      if (!mounted) {
+      if (!mounted || _videoMode) {
         return;
       }
       final cappedPosition = _capPreviewPosition(pos);
@@ -137,17 +157,13 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       _maybeHandlePreviewBoundary(cappedPosition);
     });
     _mediaItemSub = handler.mediaItem.listen((item) {
-      if (!mounted) {
+      if (!mounted || _videoMode) {
         return;
       }
       setState(() => _duration = item?.duration ?? Duration.zero);
       _persistAudiobookProgress(_position);
     });
-    await handler.playChapter(
-      audiobook: widget.audiobook,
-      chapter: _currentChapter ?? widget.chapter,
-    );
-    await _restoreSavedAudioPosition(handler);
+    await _startPlayback();
     if (mounted) {
       setState(() {});
     }
@@ -252,6 +268,9 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _playbackStateSub?.cancel();
     _sleepTimer?.cancel();
     _model.dispose();
+    _videoController?.removeListener(_videoListener);
+    _videoController?.dispose();
+    _ambientPlayer.dispose();
     PresenceTrackingService.instance.updateActivity(PresenceActivity.browsing);
     super.dispose();
   }
@@ -311,12 +330,54 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     return 0;
   }
 
+  Future<void> _startPlayback() async {
+    final handler = _handler ?? await AudioPlaybackService.handler;
+    _handler = handler;
+
+    if (_hasVideo()) {
+      setState(() {
+        _videoMode = true;
+      });
+      await handler.pause();
+      await _initVideoPlayer();
+      
+      final isSameBook = widget.audiobook['id']?.toString() ==
+              FFAppState().homePageLastAudioBookId ||
+          widget.audiobook['_id']?.toString() ==
+              FFAppState().homePageLastAudioBookId;
+      if (isSameBook) {
+        final savedSec = FFAppState().homePageLastAudioPositionSec;
+        if (savedSec > 0) {
+          final lastTrack =
+              FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
+          final currentTrack =
+              int.tryParse((_currentChapter?['track_number'] ?? '').toString()) ??
+                  (_currentIndex + 1);
+          if (currentTrack == lastTrack) {
+            await _videoController?.seekTo(Duration(seconds: savedSec));
+          }
+        }
+      }
+    } else {
+      setState(() {
+        _videoMode = false;
+      });
+      if (_videoController != null) {
+        await _videoController!.pause();
+      }
+      _updateAmbientState();
+      await handler.playChapter(
+        audiobook: widget.audiobook,
+        chapter: _currentChapter ?? widget.chapter,
+      );
+      await _restoreSavedAudioPosition(handler);
+    }
+  }
+
   Future<void> _playChapterAt(int index) async {
     if (index < 0 || index >= _chapters.length) {
       return;
     }
-    final handler = _handler ?? await AudioPlaybackService.handler;
-    _handler = handler;
     setState(() {
       _currentIndex = index;
       _currentChapter = _chapters[index];
@@ -325,10 +386,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       _previewLimitShown = false;
     });
     _persistAudiobookMeta();
-    await handler.playChapter(
-      audiobook: widget.audiobook,
-      chapter: _currentChapter ?? widget.chapter,
-    );
+    await _startPlayback();
   }
 
   void _persistAudiobookMeta() {
@@ -407,8 +465,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     if (mounted) {
       setState(() => _position = target);
     }
-    await _handler?.seek(target);
-    _maybeHandlePreviewBoundary(target);
+    if (_videoMode) {
+      await _videoController?.seekTo(target);
+    } else {
+      await _handler?.seek(target);
+      _maybeHandlePreviewBoundary(target);
+    }
   }
 
   void _clearPersistedAudiobookProgress() {
@@ -501,6 +563,308 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     final seconds = totalSeconds % 60;
     return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
+
+  void _initAmbientPlayer() {
+    _ambientPlayer.setLoopMode(LoopMode.one);
+    _ambientPlayer.setVolume(_ambientVolume);
+  }
+
+  Future<void> _loadAmbientTracks() async {
+    try {
+      if (TtsService.instance.ambientTracks.isEmpty) {
+        await TtsService.instance.fetchAmbientTracks();
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (_) {}
+  }
+
+  List<Map<String, String>> _getAmbientTracks() {
+    return TtsService.instance.ambientTracks.map((t) => {
+      'name': '${t.emoji} ${t.label}'.trim().isNotEmpty ? '${t.emoji} ${t.label}'.trim() : t.name,
+      'url': t.url,
+    }).toList();
+  }
+
+  void _updateAmbientState() {
+    if (!mounted) return;
+    if (_ambientEnabled && _isPlaying && !_videoMode) {
+      _ambientPlayer.play();
+    } else {
+      _ambientPlayer.pause();
+    }
+  }
+
+  bool _hasVideo() {
+    if (_currentChapter == null) return false;
+    final file = (_currentChapter?['file'] ?? _currentChapter?['audio'] ?? '').toString().toLowerCase();
+    
+    final hasVideoUrl = _currentChapter?['video'] != null ||
+                        _currentChapter?['videoUrl'] != null ||
+                        _currentChapter?['video_url'] != null;
+
+    bool isVideoFile = false;
+    if (file.isNotEmpty) {
+      try {
+        final uri = Uri.parse(file);
+        final path = uri.path.toLowerCase();
+        isVideoFile = path.endsWith('.mp4') ||
+                      path.endsWith('.m4v') ||
+                      path.endsWith('.mov') ||
+                      path.endsWith('.avi') ||
+                      path.endsWith('.mkv') ||
+                      path.endsWith('.webm');
+      } catch (_) {
+        isVideoFile = file.contains('.mp4') ||
+                      file.contains('.m4v') ||
+                      file.contains('.mov') ||
+                      file.contains('.avi') ||
+                      file.contains('.mkv') ||
+                      file.contains('.webm');
+      }
+    }
+
+    final raw = _currentChapter?['raw'];
+    final isRawVideo = raw != null && (
+      raw['is_video'] == true ||
+      raw['isVideo'] == true ||
+      raw['media_type']?.toString().toLowerCase() == 'video' ||
+      raw['format']?.toString().toLowerCase() == 'video'
+    );
+
+    final rawIsVideo = _currentChapter?['isVideo'] == true ||
+                       _currentChapter?['is_video'] == true ||
+                       _currentChapter?['format']?.toString().toLowerCase() == 'video' ||
+                       isRawVideo ||
+                       widget.audiobook['isVideo'] == true ||
+                       widget.audiobook['is_video'] == true ||
+                       widget.audiobook['format']?.toString().toLowerCase() == 'video';
+
+    return hasVideoUrl || isVideoFile || rawIsVideo;
+  }
+
+  String _resolveVideoUrl() {
+    if (_currentChapter == null) return '';
+    final videoUrl = _currentChapter?['video'] ??
+                     _currentChapter?['videoUrl'] ??
+                     _currentChapter?['video_url'] ??
+                     _currentChapter?['file'] ??
+                     _currentChapter?['audio'] ??
+                     '';
+    final raw = videoUrl.toString().trim();
+    if (raw.isEmpty) {
+      return '';
+    }
+    if (raw.startsWith('http')) {
+      return raw;
+    }
+    final base = FFAppConstants.audiobookAudioUrl;
+    if (raw.startsWith('/')) {
+      return '$base${raw.substring(1)}';
+    }
+    return '$base$raw';
+  }
+
+  Future<void> _initVideoPlayer() async {
+    if (!mounted) return;
+    if (_videoController != null) {
+      _videoController!.removeListener(_videoListener);
+      await _videoController!.dispose();
+      _videoController = null;
+    }
+
+    final url = _resolveVideoUrl();
+    if (url.isEmpty) return;
+
+    final controller = url.startsWith('http')
+        ? VideoPlayerController.networkUrl(Uri.parse(url))
+        : VideoPlayerController.asset(url);
+
+    _videoController = controller;
+
+    setState(() {
+      _videoLoading = true;
+    });
+
+    try {
+      await controller.initialize();
+      if (!mounted) return;
+      setState(() {
+        _videoLoading = false;
+        _duration = controller.value.duration;
+      });
+      controller.addListener(_videoListener);
+      if (_isPlaying) {
+        await controller.play();
+      }
+    } catch (e) {
+      debugPrint('Video init failed: $e');
+      if (mounted) {
+        setState(() {
+          _videoLoading = false;
+        });
+      }
+    }
+  }
+
+  void _videoListener() {
+    if (!mounted || !_videoMode || _videoController == null) return;
+    final val = _videoController!.value;
+    setState(() {
+      _position = val.position;
+      _duration = val.duration;
+      _isPlaying = val.isPlaying;
+    });
+    _updateAmbientState();
+  }
+
+
+
+  void _showAmbientSettingsSheet() {
+    final tracks = _getAmbientTracks();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Background Ambient Sound',
+                          style: FlutterFlowTheme.of(context).headlineSmall.override(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        Switch(
+                          value: _ambientEnabled,
+                          activeColor: FlutterFlowTheme.of(context).primary,
+                          onChanged: (val) async {
+                            setState(() {
+                              _ambientEnabled = val;
+                            });
+                            setModalState(() {});
+                            if (val) {
+                              if (_selectedAmbientIndex >= tracks.length) {
+                                _selectedAmbientIndex = 0;
+                              }
+                              await _ambientPlayer.setUrl(tracks[_selectedAmbientIndex]['url']!);
+                              _updateAmbientState();
+                            } else {
+                              await _ambientPlayer.pause();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Select Track',
+                      style: FlutterFlowTheme.of(context).bodyMedium.override(
+                            fontFamily: 'SF Pro Display',
+                            color: FlutterFlowTheme.of(context).secondaryText,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 40,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: tracks.length,
+                        itemBuilder: (context, index) {
+                          final track = tracks[index];
+                          final isSelected = _selectedAmbientIndex == index;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ChoiceChip(
+                              label: Text(track['name']!),
+                              selected: isSelected,
+                              selectedColor: FlutterFlowTheme.of(context).primary,
+                              labelStyle: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : FlutterFlowTheme.of(context).primaryText,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              onSelected: _ambientEnabled
+                                  ? (selected) async {
+                                      if (selected) {
+                                        setState(() {
+                                          _selectedAmbientIndex = index;
+                                        });
+                                        setModalState(() {});
+                                        await _ambientPlayer.setUrl(track['url']!);
+                                        _updateAmbientState();
+                                      }
+                                    }
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Ambient Volume',
+                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                fontFamily: 'SF Pro Display',
+                                color: FlutterFlowTheme.of(context).secondaryText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        Text(
+                          '${(_ambientVolume * 100).toInt()}%',
+                          style: TextStyle(
+                            color: FlutterFlowTheme.of(context).primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: _ambientVolume,
+                      min: 0.0,
+                      max: 1.0,
+                      activeColor: FlutterFlowTheme.of(context).primary,
+                      inactiveColor: FlutterFlowTheme.of(context).gray200,
+                      onChanged: _ambientEnabled
+                          ? (val) {
+                              setState(() {
+                                _ambientVolume = val;
+                              });
+                              setModalState(() {});
+                              _ambientPlayer.setVolume(val);
+                            }
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 
   Future<void> _setSpeed(double speed) async {
     final handler = _handler ?? await AudioPlaybackService.handler;
@@ -763,7 +1127,94 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Album Art
+                // if (_hasVideo())
+                //   Padding(
+                //     padding: const EdgeInsets.only(bottom: 8.0, top: 4.0),
+                //     child: Container(
+                //       padding: const EdgeInsets.all(4),
+                //       decoration: BoxDecoration(
+                //         color: FlutterFlowTheme.of(context).secondaryBackground,
+                //         borderRadius: BorderRadius.circular(24),
+                //       ),
+                //       child: Row(
+                //         mainAxisSize: MainAxisSize.min,
+                //         children: [
+                //           GestureDetector(
+                //             onTap: () => _setVideoMode(false),
+                //             child: Container(
+                //               padding: const EdgeInsets.symmetric(
+                //                   horizontal: 16, vertical: 8),
+                //               decoration: BoxDecoration(
+                //                 color: !_videoMode
+                //                     ? FlutterFlowTheme.of(context).primary
+                //                     : Colors.transparent,
+                //                 borderRadius: BorderRadius.circular(20),
+                //               ),
+                //               child: Row(
+                //                 children: [
+                //                   Icon(
+                //                     Icons.audiotrack_rounded,
+                //                     color: !_videoMode
+                //                         ? Colors.white
+                //                         : FlutterFlowTheme.of(context).primaryText,
+                //                     size: 16,
+                //                   ),
+                //                   const SizedBox(width: 6),
+                //                   Text(
+                //                     'Audio',
+                //                     style: TextStyle(
+                //                       color: !_videoMode
+                //                           ? Colors.white
+                //                           : FlutterFlowTheme.of(context).primaryText,
+                //                       fontWeight: FontWeight.bold,
+                //                       fontSize: 13,
+                //                     ),
+                //                   ),
+                //                 ],
+                //               ),
+                //             ),
+                //           ),
+                //           const SizedBox(width: 4),
+                //           GestureDetector(
+                //             onTap: () => _setVideoMode(true),
+                //             child: Container(
+                //               padding: const EdgeInsets.symmetric(
+                //                   horizontal: 16, vertical: 8),
+                //               decoration: BoxDecoration(
+                //                 color: _videoMode
+                //                     ? FlutterFlowTheme.of(context).primary
+                //                     : Colors.transparent,
+                //                 borderRadius: BorderRadius.circular(20),
+                //               ),
+                //               child: Row(
+                //                 children: [
+                //                   Icon(
+                //                     Icons.videocam_rounded,
+                //                     color: _videoMode
+                //                         ? Colors.white
+                //                         : FlutterFlowTheme.of(context).primaryText,
+                //                     size: 16,
+                //                   ),
+                //                   const SizedBox(width: 6),
+                //                   Text(
+                //                     'Video',
+                //                     style: TextStyle(
+                //                       color: _videoMode
+                //                           ? Colors.white
+                //                           : FlutterFlowTheme.of(context).primaryText,
+                //                       fontWeight: FontWeight.bold,
+                //                       fontSize: 13,
+                //                     ),
+                //                   ),
+                //                 ],
+                //               ),
+                //             ),
+                //           ),
+                //         ],
+                //       ),
+                //     ),
+                //   ),
+                // // Album Art
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -775,9 +1226,20 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                           final idealH = idealW * 1.5;
                           final coverH = idealH.clamp(0.0, availH);
                           final coverW = coverH * (2.0 / 3.0);
+                          
+                          final double playerW = _videoMode
+                              ? (MediaQuery.of(context).size.width - 40)
+                              : coverW;
+                              
+                          final double playerH = _videoMode
+                              ? (_videoController != null && _videoController!.value.isInitialized
+                                  ? (playerW / _videoController!.value.aspectRatio).clamp(0.0, availH)
+                                  : playerW * (9 / 16)).clamp(0.0, availH)
+                              : coverH;
+                              
                           return SizedBox(
-                            width: coverW,
-                            height: coverH,
+                            width: playerW,
+                            height: playerH,
                             child: Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(20.0),
@@ -799,21 +1261,64 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(20.0),
-                              child: Image.network(
-                                coverImage,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                  color: FlutterFlowTheme.of(context)
-                                      .secondaryBackground,
-                                  child: Icon(
-                                    Icons.library_books_rounded,
-                                    size: 64,
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
-                                  ),
-                                ),
-                              ),
+                              child: _videoMode
+                                  ? (_videoController != null && _videoController!.value.isInitialized
+                                      ? Center(
+                                          child: AspectRatio(
+                                            aspectRatio: _videoController!.value.aspectRatio,
+                                            child: Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                VideoPlayer(_videoController!),
+                                                Positioned(
+                                                  bottom: 8,
+                                                  right: 8,
+                                                  child: GestureDetector(
+                                                    onTap: () {
+                                                      Navigator.of(context).push(
+                                                        MaterialPageRoute(
+                                                          builder: (context) => FullscreenVideoPage(
+                                                            controller: _videoController!,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: const Icon(
+                                                      Icons.fullscreen_rounded,
+                                                      color: Colors.white54,
+                                                      size: 30,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          color: Colors.black,
+                                          child: Center(
+                                            child: CircularProgressIndicator(
+                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                FlutterFlowTheme.of(context).primary,
+                                              ),
+                                            ),
+                                          ),
+                                        ))
+                                  : Image.network(
+                                      coverImage,
+                                      fit: BoxFit.fill,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Container(
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryBackground,
+                                        child: Icon(
+                                          Icons.library_books_rounded,
+                                          size: 64,
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryText,
+                                        ),
+                                      ),
+                                    ),
                             ),
                           ),
                           );
@@ -996,67 +1501,122 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                       },
                     ),
                     // Play/Pause Button
-                    StreamBuilder<PlaybackState>(
-                      stream: _handler?.playbackState,
-                      builder: (context, snapshot) {
-                        final state = snapshot.data;
-                        final isPlaying = state?.playing ?? false;
-                        final processingState = state?.processingState;
-                        final isLoading = processingState ==
-                                AudioProcessingState.loading ||
-                            processingState == AudioProcessingState.buffering;
-                        return InkWell(
-                          onTap: () {
-                            if (_handler == null) {
-                              return;
-                            }
-                            if (isPlaying) {
-                              _handler!.pause();
-                            } else {
-                              _handler!.play();
-                            }
-                          },
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context).primary,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  blurRadius: 20.0,
-                                  color: FlutterFlowTheme.of(context)
-                                      .primary
-                                      .withValues(alpha: 0.3),
-                                  offset: Offset(0, 10),
-                                )
-                              ],
-                            ),
-                            child: isLoading
-                                ? Center(
-                                    child: SizedBox(
-                                      width: 28,
-                                      height: 28,
-                                      child: CircularProgressIndicator(
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          Colors.white,
-                                        ),
-                                        strokeWidth: 3,
-                                      ),
-                                    ),
+                    _videoMode
+                        ? InkWell(
+                            onTap: () {
+                              if (_videoController == null) return;
+                              if (_videoController!.value.isPlaying) {
+                                _videoController!.pause();
+                                setState(() {
+                                  _isPlaying = false;
+                                });
+                              } else {
+                                _videoController!.play();
+                                setState(() {
+                                  _isPlaying = true;
+                                });
+                              }
+                            },
+                            child: Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context).primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    blurRadius: 20.0,
+                                    color: FlutterFlowTheme.of(context)
+                                        .primary
+                                        .withValues(alpha: 0.3),
+                                    offset: Offset(0, 10),
                                   )
-                                : Icon(
-                                    isPlaying
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                    color: Colors.white,
-                                    size: 34,
+                                ],
+                              ),
+                              child: _videoLoading
+                                  ? Center(
+                                      child: SizedBox(
+                                        width: 28,
+                                        height: 28,
+                                        child: CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
+                                          ),
+                                          strokeWidth: 3,
+                                        ),
+                                      ),
+                                    )
+                                  : Icon(
+                                      _isPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded,
+                                      color: Colors.white,
+                                      size: 34,
+                                    ),
+                            ),
+                          )
+                        : StreamBuilder<PlaybackState>(
+                            stream: _handler?.playbackState,
+                            builder: (context, snapshot) {
+                              final state = snapshot.data;
+                              final isPlaying = state?.playing ?? false;
+                              final processingState = state?.processingState;
+                              final isLoading = processingState ==
+                                      AudioProcessingState.loading ||
+                                  processingState == AudioProcessingState.buffering;
+                              return InkWell(
+                                onTap: () {
+                                  if (_handler == null) {
+                                    return;
+                                  }
+                                  if (isPlaying) {
+                                    _handler!.pause();
+                                  } else {
+                                    _handler!.play();
+                                  }
+                                },
+                                child: Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context).primary,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        blurRadius: 20.0,
+                                        color: FlutterFlowTheme.of(context)
+                                            .primary
+                                            .withValues(alpha: 0.3),
+                                        offset: Offset(0, 10),
+                                      )
+                                    ],
                                   ),
+                                  child: isLoading
+                                      ? Center(
+                                          child: SizedBox(
+                                            width: 28,
+                                            height: 28,
+                                            child: CircularProgressIndicator(
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                              strokeWidth: 3,
+                                            ),
+                                          ),
+                                        )
+                                      : Icon(
+                                          isPlaying
+                                              ? Icons.pause_rounded
+                                              : Icons.play_arrow_rounded,
+                                          color: Colors.white,
+                                          size: 34,
+                                        ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
                     IconButton(
                       icon: Icon(Icons.forward_10_rounded,
                           color: FlutterFlowTheme.of(context).primaryText,
@@ -1123,6 +1683,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                             : 'Sleep $_sleepLabel',
                         onTap: _showSleepTimerSheet,
                       ),
+                      _buildBottomAction(
+                        context,
+                        Icons.spa_rounded,
+                        _ambientEnabled ? 'Ambient: On' : 'Ambient',
+                        onTap: _showAmbientSettingsSheet,
+                      ),
                     ],
                   ),
                 ),
@@ -1175,3 +1741,212 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     );
   }
 }
+
+class FullscreenVideoPage extends StatefulWidget {
+  final VideoPlayerController controller;
+
+  const FullscreenVideoPage({super.key, required this.controller});
+
+  @override
+  State<FullscreenVideoPage> createState() => _FullscreenVideoPageState();
+}
+
+class _FullscreenVideoPageState extends State<FullscreenVideoPage> {
+  bool _showControls = true;
+  Timer? _controlsTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Immersive fullscreen mode
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    // Cinema Landscape rotation
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    widget.controller.addListener(_videoListener);
+    _startControlsTimer();
+  }
+
+  void _videoListener() {
+    if (mounted) setState(() {});
+  }
+
+  void _startControlsTimer() {
+    _controlsTimer?.cancel();
+    _controlsTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showControls = false;
+        });
+      }
+    });
+  }
+
+  void _toggleControls() {
+    setState(() {
+      _showControls = !_showControls;
+    });
+    if (_showControls) {
+      _startControlsTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_videoListener);
+    _controlsTimer?.cancel();
+    // Restore orientations and status bar
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+    super.dispose();
+  }
+
+  String _formatDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final isInitialized = controller.value.isInitialized;
+    final isPlaying = controller.value.isPlaying;
+    final position = controller.value.position;
+    final duration = controller.value.duration;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: _toggleControls,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (isInitialized)
+              Center(
+                child: AspectRatio(
+                  aspectRatio: controller.value.aspectRatio,
+                  child: VideoPlayer(controller),
+                ),
+              )
+            else
+              const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+
+            // Controls Overlay
+            if (_showControls)
+              Container(
+                color: Colors.black.withOpacity(0.4),
+                child: Stack(
+                  children: [
+                    // Exit Button
+                    Positioned(
+                      top: 24,
+                      left: 24,
+                      child: SafeArea(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).pop(),
+                          borderRadius: BorderRadius.circular(30),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Colors.black45,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Centered Play/Pause Button
+                    Center(
+                      child: InkWell(
+                        onTap: () {
+                          if (isPlaying) {
+                            controller.pause();
+                          } else {
+                            controller.play();
+                          }
+                          _startControlsTimer();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Colors.black45,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 48,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Premium seek controls at bottom
+                    Positioned(
+                      bottom: 24,
+                      left: 24,
+                      right: 24,
+                      child: SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                trackHeight: 4,
+                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                                activeTrackColor: Colors.white,
+                                inactiveTrackColor: Colors.white24,
+                                thumbColor: Colors.white,
+                                overlayColor: Colors.white12,
+                              ),
+                              child: Slider(
+                                value: position.inMilliseconds.toDouble().clamp(0, duration.inMilliseconds.toDouble()),
+                                min: 0.0,
+                                max: duration.inMilliseconds > 0 ? duration.inMilliseconds.toDouble() : 1.0,
+                                onChanged: (val) {
+                                  controller.seekTo(Duration(milliseconds: val.toInt()));
+                                  _startControlsTimer();
+                                },
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _formatDuration(position),
+                                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                                  ),
+                                  Text(
+                                    _formatDuration(duration),
+                                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
