@@ -13,6 +13,10 @@ class BookDetailspageModel extends FlutterFlowModel<BookDetailspageWidget> {
 
   int? relatedIndex = 0;
 
+  bool? isAuthorRelated = false;
+
+  int? authorRelatedIndex = 0;
+
   bool? isProgress = false;
   bool? isFavorite = false;
   bool? isFavoriteLoading = false;

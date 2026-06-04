@@ -26,6 +26,8 @@ import 'home_page_model.dart';
 export 'home_page_model.dart';
 import '/pages/cart_pages/cart_page_widget.dart';
 import '/providers/cart_provider.dart';
+import '/custom_code/ad_manager.dart';
+import '/custom_code/widgets/ad_reward_dialog.dart';
 
 enum HomeBookFilter { all, ebook, audiobook, hardcopy }
 
@@ -337,23 +339,45 @@ class _HomePageWidgetState extends State<HomePageWidget>
         startChapter = chapters[matchedIndex];
       }
 
-      await context.pushNamed(
-        AudioPlayerPageWidget.routeName,
-        extra: <String, dynamic>{
-          'audiobook': {
-            '_id': bookId,
-            'id': bookId,
-            'name': bookName,
-            'title': bookName,
-            'image': bookImage,
-            'author': {'name': authorName},
-            'chapters': chapters,
-            'isPreviewMode': !hasAccess,
-            'previewPercent': previewPercent,
+      final isFree = FFAppState().prefs.getBool('ff_homePageLastAudioBookIsFree') ?? false;
+      final playAudio = () async {
+        await context.pushNamed(
+          AudioPlayerPageWidget.routeName,
+          extra: <String, dynamic>{
+            'audiobook': {
+              '_id': bookId,
+              'id': bookId,
+              'name': bookName,
+              'title': bookName,
+              'image': bookImage,
+              'author': {'name': authorName},
+              'chapters': chapters,
+              'isPreviewMode': !hasAccess,
+              'previewPercent': previewPercent,
+              'isFree': isFree,
+            },
+            'chapter': startChapter,
           },
-          'chapter': startChapter,
-        },
-      );
+        );
+      };
+
+      if (isFree) {
+        final canShowAd = await AdManager.canShowAd();
+        if (canShowAd) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AdRewardDialog(
+              bookImage: bookImage,
+              onWatchAd: playAudio,
+            ),
+          );
+        } else {
+          await playAudio();
+        }
+      } else {
+        await playAudio();
+      }
     } catch (_) {
       await actions.showCustomToastBottom('Failed to load audiobook');
     } finally {

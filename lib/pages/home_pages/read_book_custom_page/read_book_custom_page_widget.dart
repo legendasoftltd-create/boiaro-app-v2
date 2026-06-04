@@ -448,6 +448,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       final opened = await EpubReaderService.readBook(
         filePath: path,
         previewPercent: widget.isPreviewMode ? widget.previewPercent : 100,
+        bookTitle: widget.name,
       );
       if (!opened) {
         throw Exception('Failed to open EPUB reader');

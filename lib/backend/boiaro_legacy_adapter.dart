@@ -201,7 +201,9 @@ class BoiaroLegacyAdapter {
   /// Full book detail: same as list plus fields used on detail / reader.
   static Map<String, dynamic> legacyBookDetailFromV2(Map<String, dynamic> b) {
     final m = legacyBookFromV2(b);
-    m['description'] = b['description_bn'] ?? b['description'] ?? '';
+    final descBn = (b['description_bn'] ?? '').toString().trim();
+    m['description'] =
+        descBn.isNotEmpty ? descBn : (b['description'] ?? '').toString();
     m['reviews_count'] = b['reviews_count'];
     m['total_reads'] = b['total_reads'];
     m['tags'] = b['tags'];

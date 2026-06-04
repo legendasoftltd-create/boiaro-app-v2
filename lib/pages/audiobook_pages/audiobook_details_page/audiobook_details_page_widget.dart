@@ -18,6 +18,8 @@ export 'audiobook_details_page_model.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import '/custom_code/ad_manager.dart';
+import '/custom_code/widgets/ad_reward_dialog.dart';
 
 class AudiobookDetailsPageWidget extends StatefulWidget {
   const AudiobookDetailsPageWidget({
@@ -383,6 +385,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     required Map<String, dynamic> audiobook,
     required bool hasAccess,
     int? startTrackNumber,
+    bool isFree = false,
   }) async {
     final chapters = await _buildPlayableChapters(hasAccess: hasAccess);
     if (chapters.isEmpty) {
@@ -409,6 +412,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
           'previewPercent': chapters.isNotEmpty
               ? (chapters.first['previewPercent'] as int?) ?? 15
               : 15,
+          'isFree': isFree,
         },
         'chapter': startChapter,
       },
@@ -1092,11 +1096,32 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                               ? null
                               : () async {
                                   if (hasAccess) {
-                                    await _openAudioPlayerFromV2(
-                                      audiobook:
-                                          Map<String, dynamic>.from(book),
-                                      hasAccess: true,
-                                    );
+                                    final playAudio = () async {
+                                      await _openAudioPlayerFromV2(
+                                        audiobook:
+                                            Map<String, dynamic>.from(book),
+                                        hasAccess: true,
+                                        isFree: isFreeAccess,
+                                      );
+                                    };
+
+                                    if (isFreeAccess) {
+                                      final canShowAd = await AdManager.canShowAd();
+                                      if (canShowAd) {
+                                        showDialog(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (ctx) => AdRewardDialog(
+                                            bookImage: book['image']?.toString() ?? '',
+                                            onWatchAd: playAudio,
+                                          ),
+                                        );
+                                      } else {
+                                        await playAudio();
+                                      }
+                                    } else {
+                                      await playAudio();
+                                    }
                                   } else {
                                     if (!FFAppState().isLogin) {
                                       context.pushNamed(
@@ -1115,6 +1140,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                           audiobook:
                                               Map<String, dynamic>.from(book),
                                           hasAccess: true,
+                                          isFree: false,
                                         );
                                         return;
                                       }
@@ -1216,6 +1242,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                               chapter,
                               index + 1,
                               hasAccess,
+                              isFree: isFreeAccess,
                             );
                           },
                         ),
@@ -1617,8 +1644,9 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
     Map<String, dynamic> audiobook,
     Map<String, dynamic> chapter,
     int index,
-    bool hasAccess,
-  ) {
+    bool hasAccess, {
+    bool isFree = false,
+  }) {
     final bool isLocked = chapter['isLocked'] ?? false;
     return InkWell(
       onTap: () async {
@@ -1628,11 +1656,34 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
           return;
         }
         final startTrack = chapter['track_number'];
-        await _openAudioPlayerFromV2(
-          audiobook: audiobook,
-          hasAccess: hasAccess,
-          startTrackNumber: startTrack is num ? startTrack.toInt() : null,
-        );
+        final isChapterPreview = chapter['isPreview'] == true;
+        final playAudio = () async {
+          await _openAudioPlayerFromV2(
+            audiobook: audiobook,
+            hasAccess: hasAccess,
+            startTrackNumber: startTrack is num ? startTrack.toInt() : null,
+            isFree: !isChapterPreview && isFree,
+          );
+        };
+
+        final isAdNeeded = !isChapterPreview && isFree;
+        if (isAdNeeded) {
+          final canShowAd = await AdManager.canShowAd();
+          if (canShowAd) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => AdRewardDialog(
+                bookImage: audiobook['image']?.toString() ?? '',
+                onWatchAd: playAudio,
+              ),
+            );
+          } else {
+            await playAudio();
+          }
+        } else {
+          await playAudio();
+        }
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 12),

@@ -659,6 +659,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required bool hasFullAccess,
     int previewPercent = 15,
     bool forceIsPreviewMode = false,
+    int? initialTrackNumber,
+    bool isFree = false,
   }) async {
     final tracks = await _fetchAudioTracks(bookId);
     final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
@@ -754,6 +756,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           'Preview limit: $previewPercent%. Buy or unlock to listen full audiobook.');
     }
 
+    final initialChapter = initialTrackNumber != null
+        ? chapters.firstWhere(
+            (ch) => ch['track_number'] == initialTrackNumber,
+            orElse: () => chapters.first,
+          )
+        : chapters.first;
+
     await context.pushNamed(
       AudioPlayerPageWidget.routeName,
       extra: <String, dynamic>{
@@ -767,8 +776,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           'chapters': chapters,
           'isPreviewMode': isPreviewMode,
           'previewPercent': previewPercent,
+          'isFree': isFree,
         },
-        'chapter': chapters.first,
+        'chapter': initialChapter,
       },
     );
     return true;
@@ -932,6 +942,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           hasFullAccess: FFAppState().isLogin,
           previewPercent: safePercent,
           forceIsPreviewMode: true,
+          isFree: false,
         );
         return;
       }
@@ -1075,16 +1086,37 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           (FFAppState().isLogin &&
               await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
       if (hasAccess) {
-        final opened = await _openAudiobookPlayerFromV2(
-          bookId: bookId,
-          bookName: bookName,
-          bookImage: bookImage,
-          authorName: authorName,
-          hasFullAccess: hasAccess,
-          previewPercent: audiobookPreviewPercent,
-        );
-        if (!opened && !FFAppState().isLogin && !isAudiobookFree) {
-          context.pushNamed(SignInPageWidget.routeName);
+        final performPlay = () async {
+          final opened = await _openAudiobookPlayerFromV2(
+            bookId: bookId,
+            bookName: bookName,
+            bookImage: bookImage,
+            authorName: authorName,
+            hasFullAccess: hasAccess,
+            previewPercent: audiobookPreviewPercent,
+            isFree: isAudiobookFree,
+          );
+          if (!opened && !FFAppState().isLogin && !isAudiobookFree) {
+            context.pushNamed(SignInPageWidget.routeName);
+          }
+        };
+
+        if (isAudiobookFree) {
+          final canShowAd = await AdManager.canShowAd();
+          if (canShowAd) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => custom_widgets.AdRewardDialog(
+                bookImage: bookImage,
+                onWatchAd: performPlay,
+              ),
+            );
+          } else {
+            await performPlay();
+          }
+        } else {
+          await performPlay();
         }
         return;
       }
@@ -1095,6 +1127,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         authorName: authorName,
         hasFullAccess: false,
         previewPercent: audiobookPreviewPercent,
+        isFree: false,
       );
       return;
     }
@@ -1327,7 +1360,14 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     );
   }
 
-  Widget _buildEpisodesInAudioTab(String bookId) {
+  Widget _buildEpisodesInAudioTab({
+    required String bookId,
+    required List<Map<String, dynamic>> formats,
+    required String bookName,
+    required String bookImage,
+    required String authorName,
+    required bool isBookFree,
+  }) {
     // Trigger load on first render.
     if (_tracks == null && !_tracksLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadTracks(bookId));
@@ -1393,6 +1433,86 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                   dense: true,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 10.0, vertical: 2.0),
+                  onTap: () async {
+                    final audiobookFormat = _pickFormat(
+                        formats.cast<Map<String, dynamic>>(), 'audiobook');
+                    if (audiobookFormat == null) return;
+                    final audiobookPrice = _formatPrice(audiobookFormat);
+                    final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
+                    final audiobookPreviewPercent = _previewPercent(audiobookFormat);
+                    final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+                    final hasAccess = isAudiobookFree ||
+                        (FFAppState().isLogin &&
+                            await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
+
+                    if (hasAccess || isPreview) {
+                      final playAudiobook = () async {
+                        await _openAudiobookPlayerFromV2(
+                          bookId: bookId,
+                          bookName: bookName,
+                          bookImage: bookImage,
+                          authorName: authorName,
+                          hasFullAccess: hasAccess,
+                          previewPercent: audiobookPreviewPercent,
+                          initialTrackNumber: num,
+                          isFree: !isPreview && isAudiobookFree,
+                        );
+                      };
+
+                      final isAdNeeded = !isPreview && isAudiobookFree;
+                      if (isAdNeeded) {
+                        final canShowAd = await AdManager.canShowAd();
+                        if (canShowAd) {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (ctx) => custom_widgets.AdRewardDialog(
+                              bookImage: bookImage,
+                              onWatchAd: playAudiobook,
+                            ),
+                          );
+                        } else {
+                          await playAudiobook();
+                        }
+                      } else {
+                        await playAudiobook();
+                      }
+                    } else {
+                      if (!FFAppState().isLogin) {
+                        context.pushNamed(SignInPageWidget.routeName);
+                        return;
+                      }
+                      if (audiobookCoinPrice > 0) {
+                        final unlocked = await _confirmAndUnlockWithCoins(
+                          bookName: bookName,
+                          bookId: bookId,
+                          format: 'audiobook',
+                          coinCost: audiobookCoinPrice,
+                        );
+                        if (unlocked) {
+                          await _openAudiobookPlayerFromV2(
+                            bookId: bookId,
+                            bookName: bookName,
+                            bookImage: bookImage,
+                            authorName: authorName,
+                            hasFullAccess: true,
+                            previewPercent: audiobookPreviewPercent,
+                            initialTrackNumber: num,
+                            isFree: false,
+                          );
+                        }
+                      } else {
+                        await _addToCartAndCheckout(
+                          bookId: bookId,
+                          bookName: bookName,
+                          bookImage: bookImage,
+                          price: audiobookPrice,
+                          type: 'audiobook',
+                          coinPrice: audiobookCoinPrice > 0 ? audiobookCoinPrice : null,
+                        );
+                      }
+                    }
+                  },
                   leading: CircleAvatar(
                     radius: 14,
                     backgroundColor:
@@ -3102,7 +3222,14 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     padding:
                                         const EdgeInsetsDirectional.fromSTEB(
                                             16.0, 0.0, 16.0, 12.0),
-                                    child: _buildEpisodesInAudioTab(bookId),
+                                    child: _buildEpisodesInAudioTab(
+                                      bookId: bookId,
+                                      formats: formats,
+                                      bookName: bookName,
+                                      bookImage: bookImage,
+                                      authorName: authorName,
+                                      isBookFree: isBookFree,
+                                    ),
                                   ),
                                 // Book Description Section
                                 Padding(
@@ -3651,6 +3778,86 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           8.0),
                                                 ),
                                                 child: ListTile(
+                                                  onTap: () async {
+                                                    final audiobookFormat = _pickFormat(
+                                                        formats.cast<Map<String, dynamic>>(), 'audiobook');
+                                                    if (audiobookFormat == null) return;
+                                                    final audiobookPrice = _formatPrice(audiobookFormat);
+                                                    final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
+                                                    final audiobookPreviewPercent = _previewPercent(audiobookFormat);
+                                                    final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+                                                    final hasAccess = isAudiobookFree ||
+                                                        (FFAppState().isLogin &&
+                                                            await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
+
+                                                    if (hasAccess || isPreview) {
+                                                      final playAudiobook = () async {
+                                                        await _openAudiobookPlayerFromV2(
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          authorName: authorName,
+                                                          hasFullAccess: hasAccess,
+                                                          previewPercent: audiobookPreviewPercent,
+                                                          initialTrackNumber: num is int ? num : (num is double ? (num as double).toInt() : (num != null ? int.tryParse(num.toString()) : null)),
+                                                          isFree: !isPreview && isAudiobookFree,
+                                                        );
+                                                      };
+
+                                                      final isAdNeeded = !isPreview && isAudiobookFree;
+                                                      if (isAdNeeded) {
+                                                        final canShowAd = await AdManager.canShowAd();
+                                                        if (canShowAd) {
+                                                          showDialog(
+                                                            context: context,
+                                                            barrierDismissible: false,
+                                                            builder: (ctx) => custom_widgets.AdRewardDialog(
+                                                              bookImage: bookImage,
+                                                              onWatchAd: playAudiobook,
+                                                            ),
+                                                          );
+                                                        } else {
+                                                          await playAudiobook();
+                                                        }
+                                                      } else {
+                                                        await playAudiobook();
+                                                      }
+                                                    } else {
+                                                      if (!FFAppState().isLogin) {
+                                                        context.pushNamed(SignInPageWidget.routeName);
+                                                        return;
+                                                      }
+                                                      if (audiobookCoinPrice > 0) {
+                                                        final unlocked = await _confirmAndUnlockWithCoins(
+                                                          bookName: bookName,
+                                                          bookId: bookId,
+                                                          format: 'audiobook',
+                                                          coinCost: audiobookCoinPrice,
+                                                        );
+                                                        if (unlocked) {
+                                                          await _openAudiobookPlayerFromV2(
+                                                            bookId: bookId,
+                                                            bookName: bookName,
+                                                            bookImage: bookImage,
+                                                            authorName: authorName,
+                                                            hasFullAccess: true,
+                                                            previewPercent: audiobookPreviewPercent,
+                                                            initialTrackNumber: num is int ? num : (num is double ? (num as double).toInt() : (num != null ? int.tryParse(num.toString()) : null)),
+                                                            isFree: false,
+                                                          );
+                                                        }
+                                                      } else {
+                                                        await _addToCartAndCheckout(
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          price: audiobookPrice,
+                                                          type: 'audiobook',
+                                                          coinPrice: audiobookCoinPrice > 0 ? audiobookCoinPrice : null,
+                                                        );
+                                                      }
+                                                    }
+                                                  },
                                                   contentPadding:
                                                       const EdgeInsets
                                                           .symmetric(
@@ -4398,6 +4605,165 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     );
                                   },
                                 ),
+                                  Builder(builder: (context) {
+                                    final authorId = EbookGroup
+                                            .getbookdetailsApiCall
+                                            .authorid(
+                                          bookDetailspageGetbookdetailsApiResponse
+                                              .jsonBody,
+                                        ) ??
+                                        '';
+                                    if (authorId.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Padding(
+                                      padding: const EdgeInsetsDirectional.fromSTEB(
+                                          0.0, 16.0, 0.0, 0.0),
+                                      child: FutureBuilder<ApiCallResponse>(
+                                        future: EbookGroup.getbookbyauthorApiCall.call(
+                                          authorId: authorId,
+                                          token: FFAppState().token,
+                                        ),
+                                        builder: (context, snapshot) {
+                                          if (!snapshot.hasData) {
+                                            return Center(
+                                              child: SizedBox(
+                                                width: 50.0,
+                                                height: 50.0,
+                                                child: CircularProgressIndicator(
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<Color>(
+                                                    FlutterFlowTheme.of(context)
+                                                        .primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                          final response = snapshot.data!;
+                                          if (EbookGroup.getbookbyauthorApiCall.success(response.jsonBody) != 1) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          final books = EbookGroup.getbookbyauthorApiCall.bookDetailsList(response.jsonBody)
+                                              ?.where((b) => b is Map && (b['_id']?.toString() ?? '') != bookId)
+                                              ?.toList() ?? [];
+                                          if (books.isEmpty) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return Column(
+                                            mainAxisSize: MainAxisSize.max,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 0.0, 16.0),
+                                                child: Text(
+                                                  'More from author',
+                                                  textAlign: TextAlign.start,
+                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                    fontFamily: 'SF Pro Display',
+                                                    fontSize: 18.0,
+                                                    letterSpacing: 0.0,
+                                                    fontWeight: FontWeight.w600,
+                                                    lineHeight: 1.5,
+                                                  ),
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                                child: SingleChildScrollView(
+                                                  scrollDirection: Axis.horizontal,
+                                                  child: Row(
+                                                    spacing: 5.0,
+                                                    verticalDirection: VerticalDirection.down,
+                                                    children: List.generate(
+                                                      books.length,
+                                                      (index) {
+                                                        final item = books[index];
+                                                        final itemId = getJsonField(item, r'''$._id''').toString();
+                                                        final itemName = getJsonField(item, r'''$.name''').toString();
+                                                        return wrapWithModel(
+                                                          model: _model.mainBookComponentModels.getModel(
+                                                            'author_$itemId',
+                                                            index,
+                                                          ),
+                                                          updateCallback: () => safeSetState(() {}),
+                                                          child: MainBookComponentWidget(
+                                                            key: Key('Keyauthor_$itemId'),
+                                                            image: '${FFAppConstants.bookImagesUrl}${getJsonField(item, r'''$.image''').toString()}',
+                                                            bookName: itemName,
+                                                            id: itemId,
+                                                            isPurchased: _model.purchasedBookIds.contains(itemId),
+                                                            price: getJsonField(item, r'''$.price''').toString(),
+                                                            bookType: getJsonField(item, r'''$.type''')?.toString(),
+                                                            discountAmount: getJsonField(item, r'''$.discount_amount''').toString(),
+                                                            discountPercentage: getJsonField(item, r'''$.discount_percentage''').toString(),
+                                                            authorsName: getJsonField(item, r'''$.author.name''').toString(),
+                                                            isFav: functions.checkFavOrNot(
+                                                              EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(columnGetFavouriteBookResponse.jsonBody)?.toList(),
+                                                              itemId,
+                                                            ) == true,
+                                                            indicator: (index == _model.authorRelatedIndex) && (_model.isAuthorRelated == true),
+                                                            isFavAction: () async {
+                                                              if (FFAppState().isLogin == true) {
+                                                                _model.isAuthorRelated = true;
+                                                                _model.authorRelatedIndex = index;
+                                                                safeSetState(() {});
+                                                                if (functions.checkFavOrNot(
+                                                                  EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(columnGetFavouriteBookResponse.jsonBody)?.toList(),
+                                                                  itemId,
+                                                                ) == true) {
+                                                                  _model.getPopularDetete = await EbookGroup.removeFavouritebookCall.call(
+                                                                    userId: FFAppState().userId,
+                                                                    token: FFAppState().token,
+                                                                    bookId: itemId,
+                                                                  );
+                                                                  safeSetState(() => _model.apiRequestCompleter1 = null);
+                                                                  await _model.waitForApiRequestCompleted1();
+                                                                  await actions.showCustomToastBottom(FFAppState().unFavText);
+                                                                } else {
+                                                                  _model.getPopularAdd = await EbookGroup.addFavouriteBookApiCall.call(
+                                                                    userId: FFAppState().userId,
+                                                                    token: FFAppState().token,
+                                                                    bookId: itemId,
+                                                                  );
+                                                                  safeSetState(() => _model.apiRequestCompleter1 = null);
+                                                                  await _model.waitForApiRequestCompleted1();
+                                                                  await actions.showCustomToastBottom(FFAppState().favText);
+                                                                }
+                                                                FFAppState().clearGetFavouriteBookCacheCache();
+                                                                _model.isAuthorRelated = false;
+                                                                safeSetState(() {});
+                                                              } else {
+                                                                FFAppState().favChange = true;
+                                                                FFAppState().bookId = itemId;
+                                                                FFAppState().update(() {});
+                                                                context.pushNamed(SignInPageWidget.routeName);
+                                                              }
+                                                              safeSetState(() {});
+                                                            },
+                                                            isMainTap: () async {
+                                                              context.pushNamed(
+                                                                BookDetailspageWidget.routeName,
+                                                                queryParameters: {
+                                                                  'name': serializeParam(itemName, ParamType.String),
+                                                                  'image': serializeParam('${FFAppConstants.bookImagesUrl}${getJsonField(item, r'''$.image''').toString()}', ParamType.String),
+                                                                  'id': serializeParam(itemId, ParamType.String),
+                                                                }.withoutNulls,
+                                                              );
+                                                            },
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  }),
                                 Padding(
                                   padding: EdgeInsetsDirectional.fromSTEB(
                                       0.0, 16.0, 0.0, 0.0),
@@ -4455,7 +4821,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   .fromSTEB(
                                                       16.0, 0.0, 0.0, 16.0),
                                               child: Text(
-                                                'You might also like',
+                                                'Related books',
                                                 textAlign: TextAlign.start,
                                                 style:
                                                     FlutterFlowTheme.of(context)
