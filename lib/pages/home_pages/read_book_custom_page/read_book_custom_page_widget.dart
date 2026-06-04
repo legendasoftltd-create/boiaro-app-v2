@@ -6,6 +6,7 @@ import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
 import '/services/progress_sync_service.dart';
+import 'package:a_i_ebook_app/backend/api_requests/api_calls.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -419,6 +420,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       final bookId = (widget.id ?? '').trim();
       if (bookId.isNotEmpty) {
         await ReadingReportService.instance.startSession(bookId: bookId);
+
+        // Register book read/view — fire-and-forget, auth optional
+        unawaited(EbookGroup.registerBookReadApiCall.call(
+          bookId: bookId,
+          token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
+        ));
+
         // Pre-load TTS context into native layer so the in-reader ⚙ button
         // can open Premium settings without a Flutter round-trip.
         unawaited(EpubReaderService.ttsSetContext(

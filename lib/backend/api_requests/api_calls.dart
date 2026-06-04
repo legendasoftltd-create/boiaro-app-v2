@@ -584,6 +584,8 @@ class EbookGroup {
       ReadNotificationsApiCall();
   static PresenceHeartbeatApiCall presenceHeartbeatApiCall =
       PresenceHeartbeatApiCall();
+  static RegisterBookReadApiCall registerBookReadApiCall =
+      RegisterBookReadApiCall();
 }
 
 class PhoneSendOtpApiCall {
@@ -5818,4 +5820,43 @@ String _serializeJson(dynamic jsonVar, [bool isList = false]) {
     }
     return isList ? '[]' : '{}';
   }
+}
+
+/// POST /api/v1/books/:id/read
+/// Auth optional — with token also creates BookRead record for personalization.
+class RegisterBookReadApiCall {
+  Future<ApiCallResponse> call({
+    String? bookId = '',
+    String? token,
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final bid = Uri.encodeComponent((bookId ?? '').trim());
+    final headers = token != null && token.isNotEmpty
+        ? _boiaroAuthHeaders(token)
+        : <String, dynamic>{};
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'RegisterBookRead',
+      apiUrl: '${baseUrl}books/$bid/read',
+      callType: ApiCallType.POST,
+      headers: headers,
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    return res;
+  }
+
+  bool? success(dynamic response) {
+    final s = getJsonField(response, r'''$.success''');
+    if (s is bool) return s;
+    return null;
+  }
+
+  int? totalReads(dynamic response) =>
+      castToType<int>(getJsonField(response, r'''$.total_reads'''));
 }

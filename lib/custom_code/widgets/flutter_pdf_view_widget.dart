@@ -34,6 +34,7 @@ import 'bijoy_converter.dart';
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
 import '/services/progress_sync_service.dart';
+import 'package:a_i_ebook_app/backend/api_requests/api_calls.dart';
 
 class FlutterPdfViewWidget extends StatefulWidget {
   const FlutterPdfViewWidget({
@@ -184,8 +185,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
     }
     PdfViewerHelpers.getInitialBrightness(provider);
     ReadingReportService.instance.setDebugListener(_onReadingDebug);
+
+    // Register book read/view — fire-and-forget, auth optional
+    unawaited(_registerBookRead());
+
     unawaited(_startReadingSession());
     _startProgressHeartbeat();
+
     if (provider.readerType == ReaderType.epub) {
       EpubReaderWidget.loadEpubBook(
         _resolvedFilePath,
@@ -439,7 +445,6 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
         }
         return;
       }
-
       if (isInterval) {
         // Interval-based: scroll by a fixed amount (e.g., one viewport height)
         final viewportHeight = position.viewportDimension;
@@ -463,6 +468,22 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
       }
     } catch (e) {
       // Ignore scroll errors
+    }
+  }
+
+
+
+  Future<void> _registerBookRead() async {
+    final bookId = (widget.bookId ?? FFAppState().homePageBookId).trim();
+    if (bookId.isEmpty) return;
+    try {
+      await EbookGroup.registerBookReadApiCall.call(
+        bookId: bookId,
+        token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
+      );
+      debugPrint('BOOK READ REGISTERED: bookId=$bookId');
+    } catch (e) {
+      debugPrint('BOOK READ REGISTER ERROR: $e');
     }
   }
 
