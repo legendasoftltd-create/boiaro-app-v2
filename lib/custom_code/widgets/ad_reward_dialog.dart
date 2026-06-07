@@ -9,11 +9,13 @@ import '../../flutter_flow/flutter_flow_widgets.dart';
 class AdRewardDialog extends StatefulWidget {
   final VoidCallback onWatchAd;
   final String? bookImage;
+  final String adType; // 'rewarded' or 'interstitial'
 
   const AdRewardDialog({
     Key? key,
     required this.onWatchAd,
     this.bookImage,
+    this.adType = 'rewarded',
   }) : super(key: key);
 
   @override
@@ -28,8 +30,12 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
   @override
   void initState() {
     super.initState();
-    print('AdRewardDialog: waiting for preloaded ad...');
-    unawaited(AdManager.ensureAdLoaded());
+    print('AdRewardDialog: waiting for preloaded ${widget.adType} ad...');
+    if (widget.adType == 'interstitial') {
+      unawaited(AdManager.ensureInterstitialLoaded());
+    } else {
+      unawaited(AdManager.ensureRewardedLoaded());
+    }
     _startTimer();
   }
 
@@ -52,19 +58,36 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
 
   Future<void> _tryShowAd() async {
     Navigator.pop(context);
-    final isLoaded = await AdManager.ensureAdLoaded();
-    if (isLoaded) {
-      AdManager.showRewardedAd(
-        context: context,
-        onRewardEarned: () {
-          widget.onWatchAd();
-        },
-        onAdFailed: () {
-          widget.onWatchAd(); // fallback if ad fails to show
-        },
-      );
+    if (widget.adType == 'interstitial') {
+      final isLoaded = await AdManager.ensureInterstitialLoaded();
+      if (isLoaded) {
+        AdManager.showInterstitialAd(
+          context: context,
+          onAdClosed: () {
+            widget.onWatchAd();
+          },
+          onAdFailed: () {
+            widget.onWatchAd(); // fallback if ad fails to show
+          },
+        );
+      } else {
+        widget.onWatchAd(); // fallback if ad wasn't loaded
+      }
     } else {
-      widget.onWatchAd(); // fallback if ad wasn't loaded but timer finished
+      final isLoaded = await AdManager.ensureRewardedLoaded();
+      if (isLoaded) {
+        AdManager.showRewardedAd(
+          context: context,
+          onRewardEarned: () {
+            widget.onWatchAd();
+          },
+          onAdFailed: () {
+            widget.onWatchAd(); // fallback if ad fails to show
+          },
+        );
+      } else {
+        widget.onWatchAd(); // fallback if ad wasn't loaded but timer finished
+      }
     }
   }
 
@@ -208,15 +231,21 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                 // Action Button
                 FFButtonWidget(
                   onPressed: _isLoadingAd ? null : () {
-                    if (AdManager.isAdLoaded) {
+                    final isLoaded = widget.adType == 'interstitial'
+                        ? AdManager.isInterstitialLoaded
+                        : AdManager.isRewardedLoaded;
+                    if (isLoaded) {
                       _timer?.cancel();
                       unawaited(_tryShowAd());
                     } else {
                       setState(() {
                         _isLoadingAd = true;
                       });
-                      print('AdRewardDialog: Button clicked, requesting ad...');
-                      AdManager.ensureAdLoaded().then((loaded) {
+                      print('AdRewardDialog: Button clicked, requesting ${widget.adType} ad...');
+                      final Future<bool> loadFuture = widget.adType == 'interstitial'
+                          ? AdManager.ensureInterstitialLoaded()
+                          : AdManager.ensureRewardedLoaded();
+                      loadFuture.then((loaded) {
                         if (!mounted) return;
                         setState(() {
                           _isLoadingAd = false;
