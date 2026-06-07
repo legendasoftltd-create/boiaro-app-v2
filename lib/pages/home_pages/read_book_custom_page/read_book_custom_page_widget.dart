@@ -2,6 +2,7 @@ import 'package:epub_reader_kit/epub_reader_kit.dart';
 import 'package:epubx/epubx.dart' as epubx;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/flutter_flow_pdf_viewer.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
@@ -487,6 +488,49 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     super.dispose();
   }
 
+  Widget _buildIosPdfViewer() {
+    final resolvedPath = _resolveBookPath(widget.pdf ?? '');
+    if (resolvedPath.isEmpty) {
+      return const Center(child: Text('Invalid PDF path'));
+    }
+    if (resolvedPath.startsWith('http://') ||
+        resolvedPath.startsWith('https://')) {
+      return FlutterFlowPdfViewer(
+        networkPath: resolvedPath,
+        width: double.infinity,
+        height: double.infinity,
+        horizontalScroll: false,
+      );
+    } else if (resolvedPath.startsWith('assets/')) {
+      return FlutterFlowPdfViewer(
+        assetPath: resolvedPath,
+        width: double.infinity,
+        height: double.infinity,
+        horizontalScroll: false,
+      );
+    } else {
+      try {
+        final file = File(resolvedPath);
+        if (file.existsSync()) {
+          final bytes = file.readAsBytesSync();
+          return FlutterFlowPdfViewer(
+            fileBytes: bytes,
+            width: double.infinity,
+            height: double.infinity,
+            horizontalScroll: false,
+          );
+        }
+      } catch (e) {
+        debugPrint('Error reading local PDF file bytes: $e');
+      }
+      return FlutterFlowPdfViewer(
+        networkPath: resolvedPath,
+        width: double.infinity,
+        height: double.infinity,
+        horizontalScroll: false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -530,13 +574,17 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
                             ),
                           ),
                         ))
-                  : custom_widgets.FlutterPdfViewWidget(
-                      width: double.infinity,
-                      height: double.infinity,
-                      filePath: widget.pdf,
-                      namePage: widget.name,
-                      bookId: widget.id,
-                    ),
+                  : (!kIsWeb &&
+                          defaultTargetPlatform == TargetPlatform.iOS &&
+                          !_isEpub)
+                      ? _buildIosPdfViewer()
+                      : custom_widgets.FlutterPdfViewWidget(
+                          width: double.infinity,
+                          height: double.infinity,
+                          filePath: widget.pdf,
+                          namePage: widget.name,
+                          bookId: widget.id,
+                        ),
               if (_isPreparingReader && !_isEpub)
                 Container(
                   width: double.infinity,

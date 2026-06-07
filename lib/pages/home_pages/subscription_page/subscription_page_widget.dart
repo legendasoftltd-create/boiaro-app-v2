@@ -1,4 +1,4 @@
-﻿import '/backend/api_requests/api_calls.dart';
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -8,6 +8,7 @@ import '/pages/dialogs/verifiy_email_dialog/verifiy_email_dialog_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:a_i_ebook_app/services/revenue_cat_service.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lottie/lottie.dart';
@@ -908,6 +909,66 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
               )!,
             );
             context.safePop();
+          } else if (Theme.of(context).platform == TargetPlatform.iOS) {
+            // iOS: Purchases through RevenueCat IAP
+            final planId =
+                getJsonField(_model.subDetail, r'''$._id''')?.toString() ??
+                    getJsonField(_model.subDetail, r'''$.id''')?.toString() ??
+                    '';
+            final planName =
+                getJsonField(_model.subDetail, r'''$.name''')?.toString() ?? '';
+            final durationDays =
+                getJsonField(_model.subDetail, r'''$.duration_days''')?.toString() ?? '30';
+
+            // Determine product identifier (e.g. com.boiaro.app.monthly or com.boiaro.app.yearly)
+            // Configure these product IDs in App Store Connect & RevenueCat dashboard.
+            String productIdentifier = 'com.boiaro.app.monthly';
+            if (durationDays == '365' || planName.toLowerCase().contains('year')) {
+              productIdentifier = 'com.boiaro.app.yearly';
+            } else if (durationDays == '180' || planName.toLowerCase().contains('half')) {
+              productIdentifier = 'com.boiaro.app.halfyearly';
+            }
+
+            // Sync user login state to RevenueCat
+            if (FFAppState().userId.isNotEmpty) {
+              await RevenueCatService.logIn(FFAppState().userId);
+            }
+
+            // Show a progress indicator
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => const Center(child: CircularProgressIndicator()),
+            );
+
+            final purchaseResult = await RevenueCatService.purchasePlan(productIdentifier);
+            
+            // Pop the loading indicator
+            if (Navigator.canPop(context)) {
+              Navigator.of(context).pop();
+            }
+
+            if (purchaseResult['success'] == true) {
+              final txnId = purchaseResult['transactionId'] ?? 'rc_${DateTime.now().millisecondsSinceEpoch}';
+              
+              // Call backend API to record subscription
+              _model.subscriptionFree = await EbookGroup.usersubscriptionApiCall.call(
+                userId: FFAppState().userId,
+                subscriptionplanId: planId,
+                paymentmode: 'appstore',
+                transactionId: txnId,
+                paymentstatus: 'success',
+                paymentdate: dateTimeFormat("dd-MM-yyyy", getCurrentTimestamp),
+                price: price,
+                token: FFAppState().token,
+              );
+
+              await actions.showCustomToastBottom('সাবস্ক্রিপশন সফলভাবে সক্রিয় হয়েছে!');
+              context.safePop();
+            } else {
+              final errMsg = purchaseResult['errorMessage'] ?? 'পেমেন্ট ব্যর্থ হয়েছে।';
+              await actions.showCustomToastBottom(errMsg);
+            }
           } else {
             // Paid plan → SSLCommerz via PaymentMethodPage
             FFAppState().subscriptionId =
@@ -925,11 +986,13 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
           }
           safeSetState(() {});
         },
-        text: (getJsonField(_model.subDetail, r'''$.price''')?.toString() ??
-                    '1') ==
-                '0'
-            ? 'ফ্রি প্ল্যান চালু করুন'
-            : 'SSLCommerz দিয়ে পেমেন্ট করুন',
+        text: Theme.of(context).platform == TargetPlatform.iOS
+            ? 'সাবস্ক্রাইব করুন'
+            : ((getJsonField(_model.subDetail, r'''$.price''')?.toString() ??
+                        '1') ==
+                    '0'
+                ? 'ফ্রি প্ল্যান চালু করুন'
+                : 'SSLCommerz দিয়ে পেমেন্ট করুন'),
         icon: const Icon(Icons.lock_outline_rounded, size: 18),
         options: FFButtonOptions(
           width: double.infinity,

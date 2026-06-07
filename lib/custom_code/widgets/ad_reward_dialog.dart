@@ -9,11 +9,13 @@ import '../../flutter_flow/flutter_flow_widgets.dart';
 class AdRewardDialog extends StatefulWidget {
   final VoidCallback onWatchAd;
   final String? bookImage;
+  final String adType; // 'rewarded' or 'interstitial'
 
   const AdRewardDialog({
     Key? key,
     required this.onWatchAd,
     this.bookImage,
+    this.adType = 'rewarded',
   }) : super(key: key);
 
   @override
@@ -28,9 +30,9 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
   @override
   void initState() {
     super.initState();
-    // FIX: Removed ensureAdLoaded() here — ad is already preloaded at app start
-    // via AdManager.initialize(). Calling it on every dialog open was generating
-    // thousands of repeated ad requests with zero impressions.
+    print('AdRewardDialog: waiting for preloaded ${widget.adType} ad...');
+    // Ads are preloaded from AdManager.initialize(). Avoid forcing a request on
+    // every dialog open; the countdown/button paths will ensure readiness.
     _startTimer();
   }
 
@@ -53,19 +55,36 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
 
   Future<void> _tryShowAd() async {
     Navigator.pop(context);
-    final isLoaded = await AdManager.ensureAdLoaded();
-    if (isLoaded) {
-      AdManager.showRewardedAd(
-        context: context,
-        onRewardEarned: () {
-          widget.onWatchAd();
-        },
-        onAdFailed: () {
-          widget.onWatchAd(); // fallback if ad fails to show
-        },
-      );
+    if (widget.adType == 'interstitial') {
+      final isLoaded = await AdManager.ensureInterstitialLoaded();
+      if (isLoaded) {
+        AdManager.showInterstitialAd(
+          context: context,
+          onAdClosed: () {
+            widget.onWatchAd();
+          },
+          onAdFailed: () {
+            widget.onWatchAd(); // fallback if ad fails to show
+          },
+        );
+      } else {
+        widget.onWatchAd(); // fallback if ad wasn't loaded
+      }
     } else {
-      widget.onWatchAd(); // fallback if ad wasn't loaded but timer finished
+      final isLoaded = await AdManager.ensureRewardedLoaded();
+      if (isLoaded) {
+        AdManager.showRewardedAd(
+          context: context,
+          onRewardEarned: () {
+            widget.onWatchAd();
+          },
+          onAdFailed: () {
+            widget.onWatchAd(); // fallback if ad fails to show
+          },
+        );
+      } else {
+        widget.onWatchAd(); // fallback if ad wasn't loaded but timer finished
+      }
     }
   }
 
@@ -112,7 +131,9 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                         children: [
                           Text(
                             'Skip Ad',
-                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
                                   fontFamily: 'SF Pro Display',
                                   color: FlutterFlowTheme.of(context).primary,
                                   fontWeight: FontWeight.bold,
@@ -152,7 +173,9 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                         imageUrl: widget.bookImage!,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
-                          color: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
+                          color: FlutterFlowTheme.of(context)
+                              .primary
+                              .withOpacity(0.1),
                           child: Center(
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
@@ -179,7 +202,9 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                       height: 160,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
+                        color: FlutterFlowTheme.of(context)
+                            .primary
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
@@ -208,26 +233,38 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                 SizedBox(height: 32),
                 // Action Button
                 FFButtonWidget(
-                  onPressed: _isLoadingAd ? null : () {
-                    if (AdManager.isAdLoaded) {
-                      _timer?.cancel();
-                      unawaited(_tryShowAd());
-                    } else {
-                      setState(() {
-                        _isLoadingAd = true;
-                      });
-                      AdManager.ensureAdLoaded().then((loaded) {
-                        if (!mounted) return;
-                        setState(() {
-                          _isLoadingAd = false;
-                        });
-                        if (loaded) {
-                          _timer?.cancel();
-                          unawaited(_tryShowAd());
-                        }
-                      });
-                    }
-                  },
+                  onPressed: _isLoadingAd
+                      ? null
+                      : () {
+                          final isLoaded = widget.adType == 'interstitial'
+                              ? AdManager.isInterstitialLoaded
+                              : AdManager.isRewardedLoaded;
+                          if (isLoaded) {
+                            _timer?.cancel();
+                            unawaited(_tryShowAd());
+                          } else {
+                            setState(() {
+                              _isLoadingAd = true;
+                            });
+                            print(
+                                'AdRewardDialog: Button clicked, requesting ${widget.adType} ad...');
+                            final Future<bool> loadFuture =
+                                widget.adType == 'interstitial'
+                                    ? AdManager.ensureInterstitialLoaded()
+                                    : AdManager.ensureRewardedLoaded(
+                                        caller: 'AdRewardDialog.button');
+                            loadFuture.then((loaded) {
+                              if (!mounted) return;
+                              setState(() {
+                                _isLoadingAd = false;
+                              });
+                              if (loaded) {
+                                _timer?.cancel();
+                                unawaited(_tryShowAd());
+                              }
+                            });
+                          }
+                        },
                   text: _isLoadingAd ? 'Loading Ad...' : 'WATCH AD NOW',
                   options: FFButtonOptions(
                     width: double.infinity,

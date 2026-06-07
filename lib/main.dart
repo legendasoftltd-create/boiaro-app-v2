@@ -1,6 +1,7 @@
 import 'package:a_i_ebook_app/custom_code/widgets/app_update.dart';
 import 'package:a_i_ebook_app/pages/audiobook_pages/audiobook_page/audiobook_page_widget.dart';
 import 'package:a_i_ebook_app/services/presence_tracking_service.dart';
+import 'package:a_i_ebook_app/services/revenue_cat_service.dart';
 
 import '/custom_code/actions/index.dart' as actions;
 import 'package:provider/provider.dart';
@@ -36,6 +37,13 @@ void main() async {
   await actions.firebaseInit();
   await actions.notificationPermission();
   await actions.notificationInit();
+  
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+    await RevenueCatService.initialize();
+    if (appState.isLogin && appState.userId.isNotEmpty) {
+      await RevenueCatService.logIn(appState.userId);
+    }
+  }
   // End initial custom actions code
 
   await appState.initializePersistedState();

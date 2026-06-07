@@ -12,9 +12,16 @@ class PdfViewerHelpers {
   static void determineReaderType(String? filePath, PdfViewerProvider provider) {
     if (filePath != null) {
       final String path = filePath.toLowerCase();
-      if (path.endsWith('.epub')) {
+      // Try parsing as URI to extract path without query params
+      String uriPath = path;
+      try {
+        final uri = Uri.parse(filePath);
+        uriPath = uri.path.toLowerCase();
+      } catch (_) {}
+
+      if (uriPath.endsWith('.epub') || path.contains('.epub')) {
         provider.setReaderType(ReaderType.epub);
-      } else if (path.endsWith('.pdf')) {
+      } else if (uriPath.endsWith('.pdf') || path.contains('.pdf')) {
         provider.setReaderType(ReaderType.pdf);
       } else {
         // Default to PDF if extension is not recognized

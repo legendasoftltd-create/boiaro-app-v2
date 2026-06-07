@@ -995,6 +995,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               builder: (ctx) => custom_widgets.AdRewardDialog(
                 bookImage: bookImage,
                 onWatchAd: performRead,
+                adType: 'interstitial',
               ),
             );
           } else {
@@ -1209,6 +1210,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           builder: (ctx) => custom_widgets.AdRewardDialog(
             bookImage: bookImage,
             onWatchAd: performDownload,
+            adType: 'rewarded',
           ),
         );
       } else {

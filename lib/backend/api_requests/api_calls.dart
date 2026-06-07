@@ -741,7 +741,8 @@ class SocialLoginCall {
     final providerNormalized = (provider ?? '').toLowerCase().trim();
     final isGoogle = providerNormalized == 'google';
     final isFacebook = providerNormalized == 'facebook';
-    if (!isGoogle && !isFacebook) {
+    final isApple = providerNormalized == 'apple';
+    if (!isGoogle && !isFacebook && !isApple) {
       return ApiCallResponse(
         BoiaroLegacyAdapter.legacyDataEnvelope(
           success: 0,
@@ -769,7 +770,9 @@ class SocialLoginCall {
       );
     }
     final baseUrl = EbookGroup.getBaseUrl();
-    final endpoint = isGoogle ? 'auth/social/google' : 'auth/social/facebook';
+    final endpoint = isGoogle
+        ? 'auth/social/google'
+        : (isFacebook ? 'auth/social/facebook' : 'auth/social/apple');
     final body = BoiaroLegacyAdapter.jsonEncodeBody({
       if (tokenForServer.isNotEmpty) 'access_token': tokenForServer,
       if (tokenForServer.isNotEmpty) 'accessToken': tokenForServer,
