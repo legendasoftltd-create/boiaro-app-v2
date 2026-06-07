@@ -228,7 +228,7 @@ class _BannerSliderState extends State<BannerSlider> {
                               borderRadius: BorderRadius.circular(10),
                               child: SizedBox(
                                 width: 92,
-                                height: 160,
+                                height: 130,
                                 child: imageUrl.isEmpty
                                     ? ColoredBox(
                                         color: theme.gray200,

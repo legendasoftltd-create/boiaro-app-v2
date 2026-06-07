@@ -42,11 +42,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   VideoPlayerController? _videoController;
   bool _videoLoading = false;
 
-  // Ambient Sound player state
-  final AudioPlayer _ambientPlayer = AudioPlayer();
-  bool _ambientEnabled = false;
-  int _selectedAmbientIndex = 0;
-  double _ambientVolume = 0.3; // Default 30% background volume
+  // Ambient Sound player state delegated to handler
+  bool get _ambientEnabled => _handler?.ambientEnabled ?? false;
+  int get _selectedAmbientIndex => _handler?.selectedAmbientIndex ?? 0;
+  double get _ambientVolume => _handler?.ambientVolume ?? 0.3;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   AudiobookAudioHandler? _handler;
@@ -101,7 +100,6 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _initializeChapters();
     _persistAudiobookMeta();
     _initAudio();
-    _initAmbientPlayer();
     _loadAmbientTracks();
   }
 
@@ -127,8 +125,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       if (_isPreviewMode) {
         _onPlaybackState(state);
       }
-      _isPlaying = state.playing;
-      _updateAmbientState();
+      _isPlaying = state.playing && state.processingState != AudioProcessingState.completed;
       final bId = _bookId();
       if (bId.isNotEmpty) {
         if (_isPlaying) {
@@ -270,7 +267,6 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _model.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
-    _ambientPlayer.dispose();
     PresenceTrackingService.instance.updateActivity(PresenceActivity.browsing);
     super.dispose();
   }
@@ -365,7 +361,6 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       if (_videoController != null) {
         await _videoController!.pause();
       }
-      _updateAmbientState();
       await handler.playChapter(
         audiobook: widget.audiobook,
         chapter: _currentChapter ?? widget.chapter,
@@ -406,6 +401,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     FFAppState().homePageLastAudioBookAuthor =
         _stringValue(author, fallback: '');
     FFAppState().homePageLastAudioBookImage = imageUrl;
+    FFAppState().prefs.setBool('ff_homePageLastAudioBookIsFree', widget.audiobook['isFree'] == true);
   }
 
   double _currentPreviewFraction() {
@@ -564,11 +560,6 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  void _initAmbientPlayer() {
-    _ambientPlayer.setLoopMode(LoopMode.one);
-    _ambientPlayer.setVolume(_ambientVolume);
-  }
-
   Future<void> _loadAmbientTracks() async {
     try {
       if (TtsService.instance.ambientTracks.isEmpty) {
@@ -585,15 +576,6 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       'name': '${t.emoji} ${t.label}'.trim().isNotEmpty ? '${t.emoji} ${t.label}'.trim() : t.name,
       'url': t.url,
     }).toList();
-  }
-
-  void _updateAmbientState() {
-    if (!mounted) return;
-    if (_ambientEnabled && _isPlaying && !_videoMode) {
-      _ambientPlayer.play();
-    } else {
-      _ambientPlayer.pause();
-    }
   }
 
   bool _hasVideo() {
@@ -716,7 +698,6 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       _duration = val.duration;
       _isPlaying = val.isPlaying;
     });
-    _updateAmbientState();
   }
 
 
@@ -754,19 +735,15 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                           value: _ambientEnabled,
                           activeColor: FlutterFlowTheme.of(context).primary,
                           onChanged: (val) async {
-                            setState(() {
-                              _ambientEnabled = val;
-                            });
-                            setModalState(() {});
-                            if (val) {
-                              if (_selectedAmbientIndex >= tracks.length) {
-                                _selectedAmbientIndex = 0;
+                            if (_handler != null) {
+                              await _handler!.setAmbientEnabled(val);
+                              if (val) {
+                                final targetIndex = _selectedAmbientIndex >= tracks.length ? 0 : _selectedAmbientIndex;
+                                await _handler!.setAmbientUrl(tracks[targetIndex]['url']!, targetIndex);
                               }
-                              await _ambientPlayer.setUrl(tracks[_selectedAmbientIndex]['url']!);
-                              _updateAmbientState();
-                            } else {
-                              await _ambientPlayer.pause();
                             }
+                            setModalState(() {});
+                            setState(() {});
                           },
                         ),
                       ],
@@ -803,13 +780,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                               ),
                               onSelected: _ambientEnabled
                                   ? (selected) async {
-                                      if (selected) {
-                                        setState(() {
-                                          _selectedAmbientIndex = index;
-                                        });
+                                      if (selected && _handler != null) {
+                                        await _handler!.setAmbientUrl(track['url']!, index);
                                         setModalState(() {});
-                                        await _ambientPlayer.setUrl(track['url']!);
-                                        _updateAmbientState();
+                                        setState(() {});
                                       }
                                     }
                                   : null,
@@ -846,12 +820,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                       activeColor: FlutterFlowTheme.of(context).primary,
                       inactiveColor: FlutterFlowTheme.of(context).gray200,
                       onChanged: _ambientEnabled
-                          ? (val) {
-                              setState(() {
-                                _ambientVolume = val;
-                              });
+                          ? (val) async {
+                              if (_handler != null) {
+                                await _handler!.setAmbientVolume(val);
+                              }
                               setModalState(() {});
-                              _ambientPlayer.setVolume(val);
+                              setState(() {});
                             }
                           : null,
                     ),

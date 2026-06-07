@@ -659,6 +659,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required bool hasFullAccess,
     int previewPercent = 15,
     bool forceIsPreviewMode = false,
+    int? initialTrackNumber,
+    bool isFree = false,
   }) async {
     final tracks = await _fetchAudioTracks(bookId);
     final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
@@ -754,6 +756,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           'Preview limit: $previewPercent%. Buy or unlock to listen full audiobook.');
     }
 
+    final initialChapter = initialTrackNumber != null
+        ? chapters.firstWhere(
+            (ch) => ch['track_number'] == initialTrackNumber,
+            orElse: () => chapters.first,
+          )
+        : chapters.first;
+
     await context.pushNamed(
       AudioPlayerPageWidget.routeName,
       extra: <String, dynamic>{
@@ -767,8 +776,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           'chapters': chapters,
           'isPreviewMode': isPreviewMode,
           'previewPercent': previewPercent,
+          'isFree': isFree,
         },
-        'chapter': chapters.first,
+        'chapter': initialChapter,
       },
     );
     return true;
@@ -932,6 +942,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           hasFullAccess: FFAppState().isLogin,
           previewPercent: safePercent,
           forceIsPreviewMode: true,
+          isFree: false,
         );
         return;
       }
@@ -1076,16 +1087,37 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           (FFAppState().isLogin &&
               await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
       if (hasAccess) {
-        final opened = await _openAudiobookPlayerFromV2(
-          bookId: bookId,
-          bookName: bookName,
-          bookImage: bookImage,
-          authorName: authorName,
-          hasFullAccess: hasAccess,
-          previewPercent: audiobookPreviewPercent,
-        );
-        if (!opened && !FFAppState().isLogin && !isAudiobookFree) {
-          context.pushNamed(SignInPageWidget.routeName);
+        final performPlay = () async {
+          final opened = await _openAudiobookPlayerFromV2(
+            bookId: bookId,
+            bookName: bookName,
+            bookImage: bookImage,
+            authorName: authorName,
+            hasFullAccess: hasAccess,
+            previewPercent: audiobookPreviewPercent,
+            isFree: isAudiobookFree,
+          );
+          if (!opened && !FFAppState().isLogin && !isAudiobookFree) {
+            context.pushNamed(SignInPageWidget.routeName);
+          }
+        };
+
+        if (isAudiobookFree) {
+          final canShowAd = await AdManager.canShowAd();
+          if (canShowAd) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => custom_widgets.AdRewardDialog(
+                bookImage: bookImage,
+                onWatchAd: performPlay,
+              ),
+            );
+          } else {
+            await performPlay();
+          }
+        } else {
+          await performPlay();
         }
         return;
       }
@@ -1096,6 +1128,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         authorName: authorName,
         hasFullAccess: false,
         previewPercent: audiobookPreviewPercent,
+        isFree: false,
       );
       return;
     }
@@ -1329,29 +1362,178 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     );
   }
 
-  Widget _buildEpisodesInAudioTab(String bookId) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Episode card builder — premium design
+  // ─────────────────────────────────────────────────────────────────────────
+  static const int _episodePreviewLimit = 3;
+
+  Widget _buildEpisodeCard({
+    required Map<String, dynamic> track,
+    required int index,
+    required String bookId,
+    required String bookName,
+    required String bookImage,
+    required String authorName,
+    required bool isBookFree,
+    required List<Map<String, dynamic>> formats,
+  }) {
+    final theme = FlutterFlowTheme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPreview = track['is_preview'] == true;
+    final num = track['track_number'];
+    final title = track['title']?.toString() ?? 'Episode ${index + 1}';
+    final dur = track['duration']?.toString() ?? '';
+
+    Future<void> handlePlay() async {
+      final audiobookFormat =
+          _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
+      if (audiobookFormat == null) return;
+      final audiobookPrice = _formatPrice(audiobookFormat);
+      final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
+      final audiobookPreviewPercent = _previewPercent(audiobookFormat);
+      final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+      final hasAccess = isAudiobookFree ||
+          (FFAppState().isLogin &&
+              await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
+
+      if (hasAccess || isPreview) {
+        final playAudiobook = () async {
+          await _openAudiobookPlayerFromV2(
+            bookId: bookId,
+            bookName: bookName,
+            bookImage: bookImage,
+            authorName: authorName,
+            hasFullAccess: hasAccess,
+            previewPercent: audiobookPreviewPercent,
+            initialTrackNumber: num,
+            isFree: !isPreview && isAudiobookFree,
+          );
+        };
+        final isAdNeeded = !isPreview && isAudiobookFree;
+        if (isAdNeeded) {
+          final canShowAd = await AdManager.canShowAd();
+          if (canShowAd) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => custom_widgets.AdRewardDialog(
+                bookImage: bookImage,
+                onWatchAd: playAudiobook,
+              ),
+            );
+          } else {
+            await playAudiobook();
+          }
+        } else {
+          await playAudiobook();
+        }
+      } else {
+        if (!FFAppState().isLogin) {
+          context.pushNamed(SignInPageWidget.routeName);
+          return;
+        }
+        if (audiobookCoinPrice > 0) {
+          final unlocked = await _confirmAndUnlockWithCoins(
+            bookName: bookName,
+            bookId: bookId,
+            format: 'audiobook',
+            coinCost: audiobookCoinPrice,
+          );
+          if (unlocked) {
+            await _openAudiobookPlayerFromV2(
+              bookId: bookId,
+              bookName: bookName,
+              bookImage: bookImage,
+              authorName: authorName,
+              hasFullAccess: true,
+              previewPercent: audiobookPreviewPercent,
+              initialTrackNumber: num,
+              isFree: false,
+            );
+          }
+        } else {
+          await _addToCartAndCheckout(
+            bookId: bookId,
+            bookName: bookName,
+            bookImage: bookImage,
+            price: audiobookPrice,
+            type: 'audiobook',
+            coinPrice: audiobookCoinPrice > 0 ? audiobookCoinPrice : null,
+          );
+        }
+      }
+    }
+
+    return _AnimatedEpisodeCard(
+      key: ValueKey('ep_$index'),
+      track: track,
+      index: index,
+      theme: theme,
+      isDark: isDark,
+      isPreview: isPreview,
+      num: num,
+      title: title,
+      dur: dur,
+      onTap: handlePlay,
+    );
+  }
+
+  Widget _buildEpisodesInAudioTab({
+    required String bookId,
+    required List<Map<String, dynamic>> formats,
+    required String bookName,
+    required String bookImage,
+    required String authorName,
+    required bool isBookFree,
+  }) {
     // Trigger load on first render.
     if (_tracks == null && !_tracksLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadTracks(bookId));
     }
+    final theme = FlutterFlowTheme.of(context);
     final tracks = _tracks ?? [];
     final trackCount = tracks.length;
+    final showSeeMore = trackCount > _episodePreviewLimit;
+    final displayTracks =
+        showSeeMore ? tracks.take(_episodePreviewLimit).toList() : tracks;
 
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(0.0, 12.0, 0.0, 0.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header ─────────────────────────────────────────────────────
           Row(
             children: [
+              // Icon
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [theme.primary, theme.primary.withOpacity(0.7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.headphones_rounded,
+                  color: Colors.white,
+                  size: 15,
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
-                _tracksLoading ? 'Episodes' : 'Episodes ($trackCount)',
-                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      fontFamily: 'SF Pro Display',
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.0,
-                    ),
+                _tracksLoading
+                    ? 'Episodes'
+                    : 'Episodes${trackCount > 0 ? ' ($trackCount)' : ''}',
+                style: theme.bodyMedium.override(
+                  fontFamily: 'SF Pro Display',
+                  fontSize: 16.0,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
               ),
               if (_tracksLoading)
                 Padding(
@@ -1361,103 +1543,154 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                     height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(
-                        FlutterFlowTheme.of(context).primary,
-                      ),
+                      valueColor:
+                          AlwaysStoppedAnimation(theme.primary),
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+
+          // ── Empty state ─────────────────────────────────────────────────
           if (!_tracksLoading && trackCount == 0)
-            Text(
-              'No episodes available.',
-              style: FlutterFlowTheme.of(context).bodySmall.override(
-                    fontFamily: 'SF Pro Display',
-                    color: FlutterFlowTheme.of(context).secondaryText,
-                    letterSpacing: 0.0,
-                  ),
-            ),
-          ...tracks.map((track) {
-            final isPreview = track['is_preview'] == true;
-            final num = track['track_number'];
-            final title = track['title']?.toString() ?? '';
-            final dur = track['duration']?.toString() ?? '';
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: FlutterFlowTheme.of(context).primaryBackground,
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 10.0, vertical: 2.0),
-                  leading: CircleAvatar(
-                    radius: 14,
-                    backgroundColor:
-                        FlutterFlowTheme.of(context).primary.withOpacity(0.12),
-                    child: Text(
-                      '${num ?? ''}',
-                      style: TextStyle(
-                        color: FlutterFlowTheme.of(context).primary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: FlutterFlowTheme.of(context).bodySmall.override(
-                          fontFamily: 'SF Pro Display',
-                          fontSize: 13.0,
-                          letterSpacing: 0.0,
-                        ),
-                  ),
-                  subtitle: dur.isNotEmpty
-                      ? Text(
-                          dur,
-                          style: FlutterFlowTheme.of(context)
-                              .bodySmall
-                              .override(
-                                fontFamily: 'SF Pro Display',
-                                color:
-                                    FlutterFlowTheme.of(context).secondaryText,
-                                fontSize: 11.0,
-                                letterSpacing: 0.0,
-                              ),
-                        )
-                      : null,
-                  trailing: isPreview
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            'Free',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                      : Icon(
-                          Icons.lock_outline,
-                          size: 16,
-                          color: FlutterFlowTheme.of(context).secondaryText,
-                        ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: theme.primaryBackground,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: theme.secondaryText.withOpacity(0.1),
                 ),
               ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.headset_off_outlined,
+                    size: 36,
+                    color: theme.secondaryText.withOpacity(0.4),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No episodes available.',
+                    style: theme.bodySmall.override(
+                      fontFamily: 'SF Pro Display',
+                      color: theme.secondaryText,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // ── Episode cards ───────────────────────────────────────────────
+          ...displayTracks.asMap().entries.map((entry) {
+            return _buildEpisodeCard(
+              track: entry.value,
+              index: entry.key,
+              bookId: bookId,
+              bookName: bookName,
+              bookImage: bookImage,
+              authorName: authorName,
+              isBookFree: isBookFree,
+              formats: formats,
             );
           }),
+
+          // ── See More button ─────────────────────────────────────────────
+          if (showSeeMore)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: _SeeMoreButton(
+                remaining: trackCount - _episodePreviewLimit,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => _EpisodesListPage(
+                        bookName: bookName,
+                        bookImage: bookImage,
+                        tracks: tracks,
+                        onPlayTrack: (track) async {
+                          await _buildEpisodeCard(
+                            track: track,
+                            index:
+                                tracks.indexWhere((t) => t['track_number'] == track['track_number']),
+                            bookId: bookId,
+                            bookName: bookName,
+                            bookImage: bookImage,
+                            authorName: authorName,
+                            isBookFree: isBookFree,
+                            formats: formats,
+                          );
+                          // Play handled by card's onTap internally — push via handlePlay
+                          final audiobookFormat = _pickFormat(
+                              formats.cast<Map<String, dynamic>>(),
+                              'audiobook');
+                          if (audiobookFormat == null) return;
+                          final audiobookPrice = _formatPrice(audiobookFormat);
+                          final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
+                          final audiobookPreviewPercent = _previewPercent(audiobookFormat);
+                          final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+                          final isPreview = track['is_preview'] == true;
+                          final hasAccess = isAudiobookFree ||
+                              (FFAppState().isLogin &&
+                                  await _hasFormatAccess(
+                                      bookId: bookId, format: 'audiobook'));
+                          if (hasAccess || isPreview) {
+                            await _openAudiobookPlayerFromV2(
+                              bookId: bookId,
+                              bookName: bookName,
+                              bookImage: bookImage,
+                              authorName: authorName,
+                              hasFullAccess: hasAccess,
+                              previewPercent: audiobookPreviewPercent,
+                              initialTrackNumber: track['track_number'],
+                              isFree: !isPreview && isAudiobookFree,
+                            );
+                          } else {
+                            if (!FFAppState().isLogin) {
+                              context.pushNamed(SignInPageWidget.routeName);
+                              return;
+                            }
+                            if (audiobookCoinPrice > 0) {
+                              final unlocked = await _confirmAndUnlockWithCoins(
+                                bookName: bookName,
+                                bookId: bookId,
+                                format: 'audiobook',
+                                coinCost: audiobookCoinPrice,
+                              );
+                              if (unlocked) {
+                                await _openAudiobookPlayerFromV2(
+                                  bookId: bookId,
+                                  bookName: bookName,
+                                  bookImage: bookImage,
+                                  authorName: authorName,
+                                  hasFullAccess: true,
+                                  previewPercent: audiobookPreviewPercent,
+                                  initialTrackNumber: track['track_number'],
+                                  isFree: false,
+                                );
+                              }
+                            } else {
+                              await _addToCartAndCheckout(
+                                bookId: bookId,
+                                bookName: bookName,
+                                bookImage: bookImage,
+                                price: audiobookPrice,
+                                type: 'audiobook',
+                                coinPrice:
+                                    audiobookCoinPrice > 0 ? audiobookCoinPrice : null,
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
         ],
       ),
     );
@@ -3104,7 +3337,14 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     padding:
                                         const EdgeInsetsDirectional.fromSTEB(
                                             16.0, 0.0, 16.0, 12.0),
-                                    child: _buildEpisodesInAudioTab(bookId),
+                                    child: _buildEpisodesInAudioTab(
+                                      bookId: bookId,
+                                      formats: formats,
+                                      bookName: bookName,
+                                      bookImage: bookImage,
+                                      authorName: authorName,
+                                      isBookFree: isBookFree,
+                                    ),
                                   ),
                                 // Book Description Section
                                 Padding(
@@ -3653,6 +3893,86 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           8.0),
                                                 ),
                                                 child: ListTile(
+                                                  onTap: () async {
+                                                    final audiobookFormat = _pickFormat(
+                                                        formats.cast<Map<String, dynamic>>(), 'audiobook');
+                                                    if (audiobookFormat == null) return;
+                                                    final audiobookPrice = _formatPrice(audiobookFormat);
+                                                    final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
+                                                    final audiobookPreviewPercent = _previewPercent(audiobookFormat);
+                                                    final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+                                                    final hasAccess = isAudiobookFree ||
+                                                        (FFAppState().isLogin &&
+                                                            await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
+
+                                                    if (hasAccess || isPreview) {
+                                                      final playAudiobook = () async {
+                                                        await _openAudiobookPlayerFromV2(
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          authorName: authorName,
+                                                          hasFullAccess: hasAccess,
+                                                          previewPercent: audiobookPreviewPercent,
+                                                          initialTrackNumber: num is int ? num : (num is double ? (num as double).toInt() : (num != null ? int.tryParse(num.toString()) : null)),
+                                                          isFree: !isPreview && isAudiobookFree,
+                                                        );
+                                                      };
+
+                                                      final isAdNeeded = !isPreview && isAudiobookFree;
+                                                      if (isAdNeeded) {
+                                                        final canShowAd = await AdManager.canShowAd();
+                                                        if (canShowAd) {
+                                                          showDialog(
+                                                            context: context,
+                                                            barrierDismissible: false,
+                                                            builder: (ctx) => custom_widgets.AdRewardDialog(
+                                                              bookImage: bookImage,
+                                                              onWatchAd: playAudiobook,
+                                                            ),
+                                                          );
+                                                        } else {
+                                                          await playAudiobook();
+                                                        }
+                                                      } else {
+                                                        await playAudiobook();
+                                                      }
+                                                    } else {
+                                                      if (!FFAppState().isLogin) {
+                                                        context.pushNamed(SignInPageWidget.routeName);
+                                                        return;
+                                                      }
+                                                      if (audiobookCoinPrice > 0) {
+                                                        final unlocked = await _confirmAndUnlockWithCoins(
+                                                          bookName: bookName,
+                                                          bookId: bookId,
+                                                          format: 'audiobook',
+                                                          coinCost: audiobookCoinPrice,
+                                                        );
+                                                        if (unlocked) {
+                                                          await _openAudiobookPlayerFromV2(
+                                                            bookId: bookId,
+                                                            bookName: bookName,
+                                                            bookImage: bookImage,
+                                                            authorName: authorName,
+                                                            hasFullAccess: true,
+                                                            previewPercent: audiobookPreviewPercent,
+                                                            initialTrackNumber: num is int ? num : (num is double ? (num as double).toInt() : (num != null ? int.tryParse(num.toString()) : null)),
+                                                            isFree: false,
+                                                          );
+                                                        }
+                                                      } else {
+                                                        await _addToCartAndCheckout(
+                                                          bookId: bookId,
+                                                          bookName: bookName,
+                                                          bookImage: bookImage,
+                                                          price: audiobookPrice,
+                                                          type: 'audiobook',
+                                                          coinPrice: audiobookCoinPrice > 0 ? audiobookCoinPrice : null,
+                                                        );
+                                                      }
+                                                    }
+                                                  },
                                                   contentPadding:
                                                       const EdgeInsets
                                                           .symmetric(
@@ -4400,6 +4720,165 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     );
                                   },
                                 ),
+                                  Builder(builder: (context) {
+                                    final authorId = EbookGroup
+                                            .getbookdetailsApiCall
+                                            .authorid(
+                                          bookDetailspageGetbookdetailsApiResponse
+                                              .jsonBody,
+                                        ) ??
+                                        '';
+                                    if (authorId.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Padding(
+                                      padding: const EdgeInsetsDirectional.fromSTEB(
+                                          0.0, 16.0, 0.0, 0.0),
+                                      child: FutureBuilder<ApiCallResponse>(
+                                        future: EbookGroup.getbookbyauthorApiCall.call(
+                                          authorId: authorId,
+                                          token: FFAppState().token,
+                                        ),
+                                        builder: (context, snapshot) {
+                                          if (!snapshot.hasData) {
+                                            return Center(
+                                              child: SizedBox(
+                                                width: 50.0,
+                                                height: 50.0,
+                                                child: CircularProgressIndicator(
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<Color>(
+                                                    FlutterFlowTheme.of(context)
+                                                        .primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                          final response = snapshot.data!;
+                                          if (EbookGroup.getbookbyauthorApiCall.success(response.jsonBody) != 1) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          final books = EbookGroup.getbookbyauthorApiCall.bookDetailsList(response.jsonBody)
+                                              ?.where((b) => b is Map && (b['_id']?.toString() ?? '') != bookId)
+                                              ?.toList() ?? [];
+                                          if (books.isEmpty) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return Column(
+                                            mainAxisSize: MainAxisSize.max,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 0.0, 16.0),
+                                                child: Text(
+                                                  'More from author',
+                                                  textAlign: TextAlign.start,
+                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                    fontFamily: 'SF Pro Display',
+                                                    fontSize: 18.0,
+                                                    letterSpacing: 0.0,
+                                                    fontWeight: FontWeight.w600,
+                                                    lineHeight: 1.5,
+                                                  ),
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                                child: SingleChildScrollView(
+                                                  scrollDirection: Axis.horizontal,
+                                                  child: Row(
+                                                    spacing: 5.0,
+                                                    verticalDirection: VerticalDirection.down,
+                                                    children: List.generate(
+                                                      books.length,
+                                                      (index) {
+                                                        final item = books[index];
+                                                        final itemId = getJsonField(item, r'''$._id''').toString();
+                                                        final itemName = getJsonField(item, r'''$.name''').toString();
+                                                        return wrapWithModel(
+                                                          model: _model.mainBookComponentModels.getModel(
+                                                            'author_$itemId',
+                                                            index,
+                                                          ),
+                                                          updateCallback: () => safeSetState(() {}),
+                                                          child: MainBookComponentWidget(
+                                                            key: Key('Keyauthor_$itemId'),
+                                                            image: '${FFAppConstants.bookImagesUrl}${getJsonField(item, r'''$.image''').toString()}',
+                                                            bookName: itemName,
+                                                            id: itemId,
+                                                            isPurchased: _model.purchasedBookIds.contains(itemId),
+                                                            price: getJsonField(item, r'''$.price''').toString(),
+                                                            bookType: getJsonField(item, r'''$.type''')?.toString(),
+                                                            discountAmount: getJsonField(item, r'''$.discount_amount''').toString(),
+                                                            discountPercentage: getJsonField(item, r'''$.discount_percentage''').toString(),
+                                                            authorsName: getJsonField(item, r'''$.author.name''').toString(),
+                                                            isFav: functions.checkFavOrNot(
+                                                              EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(columnGetFavouriteBookResponse.jsonBody)?.toList(),
+                                                              itemId,
+                                                            ) == true,
+                                                            indicator: (index == _model.authorRelatedIndex) && (_model.isAuthorRelated == true),
+                                                            isFavAction: () async {
+                                                              if (FFAppState().isLogin == true) {
+                                                                _model.isAuthorRelated = true;
+                                                                _model.authorRelatedIndex = index;
+                                                                safeSetState(() {});
+                                                                if (functions.checkFavOrNot(
+                                                                  EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(columnGetFavouriteBookResponse.jsonBody)?.toList(),
+                                                                  itemId,
+                                                                ) == true) {
+                                                                  _model.getPopularDetete = await EbookGroup.removeFavouritebookCall.call(
+                                                                    userId: FFAppState().userId,
+                                                                    token: FFAppState().token,
+                                                                    bookId: itemId,
+                                                                  );
+                                                                  safeSetState(() => _model.apiRequestCompleter1 = null);
+                                                                  await _model.waitForApiRequestCompleted1();
+                                                                  await actions.showCustomToastBottom(FFAppState().unFavText);
+                                                                } else {
+                                                                  _model.getPopularAdd = await EbookGroup.addFavouriteBookApiCall.call(
+                                                                    userId: FFAppState().userId,
+                                                                    token: FFAppState().token,
+                                                                    bookId: itemId,
+                                                                  );
+                                                                  safeSetState(() => _model.apiRequestCompleter1 = null);
+                                                                  await _model.waitForApiRequestCompleted1();
+                                                                  await actions.showCustomToastBottom(FFAppState().favText);
+                                                                }
+                                                                FFAppState().clearGetFavouriteBookCacheCache();
+                                                                _model.isAuthorRelated = false;
+                                                                safeSetState(() {});
+                                                              } else {
+                                                                FFAppState().favChange = true;
+                                                                FFAppState().bookId = itemId;
+                                                                FFAppState().update(() {});
+                                                                context.pushNamed(SignInPageWidget.routeName);
+                                                              }
+                                                              safeSetState(() {});
+                                                            },
+                                                            isMainTap: () async {
+                                                              context.pushNamed(
+                                                                BookDetailspageWidget.routeName,
+                                                                queryParameters: {
+                                                                  'name': serializeParam(itemName, ParamType.String),
+                                                                  'image': serializeParam('${FFAppConstants.bookImagesUrl}${getJsonField(item, r'''$.image''').toString()}', ParamType.String),
+                                                                  'id': serializeParam(itemId, ParamType.String),
+                                                                }.withoutNulls,
+                                                              );
+                                                            },
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  }),
                                 Padding(
                                   padding: EdgeInsetsDirectional.fromSTEB(
                                       0.0, 16.0, 0.0, 0.0),
@@ -4457,7 +4936,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   .fromSTEB(
                                                       16.0, 0.0, 0.0, 16.0),
                                               child: Text(
-                                                'You might also like',
+                                                'Related books',
                                                 textAlign: TextAlign.start,
                                                 style:
                                                     FlutterFlowTheme.of(context)
@@ -5155,7 +5634,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         //         },
                         //       ),
                         //     );
-                        //   },
+        //   },
                         // ),
                       ],
                     );
@@ -5166,6 +5645,435 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           ),
         );
       },
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Animated Episode Card
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _AnimatedEpisodeCard extends StatefulWidget {
+  const _AnimatedEpisodeCard({
+    super.key,
+    required this.track,
+    required this.index,
+    required this.theme,
+    required this.isDark,
+    required this.isPreview,
+    required this.num,
+    required this.title,
+    required this.dur,
+    required this.onTap,
+  });
+
+  final Map<String, dynamic> track;
+  final int index;
+  final dynamic theme;
+  final bool isDark;
+  final bool isPreview;
+  final dynamic num;
+  final String title;
+  final String dur;
+  final VoidCallback onTap;
+
+  @override
+  State<_AnimatedEpisodeCard> createState() => _AnimatedEpisodeCardState();
+}
+
+class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 110),
+      lowerBound: 0.97,
+      upperBound: 1.0,
+      value: 1.0,
+    );
+    _scaleAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.theme;
+    final isDark = widget.isDark;
+    final isPreview = widget.isPreview;
+    final brandColor = theme.primary as Color;
+
+    return ScaleTransition(
+      scale: _scaleAnim,
+      child: GestureDetector(
+        onTapDown: (_) => _ctrl.reverse(),
+        onTapUp: (_) => _ctrl.forward(),
+        onTapCancel: () => _ctrl.forward(),
+        onTap: widget.onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 7),
+          decoration: BoxDecoration(
+            color: isDark
+                ? brandColor.withOpacity(0.08)
+                : brandColor.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: brandColor.withOpacity(isPreview ? 0.30 : 0.12),
+              width: 1,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                // Episode number badge
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: brandColor.withOpacity(isPreview ? 1 : 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${widget.num ?? widget.index + 1}',
+                    style: TextStyle(
+                      color: isPreview ? Colors.white : brandColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'SF Pro Display',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Title + duration
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : const Color(0xFF1A2530),
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                      if (widget.dur.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.access_time_rounded,
+                                size: 10, color: theme.secondaryText as Color),
+                            const SizedBox(width: 3),
+                            Text(
+                              widget.dur,
+                              style: TextStyle(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 10,
+                                color: theme.secondaryText as Color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Free/Paid pill + play button
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Pill badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: brandColor.withOpacity(isPreview ? 0.12 : 0.07),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: brandColor.withOpacity(isPreview ? 0.35 : 0.15),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        isPreview ? 'Free' : 'Paid',
+                        style: TextStyle(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: brandColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    // Play button
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: brandColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child:  Icon(
+                        color: Colors.white,
+                        Icons.play_arrow_rounded,
+                        size: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// See More Button
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _SeeMoreButton extends StatefulWidget {
+  const _SeeMoreButton({required this.remaining, required this.onTap});
+  final int remaining;
+  final VoidCallback onTap;
+
+  @override
+  State<_SeeMoreButton> createState() => _SeeMoreButtonState();
+}
+
+class _SeeMoreButtonState extends State<_SeeMoreButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                theme.primary.withOpacity(isDark ? 0.2 : 0.08),
+                theme.primary.withOpacity(isDark ? 0.12 : 0.04),
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: theme.primary.withOpacity(0.25),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.expand_more_rounded,
+                color: theme.primary,
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'See All Episodes (+${widget.remaining} more)',
+                style: TextStyle(
+                  fontFamily: 'SF Pro Display',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.primary,
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Full Episodes List Page (opened from See More)
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _EpisodesListPage extends StatelessWidget {
+  const _EpisodesListPage({
+    required this.bookName,
+    required this.bookImage,
+    required this.tracks,
+    required this.onPlayTrack,
+  });
+
+  final String bookName;
+  final String bookImage;
+  final List<Map<String, dynamic>> tracks;
+  final Future<void> Function(Map<String, dynamic> track) onPlayTrack;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: theme.primaryBackground,
+      body: CustomScrollView(
+        slivers: [
+          // Sliver App Bar
+          SliverAppBar(
+            expandedHeight: 150,
+            pinned: true,
+            backgroundColor: theme.primary,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white, size: 18),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding:
+                  const EdgeInsets.only(left: 56, bottom: 14, right: 16),
+              title: Text(
+                bookName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'SF Pro Display',
+                ),
+              ),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (bookImage.isNotEmpty)
+                    Image.network(
+                      bookImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(color: theme.primary),
+                    ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          theme.primary.withOpacity(0.55),
+                          theme.primary.withOpacity(0.97),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 16,
+                    bottom: 14,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.3), width: 1),
+                      ),
+                      child: Text(
+                        '${tracks.length} Episodes',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'SF Pro Display',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Track List
+          tracks.isEmpty
+              ? SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.headphones_outlined,
+                            size: 56,
+                            color: theme.secondaryText.withOpacity(0.4)),
+                        const SizedBox(height: 12),
+                        Text('No episodes available',
+                            style: theme.bodyMedium.override(
+                              fontFamily: 'SF Pro Display',
+                              color: theme.secondaryText,
+                              letterSpacing: 0,
+                            )),
+                      ],
+                    ),
+                  ),
+                )
+              : SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) {
+                        final track = tracks[i];
+                        final isPreview = track['is_preview'] == true;
+                        final num = track['track_number'];
+                        final title =
+                            track['title']?.toString() ?? 'Episode ${i + 1}';
+                        final dur = track['duration']?.toString() ?? '';
+
+                        return _AnimatedEpisodeCard(
+                          key: ValueKey('eplist_$i'),
+                          track: track,
+                          index: i,
+                          theme: theme,
+                          isDark: isDark,
+                          isPreview: isPreview,
+                          num: num,
+                          title: title,
+                          dur: dur,
+                          onTap: () => onPlayTrack(track),
+                        );
+                      },
+                      childCount: tracks.length,
+                    ),
+                  ),
+                ),
+        ],
+      ),
     );
   }
 }

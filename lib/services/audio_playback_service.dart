@@ -38,7 +38,19 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
   bool _previewEnded = false;
   bool _isStoppingAtPreviewLimit = false;
 
+  final AudioPlayer _ambientPlayer = AudioPlayer();
+  bool ambientEnabled = false;
+  double ambientVolume = 0.3;
+  int selectedAmbientIndex = 0;
+
   AudiobookAudioHandler() {
+    _ambientPlayer.setLoopMode(LoopMode.one);
+    _ambientPlayer.setVolume(ambientVolume);
+
+    _player.playerStateStream.listen((state) {
+      _updateAmbientState();
+    });
+
     _player.playbackEventStream.map(_transformEvent).listen(playbackState.add);
     _player.positionStream.listen((position) {
       final limit = _previewLimit;
@@ -155,7 +167,52 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> stop() async {
     await _player.stop();
+    await _ambientPlayer.stop();
     return super.stop();
+  }
+
+  void _updateAmbientState() {
+    final shouldPlay = ambientEnabled &&
+        _player.playing &&
+        _player.processingState != ProcessingState.completed &&
+        _player.processingState != ProcessingState.idle;
+    if (shouldPlay) {
+      if (!_ambientPlayer.playing) {
+        _ambientPlayer.play();
+      }
+    } else {
+      if (_ambientPlayer.playing) {
+        _ambientPlayer.pause();
+      }
+    }
+  }
+
+  Future<void> setAmbientEnabled(bool enabled) async {
+    ambientEnabled = enabled;
+    if (enabled) {
+      _updateAmbientState();
+    } else {
+      await _ambientPlayer.pause();
+    }
+  }
+
+  Future<void> setAmbientVolume(double volume) async {
+    ambientVolume = volume;
+    await _ambientPlayer.setVolume(volume);
+  }
+
+  Future<void> setAmbientUrl(String? url, int index) async {
+    selectedAmbientIndex = index;
+    if (url == null || url.trim().isEmpty) {
+      await _ambientPlayer.stop();
+    } else {
+      try {
+        await _ambientPlayer.setUrl(url);
+        _updateAmbientState();
+      } catch (e) {
+        debugPrint('Error setting ambient URL in handler: $e');
+      }
+    }
   }
 
   void _resetPreviewSession({
