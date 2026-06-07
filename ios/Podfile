@@ -1,5 +1,4 @@
-# Uncomment this line to define a global platform for your project
-platform :ios, '14.0.0'
+platform :ios, '16.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -32,7 +31,8 @@ target 'Runner' do
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  pod 'FirebaseFirestore', :git => 'https://github.com/invertase/firestore-ios-sdk-frameworks.git', :tag => '11.10.0'
+  # fallback to standard cocoapods source download if git clone times out
+  # pod 'FirebaseFirestore', :git => 'https://github.com/invertase/firestore-ios-sdk-frameworks.git', :tag => '11.15.0'
 end
 
 post_install do |installer|
@@ -40,7 +40,24 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings.delete 'IPHONEOS_DEPLOYMENT_TARGET'
-      
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_PHOTOS=1',
+        'PERMISSION_NOTIFICATIONS=1',
+        'PERMISSION_MICROPHONE=0',
+        'PERMISSION_LOCATION=0',
+        'PERMISSION_CONTACTS=0',
+        'PERMISSION_REMINDERS=0',
+        'PERMISSION_EVENTS=0',
+        'PERMISSION_SPEECH_RECOGNITION=0',
+        'PERMISSION_MEDIA_LIBRARY=0',
+        'PERMISSION_SENSORS=0',
+        'PERMISSION_BLUETOOTH=0',
+        'PERMISSION_APP_TRACKING_TRANSPARENCY=1',
+        'PERMISSION_CRITICAL_ALERTS=0',
+        'PERMISSION_ASSISTANT=0'
+      ]
     end
   end
 end

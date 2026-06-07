@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Result class for social login operations
 class SocialLoginResult {
@@ -53,6 +54,51 @@ class SocialLoginRepository {
       serverClientId:
           '37005664714-ouo8u0aquc5cefrglf8n46j2t28g7c71.apps.googleusercontent.com',
     );
+  }
+
+  Future<ApiCallResponse?> signInWithApple() async {
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final String? deviceId = FFAppState().deviceId;
+      final String? fcmToken = FFAppState().tokenFcm;
+
+      print('Calling Social Login API with provider: apple');
+
+      // The email and name are only returned on the first login.
+      // Subsequent logins will return them as null, which is standard.
+      // The backend must rely on providerId (the userIdentifier) to match existing accounts.
+      final String email = credential.email ?? '';
+      final String givenName = credential.givenName ?? '';
+      final String familyName = credential.familyName ?? '';
+      final String username = '${givenName} ${familyName}'.trim();
+
+      final response = await EbookGroup.socialLoginCall.call(
+        email: email,
+        firstname: givenName,
+        lastname: familyName,
+        username: username.isNotEmpty ? username : 'Apple User',
+        provider: 'apple',
+        providerId: credential.userIdentifier ?? '',
+        accessToken: credential.authorizationCode,
+        idToken: credential.identityToken,
+        registrationToken: fcmToken,
+        deviceId: deviceId,
+      );
+
+      print('Apple Social Login API Result: ${response.statusCode}');
+      print('Apple Social Login API Body: ${response.jsonBody}');
+      return response;
+    } catch (error, stacktrace) {
+      print('Apple sign in error: $error');
+      print('Apple sign in error: $stacktrace');
+      return null;
+    }
   }
 
   Future<ApiCallResponse?> signInWithGoogle() async {
