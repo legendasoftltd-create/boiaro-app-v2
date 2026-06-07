@@ -28,8 +28,9 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
   @override
   void initState() {
     super.initState();
-    print('AdRewardDialog: waiting for preloaded ad...');
-    unawaited(AdManager.ensureAdLoaded());
+    // FIX: Removed ensureAdLoaded() here — ad is already preloaded at app start
+    // via AdManager.initialize(). Calling it on every dialog open was generating
+    // thousands of repeated ad requests with zero impressions.
     _startTimer();
   }
 
@@ -215,7 +216,6 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                       setState(() {
                         _isLoadingAd = true;
                       });
-                      print('AdRewardDialog: Button clicked, requesting ad...');
                       AdManager.ensureAdLoaded().then((loaded) {
                         if (!mounted) return;
                         setState(() {
