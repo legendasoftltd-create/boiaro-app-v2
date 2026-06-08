@@ -122,6 +122,61 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
     );
   }
 
+  InputDecoration _readOnlyFieldDecoration(
+    BuildContext context, {
+    required String labelText,
+    String? hintText,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: FlutterFlowTheme.of(context).labelMedium.override(
+            fontFamily: 'SF Pro Display',
+            color: FlutterFlowTheme.of(context).primaryText,
+            fontSize: 14.0,
+            letterSpacing: 0.0,
+          ),
+      hintText: hintText,
+      hintStyle: FlutterFlowTheme.of(context).labelMedium.override(
+            fontFamily: 'SF Pro Display',
+            fontSize: 17.0,
+            letterSpacing: 0.0,
+            lineHeight: 1.5,
+          ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: const BorderSide(
+          color: Color(0x00000000),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(
+          color: Color(0x00000000),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderSide: const BorderSide(
+          color: Color(0x00000000),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderSide: const BorderSide(
+          color: Color(0x00000000),
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      filled: true,
+      fillColor: FlutterFlowTheme.of(context).lightGrey,
+      contentPadding:
+          const EdgeInsetsDirectional.fromSTEB(16.0, 13.0, 0.0, 12.0),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -170,6 +225,11 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
+
+    final hasEmail = _userDetailStr(['email']).isNotEmpty;
+    final hasPhone = _userDetailStr(['phone']).isNotEmpty;
+    final isEmailReadOnly = hasEmail && !hasPhone;
+    final isPhoneReadOnly = hasPhone && !hasEmail;
 
     return GestureDetector(
       onTap: () {
@@ -528,63 +588,19 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 controller: _model.textController3,
                                 focusNode: _model.textFieldFocusNode3,
                                 autofocus: false,
-                                readOnly: true,
+                                readOnly: isEmailReadOnly,
                                 obscureText: false,
-                                decoration: InputDecoration(
-                                  labelText: 'Email',
-                                  labelStyle: FlutterFlowTheme.of(context)
-                                      .labelMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryText,
-                                        fontSize: 14.0,
-                                        letterSpacing: 0.0,
+                                decoration: isEmailReadOnly
+                                    ? _readOnlyFieldDecoration(
+                                        context,
+                                        labelText: 'Email',
+                                        hintText: 'Email address',
+                                      )
+                                    : _editFieldDecoration(
+                                        context,
+                                        labelText: 'Email',
+                                        hintText: 'Email address',
                                       ),
-                                  hintText: 'Email address',
-                                  hintStyle: FlutterFlowTheme.of(context)
-                                      .labelMedium
-                                      .override(
-                                        fontFamily: 'SF Pro Display',
-                                        fontSize: 17.0,
-                                        letterSpacing: 0.0,
-                                        lineHeight: 1.5,
-                                      ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: const BorderSide(
-                                      color: Color(0x00000000),
-                                      width: 1.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: const BorderSide(
-                                      color: Color(0x00000000),
-                                      width: 1.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                  errorBorder: OutlineInputBorder(
-                                    borderSide: const BorderSide(
-                                      color: Color(0x00000000),
-                                      width: 1.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                  focusedErrorBorder: OutlineInputBorder(
-                                    borderSide: const BorderSide(
-                                      color: Color(0x00000000),
-                                      width: 1.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                  filled: true,
-                                  fillColor:
-                                      FlutterFlowTheme.of(context).lightGrey,
-                                  contentPadding:
-                                      const EdgeInsetsDirectional.fromSTEB(
-                                          16.0, 13.0, 0.0, 12.0),
-                                ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
                                     .override(
@@ -653,14 +669,21 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 controller: _model.textController6,
                                 focusNode: _model.textFieldFocusNode6,
                                 autofocus: false,
+                                readOnly: isPhoneReadOnly,
                                 textInputAction: TextInputAction.done,
                                 obscureText: false,
                                 keyboardType: TextInputType.phone,
-                                decoration: _editFieldDecoration(
-                                  context,
-                                  labelText: 'Phone number (optional)',
-                                  hintText: '01XXXXXXXXX',
-                                ),
+                                decoration: isPhoneReadOnly
+                                    ? _readOnlyFieldDecoration(
+                                        context,
+                                        labelText: 'Phone number',
+                                        hintText: '01XXXXXXXXX',
+                                      )
+                                    : _editFieldDecoration(
+                                        context,
+                                        labelText: 'Phone number (optional)',
+                                        hintText: '01XXXXXXXXX',
+                                      ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
                                     .override(
@@ -728,6 +751,7 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 ? _userDetailStr(['avatar_url', 'image'])
                                 : _model.image!,
                             phone: _model.textController6?.text ?? FFAppState().phone,
+                            email: _model.textController3?.text ?? '',
                             countryCode: '+${FFAppState().countryCodeEdit}',
                             bio: _model.textController4?.text ?? '',
                             preferredLanguage:

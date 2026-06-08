@@ -57,8 +57,7 @@ class AdManager {
   // Interstitial Ad Unit IDs
   static String get interstitialAdUnitId {
     if (Platform.isAndroid) {
-      // Test ad unit ID for Android Interstitial (since no production one is specified)
-      return 'ca-app-pub-3940256099942544/1033173712';
+      return 'ca-app-pub-1401510952827121/7065643392';
     } else if (Platform.isIOS) {
       return 'ca-app-pub-1401510952827121/7435069248'; // I001
     } else {

@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
 
 import '/app_constants.dart';
+import '/backend/boiaro_legacy_adapter.dart';
 
 class AudioPlaybackService {
   static AudiobookAudioHandler? _handler;
@@ -103,8 +104,8 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
     final bookTitle = audiobook['title']?.toString() ??
         audiobook['name']?.toString() ??
         'Audiobook';
-    final author =
-        audiobook['author']?.toString() ?? audiobook['authorName']?.toString();
+    final author = BoiaroLegacyAdapter.resolveAuthorName(
+        audiobook['author'] ?? audiobook['authorName'] ?? audiobook['authors']);
     final artUri = _resolveBookImage(audiobook['image']?.toString());
 
     try {

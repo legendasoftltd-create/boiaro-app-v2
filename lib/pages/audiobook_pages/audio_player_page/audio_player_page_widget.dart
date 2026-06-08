@@ -140,6 +140,17 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
           );
         }
       }
+      if (state.processingState == AudioProcessingState.completed) {
+        if (!_previewLimitShown) {
+          if (_chapters.isNotEmpty && _currentIndex < _chapters.length - 1) {
+            final nextChapter = _chapters[_currentIndex + 1];
+            final isLocked = nextChapter['isLocked'] == true || nextChapter['is_locked'] == true;
+            if (!isLocked) {
+              _playChapterAt(_currentIndex + 1);
+            }
+          }
+        }
+      }
     });
     _positionSub = AudioService.position.listen((pos) {
       if (!mounted || _videoMode) {
@@ -693,11 +704,26 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   void _videoListener() {
     if (!mounted || !_videoMode || _videoController == null) return;
     final val = _videoController!.value;
+    final position = val.position;
+    final duration = val.duration;
     setState(() {
-      _position = val.position;
-      _duration = val.duration;
+      _position = position;
+      _duration = duration;
       _isPlaying = val.isPlaying;
     });
+    if (val.isInitialized &&
+        duration > Duration.zero &&
+        position >= duration &&
+        !val.isPlaying &&
+        !_previewLimitShown) {
+      if (_chapters.isNotEmpty && _currentIndex < _chapters.length - 1) {
+        final nextChapter = _chapters[_currentIndex + 1];
+        final isLocked = nextChapter['isLocked'] == true || nextChapter['is_locked'] == true;
+        if (!isLocked) {
+          _playChapterAt(_currentIndex + 1);
+        }
+      }
+    }
   }
 
 
@@ -1734,11 +1760,25 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage> {
     super.initState();
     // Immersive fullscreen mode
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    // Cinema Landscape rotation
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    
+    // Check if the video is vertical (portrait aspect ratio)
+    final size = widget.controller.value.size;
+    final isPortraitVideo = widget.controller.value.isInitialized &&
+        (size.height > size.width || widget.controller.value.aspectRatio < 1.0);
+
+    if (isPortraitVideo) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    } else {
+      // Cinema Landscape rotation
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
+    
     widget.controller.addListener(_videoListener);
     _startControlsTimer();
   }

@@ -805,24 +805,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
     required VoidCallback onTap,
     bool isLoading = false,
   }) {
-    String cleanAuthor(String author) {
-      var s = author.trim();
-      if (s.startsWith('{') && s.endsWith('}')) {
-        s = s.substring(1, s.length - 1).trim();
-      }
-      if (s.startsWith('name:')) {
-        s = s.substring(5).trim();
-      } else if (s.contains('name:')) {
-        final index = s.indexOf('name:');
-        s = s.substring(index + 5).trim();
-        if (s.contains(',')) {
-          s = s.split(',')[0].trim();
-        }
-      }
-      return s;
-    }
-
-    final trimmedAuthor = cleanAuthor(bookAuthor);
+    final trimmedAuthor = BoiaroLegacyAdapter.resolveAuthorName(bookAuthor);
     final trimmedType = bookType.trim();
     final subtitleText = trimmedAuthor.isNotEmpty && trimmedType.isNotEmpty
         ? '$trimmedAuthor • $trimmedType'

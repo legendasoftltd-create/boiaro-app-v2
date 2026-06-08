@@ -1909,6 +1909,7 @@ class UsereditprofileApiCall {
     String? displayName = '',
     String? fullName = '',
     String? phone = '',
+    String? email = '',
     String? image = '',
     String? countryCode = '',
     String? bio = '',
@@ -1941,6 +1942,7 @@ class UsereditprofileApiCall {
       if (fn.isNotEmpty) 'full_name': fn,
       if (normalizedImage.isNotEmpty) 'avatar_url': normalizedImage,
       if ((phone ?? '').trim().isNotEmpty) 'phone': phone,
+      if ((email ?? '').trim().isNotEmpty) 'email': email,
       if ((bio ?? '').trim().isNotEmpty) 'bio': bio,
       if ((preferredLanguage ?? '').trim().isNotEmpty)
         'preferred_language': preferredLanguage,

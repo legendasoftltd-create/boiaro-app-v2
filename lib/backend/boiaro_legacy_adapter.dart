@@ -437,4 +437,39 @@ class BoiaroLegacyAdapter {
     };
   }
 
+  static String resolveAuthorName(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    if (value is Map) {
+      final name = value['name'] ?? value['title'] ?? value['full_name'];
+      if (name != null) {
+        final s = name.toString().trim();
+        if (s.isNotEmpty) return s;
+      }
+      return fallback;
+    }
+    if (value is List) {
+      final names = value
+          .map((e) => resolveAuthorName(e, fallback: ''))
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (names.isNotEmpty) return names.join(', ');
+      return fallback;
+    }
+    final str = value.toString().trim();
+    if (str.startsWith('{') && str.endsWith('}')) {
+      var s = str.substring(1, str.length - 1).trim();
+      if (s.startsWith('name:')) {
+        s = s.substring(5).trim();
+      } else if (s.contains('name:')) {
+        final index = s.indexOf('name:');
+        s = s.substring(index + 5).trim();
+        if (s.contains(',')) {
+          s = s.split(',')[0].trim();
+        }
+      }
+      return s.isNotEmpty ? s : fallback;
+    }
+    return str.isNotEmpty ? str : fallback;
+  }
+
 }
