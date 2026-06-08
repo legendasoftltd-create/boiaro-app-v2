@@ -95,7 +95,7 @@ class _BannerSliderState extends State<BannerSlider> {
             final metaLine = metaParts.join(' · ');
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -107,7 +107,7 @@ class _BannerSliderState extends State<BannerSlider> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+                      padding: const EdgeInsets.fromLTRB(14, 0, 12,0),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -227,8 +227,8 @@ class _BannerSliderState extends State<BannerSlider> {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(10),
                               child: SizedBox(
-                                width: 92,
-                                height: 130,
+                                width: 110,
+                                height: 160,
                                 child: imageUrl.isEmpty
                                     ? ColoredBox(
                                         color: theme.gray200,
@@ -240,8 +240,7 @@ class _BannerSliderState extends State<BannerSlider> {
                                       )
                                     : CachedNetworkImage(
                                         imageUrl: imageUrl,
-                                        fit: BoxFit.cover,
-                                        memCacheWidth: 190,
+                                        fit: BoxFit.fill,
                                         placeholder: (_, __) => ColoredBox(
                                           color: theme.gray200,
                                           child: Center(
@@ -279,7 +278,7 @@ class _BannerSliderState extends State<BannerSlider> {
         ),
         if (widget.sliderItems.length > 1)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8, top: 2),
+            padding: const EdgeInsets.only(bottom: 4, top: 5),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(widget.sliderItems.length, (i) {
