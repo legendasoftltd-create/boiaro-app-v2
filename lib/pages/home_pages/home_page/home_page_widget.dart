@@ -370,6 +370,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
             builder: (ctx) => AdRewardDialog(
               bookImage: bookImage,
               onWatchAd: playAudio,
+              adType: 'rewarded_interstitial',
             ),
           );
         } else {

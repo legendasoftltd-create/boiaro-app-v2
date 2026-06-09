@@ -70,6 +70,21 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
       } else {
         widget.onWatchAd(); // fallback if ad wasn't loaded
       }
+    } else if (widget.adType == 'rewarded_interstitial') {
+      final isLoaded = await AdManager.ensureRewardedInterstitialLoaded();
+      if (isLoaded) {
+        AdManager.showRewardedInterstitialAd(
+          context: context,
+          onRewardEarned: () {
+            widget.onWatchAd();
+          },
+          onAdFailed: () {
+            widget.onWatchAd(); // fallback if ad fails to show
+          },
+        );
+      } else {
+        widget.onWatchAd(); // fallback if ad wasn't loaded
+      }
     } else {
       final isLoaded = await AdManager.ensureRewardedLoaded();
       if (isLoaded) {
@@ -238,7 +253,9 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                       : () {
                           final isLoaded = widget.adType == 'interstitial'
                               ? AdManager.isInterstitialLoaded
-                              : AdManager.isRewardedLoaded;
+                              : (widget.adType == 'rewarded_interstitial'
+                                  ? AdManager.isRewardedInterstitialLoaded
+                                  : AdManager.isRewardedLoaded);
                           if (isLoaded) {
                             _timer?.cancel();
                             unawaited(_tryShowAd());
@@ -251,8 +268,10 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                             final Future<bool> loadFuture =
                                 widget.adType == 'interstitial'
                                     ? AdManager.ensureInterstitialLoaded()
-                                    : AdManager.ensureRewardedLoaded(
-                                        caller: 'AdRewardDialog.button');
+                                    : (widget.adType == 'rewarded_interstitial'
+                                        ? AdManager.ensureRewardedInterstitialLoaded()
+                                        : AdManager.ensureRewardedLoaded(
+                                            caller: 'AdRewardDialog.button'));
                             loadFuture.then((loaded) {
                               if (!mounted) return;
                               setState(() {

@@ -38,7 +38,31 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
   }
 
   Future<void> _handleClaimDaily() async {
-    await _claimDaily();
+    final canShow = await AdManager.canShowAd();
+    if (!canShow) {
+      await actions.showCustomToastBottom(
+          'Please wait 3 minutes between ads or daily limit of 20 ads reached.');
+      return;
+    }
+
+    if (!AdManager.isAdLoaded) {
+      await actions.showCustomToastBottom('Loading Ad... Please wait a second.');
+      final loaded = await AdManager.ensureAdLoaded();
+      if (!loaded) {
+        await actions.showCustomToastBottom('Failed to load ad. Please try again.');
+        return;
+      }
+    }
+
+    AdManager.showRewardedAd(
+      context: context,
+      onRewardEarned: () async {
+        await _claimDaily();
+      },
+      onAdFailed: () async {
+        await actions.showCustomToastBottom('Failed to show ad. Please try again.');
+      },
+    );
   }
 
   Future<void> _handleClaimAd() async {

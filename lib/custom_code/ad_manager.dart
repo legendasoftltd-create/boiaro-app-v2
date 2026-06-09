@@ -18,6 +18,12 @@ class AdManager {
   static bool _isInterstitialLoading = false;
   static Completer<void>? _interstitialCompleter;
 
+  // Rewarded Interstitial Ad state
+  static RewardedInterstitialAd? _rewardedInterstitialAd;
+  static bool _isRewardedInterstitialLoaded = false;
+  static bool _isRewardedInterstitialLoading = false;
+  static Completer<void>? _rewardedInterstitialCompleter;
+
   static int _rewardedRetryCount = 0;
   static const int _maxRewardedRetries = 3;
   static int _totalRewardedRequestCount = 0;
@@ -26,6 +32,7 @@ class AdManager {
   static bool get isAdLoaded => _isRewardedLoaded;
   static bool get isRewardedLoaded => _isRewardedLoaded;
   static bool get isInterstitialLoaded => _isInterstitialLoaded;
+  static bool get isRewardedInterstitialLoaded => _isRewardedInterstitialLoaded;
 
   static Future<void> waitForAd() async {
     if (_isRewardedLoaded) return;
@@ -43,10 +50,18 @@ class AdManager {
     return _interstitialCompleter!.future;
   }
 
+  static Future<void> waitForRewardedInterstitial() async {
+    if (_isRewardedInterstitialLoaded) return;
+    if (_rewardedInterstitialCompleter == null || _rewardedInterstitialCompleter!.isCompleted) {
+      _rewardedInterstitialCompleter = Completer<void>();
+    }
+    return _rewardedInterstitialCompleter!.future;
+  }
+
   // Rewarded Ad Unit IDs
   static String get rewardedAdUnitId {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-1401510952827121/6858828755';
+      return 'ca-app-pub-1401510952827121/1716336801';
     } else if (Platform.isIOS) {
       return 'ca-app-pub-1401510952827121/2605414398'; // R001
     } else {
@@ -65,6 +80,17 @@ class AdManager {
     }
   }
 
+  // Rewarded Interstitial Ad Unit IDs
+  static String get rewardedInterstitialAdUnitId {
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-1401510952827121/6858828755';
+    } else if (Platform.isIOS) {
+      return 'ca-app-pub-1401510952827121/2605414398'; // Fallback to iOS Rewarded ID
+    } else {
+      throw UnsupportedError("Unsupported platform");
+    }
+  }
+
   static Future<void> initialize() async {
     if (Platform.isIOS) {
       try {
@@ -75,8 +101,9 @@ class AdManager {
       }
     }
     await MobileAds.instance.initialize();
-    loadRewardedAd(caller: 'AdManager.initialize [app_start]');
-    loadInterstitialAd();
+    // loadRewardedAd(caller: 'AdManager.initialize [app_start]');
+    // loadInterstitialAd();
+    loadRewardedInterstitialAd();
   }
 
   static Future<bool> ensureAdLoaded({
@@ -113,6 +140,17 @@ class AdManager {
       await waitForInterstitial().timeout(timeout);
     } catch (_) {}
     return _isInterstitialLoaded;
+  }
+
+  static Future<bool> ensureRewardedInterstitialLoaded({
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    if (_isRewardedInterstitialLoaded) return true;
+    loadRewardedInterstitialAd();
+    try {
+      await waitForRewardedInterstitial().timeout(timeout);
+    } catch (_) {}
+    return _isRewardedInterstitialLoaded;
   }
 
   static Future<bool> canShowAd() async {
@@ -283,7 +321,7 @@ class AdManager {
     if (_isInterstitialLoaded || _isInterstitialLoading) return;
 
     _isInterstitialLoading = true;
-    print('Interstitial ad loading started...');
+    print('[AD] Interstitial ad loading started...');
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: const AdRequest(),
@@ -292,7 +330,7 @@ class AdManager {
           _interstitialAd = ad;
           _isInterstitialLoaded = true;
           _isInterstitialLoading = false;
-          print('Interstitial ad loaded successfully');
+          print('[AD] Interstitial ad loaded successfully');
           if (_interstitialCompleter != null &&
               !_interstitialCompleter!.isCompleted) {
             _interstitialCompleter!.complete();
@@ -302,7 +340,7 @@ class AdManager {
           _interstitialAd = null;
           _isInterstitialLoaded = false;
           _isInterstitialLoading = false;
-          print('Interstitial ad failed to load: $error');
+          print('[AD] Interstitial ad failed to load: $error');
           if (_interstitialCompleter != null &&
               !_interstitialCompleter!.isCompleted) {
             _interstitialCompleter!.completeError(error);
@@ -343,6 +381,82 @@ class AdManager {
     } else {
       if (onAdFailed != null) onAdFailed();
       loadInterstitialAd();
+    }
+  }
+
+  static void loadRewardedInterstitialAd() {
+    if (_isRewardedInterstitialLoaded || _isRewardedInterstitialLoading) return;
+
+    _isRewardedInterstitialLoading = true;
+    print('[AD] Rewarded Interstitial ad loading started...');
+    RewardedInterstitialAd.load(
+      adUnitId: rewardedInterstitialAdUnitId,
+      request: const AdRequest(),
+      rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedInterstitialAd = ad;
+          _isRewardedInterstitialLoaded = true;
+          _isRewardedInterstitialLoading = false;
+          print('[AD] Rewarded Interstitial ad loaded successfully');
+          if (_rewardedInterstitialCompleter != null &&
+              !_rewardedInterstitialCompleter!.isCompleted) {
+            _rewardedInterstitialCompleter!.complete();
+          }
+        },
+        onAdFailedToLoad: (error) {
+          _rewardedInterstitialAd = null;
+          _isRewardedInterstitialLoaded = false;
+          _isRewardedInterstitialLoading = false;
+          print('[AD] Rewarded Interstitial ad failed to load: $error');
+          if (_rewardedInterstitialCompleter != null &&
+              !_rewardedInterstitialCompleter!.isCompleted) {
+            _rewardedInterstitialCompleter!.completeError(error);
+          }
+          Future.delayed(const Duration(seconds: 15), () {
+            loadRewardedInterstitialAd();
+          });
+        },
+      ),
+    );
+  }
+
+  static void showRewardedInterstitialAd({
+    required Function onRewardEarned,
+    required BuildContext context,
+    Function? onAdFailed,
+  }) {
+    if (_isRewardedInterstitialLoaded && _rewardedInterstitialAd != null) {
+      bool isRewardEarned = false;
+      _rewardedInterstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _rewardedInterstitialAd = null;
+          _isRewardedInterstitialLoaded = false;
+          print('[AD] Rewarded Interstitial ad dismissed. Reward earned: $isRewardEarned. Preloading next...');
+          if (isRewardEarned) {
+            onRewardEarned();
+          }
+          loadRewardedInterstitialAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _rewardedInterstitialAd = null;
+          _isRewardedInterstitialLoaded = false;
+          print('[AD] Rewarded Interstitial ad failed to show: $error. Preloading next...');
+          loadRewardedInterstitialAd();
+          if (onAdFailed != null) onAdFailed();
+        },
+      );
+
+      _rewardedInterstitialAd!.show(
+        onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+          isRewardEarned = true;
+          recordAdShown();
+        },
+      );
+    } else {
+      if (onAdFailed != null) onAdFailed();
+      loadRewardedInterstitialAd();
     }
   }
 }

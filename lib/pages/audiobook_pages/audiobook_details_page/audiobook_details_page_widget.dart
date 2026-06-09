@@ -1114,6 +1114,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
                                           builder: (ctx) => AdRewardDialog(
                                             bookImage: book['image']?.toString() ?? '',
                                             onWatchAd: playAudio,
+                                            adType: 'rewarded_interstitial',
                                           ),
                                         );
                                       } else {
@@ -1676,6 +1677,7 @@ class _AudiobookDetailsPageWidgetState extends State<AudiobookDetailsPageWidget>
               builder: (ctx) => AdRewardDialog(
                 bookImage: audiobook['image']?.toString() ?? '',
                 onWatchAd: playAudio,
+                adType: 'rewarded_interstitial',
               ),
             );
           } else {

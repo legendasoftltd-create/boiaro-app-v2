@@ -995,7 +995,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               builder: (ctx) => custom_widgets.AdRewardDialog(
                 bookImage: bookImage,
                 onWatchAd: performRead,
-                adType: 'interstitial',
+                adType: 'rewarded_interstitial',
               ),
             );
           } else {
@@ -1111,6 +1111,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               builder: (ctx) => custom_widgets.AdRewardDialog(
                 bookImage: bookImage,
                 onWatchAd: performPlay,
+                adType: 'rewarded_interstitial',
               ),
             );
           } else {
@@ -1419,6 +1420,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               builder: (ctx) => custom_widgets.AdRewardDialog(
                 bookImage: bookImage,
                 onWatchAd: playAudiobook,
+                adType: 'rewarded_interstitial',
               ),
             );
           } else {
@@ -3929,6 +3931,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             builder: (ctx) => custom_widgets.AdRewardDialog(
                                                               bookImage: bookImage,
                                                               onWatchAd: playAudiobook,
+                                                              adType: 'rewarded_interstitial',
                                                             ),
                                                           );
                                                         } else {
