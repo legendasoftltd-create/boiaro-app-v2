@@ -14,7 +14,7 @@
     <application
         android:name=".MainApplication"
         android:label="Boi Aro"
-        android:icon="@mipmap/launcher_icon"
+        android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
         tools:replace="android:label,android:name">
 
