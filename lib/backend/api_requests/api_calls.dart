@@ -600,6 +600,9 @@ class EbookGroup {
       GetRewardedAdStatusCall();
   static ClaimRewardedAdRewardCall claimRewardedAdRewardCall =
       ClaimRewardedAdRewardCall();
+  static GetAdPlacementsCall getAdPlacementsCall = GetAdPlacementsCall();
+  static PostAdImpressionCall postAdImpressionCall = PostAdImpressionCall();
+  static PostAdClickCall postAdClickCall = PostAdClickCall();
   static GetGamificationSummaryCall getGamificationSummaryCall =
       GetGamificationSummaryCall();
   static UpdateStreakCall updateStreakCall = UpdateStreakCall();
@@ -6019,8 +6022,8 @@ class GetAdSettingsCall {
 
 class GetActiveBannersCall {
   Future<ApiCallResponse> call({
-    String? placement = 'homepage_banner',
-    String? device = 'mobile',
+    String? placement,
+    String? device,
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
     return ApiManager.instance.makeApiCall(
@@ -6204,6 +6207,78 @@ class ValidateReferralCodeCall {
       headers: _boiaroAuthHeaders(null),
       params: {},
       bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetAdPlacementsCall {
+  Future<ApiCallResponse> call() async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetAdPlacements',
+      apiUrl: '${baseUrl}ads/placements',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(null),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class PostAdImpressionCall {
+  Future<ApiCallResponse> call({
+    required String bannerId,
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final body = json.encode({
+      'banner_id': bannerId,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'PostAdImpression',
+      apiUrl: '${baseUrl}ads/impression',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(null),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class PostAdClickCall {
+  Future<ApiCallResponse> call({
+    required String bannerId,
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final body = json.encode({
+      'banner_id': bannerId,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'PostAdClick',
+      apiUrl: '${baseUrl}ads/click',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(null),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,

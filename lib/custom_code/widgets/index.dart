@@ -9,3 +9,4 @@ export 'custom_label_country_code_edit_widget.dart'
     show CustomLabelCountryCodeEditWidget;
 export 'html_converter.dart' show HtmlConverter;
 export 'ad_reward_dialog.dart' show AdRewardDialog;
+export 'ad_banner_widget.dart' show AdBannerWidget;

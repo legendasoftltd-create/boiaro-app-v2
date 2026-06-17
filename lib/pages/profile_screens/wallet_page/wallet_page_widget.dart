@@ -454,6 +454,10 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 12),
+                              const custom_widgets.AdBannerWidget(
+                                placementKey: 'wallet_page',
+                              ),
                               const SizedBox(height: 18),
                               Text(
                                 'Transaction History',

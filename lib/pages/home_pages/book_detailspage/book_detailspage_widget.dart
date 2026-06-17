@@ -3482,6 +3482,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                       isBookFree: isBookFree,
                                     ),
                                   ),
+                                // Book details placement banner
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                                  child: custom_widgets.AdBannerWidget(
+                                    placementKey: 'book_details',
+                                  ),
+                                ),
                                 // Book Description Section
                                 Padding(
                                   padding: EdgeInsetsDirectional.fromSTEB(

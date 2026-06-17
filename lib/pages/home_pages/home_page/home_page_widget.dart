@@ -28,6 +28,7 @@ import '/pages/cart_pages/cart_page_widget.dart';
 import '/providers/cart_provider.dart';
 import '/custom_code/ad_manager.dart';
 import '/custom_code/widgets/ad_reward_dialog.dart';
+import '/custom_code/widgets/index.dart' as custom_widgets;
 
 enum HomeBookFilter { all, ebook, audiobook, hardcopy }
 
@@ -2335,6 +2336,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
               );
             },
           ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: custom_widgets.AdBannerWidget(
+              placementKey: 'homepage_banner',
+            ),
+          ),
           _buildBookStripSection(
             title: 'Editor\'s Pick',
             sectionKey: 'editors_pick',
@@ -2392,6 +2399,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
           _buildDynamicCategorySections(
             sections: categorySections,
             favouriteJson: favouriteJson,
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: custom_widgets.AdBannerWidget(
+              placementKey: 'dashboard',
+            ),
           ),
         ],
       ),
