@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '/app_state.dart';
+import '/backend/api_requests/api_calls.dart';
 
 class AdManager {
   // Rewarded Ad state
@@ -155,6 +157,22 @@ class AdManager {
 
   static Future<bool> canShowAd() async {
     try {
+      final token = FFAppState().token.trim();
+      if (token.isNotEmpty) {
+        try {
+          final res = await EbookGroup.getRewardedAdStatusCall.call(token: token);
+          if (res.statusCode == 200 && res.jsonBody != null) {
+            final canWatch = res.jsonBody['can_watch'];
+            if (canWatch is bool) {
+              print('[AD] Ad frequency check from backend: can_watch = $canWatch');
+              return canWatch;
+            }
+          }
+        } catch (e) {
+          print('[AD] Backend ad status check failed, falling back to local: $e');
+        }
+      }
+
       final prefs = await SharedPreferences.getInstance();
 
       final now = DateTime.now();
@@ -309,6 +327,28 @@ class AdManager {
         onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
           isRewardEarned = true;
           recordAdShown();
+          try {
+            final token = FFAppState().token;
+            if (token.isNotEmpty) {
+              final responseId = ad.responseInfo?.responseId ?? '';
+              EbookGroup.claimRewardedAdRewardCall.call(
+                placement: 'mobile_player',
+                adEventId: responseId,
+                token: token,
+              ).then((res) {
+                if (res.statusCode == 200) {
+                  print('[AD] Backend ad claim successful: ${res.jsonBody}');
+                  FFAppState().update(() {});
+                } else {
+                  print('[AD] Backend ad claim failed: ${res.statusCode} - ${res.jsonBody}');
+                }
+              }).catchError((err) {
+                print('[AD] Backend ad claim error: $err');
+              });
+            }
+          } catch (e) {
+            print('[AD] Failed to claim reward on backend: $e');
+          }
         },
       );
     } else {
@@ -452,6 +492,28 @@ class AdManager {
         onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
           isRewardEarned = true;
           recordAdShown();
+          try {
+            final token = FFAppState().token;
+            if (token.isNotEmpty) {
+              final responseId = ad.responseInfo?.responseId ?? '';
+              EbookGroup.claimRewardedAdRewardCall.call(
+                placement: 'mobile_player',
+                adEventId: responseId,
+                token: token,
+              ).then((res) {
+                if (res.statusCode == 200) {
+                  print('[AD] Backend ad claim successful: ${res.jsonBody}');
+                  FFAppState().update(() {});
+                } else {
+                  print('[AD] Backend ad claim failed: ${res.statusCode} - ${res.jsonBody}');
+                }
+              }).catchError((err) {
+                print('[AD] Backend ad claim error: $err');
+              });
+            }
+          } catch (e) {
+            print('[AD] Failed to claim reward on backend: $e');
+          }
         },
       );
     } else {

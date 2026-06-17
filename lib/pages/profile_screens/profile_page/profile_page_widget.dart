@@ -312,48 +312,48 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                   // ).animateOnPageLoad(animationsMap[
                                   //     'textOnPageLoadAnimation2']!),
                                   
-                                  // if (getJsonField(
-                                  //           FFAppState().userDetail,
-                                  //           r'''$.referral_code''',
-                                  //         ) !=
-                                  //         null &&
-                                  //     getJsonField(
-                                  //           FFAppState().userDetail,
-                                  //           r'''$.referral_code''',
-                                  //         )
-                                  //             .toString()
-                                  //             .trim()
-                                  //             .isNotEmpty)
-                                  //   InkWell(
-                                  //     onTap: () async {
-                                  //       final code = getJsonField(
-                                  //         FFAppState().userDetail,
-                                  //         r'''$.referral_code''',
-                                  //       ).toString();
-                                  //       await Clipboard.setData(
-                                  //           ClipboardData(text: code));
-                                  //       await actions.showCustomToastBottom(
-                                  //           'Referral code copied');
-                                  //     },
-                                  //     child: Container(
-                                  //       padding: const EdgeInsets.symmetric(
-                                  //           horizontal: 12, vertical: 8),
-                                  //       decoration: BoxDecoration(
-                                  //         color: FlutterFlowTheme.of(context)
-                                  //             .secondaryBackground,
-                                  //         borderRadius:
-                                  //             BorderRadius.circular(10),
-                                  //       ),
-                                  //       child: Text(
-                                  //         'Referral code: ${getJsonField(
-                                  //           FFAppState().userDetail,
-                                  //           r'''$.referral_code''',
-                                  //         ).toString()}',
-                                  //         style: FlutterFlowTheme.of(context)
-                                  //             .bodySmall,
-                                  //       ),
-                                  //     ),
-                                  //   ),
+                                  if (getJsonField(
+                                            FFAppState().userDetail,
+                                            r'''$.referral_code''',
+                                          ) !=
+                                          null &&
+                                      getJsonField(
+                                            FFAppState().userDetail,
+                                            r'''$.referral_code''',
+                                          )
+                                              .toString()
+                                              .trim()
+                                              .isNotEmpty)
+                                    InkWell(
+                                      onTap: () async {
+                                        final code = getJsonField(
+                                          FFAppState().userDetail,
+                                          r'''$.referral_code''',
+                                        ).toString();
+                                        await Clipboard.setData(
+                                            ClipboardData(text: code));
+                                        await actions.showCustomToastBottom(
+                                            'Referral code copied');
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryBackground,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          'Referral code: ${getJsonField(
+                                            FFAppState().userDetail,
+                                            r'''$.referral_code''',
+                                          ).toString()}',
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodySmall,
+                                        ),
+                                      ),
+                                    ),
                                 ].divide(SizedBox(height: 4.0)),
                               ),
                             ),
@@ -1352,6 +1352,102 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                               ).animateOnPageLoad(animationsMap[
                                   'containerOnPageLoadAnimation4']!),
                             ),
+                          if (FFAppState().isLogin == true)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  16.0, 0.0, 16.0, 16.0),
+                              child: InkWell(
+                                splashColor: Colors.transparent,
+                                focusColor: Colors.transparent,
+                                hoverColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
+                                onTap: () async {
+                                  _showReferAndEarnBottomSheet(context);
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryBackground,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        blurRadius: 16.0,
+                                        color: FlutterFlowTheme.of(context)
+                                            .shadowColor,
+                                        offset: const Offset(
+                                          0.0,
+                                          4.0,
+                                        ),
+                                      )
+                                    ],
+                                    borderRadius: BorderRadius.circular(12.0),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsetsDirectional.fromSTEB(
+                                        8.0, 8.0, 16.0, 8.0),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.max,
+                                      children: [
+                                        Container(
+                                          width: 48.0,
+                                          height: 48.0,
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context)
+                                                .lightGrey,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          alignment:
+                                              const AlignmentDirectional(0.0, 0.0),
+                                          child: Icon(
+                                            Icons.card_giftcard_rounded,
+                                            color: FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                            size: 24.0,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Padding(
+                                            padding:
+                                                const EdgeInsetsDirectional.fromSTEB(
+                                                    16.0, 0.0, 0.0, 0.0),
+                                            child: Text(
+                                              'Refer & Earn',
+                                              style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily:
+                                                            'SF Pro Display',
+                                                        fontSize: 17.0,
+                                                        letterSpacing: 0.0,
+                                                        lineHeight: 1.5,
+                                                      ),
+                                            ),
+                                          ),
+                                        ),
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(0.0),
+                                          child: SvgPicture.asset(
+                                            'assets/images/arrow_right_ic.svg',
+                                            width: 20.0,
+                                            height: 20.0,
+                                            colorFilter: ColorFilter.mode(
+                                              FlutterFlowTheme.of(context)
+                                                  .primaryText,
+                                              BlendMode.srcIn,
+                                            ),
+                                            fit: BoxFit.contain,
+                                            alignment: const Alignment(0.0, 0.0),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ).animateOnPageLoad(animationsMap[
+                                  'containerOnPageLoadAnimation4']!),
+                            ),
                           
                           Padding(
                             padding: EdgeInsetsDirectional.fromSTEB(
@@ -1693,6 +1789,46 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                   token: FFAppState().token,
                                                 );
 
+                                                if (_model.signOutApi?.statusCode == 401) {
+                                                  Navigator.pop(dialogContext);
+                                                  FFAppState().isLogin =
+                                                      false;
+                                                  FFAppState().token = '';
+                                                  FFAppState().refreshToken =
+                                                      '';
+                                                  FFAppState().favChange =
+                                                      false;
+                                                  FFAppState().bookId = '';
+                                                  FFAppState()
+                                                      .homePageLiveReadBook = '';
+                                                  FFAppState()
+                                                      .homePageCurrentPdfIndex = 1;
+                                                  FFAppState().searchList =
+                                                      [];
+                                                  FFAppState().userId = '';
+                                                  FFAppState().userDetail =
+                                                      null;
+                                                  FFAppState().update(() {});
+                                                  FFAppState()
+                                                      .clearGetFavouriteBookCacheCache();
+                                                  await actions
+                                                      .showCustomToastBottom(
+                                                    EbookGroup.signoutApiCall
+                                                            .message(
+                                                          (_model.signOutApi
+                                                                  ?.jsonBody ??
+                                                              ''),
+                                                        ) ??
+                                                        'Session expired. Please login again.',
+                                                  );
+                                                  if (context.mounted) {
+                                                    context.pushNamed(
+                                                        SignInPageWidget
+                                                            .routeName);
+                                                  }
+                                                  return;
+                                                }
+
                                                 if (EbookGroup.signoutApiCall
                                                         .success(
                                                       (_model.signOutApi
@@ -2000,6 +2136,377 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
           ),
         ),
       ),
+    );
+  }
+
+  void _showReferAndEarnBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Padding(
+            padding: MediaQuery.of(context).viewInsets,
+            child: Container(
+              width: double.infinity,
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).primaryBackground,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(32.0),
+                  topRight: Radius.circular(32.0),
+                ),
+              ),
+              child: Stack(
+                alignment: AlignmentDirectional(1.0, -1.0),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 0.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: Container(
+                              width: 70.0,
+                              height: 5.0,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(100.0),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Refer & Earn',
+                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 20.0,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 12),
+                        Divider(
+                          height: 1.0,
+                          color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
+                        ),
+                        Expanded(
+                          child: FutureBuilder<ApiCallResponse>(
+                            future: EbookGroup.getReferralInfoCall.call(
+                              token: FFAppState().token,
+                            ),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                              if (snapshot.hasError ||
+                                  snapshot.data == null ||
+                                  !snapshot.data!.succeeded) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline_rounded,
+                                        color: FlutterFlowTheme.of(context).error,
+                                        size: 40.0,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Failed to load referral details',
+                                        style: FlutterFlowTheme.of(context).bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              final data = snapshot.data!.jsonBody;
+                              final String refCode = getJsonField(data, r'$.referral_code')?.toString() ?? '';
+                              final int totalReferrals = castToType<int>(getJsonField(data, r'$.total_referrals')) ?? 0;
+                              final int totalEarned = castToType<int>(getJsonField(data, r'$.total_earned')) ?? 0;
+                              final int signupReward = castToType<int>(getJsonField(data, r'$.signup_reward_coins')) ?? 10;
+                              final int referredBonus = castToType<int>(getJsonField(data, r'$.referred_bonus_coins')) ?? 5;
+
+                              return ListView(
+                                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                                children: [
+                                  Center(
+                                    child: Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.card_giftcard_rounded,
+                                        color: FlutterFlowTheme.of(context).primary,
+                                        size: 44,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Center(
+                                    child: Text(
+                                      'Invite your friends & earn coins!',
+                                      textAlign: TextAlign.center,
+                                      style: FlutterFlowTheme.of(context).bodyLarge.override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18.0,
+                                          ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildRefStatCard(
+                                          context,
+                                          'Total Referrals',
+                                          totalReferrals.toString(),
+                                          Icons.people_alt_rounded,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: _buildRefStatCard(
+                                          context,
+                                          'Coins Earned',
+                                          '$totalEarned Coins',
+                                          Icons.monetization_on_rounded,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      color: FlutterFlowTheme.of(context).secondaryBackground,
+                                      borderRadius: BorderRadius.circular(16.0),
+                                      border: Border.all(
+                                        color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          'YOUR REFERRAL CODE',
+                                          style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                fontFamily: 'SF Pro Display',
+                                                color: FlutterFlowTheme.of(context).secondaryText,
+                                                letterSpacing: 1.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context).primaryBackground,
+                                            borderRadius: BorderRadius.circular(12.0),
+                                            border: Border.all(
+                                              color: FlutterFlowTheme.of(context).alternate,
+                                              style: BorderStyle.solid,
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: SelectableText(
+                                            refCode,
+                                            style: FlutterFlowTheme.of(context).bodyLarge.override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontSize: 22.0,
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 2.0,
+                                                ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        ElevatedButton.icon(
+                                          onPressed: () async {
+                                            await Clipboard.setData(ClipboardData(text: refCode));
+                                            await actions.showCustomToastBottom('Referral code copied!');
+                                          },
+                                          icon: const Icon(Icons.copy_rounded, size: 18),
+                                          label: const Text('Copy Code'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: FlutterFlowTheme.of(context).primary,
+                                            foregroundColor: FlutterFlowTheme.of(context).primaryBackground,
+                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'How it works',
+                                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16.0,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildInstructionStep(
+                                    context,
+                                    '1',
+                                    'Share your code with friends',
+                                    'Send them your unique referral code.',
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildInstructionStep(
+                                    context,
+                                    '2',
+                                    'They sign up & get coins',
+                                    'Your friend receives $signupReward coins immediately upon signup.',
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildInstructionStep(
+                                    context,
+                                    '3',
+                                    'You earn rewards',
+                                    'You receive $referredBonus coins once they register using your code.',
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(0.0, 16.0, 16.0, 0.0),
+                    child: InkWell(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 40.0,
+                        height: 40.0,
+                        decoration: BoxDecoration(
+                          color: FlutterFlowTheme.of(context).lightGrey,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: FlutterFlowTheme.of(context).primaryText,
+                          size: 22.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRefStatCard(BuildContext context, String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: FlutterFlowTheme.of(context).secondaryBackground,
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(
+          color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
+          width: 1.0,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: FlutterFlowTheme.of(context).primary, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: FlutterFlowTheme.of(context).bodyLarge.override(
+                  fontFamily: 'SF Pro Display',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18.0,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: FlutterFlowTheme.of(context).bodySmall.override(
+                  fontFamily: 'SF Pro Display',
+                  color: FlutterFlowTheme.of(context).secondaryText,
+                  fontSize: 12.0,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionStep(BuildContext context, String stepNumber, String title, String subtitle) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: FlutterFlowTheme.of(context).primary,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            stepNumber,
+            style: FlutterFlowTheme.of(context).bodySmall.override(
+                  fontFamily: 'SF Pro Display',
+                  color: FlutterFlowTheme.of(context).primaryBackground,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'SF Pro Display',
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: FlutterFlowTheme.of(context).bodySmall.override(
+                      fontFamily: 'SF Pro Display',
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                      fontSize: 12.0,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

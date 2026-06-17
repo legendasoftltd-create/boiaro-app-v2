@@ -327,7 +327,6 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                               controller: _model.textController5,
                               focusNode: _model.textFieldFocusNode5,
                               autofocus: false,
-                              textInputAction: TextInputAction.done,
                               obscureText: !_model.passwordVisibility,
                               decoration: InputDecoration(
                                 labelText: 'Password',
@@ -414,9 +413,91 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                     lineHeight: 1.5,
                                   ),
                               keyboardType: TextInputType.visiblePassword,
+                              textInputAction: TextInputAction.next,
                               cursorColor: FlutterFlowTheme.of(context).primary,
                               validator: _model.textController5Validator
                                   .asValidator(context),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 0.0),
+                            child: TextFormField(
+                              controller: _model.textController2,
+                              focusNode: _model.textFieldFocusNode2,
+                              autofocus: false,
+                              textInputAction: TextInputAction.done,
+                              obscureText: false,
+                              decoration: InputDecoration(
+                                labelText: 'Referral Code (Optional)',
+                                labelStyle: FlutterFlowTheme.of(context)
+                                    .labelMedium
+                                    .override(
+                                      fontFamily: 'SF Pro Display',
+                                      color: FlutterFlowTheme.of(context)
+                                          .primaryText,
+                                      fontSize: 14.0,
+                                      letterSpacing: 0.0,
+                                    ),
+                                hintText: 'Enter referral code',
+                                hintStyle: FlutterFlowTheme.of(context)
+                                    .labelMedium
+                                    .override(
+                                      fontFamily: 'SF Pro Display',
+                                      fontSize: 17.0,
+                                      letterSpacing: 0.0,
+                                      lineHeight: 1.5,
+                                    ),
+                                errorStyle: FlutterFlowTheme.of(context)
+                                    .bodyMedium
+                                    .override(
+                                      fontFamily: 'SF Pro Display',
+                                      color: FlutterFlowTheme.of(context).error,
+                                      fontSize: 15.0,
+                                      letterSpacing: 0.0,
+                                      lineHeight: 1.2,
+                                    ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: FlutterFlowTheme.of(context).black30,
+                                    width: 1.0,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: FlutterFlowTheme.of(context)
+                                        .primaryText,
+                                    width: 1.0,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: FlutterFlowTheme.of(context).error,
+                                    width: 1.0,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: FlutterFlowTheme.of(context).error,
+                                    width: 1.0,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                contentPadding: EdgeInsetsDirectional.fromSTEB(
+                                    16.0, 13.0, 0.0, 12.0),
+                              ),
+                              style: FlutterFlowTheme.of(context)
+                                  .bodyMedium
+                                  .override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontSize: 17.0,
+                                    letterSpacing: 0.0,
+                                    lineHeight: 1.5,
+                                  ),
+                              cursorColor: FlutterFlowTheme.of(context).primary,
                             ),
                           ),
                         ]
@@ -527,6 +608,16 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                               return;
                             }
                             if (_model.checkboxValue == true) {
+                              final referralCode = _model.textController2.text.trim();
+                              if (referralCode.isNotEmpty) {
+                                final valRes = await EbookGroup.validateReferralCodeCall.call(code: referralCode);
+                                final isValid = getJsonField(valRes.jsonBody, r'''$.valid''') == true;
+                                if (!isValid) {
+                                  final msg = getJsonField(valRes.jsonBody, r'''$.message''')?.toString() ?? 'Invalid referral code';
+                                  await actions.showCustomToastBottom(msg);
+                                  return;
+                                }
+                              }
                               _model.checkUserFunction = await EbookGroup
                                   .checkregistereduserApiCall
                                   .call(
@@ -556,6 +647,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                     password: _model.textController5.text,
                                     registrationToken: FFAppState().tokenFcm,
                                     deviceId: FFAppState().deviceId,
+                                    referralCode: referralCode,
                                   );
 
                                   if (EbookGroup.signupApiCall.success(

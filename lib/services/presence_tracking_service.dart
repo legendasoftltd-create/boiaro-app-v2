@@ -24,6 +24,8 @@ class PresenceTrackingService {
   DateTime _lastInteractionTime = DateTime.now();
   Timer? _heartbeatTimer;
   bool _isInitialized = false;
+  bool _streakUpdated = false;
+
 
   void init() {
     if (_isInitialized) return;
@@ -81,9 +83,40 @@ class PresenceTrackingService {
 
   Future<void> _sendHeartbeat() async {
     final activityType = _currentActivity.name;
-    final token = FFAppState().token;
+    final token = FFAppState().token.trim();
 
     _notifyDebug('PRESENCE HEARTBEAT SEND: type=$activityType, session=$_sessionId, bookId=$_bookId, currentPage=$_currentPage');
+
+    if (token.isEmpty) {
+      _streakUpdated = false;
+    } else {
+      if (!_streakUpdated) {
+        _streakUpdated = true;
+        EbookGroup.updateStreakCall.call(token: token).then((res) {
+          _notifyDebug('STREAK UPDATE SUCCESS: status=${res.statusCode}');
+        }).catchError((err) {
+          _streakUpdated = false;
+          _notifyDebug('STREAK UPDATE ERROR: $err');
+        });
+      }
+
+      if (_bookId != null && _bookId!.isNotEmpty) {
+        if (_currentActivity == PresenceActivity.reading ||
+            _currentActivity == PresenceActivity.listening) {
+          final format = _currentActivity == PresenceActivity.listening ? 'audiobook' : 'ebook';
+          EbookGroup.logConsumptionTimeCall.call(
+            bookId: _bookId,
+            format: format,
+            seconds: 30,
+            token: token,
+          ).then((res) {
+            _notifyDebug('CONSUMPTION TIME SUCCESS: status=${res.statusCode}');
+          }).catchError((err) {
+            _notifyDebug('CONSUMPTION TIME ERROR: $err');
+          });
+        }
+      }
+    }
 
     try {
       final res = await EbookGroup.presenceHeartbeatApiCall.call(

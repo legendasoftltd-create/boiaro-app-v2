@@ -10,10 +10,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:video_player/video_player.dart';
-import 'package:just_audio/just_audio.dart' show LoopMode, AudioPlayer;
 import 'dart:async';
 import 'audio_player_page_model.dart';
 export 'audio_player_page_model.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '/backend/api_requests/api_calls.dart';
+import '/pages/cart_pages/payment_screen.dart';
+import '/pages/cart_pages/make_payment.dart';
+import '/pages/login_pages/sign_in_page/sign_in_page_widget.dart';
+import '/custom_code/actions/index.dart' as actions;
 
 
 class AudioPlayerPageWidget extends StatefulWidget {
@@ -290,7 +296,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       if (chapter is Map<String, dynamic>) {
         return {
           'title': chapter['title'] ?? chapter['name'] ?? 'Chapter',
-          'file': chapter['file'] ?? chapter['audio'],
+          'file': chapter['file'] ?? chapter['audio'] ?? chapter['audio_url'] ?? chapter['audioUrl'],
           'track_number': chapter['track_number'],
           'isLocked': chapter['isLocked'] ?? chapter['is_locked'] ?? false,
           'isPreview': chapter['isPreview'] ?? chapter['is_preview'] ?? false,
@@ -939,22 +945,191 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
               final chapter = _chapters[index];
               final title = chapter['title'] ?? 'Chapter ${index + 1}';
               final isCurrent = index == _currentIndex;
+              final isLocked = chapter['isLocked'] == true;
               return ListTile(
-                title: Text(title.toString()),
+                leading: isLocked
+                    ? Icon(Icons.lock_rounded,
+                        size: 18,
+                        color: FlutterFlowTheme.of(context).secondaryText)
+                    : null,
+                title: Text(
+                  title.toString(),
+                  style: TextStyle(
+                    color: isLocked
+                        ? FlutterFlowTheme.of(context).secondaryText
+                        : FlutterFlowTheme.of(context).primaryText,
+                  ),
+                ),
                 trailing: isCurrent
                     ? Icon(Icons.play_arrow_rounded,
                         color: FlutterFlowTheme.of(context).primary)
                     : null,
-                onTap: () {
-                  Navigator.pop(context);
-                  _playChapterAt(index);
-                },
+                onTap: isLocked
+                    ? () async {
+                        Navigator.pop(context);
+                        await _unlockChapter(chapter);
+                      }
+                    : () {
+                        Navigator.pop(context);
+                        _playChapterAt(index);
+                      },
               );
             },
           ),
         );
       },
     );
+  }
+
+  Future<void> _unlockChapter(Map<String, dynamic> chapter) async {
+    if (!FFAppState().isLogin) {
+      context.pushNamed(SignInPageWidget.routeName);
+      return;
+    }
+    final raw = chapter['raw'] ?? chapter;
+    final trackId = raw['id'] ?? raw['_id'] ?? '';
+    final coinPrice = (raw['chapter_price_coins'] as num?)?.toInt() ?? 0;
+    final bdtPrice = (raw['chapter_price_bdt'] as num?)?.toDouble() ?? 0.0;
+    final title = chapter['title'] ?? 'Chapter';
+    final bookId = _bookId();
+
+    if (trackId.toString().isEmpty) {
+      await actions.showCustomToastBottom('Unable to unlock: invalid chapter ID');
+      return;
+    }
+
+    final option = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Unlock $title'),
+        content: Text(
+          'Unlock this chapter using coins or online payment.\n\n'
+          '${coinPrice > 0 ? "• Coins: $coinPrice\n" : ""}'
+          '${bdtPrice > 0 ? "• Cash: ৳$bdtPrice\n" : ""}'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('cancel'),
+            child: const Text('Cancel'),
+          ),
+          if (coinPrice > 0)
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop('coins'),
+              child: const Text('Use Coins'),
+            ),
+          if (bdtPrice > 0)
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop('payment'),
+              child: const Text('Pay ৳'),
+            ),
+        ],
+      ),
+    );
+
+    if (option == 'coins') {
+      final balance = await _walletBalance();
+      if (balance == null || balance < coinPrice) {
+        await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');
+        return;
+      }
+      final res = await EbookGroup.unlockChapterWithCoinsCall.call(
+        trackId: trackId.toString(),
+        token: FFAppState().token,
+      );
+      if (res.statusCode == 200 || res.succeeded) {
+        await actions.showCustomToastBottom('Chapter unlocked successfully!');
+        await _refreshChapters();
+      } else {
+        final msg = getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock failed';
+        await actions.showCustomToastBottom(msg.toString());
+      }
+    } else if (option == 'payment') {
+      final res = await EbookGroup.initiateChapterPaymentCall.call(
+        trackId: trackId.toString(),
+        bookId: bookId,
+        token: FFAppState().token,
+      );
+      if (res.succeeded && res.jsonBody != null) {
+        final gatewayUrl = getJsonField(res.jsonBody, r'''$.gateway_url''')?.toString() ??
+            getJsonField(res.jsonBody, r'''$.GatewayPageURL''')?.toString() ?? '';
+        final purchaseId = getJsonField(res.jsonBody, r'''$.purchase_id''')?.toString() ??
+            getJsonField(res.jsonBody, r'''$.order_id''')?.toString() ?? '';
+        if (gatewayUrl.isNotEmpty) {
+          final success = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentWebView(
+                url: gatewayUrl,
+                orderId: purchaseId,
+                bookIds: [bookId],
+                purchasedFormats: ['audiobook'],
+                checkoutController: CheckoutController(
+                  jwtToken: FFAppState().token,
+                  userId: FFAppState().userId,
+                ),
+              ),
+            ),
+          );
+          if (success == true || success == null) {
+            await _refreshChapters();
+          }
+        } else {
+          await actions.showCustomToastBottom('Failed to get gateway URL');
+        }
+      } else {
+        await actions.showCustomToastBottom('Failed to initiate payment');
+      }
+    }
+  }
+
+  Future<void> _refreshChapters() async {
+    final bookId = _bookId();
+    if (bookId.isEmpty) return;
+    try {
+      final uri =
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/chapters');
+      final res = await http.get(
+        uri,
+        headers: {
+          'apikey': FFAppConstants.supabaseAnonApiKey,
+          'Content-Type': 'application/json',
+          if (FFAppState().token.trim().isNotEmpty)
+            'Authorization': 'Bearer ${FFAppState().token}',
+        },
+      );
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map && decoded['chapters'] is List) {
+          setState(() {
+            _chapters = _normalizeChapters(decoded['chapters']);
+            widget.audiobook['chapters'] = decoded['chapters'];
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<int?> _walletBalance() async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return null;
+    try {
+      final uri = Uri.parse('${FFAppConstants.mobileApiBaseUrl}/wallet');
+      final res = await http.get(
+        uri,
+        headers: {
+          'apikey': FFAppConstants.supabaseAnonApiKey,
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${FFAppState().token}',
+        },
+      );
+      if (res.statusCode != 200) return null;
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) return null;
+      final balance = decoded['balance'];
+      if (balance is num) return balance.toInt();
+      return int.tryParse(balance?.toString() ?? '');
+    } catch (_) {
+      return null;
+    }
   }
 
   void _showSleepTimerSheet() {

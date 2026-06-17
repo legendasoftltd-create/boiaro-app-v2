@@ -16,6 +16,36 @@ class WalletPageWidget extends StatefulWidget {
 }
 
 class _WalletPageWidgetState extends State<WalletPageWidget> {
+  int _remainingAds = 0;
+  int _coinsPerAd = 5;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAdStatus();
+    });
+  }
+
+  Future<void> _loadAdStatus() async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
+    try {
+      final res = await EbookGroup.getRewardedAdStatusCall.call(
+        token: FFAppState().token,
+      );
+      if (res.statusCode == 200 && res.jsonBody != null) {
+        final remaining = getJsonField(res.jsonBody, r'''$.remaining''') ?? getJsonField(res.jsonBody, r'''$.data.remaining''');
+        final coinPerAd = getJsonField(res.jsonBody, r'''$.coin_per_ad''') ?? getJsonField(res.jsonBody, r'''$.data.coin_per_ad''');
+        if (mounted) {
+          setState(() {
+            if (remaining is num) _remainingAds = remaining.toInt();
+            if (coinPerAd is num) _coinsPerAd = coinPerAd.toInt();
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> _claimDaily() async {
     final res = await EbookGroup.walletClaimDailyApiCall.call(
       token: FFAppState().token,
@@ -58,6 +88,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
       context: context,
       onRewardEarned: () async {
         await _claimDaily();
+        await _loadAdStatus();
       },
       onAdFailed: () async {
         await actions.showCustomToastBottom('Failed to show ad. Please try again.');
@@ -86,6 +117,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
       context: context,
       onRewardEarned: () async {
         await _claimAd();
+        await _loadAdStatus();
       },
       onAdFailed: () async {
         await actions.showCustomToastBottom('Failed to show ad. Please try again.');
@@ -114,7 +146,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
               ),
               Expanded(
                 child: FutureBuilder<ApiCallResponse>(
-                  future: EbookGroup.walletApiCall.call(
+                  future: EbookGroup.getGamificationSummaryCall.call(
                     token: FFAppState().token,
                   ),
                   builder: (context, walletSnap) {
@@ -126,11 +158,18 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                       );
                     }
                     final walletResp = walletSnap.data!;
-                    final balance = EbookGroup.walletApiCall.balance(walletResp.jsonBody) ?? 0;
-                    final totalEarned =
-                        EbookGroup.walletApiCall.totalEarned(walletResp.jsonBody) ?? 0;
-                    final totalSpent =
-                        EbookGroup.walletApiCall.totalSpent(walletResp.jsonBody) ?? 0;
+                    final balance = getJsonField(walletResp.jsonBody, r'''$.wallet.balance''') ??
+                        getJsonField(walletResp.jsonBody, r'''$.data.wallet.balance''') ?? 0;
+                    final totalEarned = getJsonField(walletResp.jsonBody, r'''$.wallet.total_earned''') ??
+                        getJsonField(walletResp.jsonBody, r'''$.data.wallet.total_earned''') ?? 0;
+                    final totalSpent = getJsonField(walletResp.jsonBody, r'''$.wallet.total_spent''') ??
+                        getJsonField(walletResp.jsonBody, r'''$.data.wallet.total_spent''') ?? 0;
+                    final streakCurrent = getJsonField(walletResp.jsonBody, r'''$.streak.current''') ??
+                        getJsonField(walletResp.jsonBody, r'''$.data.streak.current''') ?? 0;
+                    final streakBest = getJsonField(walletResp.jsonBody, r'''$.streak.best''') ??
+                        getJsonField(walletResp.jsonBody, r'''$.data.streak.best''') ?? 0;
+                    final totalPoints = getJsonField(walletResp.jsonBody, r'''$.total_points''') ??
+                        getJsonField(walletResp.jsonBody, r'''$.data.total_points''') ?? 0;
                     return FutureBuilder<ApiCallResponse>(
                       future: EbookGroup.walletTransactionsApiCall.call(
                         token: FFAppState().token,
@@ -247,6 +286,90 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                 ),
                               ),
                               const SizedBox(height: 12),
+                              // Daily Streak & Points Card
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 22),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '$streakCurrent Days',
+                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                      fontFamily: 'SF Pro Display',
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Current Streak (Best: $streakBest)',
+                                            textAlign: TextAlign.center,
+                                            style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  color: FlutterFlowTheme.of(context).secondaryText,
+                                                  fontSize: 11,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      height: 30,
+                                      color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(Icons.stars_rounded, color: Colors.purple, size: 22),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '$totalPoints Pts',
+                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                      fontFamily: 'SF Pro Display',
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Gamification Points',
+                                            textAlign: TextAlign.center,
+                                            style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  color: FlutterFlowTheme.of(context).secondaryText,
+                                                  fontSize: 11,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
                               // Compact Action Row
                               Row(
                                 children: [
@@ -283,34 +406,50 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
-                                    child: InkWell(
-                                      onTap: _handleClaimAd,
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Container(
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: FlutterFlowTheme.of(context).secondaryBackground,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        InkWell(
+                                          onTap: _handleClaimAd,
                                           borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
-                                            width: 1,
+                                          child: Container(
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: FlutterFlowTheme.of(context).secondaryBackground,
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(Icons.play_circle_fill_rounded, color: Colors.orangeAccent, size: 18),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'Watch Ad (+$_coinsPerAd)',
+                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                        fontFamily: 'SF Pro Display',
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.play_circle_fill_rounded, color: Colors.orangeAccent, size: 18),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'Watch Ad',
-                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                    fontFamily: 'SF Pro Display',
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                        if (FFAppState().isLogin) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '$_remainingAds left today',
+                                            style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  color: FlutterFlowTheme.of(context).secondaryText,
+                                                  fontSize: 11,
+                                                ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
                                 ],

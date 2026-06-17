@@ -79,6 +79,24 @@ class _HomePageWidgetState extends State<HomePageWidget>
         headers: _apiHeaders(authRequired: authRequired),
         body: jsonEncode(body),
       );
+      if (res.statusCode >= 400 && res.statusCode < 500) {
+        FFAppState().isLogin = false;
+        FFAppState().token = '';
+        FFAppState().refreshToken = '';
+        FFAppState().favChange = false;
+        FFAppState().bookId = '';
+        FFAppState().homePageLiveReadBook = '';
+        FFAppState().homePageCurrentPdfIndex = 1;
+        FFAppState().searchList = [];
+        FFAppState().userId = '';
+        FFAppState().userDetail = null;
+        FFAppState().update(() {});
+        FFAppState().clearGetFavouriteBookCacheCache();
+        if (mounted) {
+          context.pushNamed(SignInPageWidget.routeName);
+        }
+        return null;
+      }
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) return decoded;
     } catch (_) {}
@@ -103,15 +121,15 @@ class _HomePageWidgetState extends State<HomePageWidget>
   Future<List<Map<String, dynamic>>> _fetchAudioTracks(String bookId) async {
     try {
       final uri =
-          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/chapters');
       final res = await http.get(
         uri,
-        headers: _apiHeaders(authRequired: false),
+        headers: _apiHeaders(authRequired: FFAppState().isLogin),
       );
       if (res.statusCode != 200) return const [];
       final decoded = jsonDecode(res.body);
       if (decoded is! Map) return const [];
-      final raw = decoded['tracks'];
+      final raw = decoded['chapters'];
       if (raw is! List) return const [];
       return raw
           .whereType<Map>()
@@ -180,6 +198,24 @@ class _HomePageWidgetState extends State<HomePageWidget>
         headers: _apiHeaders(authRequired: true),
         body: jsonEncode({'book_id': bookId}),
       );
+      if (res.statusCode >= 400 && res.statusCode < 500) {
+        FFAppState().isLogin = false;
+        FFAppState().token = '';
+        FFAppState().refreshToken = '';
+        FFAppState().favChange = false;
+        FFAppState().bookId = '';
+        FFAppState().homePageLiveReadBook = '';
+        FFAppState().homePageCurrentPdfIndex = 1;
+        FFAppState().searchList = [];
+        FFAppState().userId = '';
+        FFAppState().userDetail = null;
+        FFAppState().update(() {});
+        FFAppState().clearGetFavouriteBookCacheCache();
+        if (mounted) {
+          context.pushNamed(SignInPageWidget.routeName);
+        }
+        return null;
+      }
       final decoded = jsonDecode(res.body);
       final body = decoded is Map<String, dynamic> ? decoded : null;
       final url = _extractUrlFromBody(body);
@@ -197,6 +233,24 @@ class _HomePageWidgetState extends State<HomePageWidget>
         headers: _apiHeaders(authRequired: false),
         body: jsonEncode({'book_id': bookId}),
       );
+      if (guestRes.statusCode >= 400 && guestRes.statusCode < 500) {
+        FFAppState().isLogin = false;
+        FFAppState().token = '';
+        FFAppState().refreshToken = '';
+        FFAppState().favChange = false;
+        FFAppState().bookId = '';
+        FFAppState().homePageLiveReadBook = '';
+        FFAppState().homePageCurrentPdfIndex = 1;
+        FFAppState().searchList = [];
+        FFAppState().userId = '';
+        FFAppState().userDetail = null;
+        FFAppState().update(() {});
+        FFAppState().clearGetFavouriteBookCacheCache();
+        if (mounted) {
+          context.pushNamed(SignInPageWidget.routeName);
+        }
+        return null;
+      }
       final decoded = jsonDecode(guestRes.body);
       final guestBody = decoded is Map<String, dynamic> ? decoded : null;
       final guestUrl = _extractUrlFromBody(guestBody);
@@ -281,43 +335,40 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
       for (var i = 0; i < effectiveTracks.length; i++) {
         final track = effectiveTracks[i];
-        final isTrackPreview = track['is_preview'] == true || i < previewCount;
+        final isFree = track['is_free'] == true;
+        final isUnlocked = track['is_unlocked'] == true;
+        final isLocked = !isFree && !isUnlocked;
+        
         final trackNumber = (track['track_number'] is num)
             ? (track['track_number'] as num).toInt()
             : (i + 1);
-        String? signedUrl;
-        if (urlsMap.isNotEmpty) {
-          final candidate = urlsMap['$trackNumber'];
-          if (candidate is Map) {
-            signedUrl = candidate['signed_url']?.toString();
-          }
-        }
-        signedUrl ??= track['signed_url']?.toString();
-        signedUrl ??= await _fetchAudioTrackSignedUrl(
-          bookId: bookId,
-          trackNumber: trackNumber,
-          authRequired: hasAccess && FFAppState().isLogin,
-        );
+        String? signedUrl = track['audio_url']?.toString();
         if (signedUrl == null || signedUrl.isEmpty) {
+          if (urlsMap.isNotEmpty) {
+            final candidate = urlsMap['$trackNumber'];
+            if (candidate is Map) {
+              signedUrl = candidate['signed_url']?.toString();
+            }
+          }
+          signedUrl ??= track['signed_url']?.toString();
+          signedUrl ??= await _fetchAudioTrackSignedUrl(
+            bookId: bookId,
+            trackNumber: trackNumber,
+            authRequired: !isLocked && FFAppState().isLogin,
+          );
+        }
+        if ((signedUrl == null || signedUrl.isEmpty) && !isLocked) {
           continue;
         }
-        if (!hasAccess && !isTrackPreview) {
-          continue;
-        }
-        final isPartialPreviewTrack =
-            !hasAccess && hasPartialPreviewTrack && i == (previewCount - 1);
-        final previewFraction = isPartialPreviewTrack
-            ? (rawPreviewTracks - fullPreviewTracks).clamp(0.0, 1.0)
-            : 1.0;
 
         chapters.add({
           'title': track['title']?.toString() ?? 'Track $trackNumber',
-          'file': signedUrl,
+          'file': signedUrl ?? '',
           'track_number': trackNumber,
           'duration': track['duration']?.toString() ?? '',
-          'isLocked': hasAccess ? false : !isTrackPreview,
-          'isPreview': !hasAccess ? true : (track['is_preview'] == true),
-          'previewFraction': previewFraction,
+          'isLocked': isLocked,
+          'isPreview': isFree,
+          'previewFraction': 1.0,
         });
       }
 

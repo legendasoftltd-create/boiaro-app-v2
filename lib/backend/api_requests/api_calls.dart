@@ -586,6 +586,28 @@ class EbookGroup {
       PresenceHeartbeatApiCall();
   static RegisterBookReadApiCall registerBookReadApiCall =
       RegisterBookReadApiCall();
+  static GetBookChaptersApiCall getBookChaptersApiCall =
+      GetBookChaptersApiCall();
+  static UnlockChapterWithCoinsCall unlockChapterWithCoinsCall =
+      UnlockChapterWithCoinsCall();
+  static InitiateChapterPaymentCall initiateChapterPaymentCall =
+      InitiateChapterPaymentCall();
+  static PollPaymentStatusCall pollPaymentStatusCall =
+      PollPaymentStatusCall();
+  static GetAdSettingsCall getAdSettingsCall = GetAdSettingsCall();
+  static GetActiveBannersCall getActiveBannersCall = GetActiveBannersCall();
+  static GetRewardedAdStatusCall getRewardedAdStatusCall =
+      GetRewardedAdStatusCall();
+  static ClaimRewardedAdRewardCall claimRewardedAdRewardCall =
+      ClaimRewardedAdRewardCall();
+  static GetGamificationSummaryCall getGamificationSummaryCall =
+      GetGamificationSummaryCall();
+  static UpdateStreakCall updateStreakCall = UpdateStreakCall();
+  static LogConsumptionTimeCall logConsumptionTimeCall =
+      LogConsumptionTimeCall();
+  static GetReferralInfoCall getReferralInfoCall = GetReferralInfoCall();
+  static ValidateReferralCodeCall validateReferralCodeCall =
+      ValidateReferralCodeCall();
 }
 
 class PhoneSendOtpApiCall {
@@ -1361,6 +1383,7 @@ class SignupApiCall {
     String? registrationToken = '',
     String? deviceId = '',
     String? token = '',
+    String? referralCode = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
     final displayName = [
@@ -1377,6 +1400,7 @@ class SignupApiCall {
         'email': email,
         'password': password,
         if (displayName.isNotEmpty) 'display_name': displayName,
+        if (referralCode != null && referralCode.isNotEmpty) 'referral_code': referralCode,
       }),
       bodyType: BodyType.JSON,
       returnBody: true,
@@ -5864,4 +5888,328 @@ class RegisterBookReadApiCall {
 
   int? totalReads(dynamic response) =>
       castToType<int>(getJsonField(response, r'''$.total_reads'''));
+}
+
+class GetBookChaptersApiCall {
+  Future<ApiCallResponse> call({
+    String? bookId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final bid = Uri.encodeComponent((bookId ?? '').trim());
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetBookChapters',
+      apiUrl: '${baseUrl}books/$bid/chapters',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class UnlockChapterWithCoinsCall {
+  Future<ApiCallResponse> call({
+    String? trackId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final tid = Uri.encodeComponent((trackId ?? '').trim());
+    return ApiManager.instance.makeApiCall(
+      callName: 'UnlockChapterWithCoins',
+      apiUrl: '${baseUrl}chapters/$tid/unlock-coin',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class InitiateChapterPaymentCall {
+  Future<ApiCallResponse> call({
+    String? trackId = '',
+    String? bookId = '',
+    String? gateway = 'sslcommerz', // sslcommerz | bkash
+    String? successRedirect = 'myapp://payment/success',
+    String? failRedirect = 'myapp://payment/failed',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final tid = Uri.encodeComponent((trackId ?? '').trim());
+    final body = json.encode({
+      'book_id': bookId,
+      'gateway': gateway,
+      'success_redirect': successRedirect,
+      'fail_redirect': failRedirect,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'InitiateChapterPayment',
+      apiUrl: '${baseUrl}chapters/$tid/initiate-payment',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class PollPaymentStatusCall {
+  Future<ApiCallResponse> call({
+    String? purchaseId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final pid = Uri.encodeComponent((purchaseId ?? '').trim());
+    return ApiManager.instance.makeApiCall(
+      callName: 'PollPaymentStatus',
+      apiUrl: '${baseUrl}chapters/payment-status/$pid',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetAdSettingsCall {
+  Future<ApiCallResponse> call() async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetAdSettings',
+      apiUrl: '${baseUrl}ads/settings',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(null),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetActiveBannersCall {
+  Future<ApiCallResponse> call({
+    String? placement = 'homepage_banner',
+    String? device = 'mobile',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetActiveBanners',
+      apiUrl: '${baseUrl}ads/banners',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(null),
+      params: {
+        'placement': placement ?? '',
+        'device': device ?? '',
+      },
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetRewardedAdStatusCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetRewardedAdStatus',
+      apiUrl: '${baseUrl}ads/rewarded/status',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ClaimRewardedAdRewardCall {
+  Future<ApiCallResponse> call({
+    String? placement = 'mobile_player',
+    String? adEventId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final body = json.encode({
+      'placement': placement,
+      if (adEventId != null && adEventId.isNotEmpty) 'ad_event_id': adEventId,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'ClaimRewardedAdReward',
+      apiUrl: '${baseUrl}ads/rewarded/claim',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetGamificationSummaryCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetGamificationSummary',
+      apiUrl: '${baseUrl}gamification/summary',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class UpdateStreakCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'UpdateStreak',
+      apiUrl: '${baseUrl}gamification/streak/update',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class LogConsumptionTimeCall {
+  Future<ApiCallResponse> call({
+    String? bookId = '',
+    String? format = 'audiobook',
+    int seconds = 60,
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final body = json.encode({
+      'book_id': bookId,
+      'format': format,
+      'seconds': seconds,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'LogConsumptionTime',
+      apiUrl: '${baseUrl}gamification/consumption-time',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetReferralInfoCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetReferralInfo',
+      apiUrl: '${baseUrl}referral/info',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ValidateReferralCodeCall {
+  Future<ApiCallResponse> call({
+    String? code = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final c = Uri.encodeComponent((code ?? '').trim());
+    return ApiManager.instance.makeApiCall(
+      callName: 'ValidateReferralCode',
+      apiUrl: '${baseUrl}referral/validate/$c',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(null),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
 }

@@ -57,7 +57,7 @@ void main() async {
         providers: [
           ChangeNotifierProvider(create: (context) => appState),
           ChangeNotifierProvider(create: (context) => CartProvider()),
-          ChangeNotifierProvider(create: (context) => PdfViewerProvider()),
+          // ChangeNotifierProvider(create: (context) => PdfViewerProvider()),
         ],
         child: MyApp(),
       ),

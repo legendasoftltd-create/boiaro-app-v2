@@ -1,759 +1,759 @@
-import 'dart:developer';
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:epubx/epubx.dart' as epubx;
-import 'package:http/http.dart' as http;
-import '/backend/backend.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
-import '/flutter_flow/flutter_flow_util.dart';
-import '/providers/pdf_viewer_provider.dart';
-import 'package:a_i_ebook_app/custom_code/extensions/custom_text_selection_controls.dart';
-import 'package:a_i_ebook_app/custom_code/widgets/html_parser_widget.dart';
-import 'package:a_i_ebook_app/custom_code/widgets/pdf_viewer_helpers.dart';
-import 'package:a_i_ebook_app/custom_code/widgets/pdf_viewer_text_operations.dart';
+// import 'dart:developer';
+// import 'dart:io';
+// import 'package:flutter/material.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter/rendering.dart';
+// import 'package:flutter/services.dart';
+// import 'package:provider/provider.dart';
+// import 'package:epubx/epubx.dart' as epubx;
+// import 'package:http/http.dart' as http;
+// import '/backend/backend.dart';
+// import '/flutter_flow/flutter_flow_theme.dart';
+// import '/flutter_flow/flutter_flow_util.dart';
+// import '/providers/pdf_viewer_provider.dart';
+// import 'package:a_i_ebook_app/custom_code/extensions/custom_text_selection_controls.dart';
+// import 'package:a_i_ebook_app/custom_code/widgets/html_parser_widget.dart';
+// import 'package:a_i_ebook_app/custom_code/widgets/pdf_viewer_helpers.dart';
+// import 'package:a_i_ebook_app/custom_code/widgets/pdf_viewer_text_operations.dart';
 
-/// EPUB Reader Widget and related methods
-class EpubReaderWidget {
-  /// Load EPUB book from file path
-  static Future<void> loadEpubBook(
-    String? filePath,
-    PdfViewerProvider provider,
-    BuildContext context,
-    Function loadEpubChapter, {
-    int initialChapterIndex = 0,
-  }) async {
-    if (filePath == null || filePath.isEmpty) {
-      log('Invalid EPUB path');
-      return;
-    }
+// /// EPUB Reader Widget and related methods
+// class EpubReaderWidget {
+//   /// Load EPUB book from file path
+//   static Future<void> loadEpubBook(
+//     String? filePath,
+//     PdfViewerProvider provider,
+//     BuildContext context,
+//     Function loadEpubChapter, {
+//     int initialChapterIndex = 0,
+//   }) async {
+//     if (filePath == null || filePath.isEmpty) {
+//       log('Invalid EPUB path');
+//       return;
+//     }
 
-    provider.setLoadingEpub(true);
-    try {
-      // Step 1: Load file bytes on main thread (required for rootBundle/http)
-      List<int> bytes;
+//     provider.setLoadingEpub(true);
+//     try {
+//       // Step 1: Load file bytes on main thread (required for rootBundle/http)
+//       List<int> bytes;
       
-      if (filePath.startsWith('http')) {
-        // Add a cache-busting param so CDN/proxy caches never serve a stale epub
-        // after the backend file has been updated.
-        // EXCEPTION: pre-signed URLs (AWS S3 etc.) have a cryptographic signature
-        // over their exact query params — adding extra params causes a 403 error.
-        // Pre-signed URLs are already unique per-request, so no busting needed.
-        final uri = Uri.parse(filePath);
-        final isPresigned = uri.queryParameters.containsKey('X-Amz-Signature') ||
-            uri.queryParameters.containsKey('Signature');
-        final fetchUri = isPresigned
-            ? uri
-            : uri.replace(queryParameters: {
-                ...uri.queryParameters,
-                '_cb': DateTime.now().millisecondsSinceEpoch.toString(),
-              });
-        final response = await http.get(fetchUri);
-        bytes = response.bodyBytes;
-      } else if (filePath.startsWith('assets/')) {
-        final data = await rootBundle.load(filePath);
-        bytes = data.buffer.asUint8List();
-      } else {
-        final file = File(filePath);
-        bytes = await file.readAsBytes();
-      }
+//       if (filePath.startsWith('http')) {
+//         // Add a cache-busting param so CDN/proxy caches never serve a stale epub
+//         // after the backend file has been updated.
+//         // EXCEPTION: pre-signed URLs (AWS S3 etc.) have a cryptographic signature
+//         // over their exact query params — adding extra params causes a 403 error.
+//         // Pre-signed URLs are already unique per-request, so no busting needed.
+//         final uri = Uri.parse(filePath);
+//         final isPresigned = uri.queryParameters.containsKey('X-Amz-Signature') ||
+//             uri.queryParameters.containsKey('Signature');
+//         final fetchUri = isPresigned
+//             ? uri
+//             : uri.replace(queryParameters: {
+//                 ...uri.queryParameters,
+//                 '_cb': DateTime.now().millisecondsSinceEpoch.toString(),
+//               });
+//         final response = await http.get(fetchUri);
+//         bytes = response.bodyBytes;
+//       } else if (filePath.startsWith('assets/')) {
+//         final data = await rootBundle.load(filePath);
+//         bytes = data.buffer.asUint8List();
+//       } else {
+//         final file = File(filePath);
+//         bytes = await file.readAsBytes();
+//       }
 
-      // Step 2: Parse EPUB in background isolate (this is the heavy CPU work)
-      // This prevents ANR when parsing large EPUB files
-      final epubBook = await compute(_parseEpubInIsolate, bytes);
+//       // Step 2: Parse EPUB in background isolate (this is the heavy CPU work)
+//       // This prevents ANR when parsing large EPUB files
+//       final epubBook = await compute(_parseEpubInIsolate, bytes);
       
-      provider.setEpubBook(epubBook);
+//       provider.setEpubBook(epubBook);
       
-      // Step 3: Extract chapters (also heavy, do in isolate)
-      final chapters = await compute(_getChaptersInIsolate, epubBook);
-      provider.setEpubChapters(chapters);
+//       // Step 3: Extract chapters (also heavy, do in isolate)
+//       final chapters = await compute(_getChaptersInIsolate, epubBook);
+//       provider.setEpubChapters(chapters);
 
-      if (chapters.isNotEmpty) {
-        final safeInitialIndex =
-            initialChapterIndex.clamp(0, chapters.length - 1);
-        loadEpubChapter(safeInitialIndex);
-      }
-    } catch (e, stacktrace) {
-      log('Error loading EPUB: $e stacktrace $stacktrace');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading EPUB file: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (context.mounted) provider.setLoadingEpub(false);
-    }
-  }
+//       if (chapters.isNotEmpty) {
+//         final safeInitialIndex =
+//             initialChapterIndex.clamp(0, chapters.length - 1);
+//         loadEpubChapter(safeInitialIndex);
+//       }
+//     } catch (e, stacktrace) {
+//       log('Error loading EPUB: $e stacktrace $stacktrace');
+//       if (context.mounted) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(
+//             content: Text('Error loading EPUB file: $e'),
+//             backgroundColor: Colors.red,
+//           ),
+//         );
+//       }
+//     } finally {
+//       if (context.mounted) provider.setLoadingEpub(false);
+//     }
+//   }
 
-  /// Parse EPUB bytes in background isolate (ANR protection)
-  /// This is the CPU-intensive operation that blocks the main thread
-  static Future<epubx.EpubBook> _parseEpubInIsolate(List<int> bytes) async {
-    return await epubx.EpubReader.readBook(bytes);
-  }
+//   /// Parse EPUB bytes in background isolate (ANR protection)
+//   /// This is the CPU-intensive operation that blocks the main thread
+//   static Future<epubx.EpubBook> _parseEpubInIsolate(List<int> bytes) async {
+//     return await epubx.EpubReader.readBook(bytes);
+//   }
 
-  /// Extract chapters in background isolate (ANR protection)
-  static List<epubx.EpubChapter> _getChaptersInIsolate(epubx.EpubBook epubBook) {
-    return getChaptersFromSpine(epubBook);
-  }
+//   /// Extract chapters in background isolate (ANR protection)
+//   static List<epubx.EpubChapter> _getChaptersInIsolate(epubx.EpubBook epubBook) {
+//     return getChaptersFromSpine(epubBook);
+//   }
 
-  /// Apply highlights in background isolate (ANR protection)
-  /// This prevents the UI thread from freezing during highlight processing
-  static String _applyHighlightsInIsolate(Map<String, dynamic> params) {
-    final content = params['content'] as String;
-    final highlightDataList = params['highlights'] as List<dynamic>;
+//   /// Apply highlights in background isolate (ANR protection)
+//   /// This prevents the UI thread from freezing during highlight processing
+//   static String _applyHighlightsInIsolate(Map<String, dynamic> params) {
+//     final content = params['content'] as String;
+//     final highlightDataList = params['highlights'] as List<dynamic>;
     
-    // Convert back to a simple format we can work with
-    final highlights = highlightDataList.map((data) {
-      final map = data as Map<String, dynamic>;
-      return {
-        'id': map['id'] as String,
-        'text': map['text'] as String,
-        'startPosition': map['startPosition'] as int,
-        'endPosition': map['endPosition'] as int,
-      };
-    }).toList();
+//     // Convert back to a simple format we can work with
+//     final highlights = highlightDataList.map((data) {
+//       final map = data as Map<String, dynamic>;
+//       return {
+//         'id': map['id'] as String,
+//         'text': map['text'] as String,
+//         'startPosition': map['startPosition'] as int,
+//         'endPosition': map['endPosition'] as int,
+//       };
+//     }).toList();
     
-    // Sort highlights by end position (descending) so we apply from end to start
-    // This ensures that applying earlier highlights doesn't affect positions of later ones
-    highlights.sort((a, b) => (b['endPosition'] as int).compareTo(a['endPosition'] as int));
+//     // Sort highlights by end position (descending) so we apply from end to start
+//     // This ensures that applying earlier highlights doesn't affect positions of later ones
+//     highlights.sort((a, b) => (b['endPosition'] as int).compareTo(a['endPosition'] as int));
     
-    var processedContent = content;
+//     var processedContent = content;
     
-    for (final highlight in highlights) {
-      processedContent = _applyHighlightAtPositionIsolate(
-        processedContent,
-        highlight['id'] as String,
-        highlight['text'] as String,
-        highlight['startPosition'] as int,
-        highlight['endPosition'] as int,
-      );
-    }
+//     for (final highlight in highlights) {
+//       processedContent = _applyHighlightAtPositionIsolate(
+//         processedContent,
+//         highlight['id'] as String,
+//         highlight['text'] as String,
+//         highlight['startPosition'] as int,
+//         highlight['endPosition'] as int,
+//       );
+//     }
     
-    return processedContent;
-  }
+//     return processedContent;
+//   }
 
-  /// Apply single highlight at position (isolate-safe version)
-  static String _applyHighlightAtPositionIsolate(
-    String htmlContent,
-    String highlightId,
-    String text,
-    int startPos,
-    int endPos,
-  ) {
-    // Check if already highlighted
-    if (htmlContent.contains('data-highlight-id="$highlightId"')) {
-      return htmlContent; // Already highlighted
-    }
+//   /// Apply single highlight at position (isolate-safe version)
+//   static String _applyHighlightAtPositionIsolate(
+//     String htmlContent,
+//     String highlightId,
+//     String text,
+//     int startPos,
+//     int endPos,
+//   ) {
+//     // Check if already highlighted
+//     if (htmlContent.contains('data-highlight-id="$highlightId"')) {
+//       return htmlContent; // Already highlighted
+//     }
 
-    // Validate positions
-    if (startPos < 0 || endPos <= startPos || endPos > htmlContent.length) {
-      // Fallback to text search if positions are invalid
-      final normalizedText = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+//     // Validate positions
+//     if (startPos < 0 || endPos <= startPos || endPos > htmlContent.length) {
+//       // Fallback to text search if positions are invalid
+//       final normalizedText = text.replaceAll(RegExp(r'\s+'), ' ').trim();
 
-      if (htmlContent.contains(normalizedText)) {
-        final index = htmlContent.indexOf(normalizedText);
-        if (index != -1 && !_isInsideMarkIsolate(index, htmlContent)) {
-          return htmlContent.replaceFirst(
-            normalizedText,
-            '<mark data-highlight-id="$highlightId" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedText</mark>',
-          );
-        }
-      }
-      return htmlContent;
-    }
+//       if (htmlContent.contains(normalizedText)) {
+//         final index = htmlContent.indexOf(normalizedText);
+//         if (index != -1 && !_isInsideMarkIsolate(index, htmlContent)) {
+//           return htmlContent.replaceFirst(
+//             normalizedText,
+//             '<mark data-highlight-id="$highlightId" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$normalizedText</mark>',
+//           );
+//         }
+//       }
+//       return htmlContent;
+//     }
 
-    // Check if position is already inside a mark tag
-    if (_isInsideMarkIsolate(startPos, htmlContent)) {
-      return htmlContent; // Already highlighted
-    }
+//     // Check if position is already inside a mark tag
+//     if (_isInsideMarkIsolate(startPos, htmlContent)) {
+//       return htmlContent; // Already highlighted
+//     }
 
-    // Extract the text at the position
-    final highlightedText = htmlContent.substring(startPos, endPos);
+//     // Extract the text at the position
+//     final highlightedText = htmlContent.substring(startPos, endPos);
 
-    // Check if this text is already wrapped in a mark tag
-    if (highlightedText.contains('<mark') ||
-        highlightedText.contains('</mark>')) {
-      return htmlContent; // Already highlighted
-    }
+//     // Check if this text is already wrapped in a mark tag
+//     if (highlightedText.contains('<mark') ||
+//         highlightedText.contains('</mark>')) {
+//       return htmlContent; // Already highlighted
+//     }
 
-    // Apply highlight at the exact position
-    final beforeText = htmlContent.substring(0, startPos);
-    final afterText = htmlContent.substring(endPos);
+//     // Apply highlight at the exact position
+//     final beforeText = htmlContent.substring(0, startPos);
+//     final afterText = htmlContent.substring(endPos);
 
-    return beforeText +
-        '<mark data-highlight-id="$highlightId" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$highlightedText</mark>' +
-        afterText;
-  }
+//     return beforeText +
+//         '<mark data-highlight-id="$highlightId" style="background-color: yellow; padding: 0; margin: 0; display: inline; vertical-align: baseline;">$highlightedText</mark>' +
+//         afterText;
+//   }
 
-  /// Check if position is inside a mark tag (isolate-safe version)
-  static bool _isInsideMarkIsolate(int position, String content) {
-    int start = position;
-    while (start > 0 && start > position - 100) {
-      if (start + 5 <= content.length &&
-          content.substring(start, start + 5) == '<mark') {
-        return true;
-      }
-      if (start + 6 <= content.length &&
-          content.substring(start, start + 6) == '</mark') {
-        return false;
-      }
-      start--;
-    }
-    return false;
-  }
+//   /// Check if position is inside a mark tag (isolate-safe version)
+//   static bool _isInsideMarkIsolate(int position, String content) {
+//     int start = position;
+//     while (start > 0 && start > position - 100) {
+//       if (start + 5 <= content.length &&
+//           content.substring(start, start + 5) == '<mark') {
+//         return true;
+//       }
+//       if (start + 6 <= content.length &&
+//           content.substring(start, start + 6) == '</mark') {
+//         return false;
+//       }
+//       start--;
+//     }
+//     return false;
+//   }
 
 
-  /// Get all chapters from Spine (Reading Order)
-  /// This ensures we include all split files (e.g. index_split_000.html, index_split_001.html)
-  static List<epubx.EpubChapter> getChaptersFromSpine(epubx.EpubBook epubBook) {
-    // If schema is missing, fallback to TOC
-    if (epubBook.Schema?.Package?.Spine?.Items == null ||
-        epubBook.Schema?.Package?.Manifest?.Items == null) {
-      return getAllChapters(epubBook.Chapters ?? []);
-    }
+//   /// Get all chapters from Spine (Reading Order)
+//   /// This ensures we include all split files (e.g. index_split_000.html, index_split_001.html)
+//   static List<epubx.EpubChapter> getChaptersFromSpine(epubx.EpubBook epubBook) {
+//     // If schema is missing, fallback to TOC
+//     if (epubBook.Schema?.Package?.Spine?.Items == null ||
+//         epubBook.Schema?.Package?.Manifest?.Items == null) {
+//       return getAllChapters(epubBook.Chapters ?? []);
+//     }
 
-    try {
-      List<epubx.EpubChapter> spineChapters = [];
-      final tocTitles = <String, String>{};
+//     try {
+//       List<epubx.EpubChapter> spineChapters = [];
+//       final tocTitles = <String, String>{};
 
-      // Map TOC titles to file names for display
-      if (epubBook.Chapters != null) {
-        _mapTocTitles(epubBook.Chapters!, tocTitles);
-      }
+//       // Map TOC titles to file names for display
+//       if (epubBook.Chapters != null) {
+//         _mapTocTitles(epubBook.Chapters!, tocTitles);
+//       }
 
-      final manifestItems = epubBook.Schema!.Package!.Manifest!.Items!;
-      final spineItems = epubBook.Schema!.Package!.Spine!.Items!;
+//       final manifestItems = epubBook.Schema!.Package!.Manifest!.Items!;
+//       final spineItems = epubBook.Schema!.Package!.Spine!.Items!;
 
-      // Map manifest ID to Item for quick lookup
-      Map<String, epubx.EpubManifestItem> idToManifest = {};
-      for (var item in manifestItems) {
-        if (item.Id != null) {
-          idToManifest[item.Id!] = item;
-        }
-      }
+//       // Map manifest ID to Item for quick lookup
+//       Map<String, epubx.EpubManifestItem> idToManifest = {};
+//       for (var item in manifestItems) {
+//         if (item.Id != null) {
+//           idToManifest[item.Id!] = item;
+//         }
+//       }
 
-      String lastTitle = "";
-      // Sometimes the title is for the first split file, we want to persist it
-      // unless a new title comes up.
+//       String lastTitle = "";
+//       // Sometimes the title is for the first split file, we want to persist it
+//       // unless a new title comes up.
 
-      for (var spineItem in spineItems) {
-        final idRef = spineItem.IdRef;
-        if (idRef == null || !idToManifest.containsKey(idRef)) continue;
+//       for (var spineItem in spineItems) {
+//         final idRef = spineItem.IdRef;
+//         if (idRef == null || !idToManifest.containsKey(idRef)) continue;
 
-        final manifestItem = idToManifest[idRef]!;
-        final href = manifestItem.Href;
+//         final manifestItem = idToManifest[idRef]!;
+//         final href = manifestItem.Href;
 
-        if (href == null) continue;
+//         if (href == null) continue;
 
-        // Find content in the book
-        // Note: keys in Content.Html usually match the href (decoded)
-        String? content;
-        if (epubBook.Content?.Html != null) {
-          if (epubBook.Content!.Html!.containsKey(href)) {
-            content = epubBook.Content!.Html![href]?.Content;
-          } else {
-            // Try to find key that roughly matches if exact match fails
-            // (e.g. OEBPS prefix issues)
-            try {
-              final key = epubBook.Content!.Html!.keys.firstWhere(
-                  (k) => k.endsWith(href) || href.endsWith(k),
-                  orElse: () => "");
-              if (key.isNotEmpty) {
-                content = epubBook.Content!.Html![key]?.Content;
-              }
-            } catch (e) {
-              log('Error finding content for $href: $e');
-            }
-          }
-        }
+//         // Find content in the book
+//         // Note: keys in Content.Html usually match the href (decoded)
+//         String? content;
+//         if (epubBook.Content?.Html != null) {
+//           if (epubBook.Content!.Html!.containsKey(href)) {
+//             content = epubBook.Content!.Html![href]?.Content;
+//           } else {
+//             // Try to find key that roughly matches if exact match fails
+//             // (e.g. OEBPS prefix issues)
+//             try {
+//               final key = epubBook.Content!.Html!.keys.firstWhere(
+//                   (k) => k.endsWith(href) || href.endsWith(k),
+//                   orElse: () => "");
+//               if (key.isNotEmpty) {
+//                 content = epubBook.Content!.Html![key]?.Content;
+//               }
+//             } catch (e) {
+//               log('Error finding content for $href: $e');
+//             }
+//           }
+//         }
 
-        if (content == null) continue;
+//         if (content == null) continue;
 
-        // Determine Title
-        String title = tocTitles[href] ?? "";
-        if (title.isNotEmpty) {
-          lastTitle = title;
-        } else {
-          // If this section has no title in TOC, it's likely a continuation
-          // We can use the last known title
-          if (lastTitle.isNotEmpty) {
-            title = lastTitle;
-            // Optional: Add indicator like " (cont.)" if you want
-            // title = "$lastTitle";
-          }
-        }
+//         // Determine Title
+//         String title = tocTitles[href] ?? "";
+//         if (title.isNotEmpty) {
+//           lastTitle = title;
+//         } else {
+//           // If this section has no title in TOC, it's likely a continuation
+//           // We can use the last known title
+//           if (lastTitle.isNotEmpty) {
+//             title = lastTitle;
+//             // Optional: Add indicator like " (cont.)" if you want
+//             // title = "$lastTitle";
+//           }
+//         }
 
-        // Create EpubChapter
-        final chapter = epubx.EpubChapter();
-        chapter.Title = title;
-        chapter.ContentFileName = href;
-        chapter.HtmlContent = content;
-        chapter.SubChapters = [];
+//         // Create EpubChapter
+//         final chapter = epubx.EpubChapter();
+//         chapter.Title = title;
+//         chapter.ContentFileName = href;
+//         chapter.HtmlContent = content;
+//         chapter.SubChapters = [];
 
-        spineChapters.add(chapter);
-      }
+//         spineChapters.add(chapter);
+//       }
 
-      if (spineChapters.isEmpty) {
-        return getAllChapters(epubBook.Chapters ?? []);
-      }
+//       if (spineChapters.isEmpty) {
+//         return getAllChapters(epubBook.Chapters ?? []);
+//       }
 
-      return spineChapters;
-    } catch (e) {
-      log('Error parsing spine chapters: $e');
-      return getAllChapters(epubBook.Chapters ?? []);
-    }
-  }
+//       return spineChapters;
+//     } catch (e) {
+//       log('Error parsing spine chapters: $e');
+//       return getAllChapters(epubBook.Chapters ?? []);
+//     }
+//   }
 
-  /// Helper to map TOC titles to filenames
-  static void _mapTocTitles(
-      List<epubx.EpubChapter> chapters, Map<String, String> map) {
-    for (var chapter in chapters) {
-      if (chapter.ContentFileName != null) {
-        // Clean up filename (sometimes has anchors)
-        String filename = chapter.ContentFileName!;
-        if (filename.contains('#')) {
-          filename = filename.split('#')[0];
-        }
-        map[filename] = chapter.Title ?? "";
-      }
-      if (chapter.SubChapters != null && chapter.SubChapters!.isNotEmpty) {
-        _mapTocTitles(chapter.SubChapters!, map);
-      }
-    }
-  }
-  /// Get all chapters recursively
-  static List<epubx.EpubChapter> getAllChapters(
-      List<epubx.EpubChapter> chapters) {
-    List<epubx.EpubChapter> allChapters = [];
-    for (var chapter in chapters) {
-      allChapters.add(chapter);
-      if (chapter.SubChapters != null && chapter.SubChapters!.isNotEmpty) {
-        allChapters.addAll(getAllChapters(chapter.SubChapters!));
-      }
-    }
-    return allChapters;
-  }
+//   /// Helper to map TOC titles to filenames
+//   static void _mapTocTitles(
+//       List<epubx.EpubChapter> chapters, Map<String, String> map) {
+//     for (var chapter in chapters) {
+//       if (chapter.ContentFileName != null) {
+//         // Clean up filename (sometimes has anchors)
+//         String filename = chapter.ContentFileName!;
+//         if (filename.contains('#')) {
+//           filename = filename.split('#')[0];
+//         }
+//         map[filename] = chapter.Title ?? "";
+//       }
+//       if (chapter.SubChapters != null && chapter.SubChapters!.isNotEmpty) {
+//         _mapTocTitles(chapter.SubChapters!, map);
+//       }
+//     }
+//   }
+//   /// Get all chapters recursively
+//   static List<epubx.EpubChapter> getAllChapters(
+//       List<epubx.EpubChapter> chapters) {
+//     List<epubx.EpubChapter> allChapters = [];
+//     for (var chapter in chapters) {
+//       allChapters.add(chapter);
+//       if (chapter.SubChapters != null && chapter.SubChapters!.isNotEmpty) {
+//         allChapters.addAll(getAllChapters(chapter.SubChapters!));
+//       }
+//     }
+//     return allChapters;
+//   }
 
-  /// Parse HTML content
-  static String parseHtmlContent(String? htmlContent) {
-    if (htmlContent == null || htmlContent.isEmpty) return "";
-    return htmlContent;
-  }
+//   /// Parse HTML content
+//   static String parseHtmlContent(String? htmlContent) {
+//     if (htmlContent == null || htmlContent.isEmpty) return "";
+//     return htmlContent;
+//   }
 
-  /// Load EPUB chapter with smooth animation
-  /// Returns the original HTML content (before highlights) via callback
-  static void loadEpubChapter(
-    PdfViewerProvider provider,
-    int index,
-    ValueNotifier<String> currentEpubContentNotifier,
-    ScrollController epubScrollController, {
-    Function(String)? onOriginalContentReady, // Callback to get original HTML
-  }) {
-    final chapters = provider.epubChapters;
-    if (index >= 0 && index < chapters.length) {
-      // Set loading state
-      provider.setChangingChapter(true);
+//   /// Load EPUB chapter with smooth animation
+//   /// Returns the original HTML content (before highlights) via callback
+//   static void loadEpubChapter(
+//     PdfViewerProvider provider,
+//     int index,
+//     ValueNotifier<String> currentEpubContentNotifier,
+//     ScrollController epubScrollController, {
+//     Function(String)? onOriginalContentReady, // Callback to get original HTML
+//   }) {
+//     final chapters = provider.epubChapters;
+//     if (index >= 0 && index < chapters.length) {
+//       // Set loading state
+//       provider.setChangingChapter(true);
 
-      // Add a small delay to show loading indicator
-      Future.delayed(const Duration(milliseconds: 100), () async {
-        provider.setCurrentEpubChapterIndex(index);
+//       // Add a small delay to show loading indicator
+//       Future.delayed(const Duration(milliseconds: 100), () async {
+//         provider.setCurrentEpubChapterIndex(index);
 
-        final chapter = chapters[index];
-        var originalContent = parseHtmlContent(chapter.HtmlContent);
-        final chapterId = index.toString();
+//         final chapter = chapters[index];
+//         var originalContent = parseHtmlContent(chapter.HtmlContent);
+//         final chapterId = index.toString();
 
-        // Notify about original content (before highlights)
-        if (onOriginalContentReady != null) {
-          onOriginalContentReady(originalContent);
-        }
+//         // Notify about original content (before highlights)
+//         if (onOriginalContentReady != null) {
+//           onOriginalContentReady(originalContent);
+//         }
 
-        // Apply highlights in background isolate to prevent blocking main thread and ANR
-        final chapterHighlights = provider.getHighlightsForChapter(chapterId);
+//         // Apply highlights in background isolate to prevent blocking main thread and ANR
+//         final chapterHighlights = provider.getHighlightsForChapter(chapterId);
         
-        String content;
-        if (chapterHighlights.isEmpty) {
-          // No highlights, use original content
-          content = originalContent;
-        } else {
-          // Process highlights in background isolate (prevents ANR)
-          // Convert highlights to serializable format for isolate
-          final highlightData = chapterHighlights.map((h) => {
-            'id': h.id,
-            'text': h.text,
-            'startPosition': h.startPosition,
-            'endPosition': h.endPosition,
-          }).toList();
+//         String content;
+//         if (chapterHighlights.isEmpty) {
+//           // No highlights, use original content
+//           content = originalContent;
+//         } else {
+//           // Process highlights in background isolate (prevents ANR)
+//           // Convert highlights to serializable format for isolate
+//           final highlightData = chapterHighlights.map((h) => {
+//             'id': h.id,
+//             'text': h.text,
+//             'startPosition': h.startPosition,
+//             'endPosition': h.endPosition,
+//           }).toList();
           
-          content = await compute(_applyHighlightsInIsolate, {
-            'content': originalContent,
-            'highlights': highlightData,
-          });
-        }
+//           content = await compute(_applyHighlightsInIsolate, {
+//             'content': originalContent,
+//             'highlights': highlightData,
+//           });
+//         }
 
-        // Apply search highlights if there's an active search
-        // Note: Search highlights are applied in the widget after chapter loads
-        // to avoid circular dependencies
+//         // Apply search highlights if there's an active search
+//         // Note: Search highlights are applied in the widget after chapter loads
+//         // to avoid circular dependencies
 
-        provider.setCurrentEpubContent(content);
+//         provider.setCurrentEpubContent(content);
 
-        // Update total pages for EPUB (based on chapters)
-        FFAppState().totalPages = chapters.length;
-        FFAppState().update(() {
-          FFAppState().homePageTotalPdfPageIndex = chapters.length;
-          FFAppState().homePageCurrentPdfIndex = provider.currentPage;
-        });
+//         // Update total pages for EPUB (based on chapters)
+//         FFAppState().totalPages = chapters.length;
+//         FFAppState().update(() {
+//           FFAppState().homePageTotalPdfPageIndex = chapters.length;
+//           FFAppState().homePageCurrentPdfIndex = provider.currentPage;
+//         });
 
-        // Animate content change with fade transition
-        // First fade out, then update content, then fade in
-        currentEpubContentNotifier.value = '';
+//         // Animate content change with fade transition
+//         // First fade out, then update content, then fade in
+//         currentEpubContentNotifier.value = '';
 
-        Future.delayed(const Duration(milliseconds: 150), () {
-          currentEpubContentNotifier.value = content;
+//         Future.delayed(const Duration(milliseconds: 150), () {
+//           currentEpubContentNotifier.value = content;
 
-          // Wait for layout to complete before scrolling
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (epubScrollController.hasClients) {
-                double targetScroll = 0;
+//           // Wait for layout to complete before scrolling
+//           WidgetsBinding.instance.addPostFrameCallback((_) {
+//             Future.delayed(const Duration(milliseconds: 500), () {
+//               if (epubScrollController.hasClients) {
+//                 double targetScroll = 0;
 
-                // Check if chapter has an anchor/ID to scroll to
-                final anchor = chapter.Anchor;
+//                 // Check if chapter has an anchor/ID to scroll to
+//                 final anchor = chapter.Anchor;
 
-                // Determine if this is a root chapter (Top Level)
-                // "Contents without subcontents" logic: Main chapters should start at top
-                // Only scroll to anchor if it's a SubContent (child)
-                bool isRoot = false;
-                if (provider.epubBook != null &&
-                    provider.epubBook!.Chapters != null) {
-                  // Check if current chapter is in the top-level list
-                  isRoot = provider.epubBook!.Chapters!.contains(chapter);
-                }
+//                 // Determine if this is a root chapter (Top Level)
+//                 // "Contents without subcontents" logic: Main chapters should start at top
+//                 // Only scroll to anchor if it's a SubContent (child)
+//                 bool isRoot = false;
+//                 if (provider.epubBook != null &&
+//                     provider.epubBook!.Chapters != null) {
+//                   // Check if current chapter is in the top-level list
+//                   isRoot = provider.epubBook!.Chapters!.contains(chapter);
+//                 }
 
-                if (!isRoot && anchor != null && anchor.isNotEmpty) {
-                  final maxScroll =
-                      epubScrollController.position.maxScrollExtent;
-                  final contentLen = content.length;
+//                 if (!isRoot && anchor != null && anchor.isNotEmpty) {
+//                   final maxScroll =
+//                       epubScrollController.position.maxScrollExtent;
+//                   final contentLen = content.length;
 
-                  // Find anchor position in raw HTML
-                  final anchorIndex = _findAnchorIndex(content, anchor);
+//                   // Find anchor position in raw HTML
+//                   final anchorIndex = _findAnchorIndex(content, anchor);
 
-                  log('EPUB Navigation: Chapter "${chapter.Title}", Anchor "$anchor"');
-                  log('EPUB Navigation: Anchor index: $anchorIndex of $contentLen');
+//                   log('EPUB Navigation: Chapter "${chapter.Title}", Anchor "$anchor"');
+//                   log('EPUB Navigation: Anchor index: $anchorIndex of $contentLen');
 
-                  if (anchorIndex != -1 &&
-                      content.isNotEmpty &&
-                      maxScroll > 0) {
-                    // Refined calculation: Use plain text ratio instead of raw HTML ratio
-                    // This handles large metadata/head sections better
+//                   if (anchorIndex != -1 &&
+//                       content.isNotEmpty &&
+//                       maxScroll > 0) {
+//                     // Refined calculation: Use plain text ratio instead of raw HTML ratio
+//                     // This handles large metadata/head sections better
 
-                    // 1. Find start of the tag containing this anchor (backtrack to '<')
-                    int tagStart = content.lastIndexOf('<', anchorIndex);
-                    if (tagStart == -1) tagStart = anchorIndex;
+//                     // 1. Find start of the tag containing this anchor (backtrack to '<')
+//                     int tagStart = content.lastIndexOf('<', anchorIndex);
+//                     if (tagStart == -1) tagStart = anchorIndex;
 
-                    // 2. Extract plain text content up to that point
-                    final contentBefore = content.substring(0, tagStart);
-                    final plainTextBefore =
-                        PdfViewerTextOperations.extractPlainTextFromHtml(
-                            contentBefore);
+//                     // 2. Extract plain text content up to that point
+//                     final contentBefore = content.substring(0, tagStart);
+//                     final plainTextBefore =
+//                         PdfViewerTextOperations.extractPlainTextFromHtml(
+//                             contentBefore);
 
-                    // 3. Extract total plain text
-                    final plainTextTotal =
-                        PdfViewerTextOperations.extractPlainTextFromHtml(
-                            content);
+//                     // 3. Extract total plain text
+//                     final plainTextTotal =
+//                         PdfViewerTextOperations.extractPlainTextFromHtml(
+//                             content);
 
-                    final lenBefore = plainTextBefore.length;
-                    final lenTotal = plainTextTotal.length;
+//                     final lenBefore = plainTextBefore.length;
+//                     final lenTotal = plainTextTotal.length;
 
-                    log('EPUB Navigation: Plain text before: $lenBefore, Total: $lenTotal');
+//                     log('EPUB Navigation: Plain text before: $lenBefore, Total: $lenTotal');
 
-                    if (lenTotal > 0) {
-                      final ratio = lenBefore / lenTotal;
-                      targetScroll = (ratio * maxScroll).clamp(0.0, maxScroll);
-                      log('EPUB Navigation: Calculated scroll: $targetScroll (max: $maxScroll, ratio: $ratio)');
-                    } else {
-                      // Fallback to raw ratio if text extraction fails
-                      final ratio = anchorIndex / contentLen;
-                      targetScroll = (ratio * maxScroll).clamp(0.0, maxScroll);
-                      log('EPUB Navigation: Fallback scroll: $targetScroll (raw ratio: $ratio)');
-                    }
-                  } else {
-                    log('EPUB Navigation: Anchor not found or invalid dimensions');
-                  }
-                }
+//                     if (lenTotal > 0) {
+//                       final ratio = lenBefore / lenTotal;
+//                       targetScroll = (ratio * maxScroll).clamp(0.0, maxScroll);
+//                       log('EPUB Navigation: Calculated scroll: $targetScroll (max: $maxScroll, ratio: $ratio)');
+//                     } else {
+//                       // Fallback to raw ratio if text extraction fails
+//                       final ratio = anchorIndex / contentLen;
+//                       targetScroll = (ratio * maxScroll).clamp(0.0, maxScroll);
+//                       log('EPUB Navigation: Fallback scroll: $targetScroll (raw ratio: $ratio)');
+//                     }
+//                   } else {
+//                     log('EPUB Navigation: Anchor not found or invalid dimensions');
+//                   }
+//                 }
 
-                epubScrollController.animateTo(
-                  targetScroll,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              }
+//                 epubScrollController.animateTo(
+//                   targetScroll,
+//                   duration: const Duration(milliseconds: 300),
+//                   curve: Curves.easeInOut,
+//                 );
+//               }
 
-              // Reset loading state after animation
-              provider.setChangingChapter(false);
-            });
-          });
-        });
-      });
-    }
-  }
+//               // Reset loading state after animation
+//               provider.setChangingChapter(false);
+//             });
+//           });
+//         });
+//       });
+//     }
+//   }
 
-  /// Build EPUB reader widget
-  static Widget buildEpubReader({
-    required ValueNotifier<String> currentEpubContentNotifier,
-    required ValueNotifier<String> localSelectedTextNotifier,
-    required ScrollController epubScrollController,
-    required Function addHighlight,
-    required Function speakSelected,
-    required Function stopSpeaking,
-    required Function loadEpubChapter,
-  }) {
-    // Track scroll state to distinguish taps from scrolls
-    final isScrollingNotifier = ValueNotifier<bool>(false);
-    DateTime? lastScrollEndTime;
+//   /// Build EPUB reader widget
+//   static Widget buildEpubReader({
+//     required ValueNotifier<String> currentEpubContentNotifier,
+//     required ValueNotifier<String> localSelectedTextNotifier,
+//     required ScrollController epubScrollController,
+//     required Function addHighlight,
+//     required Function speakSelected,
+//     required Function stopSpeaking,
+//     required Function loadEpubChapter,
+//   }) {
+//     // Track scroll state to distinguish taps from scrolls
+//     final isScrollingNotifier = ValueNotifier<bool>(false);
+//     DateTime? lastScrollEndTime;
 
-    // Don't include EpubBook in selector - it has problematic equality comparison
-    // Access it via context.read inside the builder instead
-    return Selector<PdfViewerProvider, (bool, String, AppThemeMode)>(
-      selector: (_, p) =>
-          (p.isLoadingEpub, p.currentEpubContent, p.currentThemeMode),
-      builder: (context, data, child) {
-        final isLoadingEpub = data.$1;
-        final currentEpubContent = data.$2;
-        final themeMode = data.$3;
+//     // Don't include EpubBook in selector - it has problematic equality comparison
+//     // Access it via context.read inside the builder instead
+//     return Selector<PdfViewerProvider, (bool, String, AppThemeMode)>(
+//       selector: (_, p) =>
+//           (p.isLoadingEpub, p.currentEpubContent, p.currentThemeMode),
+//       builder: (context, data, child) {
+//         final isLoadingEpub = data.$1;
+//         final currentEpubContent = data.$2;
+//         final themeMode = data.$3;
 
-        // Get epubBook from provider inside builder to avoid comparison issues
-        final provider = context.read<PdfViewerProvider>();
-        final epubBook = provider.epubBook;
+//         // Get epubBook from provider inside builder to avoid comparison issues
+//         final provider = context.read<PdfViewerProvider>();
+//         final epubBook = provider.epubBook;
 
-        if (isLoadingEpub) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(
-                  color: FlutterFlowTheme.of(context).primary,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "Loading...",
-                  style: FlutterFlowTheme.of(context).bodyMedium,
-                ),
-              ],
-            ),
-          );
-        }
+//         if (isLoadingEpub) {
+//           return Center(
+//             child: Column(
+//               mainAxisAlignment: MainAxisAlignment.center,
+//               children: [
+//                 CircularProgressIndicator(
+//                   color: FlutterFlowTheme.of(context).primary,
+//                 ),
+//                 const SizedBox(height: 16),
+//                 Text(
+//                   "Loading...",
+//                   style: FlutterFlowTheme.of(context).bodyMedium,
+//                 ),
+//               ],
+//             ),
+//           );
+//         }
 
-        if (epubBook == null || currentEpubContent.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.book_outlined,
-                  size: 64,
-                  color: FlutterFlowTheme.of(context).secondaryText,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "Failed to load EPUB file",
-                  style: FlutterFlowTheme.of(context).bodyMedium,
-                ),
-              ],
-            ),
-          );
-        }
+//         if (epubBook == null || currentEpubContent.isEmpty) {
+//           return Center(
+//             child: Column(
+//               mainAxisAlignment: MainAxisAlignment.center,
+//               children: [
+//                 Icon(
+//                   Icons.book_outlined,
+//                   size: 64,
+//                   color: FlutterFlowTheme.of(context).secondaryText,
+//                 ),
+//                 const SizedBox(height: 16),
+//                 Text(
+//                   "Failed to load EPUB file",
+//                   style: FlutterFlowTheme.of(context).bodyMedium,
+//                 ),
+//               ],
+//             ),
+//           );
+//         }
 
-        Color backgroundColor;
-        Color scrollbarColor;
+//         Color backgroundColor;
+//         Color scrollbarColor;
 
-        switch (themeMode) {
-          case AppThemeMode.light:
-            backgroundColor = Colors.white;
-            scrollbarColor = Colors.black.withOpacity(0.3);
-            break;
-          case AppThemeMode.dark:
-            backgroundColor = Colors.black;
-            scrollbarColor = Colors.white.withOpacity(0.5);
-            break;
-          case AppThemeMode.sepia:
-            backgroundColor = const Color(0xFFF5DEB3); // Sepia color
-            scrollbarColor = Colors.black.withOpacity(0.3);
-            break;
-        }
+//         switch (themeMode) {
+//           case AppThemeMode.light:
+//             backgroundColor = Colors.white;
+//             scrollbarColor = Colors.black.withOpacity(0.3);
+//             break;
+//           case AppThemeMode.dark:
+//             backgroundColor = Colors.black;
+//             scrollbarColor = Colors.white.withOpacity(0.5);
+//             break;
+//           case AppThemeMode.sepia:
+//             backgroundColor = const Color(0xFFF5DEB3); // Sepia color
+//             scrollbarColor = Colors.black.withOpacity(0.3);
+//             break;
+//         }
 
-        return Container(
-          padding: EdgeInsets.only(top: 50),
-          color: backgroundColor,
-          child: SelectionArea(
-            selectionControls: CustomTextSelectionControls(
-              onHighlight: () => addHighlight(),
-              onListen: () {
-                final p = context.read<PdfViewerProvider>();
-                p.isSpeaking ? stopSpeaking() : speakSelected();
-              },
-            ),
-            onSelectionChanged: (SelectedContent? selection) {
-              // Update local ValueNotifier - this does NOT trigger provider rebuilds
-              final newSelectedText = selection?.plainText ?? '';
-              localSelectedTextNotifier.value = newSelectedText;
+//         return Container(
+//           padding: EdgeInsets.only(top: 50),
+//           color: backgroundColor,
+//           child: SelectionArea(
+//             selectionControls: CustomTextSelectionControls(
+//               onHighlight: () => addHighlight(),
+//               onListen: () {
+//                 final p = context.read<PdfViewerProvider>();
+//                 p.isSpeaking ? stopSpeaking() : speakSelected();
+//               },
+//             ),
+//             onSelectionChanged: (SelectedContent? selection) {
+//               // Update local ValueNotifier - this does NOT trigger provider rebuilds
+//               final newSelectedText = selection?.plainText ?? '';
+//               localSelectedTextNotifier.value = newSelectedText;
 
-              // Only sync to provider when selection is cleared (for UI state)
-              // For Listen button, we'll sync when Listen is clicked
-              if (newSelectedText.isEmpty) {
-                final p = context.read<PdfViewerProvider>();
-                p.clearSelectedText();
-              }
-              // Don't update provider during active selection to prevent rebuilds
-            },
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (ScrollNotification notification) {
-                final p = context.read<PdfViewerProvider>();
+//               // Only sync to provider when selection is cleared (for UI state)
+//               // For Listen button, we'll sync when Listen is clicked
+//               if (newSelectedText.isEmpty) {
+//                 final p = context.read<PdfViewerProvider>();
+//                 p.clearSelectedText();
+//               }
+//               // Don't update provider during active selection to prevent rebuilds
+//             },
+//             child: NotificationListener<ScrollNotification>(
+//               onNotification: (ScrollNotification notification) {
+//                 final p = context.read<PdfViewerProvider>();
 
-                // Track scroll state
-                if (notification is ScrollStartNotification) {
-                  isScrollingNotifier.value = true;
-                } else if (notification is ScrollEndNotification) {
-                  isScrollingNotifier.value = false;
-                  lastScrollEndTime = DateTime.now();
-                }
+//                 // Track scroll state
+//                 if (notification is ScrollStartNotification) {
+//                   isScrollingNotifier.value = true;
+//                 } else if (notification is ScrollEndNotification) {
+//                   isScrollingNotifier.value = false;
+//                   lastScrollEndTime = DateTime.now();
+//                 }
 
-                // Skip if already changing chapter
-                if (p.isChangingChapter) return true;
+//                 // Skip if already changing chapter
+//                 if (p.isChangingChapter) return true;
 
-                final metrics = notification.metrics;
+//                 final metrics = notification.metrics;
 
-                // Validate scroll metrics
-                if (!metrics.hasContentDimensions ||
-                    metrics.maxScrollExtent <= 0 ||
-                    !epubScrollController.hasClients) {
-                  return false;
-                }
+//                 // Validate scroll metrics
+//                 if (!metrics.hasContentDimensions ||
+//                     metrics.maxScrollExtent <= 0 ||
+//                     !epubScrollController.hasClients) {
+//                   return false;
+//                 }
 
-                // Update last scroll position for tracking
-                final currentPos = metrics.pixels;
-                p.setLastScrollPosition(currentPos);
+//                 // Update last scroll position for tracking
+//                 final currentPos = metrics.pixels;
+//                 p.setLastScrollPosition(currentPos);
 
-                // Automatic chapter loading on scroll disabled
-                // Users can manually navigate chapters using navigation controls
-                return false;
-              },
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: () {
-                  // Only toggle if not scrolling and no text selected
-                  if (!isScrollingNotifier.value &&
-                      localSelectedTextNotifier.value.isEmpty) {
-                    // Also check if scroll just ended (wait a bit after scroll)
-                    final now = DateTime.now();
-                    if (lastScrollEndTime == null ||
-                        now.difference(lastScrollEndTime!).inMilliseconds >
-                            200) {
-                      final p = context.read<PdfViewerProvider>();
-                      PdfViewerHelpers.toggleFullScreen(p, context);
-                    }
-                  }
-                },
-                child: ScrollbarTheme(
-                  data: ScrollbarThemeData(
-                    thumbColor: WidgetStateProperty.all(scrollbarColor),
-                    thickness: WidgetStateProperty.all(8.0),
-                    radius: const Radius.circular(4),
-                    minThumbLength: 50,
-                    crossAxisMargin: 2.0,
-                    mainAxisMargin: 8.0,
-                  ),
-                  child: Scrollbar(
-                    controller: epubScrollController,
-                    // thumbVisibility: true,
-                    // trackVisibility: false,
-                    radius: const Radius.circular(4),
-                    // thickness: 8.0,
-                    interactive: true,
-                    child: SingleChildScrollView(
-                      controller: epubScrollController,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 0),
-                      child: ValueListenableBuilder<String>(
-                        valueListenable: currentEpubContentNotifier,
-                        builder: (context, content, child) {
-                          return AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            transitionBuilder:
-                                (Widget child, Animation<double> animation) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: child,
-                              );
-                            },
-                            child: Selector<PdfViewerProvider,
-                                (double, double, AppThemeMode, String, bool)>(
-                              key: ValueKey<String>(content),
-                              selector: (_, p) => (
-                                p.epubFontSize,
-                                p.epubLineHeight,
-                                p.currentThemeMode,
-                                p.epubFontFamily,
-                                p.isJustified
-                              ),
-                              builder: (context, settings, child) {
-                                final fontSize = settings.$1;
-                                final lineHeight = settings.$2;
-                                final themeMode = settings.$3;
-                                final fontFamily = settings.$4;
-                                final isJustified = settings.$5;
+//                 // Automatic chapter loading on scroll disabled
+//                 // Users can manually navigate chapters using navigation controls
+//                 return false;
+//               },
+//               child: GestureDetector(
+//                 behavior: HitTestBehavior.translucent,
+//                 onTap: () {
+//                   // Only toggle if not scrolling and no text selected
+//                   if (!isScrollingNotifier.value &&
+//                       localSelectedTextNotifier.value.isEmpty) {
+//                     // Also check if scroll just ended (wait a bit after scroll)
+//                     final now = DateTime.now();
+//                     if (lastScrollEndTime == null ||
+//                         now.difference(lastScrollEndTime!).inMilliseconds >
+//                             200) {
+//                       final p = context.read<PdfViewerProvider>();
+//                       PdfViewerHelpers.toggleFullScreen(p, context);
+//                     }
+//                   }
+//                 },
+//                 child: ScrollbarTheme(
+//                   data: ScrollbarThemeData(
+//                     thumbColor: WidgetStateProperty.all(scrollbarColor),
+//                     thickness: WidgetStateProperty.all(8.0),
+//                     radius: const Radius.circular(4),
+//                     minThumbLength: 50,
+//                     crossAxisMargin: 2.0,
+//                     mainAxisMargin: 8.0,
+//                   ),
+//                   child: Scrollbar(
+//                     controller: epubScrollController,
+//                     // thumbVisibility: true,
+//                     // trackVisibility: false,
+//                     radius: const Radius.circular(4),
+//                     // thickness: 8.0,
+//                     interactive: true,
+//                     child: SingleChildScrollView(
+//                       controller: epubScrollController,
+//                       padding: const EdgeInsets.symmetric(
+//                           horizontal: 20, vertical: 0),
+//                       child: ValueListenableBuilder<String>(
+//                         valueListenable: currentEpubContentNotifier,
+//                         builder: (context, content, child) {
+//                           return AnimatedSwitcher(
+//                             duration: const Duration(milliseconds: 300),
+//                             transitionBuilder:
+//                                 (Widget child, Animation<double> animation) {
+//                               return FadeTransition(
+//                                 opacity: animation,
+//                                 child: child,
+//                               );
+//                             },
+//                             child: Selector<PdfViewerProvider,
+//                                 (double, double, AppThemeMode, String, bool)>(
+//                               key: ValueKey<String>(content),
+//                               selector: (_, p) => (
+//                                 p.epubFontSize,
+//                                 p.epubLineHeight,
+//                                 p.currentThemeMode,
+//                                 p.epubFontFamily,
+//                                 p.isJustified
+//                               ),
+//                               builder: (context, settings, child) {
+//                                 final fontSize = settings.$1;
+//                                 final lineHeight = settings.$2;
+//                                 final themeMode = settings.$3;
+//                                 final fontFamily = settings.$4;
+//                                 final isJustified = settings.$5;
 
-                                return HtmlParserWidget(
-                                  htmlContent: content,
-                                  fontSize: fontSize,
-                                  lineHeight: lineHeight,
-                                  themeMode: themeMode,
-                                  epubBook: epubBook,
-                                  fontFamily: fontFamily,
-                                  isJustified: isJustified,
-                                );
-                              },
-                              child: child,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+//                                 return HtmlParserWidget(
+//                                   htmlContent: content,
+//                                   fontSize: fontSize,
+//                                   lineHeight: lineHeight,
+//                                   themeMode: themeMode,
+//                                   epubBook: epubBook,
+//                                   fontFamily: fontFamily,
+//                                   isJustified: isJustified,
+//                                 );
+//                               },
+//                               child: child,
+//                             ),
+//                           );
+//                         },
+//                       ),
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//   }
 
 
-  /// Find the index of an anchor in the content
-  static int _findAnchorIndex(String content, String anchor) {
-    if (anchor.isEmpty) return -1;
-    // Handle hash prefix if present
-    final searchAnchor = anchor.startsWith('#') ? anchor.substring(1) : anchor;
+//   /// Find the index of an anchor in the content
+//   static int _findAnchorIndex(String content, String anchor) {
+//     if (anchor.isEmpty) return -1;
+//     // Handle hash prefix if present
+//     final searchAnchor = anchor.startsWith('#') ? anchor.substring(1) : anchor;
 
-    // Patterns to look for (id and name attributes)
-    final patterns = [
-      'id="$searchAnchor"',
-      "id='$searchAnchor'",
-      'name="$searchAnchor"',
-      "name='$searchAnchor'",
-    ];
+//     // Patterns to look for (id and name attributes)
+//     final patterns = [
+//       'id="$searchAnchor"',
+//       "id='$searchAnchor'",
+//       'name="$searchAnchor"',
+//       "name='$searchAnchor'",
+//     ];
 
-    for (var pattern in patterns) {
-      final index = content.indexOf(pattern);
-      if (index != -1) return index;
-    }
+//     for (var pattern in patterns) {
+//       final index = content.indexOf(pattern);
+//       if (index != -1) return index;
+//     }
 
-    return -1;
-  }
-}
+//     return -1;
+//   }
+// }

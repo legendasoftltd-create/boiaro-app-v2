@@ -580,31 +580,31 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             ),
           ),
         ),
-        FFRoute(
-          name: AudiobookViewAllPageWidget.routeName,
-          path: AudiobookViewAllPageWidget.routePath,
-          builder: (context, params) => AudiobookViewAllPageWidget(
-            title: params.getParam(
-              'title',
-              ParamType.String,
-            ),
-            audiobooks: params.getParam<List<dynamic>>(
-              'audiobooks',
-              ParamType.JSON,
-              isList: true,
-            ),
-          ),
-        ),
-        FFRoute(
-          name: AudiobookDetailsPageWidget.routeName,
-          path: AudiobookDetailsPageWidget.routePath,
-          builder: (context, params) => AudiobookDetailsPageWidget(
-            audiobook: params.getParam<Map<String, dynamic>>(
-              'audiobook',
-              ParamType.JSON,
-            )!,
-          ),
-        ),
+        // FFRoute(
+        //   name: AudiobookViewAllPageWidget.routeName,
+        //   path: AudiobookViewAllPageWidget.routePath,
+        //   builder: (context, params) => AudiobookViewAllPageWidget(
+        //     title: params.getParam(
+        //       'title',
+        //       ParamType.String,
+        //     ),
+        //     audiobooks: params.getParam<List<dynamic>>(
+        //       'audiobooks',
+        //       ParamType.JSON,
+        //       isList: true,
+        //     ),
+        //   ),
+        // ),
+        // FFRoute(
+        //   name: AudiobookDetailsPageWidget.routeName,
+        //   path: AudiobookDetailsPageWidget.routePath,
+        //   builder: (context, params) => AudiobookDetailsPageWidget(
+        //     audiobook: params.getParam<Map<String, dynamic>>(
+        //       'audiobook',
+        //       ParamType.JSON,
+        //     )!,
+        //   ),
+        // ),
         FFRoute(
           name: AudioPlayerPageWidget.routeName,
           path: AudioPlayerPageWidget.routePath,

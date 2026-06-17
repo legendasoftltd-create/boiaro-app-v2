@@ -523,47 +523,47 @@ class _GetBookByCategoryPageWidgetState
                                                                     bookDetailsListItem,
                                                                     r'''$.image''',
                                                                   )?.toString();
-                                                                  final imageUrl = (imagePath ??
-                                                                              '')
-                                                                          .startsWith(
-                                                                              'http')
-                                                                      ? imagePath
-                                                                      : '${FFAppConstants.bookImagesUrl}${imagePath ?? ''}';
-                                                                  context
-                                                                      .pushNamed(
-                                                                    AudiobookDetailsPageWidget
-                                                                        .routeName,
-                                                                    extra: <String,
-                                                                        dynamic>{
-                                                                      'audiobook':
-                                                                          {
-                                                                        'id':
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$._id''',
-                                                                        )?.toString(),
-                                                                        'title':
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.name''',
-                                                                        )?.toString(),
-                                                                        'author':
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.author.name''',
-                                                                        )?.toString(),
-                                                                        'image':
-                                                                            imageUrl,
-                                                                        'price':
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.price''',
-                                                                        ),
-                                                                        'raw':
-                                                                            bookDetailsListItem,
-                                                                      },
-                                                                    },
-                                                                  );
+                                                                  // final imageUrl = (imagePath ??
+                                                                  //             '')
+                                                                  //         .startsWith(
+                                                                  //             'http')
+                                                                  //     ? imagePath
+                                                                  //     : '${FFAppConstants.bookImagesUrl}${imagePath ?? ''}';
+                                                                  // context
+                                                                  //     .pushNamed(
+                                                                  //   AudiobookDetailsPageWidget
+                                                                  //       .routeName,
+                                                                  //   extra: <String,
+                                                                  //       dynamic>{
+                                                                  //     'audiobook':
+                                                                  //         {
+                                                                  //       'id':
+                                                                  //           getJsonField(
+                                                                  //         bookDetailsListItem,
+                                                                  //         r'''$._id''',
+                                                                  //       )?.toString(),
+                                                                  //       'title':
+                                                                  //           getJsonField(
+                                                                  //         bookDetailsListItem,
+                                                                  //         r'''$.name''',
+                                                                  //       )?.toString(),
+                                                                  //       'author':
+                                                                  //           getJsonField(
+                                                                  //         bookDetailsListItem,
+                                                                  //         r'''$.author.name''',
+                                                                  //       )?.toString(),
+                                                                  //       'image':
+                                                                  //           imageUrl,
+                                                                  //       'price':
+                                                                  //           getJsonField(
+                                                                  //         bookDetailsListItem,
+                                                                  //         r'''$.price''',
+                                                                  //       ),
+                                                                  //       'raw':
+                                                                  //           bookDetailsListItem,
+                                                                  //     },
+                                                                  //   },
+                                                                  // );
                                                                 } else {
                                                                   context
                                                                       .pushNamed(

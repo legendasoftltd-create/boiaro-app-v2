@@ -629,38 +629,38 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                                                                           'http')
                                                                   ? imagePath
                                                                   : '${FFAppConstants.bookImagesUrl}${imagePath ?? ''}';
-                                                          context.pushNamed(
-                                                            AudiobookDetailsPageWidget
-                                                                .routeName,
-                                                            extra: <String,
-                                                                dynamic>{
-                                                              'audiobook': {
-                                                                'id':
-                                                                    getJsonField(
-                                                                  bookItem,
-                                                                  r'''$._id''',
-                                                                )?.toString(),
-                                                                'title':
-                                                                    getJsonField(
-                                                                  bookItem,
-                                                                  r'''$.name''',
-                                                                )?.toString(),
-                                                                'author':
-                                                                    getJsonField(
-                                                                  bookItem,
-                                                                  r'''$.author.name''',
-                                                                )?.toString(),
-                                                                'image':
-                                                                    imageUrl,
-                                                                'price':
-                                                                    getJsonField(
-                                                                  bookItem,
-                                                                  r'''$.price''',
-                                                                ),
-                                                                'raw': bookItem,
-                                                              },
-                                                            },
-                                                          );
+                                                          // context.pushNamed(
+                                                          //   AudiobookDetailsPageWidget
+                                                          //       .routeName,
+                                                          //   extra: <String,
+                                                          //       dynamic>{
+                                                          //     'audiobook': {
+                                                          //       'id':
+                                                          //           getJsonField(
+                                                          //         bookItem,
+                                                          //         r'''$._id''',
+                                                          //       )?.toString(),
+                                                          //       'title':
+                                                          //           getJsonField(
+                                                          //         bookItem,
+                                                          //         r'''$.name''',
+                                                          //       )?.toString(),
+                                                          //       'author':
+                                                          //           getJsonField(
+                                                          //         bookItem,
+                                                          //         r'''$.author.name''',
+                                                          //       )?.toString(),
+                                                          //       'image':
+                                                          //           imageUrl,
+                                                          //       'price':
+                                                          //           getJsonField(
+                                                          //         bookItem,
+                                                          //         r'''$.price''',
+                                                          //       ),
+                                                          //       'raw': bookItem,
+                                                          //     },
+                                                          //   },
+                                                          // );
                                                         } else {
                                                           context.pushNamed(
                                                             BookDetailspageWidget

@@ -7,6 +7,8 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/pages/cart_pages/checkout_page_widget.dart';
+import '/pages/cart_pages/payment_screen.dart';
+import '/pages/cart_pages/make_payment.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/dialogs/book_review_bottom_sheet/book_review_bottom_sheet_widget.dart';
 import '/pages/empty_components/blank_component/blank_component_widget.dart';
@@ -338,6 +340,24 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         headers: _apiHeaders(authRequired: authRequired),
         body: jsonEncode(body),
       );
+      if (res.statusCode >= 400 && res.statusCode < 500) {
+        FFAppState().isLogin = false;
+        FFAppState().token = '';
+        FFAppState().refreshToken = '';
+        FFAppState().favChange = false;
+        FFAppState().bookId = '';
+        FFAppState().homePageLiveReadBook = '';
+        FFAppState().homePageCurrentPdfIndex = 1;
+        FFAppState().searchList = [];
+        FFAppState().userId = '';
+        FFAppState().userDetail = null;
+        FFAppState().update(() {});
+        FFAppState().clearGetFavouriteBookCacheCache();
+        if (mounted) {
+          context.pushNamed(SignInPageWidget.routeName);
+        }
+        return null;
+      }
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) return decoded;
     } catch (_) {}
@@ -374,6 +394,24 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         headers: _apiHeaders(authRequired: true),
         body: jsonEncode({'book_id': bookId}),
       );
+      if (res.statusCode >= 400 && res.statusCode < 500) {
+        FFAppState().isLogin = false;
+        FFAppState().token = '';
+        FFAppState().refreshToken = '';
+        FFAppState().favChange = false;
+        FFAppState().bookId = '';
+        FFAppState().homePageLiveReadBook = '';
+        FFAppState().homePageCurrentPdfIndex = 1;
+        FFAppState().searchList = [];
+        FFAppState().userId = '';
+        FFAppState().userDetail = null;
+        FFAppState().update(() {});
+        FFAppState().clearGetFavouriteBookCacheCache();
+        if (mounted) {
+          context.pushNamed(SignInPageWidget.routeName);
+        }
+        return null;
+      }
       final decoded = jsonDecode(res.body);
       final body = decoded is Map<String, dynamic> ? decoded : null;
       _lastEbookAuthError = _isAuthErrorBody(body);
@@ -466,6 +504,24 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         headers: _apiHeaders(authRequired: false),
         body: jsonEncode({'book_id': bookId}),
       );
+      if (guestRes.statusCode >= 400 && guestRes.statusCode < 500) {
+        FFAppState().isLogin = false;
+        FFAppState().token = '';
+        FFAppState().refreshToken = '';
+        FFAppState().favChange = false;
+        FFAppState().bookId = '';
+        FFAppState().homePageLiveReadBook = '';
+        FFAppState().homePageCurrentPdfIndex = 1;
+        FFAppState().searchList = [];
+        FFAppState().userId = '';
+        FFAppState().userDetail = null;
+        FFAppState().update(() {});
+        FFAppState().clearGetFavouriteBookCacheCache();
+        if (mounted) {
+          context.pushNamed(SignInPageWidget.routeName);
+        }
+        return null;
+      }
       final decoded = jsonDecode(guestRes.body);
       final guestBody = decoded is Map<String, dynamic> ? decoded : null;
       _lastEbookAuthError = _isAuthErrorBody(guestBody);
@@ -479,15 +535,15 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   Future<List<Map<String, dynamic>>> _fetchAudioTracks(String bookId) async {
     try {
       final uri =
-          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/chapters');
       final res = await http.get(
         uri,
-        headers: _apiHeaders(authRequired: false),
+        headers: _apiHeaders(authRequired: FFAppState().isLogin),
       );
       if (res.statusCode != 200) return const [];
       final decoded = jsonDecode(res.body);
       if (decoded is! Map) return const [];
-      final raw = decoded['tracks'];
+      final raw = decoded['chapters'];
       if (raw is! List) return const [];
       return raw
           .whereType<Map>()
@@ -686,57 +742,42 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
     }
 
-    // forceIsPreviewMode overrides hasFullAccess for track-count limiting.
-    // URL fetching (above) still uses hasFullAccess so signed URLs work.
-    final limitTracks = forceIsPreviewMode || !hasFullAccess;
-    final rawPreviewTracks = effectiveTracks.length * (previewPercent / 100);
-    final fullPreviewTracks =
-        limitTracks ? rawPreviewTracks.floor() : effectiveTracks.length;
-    final hasPartialPreviewTrack = limitTracks &&
-        rawPreviewTracks > fullPreviewTracks &&
-        fullPreviewTracks < effectiveTracks.length;
-    final previewCount = limitTracks
-        ? (fullPreviewTracks + (hasPartialPreviewTrack ? 1 : 0))
-            .clamp(1, effectiveTracks.length)
-        : effectiveTracks.length;
-
     for (var i = 0; i < effectiveTracks.length; i++) {
-      // Stop adding tracks once preview limit is reached
-      if (limitTracks && i >= previewCount) break;
-
       final track = effectiveTracks[i];
+      final isFree = track['is_free'] == true;
+      final isUnlocked = track['is_unlocked'] == true;
+      final isLocked = !isFree && !isUnlocked;
+
       final trackNumber = (track['track_number'] is num)
           ? (track['track_number'] as num).toInt()
           : (i + 1);
-      String? signedUrl;
-      if (urlsMap.isNotEmpty) {
-        final candidate = urlsMap['$trackNumber'];
-        if (candidate is Map) {
-          signedUrl = candidate['signed_url']?.toString();
+      String? signedUrl = track['audio_url']?.toString();
+      if (signedUrl == null || signedUrl.isEmpty) {
+        if (urlsMap.isNotEmpty) {
+          final candidate = urlsMap['$trackNumber'];
+          if (candidate is Map) {
+            signedUrl = candidate['signed_url']?.toString();
+          }
         }
+        signedUrl ??= track['signed_url']?.toString();
+        signedUrl ??= await _fetchAudioTrackSignedUrl(
+          bookId: bookId,
+          trackNumber: trackNumber,
+          authRequired: !isLocked && FFAppState().isLogin,
+        );
       }
-      signedUrl ??= track['signed_url']?.toString();
-      signedUrl ??= await _fetchAudioTrackSignedUrl(
-        bookId: bookId,
-        trackNumber: trackNumber,
-        authRequired: hasFullAccess && FFAppState().isLogin,
-      );
-      if (signedUrl == null || signedUrl.isEmpty) continue;
-
-      final isPartialPreviewTrack =
-          limitTracks && hasPartialPreviewTrack && i == (previewCount - 1);
-      final previewFraction = isPartialPreviewTrack
-          ? (rawPreviewTracks - fullPreviewTracks).clamp(0.0, 1.0)
-          : 1.0;
+      if ((signedUrl == null || signedUrl.isEmpty) && !isLocked) {
+        continue;
+      }
 
       chapters.add({
         'title': track['title']?.toString() ?? 'Track $trackNumber',
-        'file': signedUrl,
+        'file': signedUrl ?? '',
         'track_number': trackNumber,
         'duration': track['duration']?.toString() ?? '',
-        'isLocked': false,
-        'isPreview': limitTracks,
-        'previewFraction': previewFraction,
+        'isLocked': isLocked,
+        'isPreview': isFree,
+        'previewFraction': 1.0,
       });
     }
 
@@ -1231,12 +1272,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     if (mounted) safeSetState(() => _tracksLoading = true);
     try {
       final uri =
-          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/tracks');
+          Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bookId/chapters');
       final res =
-          await http.get(uri, headers: _apiHeaders(authRequired: false));
+          await http.get(uri, headers: _apiHeaders(authRequired: FFAppState().isLogin));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map?;
-        final raw = body?['tracks'];
+        final raw = body?['chapters'];
         if (raw is List) {
           final parsed = raw
               .whereType<Map>()
@@ -1380,88 +1421,126 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   }) {
     final theme = FlutterFlowTheme.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isPreview = track['is_preview'] == true;
-    final num = track['track_number'];
+    final isFree = track['is_free'] == true;
+    final isUnlocked = track['is_unlocked'] == true;
+    final isLocked = !isFree && !isUnlocked;
+    final trackNum = track['track_number'];
     final title = track['title']?.toString() ?? 'Episode ${index + 1}';
     final dur = track['duration']?.toString() ?? '';
 
     Future<void> handlePlay() async {
-      final audiobookFormat =
-          _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
-      if (audiobookFormat == null) return;
-      final audiobookPrice = _formatPrice(audiobookFormat);
-      final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
-      final audiobookPreviewPercent = _previewPercent(audiobookFormat);
-      final isAudiobookFree = isBookFree || audiobookPrice <= 0;
-      final hasAccess = isAudiobookFree ||
-          (FFAppState().isLogin &&
-              await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
-
-      if (hasAccess || isPreview) {
-        final playAudiobook = () async {
-          await _openAudiobookPlayerFromV2(
-            bookId: bookId,
-            bookName: bookName,
-            bookImage: bookImage,
-            authorName: authorName,
-            hasFullAccess: hasAccess,
-            previewPercent: audiobookPreviewPercent,
-            initialTrackNumber: num,
-            isFree: !isPreview && isAudiobookFree,
-          );
-        };
-        final isAdNeeded = !isPreview && isAudiobookFree;
-        if (isAdNeeded) {
-          final canShowAd = await AdManager.canShowAd();
-          if (canShowAd) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (ctx) => custom_widgets.AdRewardDialog(
-                bookImage: bookImage,
-                onWatchAd: playAudiobook,
-                adType: 'rewarded_interstitial',
-              ),
-            );
-          } else {
-            await playAudiobook();
-          }
-        } else {
-          await playAudiobook();
-        }
+      if (!isLocked) {
+        final audiobookFormat =
+            _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
+        final audiobookPreviewPercent = audiobookFormat != null ? _previewPercent(audiobookFormat) : 15;
+        await _openAudiobookPlayerFromV2(
+          bookId: bookId,
+          bookName: bookName,
+          bookImage: bookImage,
+          authorName: authorName,
+          hasFullAccess: true,
+          previewPercent: audiobookPreviewPercent,
+          initialTrackNumber: trackNum,
+          isFree: isFree,
+        );
       } else {
         if (!FFAppState().isLogin) {
           context.pushNamed(SignInPageWidget.routeName);
           return;
         }
-        if (audiobookCoinPrice > 0) {
-          final unlocked = await _confirmAndUnlockWithCoins(
-            bookName: bookName,
-            bookId: bookId,
-            format: 'audiobook',
-            coinCost: audiobookCoinPrice,
-          );
-          if (unlocked) {
-            await _openAudiobookPlayerFromV2(
-              bookId: bookId,
-              bookName: bookName,
-              bookImage: bookImage,
-              authorName: authorName,
-              hasFullAccess: true,
-              previewPercent: audiobookPreviewPercent,
-              initialTrackNumber: num,
-              isFree: false,
-            );
+
+        final trackId = track['id'] ?? track['_id'] ?? '';
+        final coinPrice = (track['chapter_price_coins'] as num?)?.toInt() ?? 0;
+        final bdtPrice = (track['chapter_price_bdt'] as num?)?.toDouble() ?? 0.0;
+
+        if (trackId.toString().isEmpty) {
+          await actions.showCustomToastBottom('Unable to unlock: invalid chapter ID');
+          return;
+        }
+
+        final option = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Unlock $title'),
+            content: Text(
+              'Unlock this chapter using coins or online payment.\n\n'
+              '${coinPrice > 0 ? "• Coins: $coinPrice\n" : ""}'
+              '${bdtPrice > 0 ? "• Cash: ৳$bdtPrice\n" : ""}'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop('cancel'),
+                child: const Text('Cancel'),
+              ),
+              if (coinPrice > 0)
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop('coins'),
+                  child: const Text('Use Coins'),
+                ),
+              if (bdtPrice > 0)
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop('payment'),
+                  child: const Text('Pay ৳'),
+                ),
+            ],
+          ),
+        );
+
+        if (option == 'coins') {
+          final balance = await _walletBalance();
+          if (balance == null || balance < coinPrice) {
+            await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');
+            return;
           }
-        } else {
-          await _addToCartAndCheckout(
-            bookId: bookId,
-            bookName: bookName,
-            bookImage: bookImage,
-            price: audiobookPrice,
-            type: 'audiobook',
-            coinPrice: audiobookCoinPrice > 0 ? audiobookCoinPrice : null,
+          final res = await EbookGroup.unlockChapterWithCoinsCall.call(
+            trackId: trackId.toString(),
+            token: FFAppState().token,
           );
+          if (res.statusCode == 200 || res.succeeded) {
+            await actions.showCustomToastBottom('Chapter unlocked successfully!');
+            _tracks = null;
+            safeSetState(() {});
+          } else {
+            final msg = getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock failed';
+            await actions.showCustomToastBottom(msg.toString());
+          }
+        } else if (option == 'payment') {
+          final res = await EbookGroup.initiateChapterPaymentCall.call(
+            trackId: trackId.toString(),
+            bookId: bookId,
+            token: FFAppState().token,
+          );
+          if (res.succeeded && res.jsonBody != null) {
+            final gatewayUrl = getJsonField(res.jsonBody, r'''$.gateway_url''')?.toString() ??
+                getJsonField(res.jsonBody, r'''$.GatewayPageURL''')?.toString() ?? '';
+            final purchaseId = getJsonField(res.jsonBody, r'''$.purchase_id''')?.toString() ??
+                getJsonField(res.jsonBody, r'''$.order_id''')?.toString() ?? '';
+            if (gatewayUrl.isNotEmpty) {
+              final success = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaymentWebView(
+                    url: gatewayUrl,
+                    orderId: purchaseId,
+                    bookIds: [bookId],
+                    purchasedFormats: ['audiobook'],
+                    checkoutController: CheckoutController(
+                      jwtToken: FFAppState().token,
+                      userId: FFAppState().userId,
+                    ),
+                  ),
+                ),
+              );
+              if (success == true || success == null) {
+                _tracks = null;
+                safeSetState(() {});
+              }
+            } else {
+              await actions.showCustomToastBottom('Failed to get gateway URL');
+            }
+          } else {
+            await actions.showCustomToastBottom('Failed to initiate payment');
+          }
         }
       }
     }
@@ -1472,7 +1551,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       index: index,
       theme: theme,
       isDark: isDark,
-      isPreview: isPreview,
+      isPreview: isFree,
       num: num,
       title: title,
       dur: dur,
@@ -1614,76 +1693,131 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         bookImage: bookImage,
                         tracks: tracks,
                         onPlayTrack: (track) async {
-                          await _buildEpisodeCard(
-                            track: track,
-                            index:
-                                tracks.indexWhere((t) => t['track_number'] == track['track_number']),
-                            bookId: bookId,
-                            bookName: bookName,
-                            bookImage: bookImage,
-                            authorName: authorName,
-                            isBookFree: isBookFree,
-                            formats: formats,
-                          );
-                          // Play handled by card's onTap internally — push via handlePlay
-                          final audiobookFormat = _pickFormat(
-                              formats.cast<Map<String, dynamic>>(),
-                              'audiobook');
-                          if (audiobookFormat == null) return;
-                          final audiobookPrice = _formatPrice(audiobookFormat);
-                          final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
-                          final audiobookPreviewPercent = _previewPercent(audiobookFormat);
-                          final isAudiobookFree = isBookFree || audiobookPrice <= 0;
-                          final isPreview = track['is_preview'] == true;
-                          final hasAccess = isAudiobookFree ||
-                              (FFAppState().isLogin &&
-                                  await _hasFormatAccess(
-                                      bookId: bookId, format: 'audiobook'));
-                          if (hasAccess || isPreview) {
+                          final isFree = track['is_free'] == true;
+                          final isUnlocked = track['is_unlocked'] == true;
+                          final isLocked = !isFree && !isUnlocked;
+
+                          if (!isLocked) {
+                            final audiobookFormat = _pickFormat(
+                                formats.cast<Map<String, dynamic>>(),
+                                'audiobook');
+                            final audiobookPreviewPercent = audiobookFormat != null
+                                ? _previewPercent(audiobookFormat)
+                                : 15;
                             await _openAudiobookPlayerFromV2(
                               bookId: bookId,
                               bookName: bookName,
                               bookImage: bookImage,
                               authorName: authorName,
-                              hasFullAccess: hasAccess,
+                              hasFullAccess: true,
                               previewPercent: audiobookPreviewPercent,
                               initialTrackNumber: track['track_number'],
-                              isFree: !isPreview && isAudiobookFree,
+                              isFree: isFree,
                             );
                           } else {
                             if (!FFAppState().isLogin) {
                               context.pushNamed(SignInPageWidget.routeName);
                               return;
                             }
-                            if (audiobookCoinPrice > 0) {
-                              final unlocked = await _confirmAndUnlockWithCoins(
-                                bookName: bookName,
-                                bookId: bookId,
-                                format: 'audiobook',
-                                coinCost: audiobookCoinPrice,
-                              );
-                              if (unlocked) {
-                                await _openAudiobookPlayerFromV2(
-                                  bookId: bookId,
-                                  bookName: bookName,
-                                  bookImage: bookImage,
-                                  authorName: authorName,
-                                  hasFullAccess: true,
-                                  previewPercent: audiobookPreviewPercent,
-                                  initialTrackNumber: track['track_number'],
-                                  isFree: false,
-                                );
+                            final trackId = track['id'] ?? track['_id'] ?? '';
+                            final coinPrice = (track['chapter_price_coins'] as num?)?.toInt() ?? 0;
+                            final bdtPrice = (track['chapter_price_bdt'] as num?)?.toDouble() ?? 0.0;
+                            final title = track['title']?.toString() ?? 'Episode';
+
+                            if (trackId.toString().isEmpty) {
+                              await actions.showCustomToastBottom('Unable to unlock: invalid chapter ID');
+                              return;
+                            }
+
+                            final option = await showDialog<String>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text('Unlock $title'),
+                                content: Text(
+                                  'Unlock this chapter using coins or online payment.\n\n'
+                                  '${coinPrice > 0 ? "• Coins: $coinPrice\n" : ""}'
+                                  '${bdtPrice > 0 ? "• Cash: ৳$bdtPrice\n" : ""}'
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop('cancel'),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  if (coinPrice > 0)
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.of(ctx).pop('coins'),
+                                      child: const Text('Use Coins'),
+                                    ),
+                                  if (bdtPrice > 0)
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.of(ctx).pop('payment'),
+                                      child: const Text('Pay ৳'),
+                                    ),
+                                ],
+                              ),
+                            );
+
+                            if (option == 'coins') {
+                              final balance = await _walletBalance();
+                              if (balance == null || balance < coinPrice) {
+                                await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');
+                                return;
                               }
-                            } else {
-                              await _addToCartAndCheckout(
-                                bookId: bookId,
-                                bookName: bookName,
-                                bookImage: bookImage,
-                                price: audiobookPrice,
-                                type: 'audiobook',
-                                coinPrice:
-                                    audiobookCoinPrice > 0 ? audiobookCoinPrice : null,
+                              final res = await EbookGroup.unlockChapterWithCoinsCall.call(
+                                trackId: trackId.toString(),
+                                token: FFAppState().token,
                               );
+                              if (res.statusCode == 200 || res.succeeded) {
+                                await actions.showCustomToastBottom('Chapter unlocked successfully!');
+                                _tracks = null;
+                                safeSetState(() {});
+                                if (context.mounted) {
+                                  Navigator.of(context).maybePop();
+                                }
+                              } else {
+                                final msg = getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock failed';
+                                await actions.showCustomToastBottom(msg.toString());
+                              }
+                            } else if (option == 'payment') {
+                              final res = await EbookGroup.initiateChapterPaymentCall.call(
+                                trackId: trackId.toString(),
+                                bookId: bookId,
+                                token: FFAppState().token,
+                              );
+                              if (res.succeeded && res.jsonBody != null) {
+                                final gatewayUrl = getJsonField(res.jsonBody, r'''$.gateway_url''')?.toString() ??
+                                    getJsonField(res.jsonBody, r'''$.GatewayPageURL''')?.toString() ?? '';
+                                final purchaseId = getJsonField(res.jsonBody, r'''$.purchase_id''')?.toString() ??
+                                    getJsonField(res.jsonBody, r'''$.order_id''')?.toString() ?? '';
+                                if (gatewayUrl.isNotEmpty) {
+                                  final success = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PaymentWebView(
+                                        url: gatewayUrl,
+                                        orderId: purchaseId,
+                                        bookIds: [bookId],
+                                        purchasedFormats: ['audiobook'],
+                                        checkoutController: CheckoutController(
+                                          jwtToken: FFAppState().token,
+                                          userId: FFAppState().userId,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                  if (success == true || success == null) {
+                                    _tracks = null;
+                                    safeSetState(() {});
+                                    if (context.mounted) {
+                                      Navigator.of(context).maybePop();
+                                    }
+                                  }
+                                } else {
+                                  await actions.showCustomToastBottom('Failed to get gateway URL');
+                                }
+                              } else {
+                                await actions.showCustomToastBottom('Failed to initiate payment');
+                              }
                             }
                           }
                         },
@@ -3852,7 +3986,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           if (!_tracksLoading &&
                                               trackCount == 0)
                                             Padding(
-                                              padding:
+                                            padding:
                                                   const EdgeInsets.symmetric(
                                                       vertical: 8.0),
                                               child: Text(
@@ -3875,7 +4009,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           ...tracks.map((track) {
                                             final isPreview =
                                                 track['is_preview'] == true;
-                                            final num = track['track_number'];
+                                            final trackNum = track['track_number'];
                                             final title =
                                                 track['title']?.toString() ??
                                                     '';
@@ -3916,7 +4050,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           authorName: authorName,
                                                           hasFullAccess: hasAccess,
                                                           previewPercent: audiobookPreviewPercent,
-                                                          initialTrackNumber: num is int ? num : (num is double ? (num as double).toInt() : (num != null ? int.tryParse(num.toString()) : null)),
+                                                          initialTrackNumber: trackNum is int ? trackNum : (trackNum is double ? trackNum.toInt() : (trackNum != null ? int.tryParse(trackNum.toString()) : null)),
                                                           isFree: !isPreview && isAudiobookFree,
                                                         );
                                                       };
@@ -3960,7 +4094,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             authorName: authorName,
                                                             hasFullAccess: true,
                                                             previewPercent: audiobookPreviewPercent,
-                                                            initialTrackNumber: num is int ? num : (num is double ? (num as double).toInt() : (num != null ? int.tryParse(num.toString()) : null)),
+                                                            initialTrackNumber: trackNum is int ? trackNum : (trackNum is double ? trackNum.toInt() : (trackNum != null ? int.tryParse(trackNum.toString()) : null)),
                                                             isFree: false,
                                                           );
                                                         }
@@ -3989,7 +4123,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             .primary
                                                             .withOpacity(0.12),
                                                     child: Text(
-                                                      '${num ?? ''}',
+                                                      '${trackNum ?? ''}',
                                                       style: TextStyle(
                                                         color:
                                                             FlutterFlowTheme.of(
@@ -4764,7 +4898,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           }
                                           final books = EbookGroup.getbookbyauthorApiCall.bookDetailsList(response.jsonBody)
                                               ?.where((b) => b is Map && (b['_id']?.toString() ?? '') != bookId)
-                                              ?.toList() ?? [];
+                                              .toList() ?? [];
                                           if (books.isEmpty) {
                                             return const SizedBox.shrink();
                                           }
@@ -5712,7 +5846,9 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
   Widget build(BuildContext context) {
     final theme = widget.theme;
     final isDark = widget.isDark;
-    final isPreview = widget.isPreview;
+    final isFree = widget.track['is_free'] == true;
+    final isUnlocked = widget.track['is_unlocked'] == true;
+    final isLocked = !isFree && !isUnlocked;
     final brandColor = theme.primary as Color;
 
     return ScaleTransition(
@@ -5730,7 +5866,7 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                 : brandColor.withOpacity(0.05),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: brandColor.withOpacity(isPreview ? 0.30 : 0.12),
+              color: brandColor.withOpacity(isFree ? 0.30 : (isUnlocked ? 0.30 : 0.12)),
               width: 1,
             ),
           ),
@@ -5743,14 +5879,14 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: brandColor.withOpacity(isPreview ? 1 : 0.15),
+                    color: brandColor.withOpacity(isFree ? 1 : 0.15),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    '${widget.num ?? widget.index + 1}',
+                    '${widget.index + 1}',
                     style: TextStyle(
-                      color: isPreview ? Colors.white : brandColor,
+                      color: isFree ? Colors.white : brandColor,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'SF Pro Display',
@@ -5797,7 +5933,7 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Free/Paid pill + play button
+                // Free/Locked/Unlocked pill + play/lock button
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -5806,35 +5942,35 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: brandColor.withOpacity(isPreview ? 0.12 : 0.07),
+                        color: brandColor.withOpacity(isFree ? 0.12 : (isUnlocked ? 0.12 : 0.07)),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: brandColor.withOpacity(isPreview ? 0.35 : 0.15),
+                          color: brandColor.withOpacity(isFree ? 0.35 : (isUnlocked ? 0.35 : 0.15)),
                           width: 1,
                         ),
                       ),
                       child: Text(
-                        isPreview ? 'Free' : 'Paid',
+                        isFree ? 'Free' : (isUnlocked ? 'Unlocked' : 'Locked'),
                         style: TextStyle(
                           fontFamily: 'SF Pro Display',
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
-                          color: brandColor,
+                          color: isLocked ? theme.secondaryText as Color : brandColor,
                         ),
                       ),
                     ),
                     const SizedBox(width: 7),
-                    // Play button
+                    // Play or Lock icon
                     Container(
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: brandColor,
+                        color: isLocked ? (theme.secondaryText as Color).withOpacity(0.15) : brandColor,
                         shape: BoxShape.circle,
                       ),
-                      child:  Icon(
-                        color: Colors.white,
-                        Icons.play_arrow_rounded,
+                      child: Icon(
+                        color: isLocked ? theme.secondaryText as Color : Colors.white,
+                        isLocked ? Icons.lock_rounded : Icons.play_arrow_rounded,
                         size: 16,
                       ),
                     ),
