@@ -1303,7 +1303,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                           alignment:
                                               AlignmentDirectional(0.0, 0.0),
                                           child: Icon(
-                                            Icons.account_balance_wallet_rounded,
+                                            Icons.stars_rounded,
                                             color: FlutterFlowTheme.of(context)
                                                 .primaryText,
                                             size: 24.0,
@@ -1315,7 +1315,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'Wallet',
+                                              'Coins & Rewards',
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium

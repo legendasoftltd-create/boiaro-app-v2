@@ -611,6 +611,18 @@ class EbookGroup {
   static GetReferralInfoCall getReferralInfoCall = GetReferralInfoCall();
   static ValidateReferralCodeCall validateReferralCodeCall =
       ValidateReferralCodeCall();
+  static GetStreakCall getStreakCall = GetStreakCall();
+  static GetPointsHistoryCall getPointsHistoryCall = GetPointsHistoryCall();
+  static AddPointsCall addPointsCall = AddPointsCall();
+  static GetLeaderboardCall getLeaderboardCall = GetLeaderboardCall();
+  static GetMyBadgesCall getMyBadgesCall = GetMyBadgesCall();
+  static GetBadgeDefinitionsCall getBadgeDefinitionsCall =
+      GetBadgeDefinitionsCall();
+  static CheckAwardBadgesCall checkAwardBadgesCall = CheckAwardBadgesCall();
+  static ClaimDailyRewardCall claimDailyRewardCall = ClaimDailyRewardCall();
+  static GetMyGoalsCall getMyGoalsCall = GetMyGoalsCall();
+  static AddGoalCall addGoalCall = AddGoalCall();
+  static LogActivityCall logActivityCall = LogActivityCall();
 }
 
 class PhoneSendOtpApiCall {
@@ -6276,6 +6288,284 @@ class PostAdClickCall {
       apiUrl: '${baseUrl}ads/click',
       callType: ApiCallType.POST,
       headers: _boiaroAuthHeaders(null),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetStreakCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetStreak',
+      apiUrl: '${baseUrl}gamification/streak',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetPointsHistoryCall {
+  Future<ApiCallResponse> call({
+    int? limit = 20,
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetPointsHistory',
+      apiUrl: '${baseUrl}gamification/points',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {
+        'limit': '$limit',
+      },
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class AddPointsCall {
+  Future<ApiCallResponse> call({
+    int? points,
+    String? eventType,
+    String? referenceId,
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final body = json.encode({
+      if (points != null) 'points': points,
+      if (eventType != null) 'event_type': eventType,
+      if (referenceId != null) 'reference_id': referenceId,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'AddPoints',
+      apiUrl: '${baseUrl}gamification/points',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetLeaderboardCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetLeaderboard',
+      apiUrl: '${baseUrl}gamification/leaderboard',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetMyBadgesCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetMyBadges',
+      apiUrl: '${baseUrl}gamification/badges',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetBadgeDefinitionsCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetBadgeDefinitions',
+      apiUrl: '${baseUrl}gamification/badges/definitions',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class CheckAwardBadgesCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'CheckAwardBadges',
+      apiUrl: '${baseUrl}gamification/badges/check',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: '{}',
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ClaimDailyRewardCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'ClaimDailyReward',
+      apiUrl: '${baseUrl}gamification/daily-reward',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: '{}',
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetMyGoalsCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetMyGoals',
+      apiUrl: '${baseUrl}gamification/goals',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class AddGoalCall {
+  Future<ApiCallResponse> call({
+    String? goalType = 'reading',
+    int? targetValue = 30,
+    String? period = 'daily',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final body = json.encode({
+      'goal_type': goalType,
+      'target_value': targetValue,
+      'period': period,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'AddGoal',
+      apiUrl: '${baseUrl}gamification/goals',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      body: body,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class LogActivityCall {
+  Future<ApiCallResponse> call({
+    String? action = 'play',
+    String? activityType = 'audiobook',
+    String? bookId = '',
+    String? format = 'audiobook',
+    String? page = 'player',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final body = json.encode({
+      'action': action,
+      'activity_type': activityType,
+      'book_id': bookId,
+      'format': format,
+      'page': page,
+    });
+    return ApiManager.instance.makeApiCall(
+      callName: 'LogActivity',
+      apiUrl: '${baseUrl}gamification/activity',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(token),
       params: {},
       body: body,
       bodyType: BodyType.JSON,
