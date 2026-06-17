@@ -341,6 +341,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         body: jsonEncode(body),
       );
       if (res.statusCode >= 400 && res.statusCode < 500) {
+        final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
         FFAppState().refreshToken = '';
@@ -353,7 +354,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         FFAppState().userDetail = null;
         FFAppState().update(() {});
         FFAppState().clearGetFavouriteBookCacheCache();
-        if (mounted) {
+        if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
         return null;
@@ -395,6 +396,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         body: jsonEncode({'book_id': bookId}),
       );
       if (res.statusCode >= 400 && res.statusCode < 500) {
+        final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
         FFAppState().refreshToken = '';
@@ -407,7 +409,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         FFAppState().userDetail = null;
         FFAppState().update(() {});
         FFAppState().clearGetFavouriteBookCacheCache();
-        if (mounted) {
+        if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
         return null;
@@ -505,6 +507,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         body: jsonEncode({'book_id': bookId}),
       );
       if (guestRes.statusCode >= 400 && guestRes.statusCode < 500) {
+        final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
         FFAppState().refreshToken = '';
@@ -517,7 +520,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         FFAppState().userDetail = null;
         FFAppState().update(() {});
         FFAppState().clearGetFavouriteBookCacheCache();
-        if (mounted) {
+        if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
         return null;
@@ -718,6 +721,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     int? initialTrackNumber,
     bool isFree = false,
   }) async {
+    if (!FFAppState().isLogin) {
+      context.pushNamed(SignInPageWidget.routeName);
+      return false;
+    }
     final tracks = await _fetchAudioTracks(bookId);
     final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
     if (effectiveTracks.isEmpty) {
@@ -760,11 +767,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           }
         }
         signedUrl ??= track['signed_url']?.toString();
-        signedUrl ??= await _fetchAudioTrackSignedUrl(
-          bookId: bookId,
-          trackNumber: trackNumber,
-          authRequired: !isLocked && FFAppState().isLogin,
-        );
       }
       if ((signedUrl == null || signedUrl.isEmpty) && !isLocked) {
         continue;
@@ -778,6 +780,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         'isLocked': isLocked,
         'isPreview': isFree,
         'previewFraction': 1.0,
+        'raw': track,
       });
     }
 
@@ -1460,30 +1463,210 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
         final option = await showDialog<String>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text('Unlock $title'),
-            content: Text(
-              'Unlock this chapter using coins or online payment.\n\n'
-              '${coinPrice > 0 ? "• Coins: $coinPrice\n" : ""}'
-              '${bdtPrice > 0 ? "• Cash: ৳$bdtPrice\n" : ""}'
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop('cancel'),
-                child: const Text('Cancel'),
+          builder: (ctx) {
+            final theme = FlutterFlowTheme.of(ctx);
+            final brandColor = theme.primary;
+            
+            Widget buildUnlockOptionCard({
+              required IconData icon,
+              required Color iconColor,
+              required String label,
+              required String value,
+              required VoidCallback onTap,
+            }) {
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: theme.secondaryBackground,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.alternate.withOpacity(0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: iconColor.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            icon,
+                            color: iconColor,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontFamily: 'SF Pro Display',
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryText,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: brandColor.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            value,
+                            style: TextStyle(
+                              fontFamily: 'SF Pro Display',
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: brandColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 340),
+                decoration: BoxDecoration(
+                  color: theme.secondaryBackground,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: theme.alternate.withOpacity(0.4),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: -50,
+                        right: -50,
+                        child: Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: brandColor.withOpacity(0.08),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 54,
+                              height: 54,
+                              decoration: BoxDecoration(
+                                color: brandColor.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.lock_open_rounded,
+                                color: brandColor,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Unlock Chapter',
+                              style: TextStyle(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: theme.primaryText,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              title,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 13,
+                                color: theme.secondaryText,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            if (coinPrice > 0) ...[
+                              buildUnlockOptionCard(
+                                icon: Icons.monetization_on_rounded,
+                                iconColor: const Color(0xFFFFB03A),
+                                label: 'Use Coins',
+                                value: '$coinPrice Coins',
+                                onTap: () => Navigator.of(ctx).pop('coins'),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (bdtPrice > 0) ...[
+                              buildUnlockOptionCard(
+                                icon: Icons.account_balance_wallet_rounded,
+                                iconColor: const Color(0xFF2EC4B6),
+                                label: 'Pay with Cash',
+                                value: '৳${bdtPrice.toStringAsFixed(0)}',
+                                onTap: () => Navigator.of(ctx).pop('payment'),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton(
+                                onPressed: () => Navigator.of(ctx).pop('cancel'),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    fontFamily: 'SF Pro Display',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.secondaryText,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              if (coinPrice > 0)
-                ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop('coins'),
-                  child: const Text('Use Coins'),
-                ),
-              if (bdtPrice > 0)
-                ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop('payment'),
-                  child: const Text('Pay ৳'),
-                ),
-            ],
-          ),
+            );
+          },
         );
 
         if (option == 'coins') {
@@ -1731,30 +1914,210 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
                             final option = await showDialog<String>(
                               context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: Text('Unlock $title'),
-                                content: Text(
-                                  'Unlock this chapter using coins or online payment.\n\n'
-                                  '${coinPrice > 0 ? "• Coins: $coinPrice\n" : ""}'
-                                  '${bdtPrice > 0 ? "• Cash: ৳$bdtPrice\n" : ""}'
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(ctx).pop('cancel'),
-                                    child: const Text('Cancel'),
+                              builder: (ctx) {
+                                final theme = FlutterFlowTheme.of(ctx);
+                                final brandColor = theme.primary;
+                                
+                                Widget buildUnlockOptionCard({
+                                  required IconData icon,
+                                  required Color iconColor,
+                                  required String label,
+                                  required String value,
+                                  required VoidCallback onTap,
+                                }) {
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: onTap,
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                        decoration: BoxDecoration(
+                                          color: theme.secondaryBackground,
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: theme.alternate.withOpacity(0.5),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: iconColor.withOpacity(0.1),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                icon,
+                                                color: iconColor,
+                                                size: 20,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 14),
+                                            Expanded(
+                                              child: Text(
+                                                label,
+                                                style: TextStyle(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: theme.primaryText,
+                                                ),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                              decoration: BoxDecoration(
+                                                color: brandColor.withOpacity(0.08),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                value,
+                                                style: TextStyle(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: brandColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                return Dialog(
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                                  child: Container(
+                                    constraints: const BoxConstraints(maxWidth: 340),
+                                    decoration: BoxDecoration(
+                                      color: theme.secondaryBackground,
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(
+                                        color: theme.alternate.withOpacity(0.4),
+                                        width: 1,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.15),
+                                          blurRadius: 24,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(24),
+                                      child: Stack(
+                                        children: [
+                                          Positioned(
+                                            top: -50,
+                                            right: -50,
+                                            child: Container(
+                                              width: 130,
+                                              height: 130,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: brandColor.withOpacity(0.08),
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(24.0),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  width: 54,
+                                                  height: 54,
+                                                  decoration: BoxDecoration(
+                                                    color: brandColor.withOpacity(0.1),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.lock_open_rounded,
+                                                    color: brandColor,
+                                                    size: 28,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 16),
+                                                Text(
+                                                  'Unlock Chapter',
+                                                  style: TextStyle(
+                                                    fontFamily: 'SF Pro Display',
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: theme.primaryText,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  title,
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontFamily: 'SF Pro Display',
+                                                    fontSize: 13,
+                                                    color: theme.secondaryText,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 24),
+                                                if (coinPrice > 0) ...[
+                                                  buildUnlockOptionCard(
+                                                    icon: Icons.monetization_on_rounded,
+                                                    iconColor: const Color(0xFFFFB03A),
+                                                    label: 'Use Coins',
+                                                    value: '$coinPrice Coins',
+                                                    onTap: () => Navigator.of(ctx).pop('coins'),
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                ],
+                                                if (bdtPrice > 0) ...[
+                                                  buildUnlockOptionCard(
+                                                    icon: Icons.account_balance_wallet_rounded,
+                                                    iconColor: const Color(0xFF2EC4B6),
+                                                    label: 'Pay with Cash',
+                                                    value: '৳${bdtPrice.toStringAsFixed(0)}',
+                                                    onTap: () => Navigator.of(ctx).pop('payment'),
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                ],
+                                                const SizedBox(height: 8),
+                                                SizedBox(
+                                                  width: double.infinity,
+                                                  child: TextButton(
+                                                    onPressed: () => Navigator.of(ctx).pop('cancel'),
+                                                    style: TextButton.styleFrom(
+                                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(12),
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      'Cancel',
+                                                      style: TextStyle(
+                                                        fontFamily: 'SF Pro Display',
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: theme.secondaryText,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                  if (coinPrice > 0)
-                                    ElevatedButton(
-                                      onPressed: () => Navigator.of(ctx).pop('coins'),
-                                      child: const Text('Use Coins'),
-                                    ),
-                                  if (bdtPrice > 0)
-                                    ElevatedButton(
-                                      onPressed: () => Navigator.of(ctx).pop('payment'),
-                                      child: const Text('Pay ৳'),
-                                    ),
-                                ],
-                              ),
+                                );
+                              },
                             );
 
                             if (option == 'coins') {
@@ -1872,6 +2235,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                     )
                     ?.toString() ??
                 "",
+            "");
+        String bookSlug = valueOrDefault<String>(
+            EbookGroup.getbookdetailsApiCall.slug(
+              bookDetailspageGetbookdetailsApiResponse.jsonBody,
+            ),
             "");
         String bookName = valueOrDefault<String>(
             EbookGroup.getbookdetailsApiCall.name(
@@ -2123,8 +2491,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                             onTap: () async {
                                               await SharePlus.instance.share(
                                                   ShareParams(
-                                                      uri: Uri.parse(
-                                                          "${FFAppConstants.webUrl}/b/${bookId}")));
+                                                      text: bookSlug.isNotEmpty
+                                                          ? "${FFAppConstants.webUrl}/book/$bookSlug"
+                                                          : "${FFAppConstants.webUrl}/book/$bookId"));
                                             },
                                             child: Container(
                                               width: 40.0,
@@ -2359,28 +2728,58 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               
                                               SizedBox(height: 8.0),
                                               // Author name
-                                              Text(
-                                                'By ${EbookGroup.getbookdetailsApiCall.authorName(
-                                                      bookDetailspageGetbookdetailsApiResponse
-                                                          .jsonBody,
-                                                    ) ?? ''}',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style:
-                                                    FlutterFlowTheme.of(context)
-                                                        .bodyMedium
-                                                        .override(
-                                                          fontFamily:
-                                                              'SF Pro Display',
-                                                          color: FlutterFlowTheme
-                                                                  .of(context)
-                                                              .secondaryText,
-                                                          fontSize: 13.0,
-                                                          letterSpacing: 0.0,
-                                                          fontWeight:
-                                                              FontWeight.normal,
-                                                          lineHeight: 1.3,
-                                                        ),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  final aName = EbookGroup.getbookdetailsApiCall.authorName(
+                                                        bookDetailspageGetbookdetailsApiResponse
+                                                            .jsonBody,
+                                                      ) ??
+                                                      '';
+                                                  final aImage =
+                                                      '${FFAppConstants.imageUrl}${EbookGroup.getbookdetailsApiCall.authorimage(bookDetailspageGetbookdetailsApiResponse.jsonBody) ?? ''}';
+                                                  final aId =
+                                                      EbookGroup.getbookdetailsApiCall.authorid(
+                                                            bookDetailspageGetbookdetailsApiResponse
+                                                                .jsonBody,
+                                                          ) ??
+                                                          '';
+                                                  if (aId.isNotEmpty) {
+                                                    context.pushNamed(
+                                                      AboutAuthorPageWidget.routeName,
+                                                      queryParameters: {
+                                                        'name': serializeParam(
+                                                            aName, ParamType.String),
+                                                        'authorImage': serializeParam(
+                                                            aImage, ParamType.String),
+                                                        'authorId': serializeParam(
+                                                            aId, ParamType.String),
+                                                      }.withoutNulls,
+                                                    );
+                                                  }
+                                                },
+                                                child: Text(
+                                                  'By ${EbookGroup.getbookdetailsApiCall.authorName(
+                                                        bookDetailspageGetbookdetailsApiResponse
+                                                            .jsonBody,
+                                                      ) ?? ''}',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style:
+                                                      FlutterFlowTheme.of(context)
+                                                          .bodyMedium
+                                                          .override(
+                                                            fontFamily:
+                                                                'SF Pro Display',
+                                                            color: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .primary,
+                                                            fontSize: 13.0,
+                                                            letterSpacing: 0.0,
+                                                            fontWeight:
+                                                                FontWeight.normal,
+                                                            lineHeight: 1.3,
+                                                          ),
+                                                ),
                                               ),
                                               SizedBox(height: 12.0),
 
@@ -3525,7 +3924,66 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           maxLength: 150,
                                         ),
                                       ),
-                                      SizedBox(height: 16.0),
+                                      // Category chip at bottom of about book
+                                      Builder(builder: (context) {
+                                        final catId = EbookGroup.getbookdetailsApiCall.categoryId(
+                                          bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                        ) ?? '';
+                                        final catName = EbookGroup.getbookdetailsApiCall.categoryName(
+                                          bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                        ) ?? '';
+                                        if (catName.isEmpty) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Padding(
+                                          padding: const EdgeInsets.only(top: 16.0),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              if (catId.isNotEmpty) {
+                                                context.pushNamed(
+                                                  SubCategoriesScreenWidget.routeName,
+                                                  queryParameters: {
+                                                    'id': serializeParam(catId, ParamType.String),
+                                                    'name': serializeParam(catName, ParamType.String),
+                                                  }.withoutNulls,
+                                                );
+                                              }
+                                            },
+                                            child: MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 16.0, vertical: 8.0),
+                                                decoration: BoxDecoration(
+                                                  color: FlutterFlowTheme.of(context).primary.withOpacity(0.08),
+                                                  borderRadius: BorderRadius.circular(20.0),
+                                                  border: Border.all(
+                                                    color: FlutterFlowTheme.of(context).primary.withOpacity(0.2),
+                                                    width: 1.0,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                                                                      Text(
+                                                      catName,
+                                                      style: FlutterFlowTheme.of(context)
+                                                          .bodyMedium
+                                                          .override(
+                                                            fontFamily: 'SF Pro Display',
+                                                            color: FlutterFlowTheme.of(context).primary,
+                                                            fontSize: 13.0,
+                                                            fontWeight: FontWeight.w600,
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                      // SizedBox(height: 16.0),
                                       // Genre Tags
                                       // Row(
                                       //   children: [
@@ -5858,6 +6316,15 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
     final isLocked = !isFree && !isUnlocked;
     final brandColor = theme.primary as Color;
 
+    final coinCost = (widget.track['chapter_price_coins'] as num?)?.toInt() ?? 0;
+    final bdtCost = (widget.track['chapter_price_bdt'] as num?)?.toDouble() ?? 0.0;
+    String lockedText = 'Locked';
+    if (coinCost > 0) {
+      lockedText = '$coinCost Coins';
+    } else if (bdtCost > 0) {
+      lockedText = '৳${bdtCost.toStringAsFixed(0)}';
+    }
+
     return ScaleTransition(
       scale: _scaleAnim,
       child: GestureDetector(
@@ -5957,7 +6424,7 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                         ),
                       ),
                       child: Text(
-                        isFree ? 'Free' : (isUnlocked ? 'Unlocked' : 'Locked'),
+                        isFree ? 'Free' : (isUnlocked ? 'Unlocked' : lockedText),
                         style: TextStyle(
                           fontFamily: 'SF Pro Display',
                           fontSize: 9,

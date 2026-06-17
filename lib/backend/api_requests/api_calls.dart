@@ -2937,9 +2937,14 @@ class GetbookdetailsApiCall {
         400,
       );
     }
+    final trimmed = (bookId ?? '').trim();
+    final isUuid = RegExp(r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$').hasMatch(trimmed);
+    final isMongoId = RegExp(r'^[a-fA-F0-9]{24}$').hasMatch(trimmed);
+    final isSlug = !(isUuid || isMongoId);
+    final urlPath = isSlug ? 'books/slug/$id' : 'books/$id';
     final res = await ApiManager.instance.makeApiCall(
       callName: 'GetbookdetailsApi',
-      apiUrl: '${baseUrl}books/$id',
+      apiUrl: '$baseUrl$urlPath',
       callType: ApiCallType.GET,
       headers: _boiaroAuthHeaders(token),
       params: {},
@@ -2970,6 +2975,11 @@ class GetbookdetailsApiCall {
       res.statusCode,
     );
   }
+
+  String? slug(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].slug''',
+      ));
 
   String? authorName(dynamic response) => castToType<String>(getJsonField(
         response,
@@ -3027,6 +3037,14 @@ class GetbookdetailsApiCall {
   String? categoryName(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.bookDetails[:].category.name''',
+      ));
+  String? subcategoryId(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].subcategory._id''',
+      ));
+  String? subcategoryName(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].subcategory.name''',
       ));
   int? download(dynamic response) => castToType<int>(getJsonField(
         response,
@@ -3174,14 +3192,24 @@ class GetbookbysubcategoryApiCall {
     String? type = '',
     String? token = '',
   }) async {
-    return ApiCallResponse(
-      BoiaroLegacyAdapter.legacyDataEnvelope(
-        success: 1,
-        message: '',
-        extra: {'bookDetails': <dynamic>[]},
-      ),
-      {},
-      200,
+    final sid = (subcategoryId ?? '').trim();
+    if (sid.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'subcategoryId required',
+        ),
+        {},
+        400,
+      );
+    }
+    return _booksQuery(
+      query: {
+        'subcategoryId': sid,
+        'subcategory': sid,
+      },
+      type: type,
+      token: token,
     );
   }
 

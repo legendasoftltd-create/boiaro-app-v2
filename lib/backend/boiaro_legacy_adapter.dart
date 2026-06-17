@@ -92,6 +92,14 @@ class BoiaroLegacyAdapter {
       catName = categories['name']?.toString() ?? '';
     }
 
+    final subcategories = b['subcategory'] ?? b['subcategories'];
+    String subcatId = '';
+    String subcatName = '';
+    if (subcategories is Map) {
+      subcatId = subcategories['id']?.toString() ?? '';
+      subcatName = subcategories['name']?.toString() ?? '';
+    }
+
     final publishers = b['publisher'] ?? b['publishers'];
     String publisherId = '';
     String publisherName = '';
@@ -178,6 +186,10 @@ class BoiaroLegacyAdapter {
       'category': {
         '_id': catId,
         'name': catName,
+      },
+      'subcategory': {
+        '_id': subcatId,
+        'name': subcatName,
       },
       'publisher': {
         '_id': publisherId,

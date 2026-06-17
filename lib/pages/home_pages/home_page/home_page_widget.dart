@@ -81,6 +81,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         body: jsonEncode(body),
       );
       if (res.statusCode >= 400 && res.statusCode < 500) {
+        final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
         FFAppState().refreshToken = '';
@@ -93,7 +94,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         FFAppState().userDetail = null;
         FFAppState().update(() {});
         FFAppState().clearGetFavouriteBookCacheCache();
-        if (mounted) {
+        if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
         return null;
@@ -200,6 +201,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         body: jsonEncode({'book_id': bookId}),
       );
       if (res.statusCode >= 400 && res.statusCode < 500) {
+        final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
         FFAppState().refreshToken = '';
@@ -212,7 +214,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         FFAppState().userDetail = null;
         FFAppState().update(() {});
         FFAppState().clearGetFavouriteBookCacheCache();
-        if (mounted) {
+        if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
         return null;
@@ -235,6 +237,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         body: jsonEncode({'book_id': bookId}),
       );
       if (guestRes.statusCode >= 400 && guestRes.statusCode < 500) {
+        final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
         FFAppState().refreshToken = '';
@@ -247,7 +250,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         FFAppState().userDetail = null;
         FFAppState().update(() {});
         FFAppState().clearGetFavouriteBookCacheCache();
-        if (mounted) {
+        if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
         return null;
@@ -291,6 +294,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
     required String bookImage,
     required String authorName,
   }) async {
+    if (!FFAppState().isLogin) {
+      context.pushNamed(SignInPageWidget.routeName);
+      return;
+    }
     if (_isAudiobookLoading) return;
     setState(() {
       _isAudiobookLoading = true;
@@ -352,11 +359,6 @@ class _HomePageWidgetState extends State<HomePageWidget>
             }
           }
           signedUrl ??= track['signed_url']?.toString();
-          signedUrl ??= await _fetchAudioTrackSignedUrl(
-            bookId: bookId,
-            trackNumber: trackNumber,
-            authRequired: !isLocked && FFAppState().isLogin,
-          );
         }
         if ((signedUrl == null || signedUrl.isEmpty) && !isLocked) {
           continue;
@@ -370,6 +372,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
           'isLocked': isLocked,
           'isPreview': isFree,
           'previewFraction': 1.0,
+          'raw': track,
         });
       }
 

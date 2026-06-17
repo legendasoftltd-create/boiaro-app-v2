@@ -397,6 +397,19 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           ),
         ),
         FFRoute(
+          name: 'BookDeepLink',
+          path: '/book/:slug',
+          builder: (context, params) => BookDetailspageWidget(
+            name: null,
+            price: null,
+            image: null,
+            id: params.getParam(
+              'slug',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
           name: ForgotpasswordPageWidget.routeName,
           path: ForgotpasswordPageWidget.routePath,
           builder: (context, params) => ForgotpasswordPageWidget(),

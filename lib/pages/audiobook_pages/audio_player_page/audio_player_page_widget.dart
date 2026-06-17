@@ -5,11 +5,13 @@ import '/services/audio_playback_service.dart';
 import '/services/progress_sync_service.dart';
 import '/services/presence_tracking_service.dart';
 import '/services/tts_service.dart';
+import '/services/local_download_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:video_player/video_player.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:async';
 import 'audio_player_page_model.dart';
 export 'audio_player_page_model.dart';
@@ -72,6 +74,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   bool _previewLimitShown = false;
   RemoteListeningProgress? _remoteListeningProgress;
   bool _isPlaying = false;
+  bool _isFavorite = false;
+  double? _downloadProgress; // null = not downloading, 0-1 = downloading, 1 = done
 
 
   final animationsMap = {
@@ -1000,30 +1004,210 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
 
     final option = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Unlock $title'),
-        content: Text(
-          'Unlock this chapter using coins or online payment.\n\n'
-          '${coinPrice > 0 ? "• Coins: $coinPrice\n" : ""}'
-          '${bdtPrice > 0 ? "• Cash: ৳$bdtPrice\n" : ""}'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop('cancel'),
-            child: const Text('Cancel'),
+      builder: (ctx) {
+        final theme = FlutterFlowTheme.of(ctx);
+        final brandColor = theme.primary;
+        
+        Widget buildUnlockOptionCard({
+          required IconData icon,
+          required Color iconColor,
+          required String label,
+          required String value,
+          required VoidCallback onTap,
+        }) {
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: theme.secondaryBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.alternate.withOpacity(0.5),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: iconColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        icon,
+                        color: iconColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryText,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: brandColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        value,
+                        style: TextStyle(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: brandColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 340),
+            decoration: BoxDecoration(
+              color: theme.secondaryBackground,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: theme.alternate.withOpacity(0.4),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: -50,
+                    right: -50,
+                    child: Container(
+                      width: 130,
+                      height: 130,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: brandColor.withOpacity(0.08),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: brandColor.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.lock_open_rounded,
+                            color: brandColor,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Unlock Chapter',
+                          style: TextStyle(
+                            fontFamily: 'SF Pro Display',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.primaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'SF Pro Display',
+                            fontSize: 13,
+                            color: theme.secondaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        if (coinPrice > 0) ...[
+                          buildUnlockOptionCard(
+                            icon: Icons.monetization_on_rounded,
+                            iconColor: const Color(0xFFFFB03A),
+                            label: 'Use Coins',
+                            value: '$coinPrice Coins',
+                            onTap: () => Navigator.of(ctx).pop('coins'),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        if (bdtPrice > 0) ...[
+                          buildUnlockOptionCard(
+                            icon: Icons.account_balance_wallet_rounded,
+                            iconColor: const Color(0xFF2EC4B6),
+                            label: 'Pay with Cash',
+                            value: '৳${bdtPrice.toStringAsFixed(0)}',
+                            onTap: () => Navigator.of(ctx).pop('payment'),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: () => Navigator.of(ctx).pop('cancel'),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: theme.secondaryText,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          if (coinPrice > 0)
-            ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop('coins'),
-              child: const Text('Use Coins'),
-            ),
-          if (bdtPrice > 0)
-            ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop('payment'),
-              child: const Text('Pay ৳'),
-            ),
-        ],
-      ),
+        );
+      },
     );
 
     if (option == 'coins') {
@@ -1173,6 +1357,442 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     );
   }
 
+  void _showMoreMenuSheet() {
+    final bookId = _bookId();
+    final bookName = _stringValue(
+      widget.audiobook['title'] ?? widget.audiobook['name'],
+      fallback: 'this audiobook',
+    );
+    final bookSlug = (widget.audiobook['slug'] ??
+            widget.audiobook['book_slug'] ??
+            '')
+        .toString()
+        .trim();
+    final shareUrl = bookSlug.isNotEmpty
+        ? '${FFAppConstants.webUrl}/book/$bookSlug'
+        : bookId.isNotEmpty
+            ? '${FFAppConstants.webUrl}/book/$bookId'
+            : FFAppConstants.webUrl;
+
+    // Publisher / copyright info
+    final publisher = _stringValue(
+      widget.audiobook['publisher'] ??
+          widget.audiobook['publisherName'] ??
+          widget.audiobook['production_company'] ??
+          getJsonField(widget.audiobook, r'''$.publisher.name'''),
+      fallback: '',
+    );
+    final narrator = _stringValue(
+      widget.audiobook['narrator'] ??
+          widget.audiobook['narratorName'] ??
+          widget.audiobook['narrators'] ??
+          getJsonField(widget.audiobook, r'''$.narrators.name'''),
+      fallback: '',
+    );
+    final authorName = _stringValue(
+      widget.audiobook['author'] ??
+          widget.audiobook['authorName'] ??
+          widget.audiobook['authors'] ??
+          getJsonField(widget.audiobook, r'''$.authors.name'''),
+      fallback: '',
+    );
+    final year = (widget.audiobook['publishedYear'] ??
+            widget.audiobook['year'] ??
+            widget.audiobook['published_year'] ??
+            '')
+        .toString()
+        .trim();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).secondaryBackground,
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Drag handle
+                    Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 4),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: FlutterFlowTheme.of(context)
+                            .primaryText
+                            .withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    // Sheet title
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      child: Row(
+                        children: [
+                          Text(
+                            'More Options',
+                            style: FlutterFlowTheme.of(context)
+                                .headlineSmall
+                                .override(
+                                  fontFamily: 'SF Pro Display',
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Divider(height: 1,
+                        color: FlutterFlowTheme.of(context)
+                            .primaryText
+                            .withValues(alpha: 0.08)),
+                    // ── Share ──────────────────────────────────────
+                    _moreMenuItem(
+                      icon: Icons.share_rounded,
+                      label: 'Share Audiobook',
+                      subtitle: 'Send a link to this book',
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        await SharePlus.instance.share(
+                          ShareParams(text: shareUrl),
+                        );
+                      },
+                    ),
+                    // ── Add to Favourite ───────────────────────────
+                    _moreMenuItem(
+                      icon: _isFavorite
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      iconColor: _isFavorite
+                          ? Colors.redAccent
+                          : null,
+                      label: _isFavorite
+                          ? 'Remove from Favourites'
+                          : 'Add to Favourites',
+                      subtitle: 'Save to your wishlist',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        setState(() => _isFavorite = !_isFavorite);
+                        actions.showCustomToastBottom(
+                          _isFavorite
+                              ? 'Added to Favourites'
+                              : 'Removed from Favourites',
+                        );
+                      },
+                    ),
+                    // ── Download Offline ───────────────────────────
+                    _moreMenuItem(
+                      icon: _downloadProgress != null
+                          ? Icons.downloading_rounded
+                          : Icons.download_for_offline_rounded,
+                      label: _downloadProgress != null
+                          ? 'Downloading… ${((_downloadProgress ?? 0) * 100).toInt()}%'
+                          : 'Download Offline',
+                      subtitle: 'Listen without internet',
+                      onTap: _downloadProgress != null
+                          ? null
+                          : () async {
+                              Navigator.pop(ctx);
+                              final audioUrl =
+                                  (_currentChapter?['file'] ??
+                                          _currentChapter?['audio'] ??
+                                          '')
+                                      .toString()
+                                      .trim();
+                              if (audioUrl.isEmpty) {
+                                await actions.showCustomToastBottom(
+                                    'No audio file available to download');
+                                return;
+                              }
+                              setState(() => _downloadProgress = 0.0);
+                              try {
+                                await LocalDownloadService.downloadBook(
+                                  bookId: bookId,
+                                  name: bookName,
+                                  image: widget.audiobook['image']
+                                          ?.toString() ??
+                                      '',
+                                  author: authorName,
+                                  remoteUrl: audioUrl,
+                                  onProgress: (received, total) {
+                                    if (total > 0 && mounted) {
+                                      setState(() => _downloadProgress =
+                                          received / total);
+                                    }
+                                  },
+                                );
+                                if (mounted) {
+                                  setState(() => _downloadProgress = null);
+                                  await actions.showCustomToastBottom(
+                                      'Downloaded successfully!');
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  setState(() => _downloadProgress = null);
+                                  await actions.showCustomToastBottom(
+                                      'Download failed: $e');
+                                }
+                              }
+                            },
+                    ),
+                    // ── Sleep Timer ────────────────────────────────
+                    _moreMenuItem(
+                      icon: Icons.bedtime_rounded,
+                      label: 'Sleep Timer',
+                      subtitle:
+                          _sleepLabel == 'Off' ? 'Off' : 'Stops in $_sleepLabel',
+                      trailing: _sleepLabel != 'Off'
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context)
+                                    .primary
+                                    .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _sleepLabel,
+                                style: TextStyle(
+                                  color:
+                                      FlutterFlowTheme.of(context).primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : null,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showSleepTimerSheet();
+                      },
+                    ),
+                    // ── Connect Device ─────────────────────────────
+                    _moreMenuItem(
+                      icon: Icons.cast_rounded,
+                      label: 'Connect Device',
+                      subtitle: 'Cast to speakers or TV',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        actions.showCustomToastBottom(
+                            'Device casting coming soon!');
+                      },
+                    ),
+                    // ── Copyright / Credit ─────────────────────────
+                    _moreMenuItem(
+                      icon: Icons.info_outline_rounded,
+                      label: 'Copyright & Credits',
+                      subtitle: 'Publisher, narrator & rights info',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showCopyrightSheet(
+                          bookName: bookName,
+                          authorName: authorName,
+                          narrator: narrator,
+                          publisher: publisher,
+                          year: year,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _moreMenuItem({
+    required IconData icon,
+    required String label,
+    String? subtitle,
+    Color? iconColor,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: FlutterFlowTheme.of(context)
+                      .primaryText
+                      .withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: iconColor ??
+                      (onTap == null
+                          ? FlutterFlowTheme.of(context).secondaryText
+                          : FlutterFlowTheme.of(context).primaryText),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: FlutterFlowTheme.of(context)
+                          .bodyMedium
+                          .override(
+                            fontFamily: 'SF Pro Display',
+                            fontWeight: FontWeight.w600,
+                            color: onTap == null
+                                ? FlutterFlowTheme.of(context).secondaryText
+                                : FlutterFlowTheme.of(context).primaryText,
+                          ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        style: FlutterFlowTheme.of(context)
+                            .bodySmall
+                            .override(
+                              fontFamily: 'SF Pro Display',
+                              color: FlutterFlowTheme.of(context)
+                                  .secondaryText,
+                              fontSize: 12,
+                            ),
+                      ),
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing,
+              if (trailing == null && onTap != null)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: FlutterFlowTheme.of(context).secondaryText,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCopyrightSheet({
+    required String bookName,
+    required String authorName,
+    required String narrator,
+    required String publisher,
+    required String year,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.verified_rounded,
+                        color: FlutterFlowTheme.of(context).primary,
+                        size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Copyright & Credits',
+                      style: FlutterFlowTheme.of(context)
+                          .headlineSmall
+                          .override(
+                            fontFamily: 'SF Pro Display',
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _copyrightRow('Title', bookName),
+                if (authorName.isNotEmpty)
+                  _copyrightRow('Author', authorName),
+                if (narrator.isNotEmpty)
+                  _copyrightRow('Narrator', narrator),
+                if (publisher.isNotEmpty)
+                  _copyrightRow('Publisher', publisher),
+                if (year.isNotEmpty) _copyrightRow('Year', year),
+                const SizedBox(height: 16),
+                Text(
+                  '© ${year.isNotEmpty ? year : DateTime.now().year} ${publisher.isNotEmpty ? publisher : bookName}. '
+                  'All rights reserved. Unauthorised reproduction or distribution is prohibited.',
+                  style: FlutterFlowTheme.of(context).bodySmall.override(
+                        fontFamily: 'SF Pro Display',
+                        color: FlutterFlowTheme.of(context).secondaryText,
+                        fontSize: 12,
+                      ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _copyrightRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: FlutterFlowTheme.of(context).bodySmall.override(
+                    fontFamily: 'SF Pro Display',
+                    color: FlutterFlowTheme.of(context).secondaryText,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                    fontFamily: 'SF Pro Display',
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatDuration(Duration duration) {
     final totalSeconds = duration.inSeconds;
     final hours = totalSeconds ~/ 3600;
@@ -1278,7 +1898,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
             IconButton(
               icon: Icon(Icons.more_vert_rounded,
                   color: FlutterFlowTheme.of(context).primaryText),
-              onPressed: () {},
+              onPressed: _showMoreMenuSheet,
             ),
           ],
           centerTitle: true,
