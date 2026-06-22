@@ -255,33 +255,31 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     final safeExt = ext.isEmpty ? '.epub' : ext;
     final bookId = widget.id ?? 'unknown';
 
-    // ── KEY FIX: timestamp-based unique filename ──────────────────────────────
-    // The epub_reader_kit plugin has its own SQLite DB keyed by sourceKey
-    // (= the local file path). If we reuse the same filename, the plugin finds
-    // the OLD stale DB entry and calls readerRepository.open() on it — which
-    // fails with "Could not open publication" because the stored Readium
-    // publication data no longer matches the new epub content.
-    //
-    // Fix: embed a timestamp in the filename so every download gets a UNIQUE
-    // path → unique sourceKey → plugin always does a fresh import.
-    // ─────────────────────────────────────────────────────────────────────────
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final fileName = 'book_${bookId}_$timestamp$safeExt';
+    final fileName = 'book_${bookId}$safeExt';
     final cachedFile = File(p.join(cacheDir.path, fileName));
 
-    // Clean up any previous timestamped epub files for this book to avoid
-    // filling the user's storage over time.
-    try {
-      for (final f in cacheDir.listSync()) {
-        if (f is File) {
-          final name = p.basename(f.path);
-          if (name.startsWith('book_${bookId}_') && name.endsWith(safeExt) &&
-              f.path != cachedFile.path) {
-            await f.delete();
-          }
+    // Check if the cached file already exists and is a valid EPUB.
+    // If it is, return it directly. This avoids downloading it on every open
+    // and keeps the path (and therefore sourceKey) stable, allowing
+    // the native reader to load the last reading position from the database.
+    if (cachedFile.existsSync() && cachedFile.lengthSync() > 0) {
+      try {
+        final bytes = await cachedFile.readAsBytes();
+        final book = await epubx.EpubReader.readBook(bytes);
+        final hasContent = (book.Chapters?.isNotEmpty == true) ||
+            (book.Content?.Html?.isNotEmpty == true);
+        if (hasContent) {
+          _openedEpubSource = 'local:${cachedFile.path}';
+          return cachedFile.path;
         }
+      } catch (e) {
+        debugPrint('Cached EPUB validation failed, re-downloading: $e');
+        try {
+          await cachedFile.delete();
+        } catch (_) {}
       }
-    } catch (_) {}
+    }
 
     // Add a cache-busting query param to defeat CDN / proxy caches,
     // BUT skip it for pre-signed URLs (e.g. AWS S3) because those have a
