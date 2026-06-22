@@ -570,9 +570,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: PurchaseHistoryPageWidget.routeName,
           path: PurchaseHistoryPageWidget.routePath,
-          builder: (context, params) => params.isEmpty
-              ? NavBarPage(initialPage: 'LibraryPage')
-              : PurchaseHistoryPageWidget(),
+          builder: (context, params) {
+            final tab = params.getParam('tab', ParamType.int) ?? 0;
+            return NavBarPage(
+              initialPage: 'LibraryPage',
+              page: PurchaseHistoryPageWidget(initialTabIndex: tab),
+            );
+          },
         ),
         FFRoute(
           name: OrdersPageWidget.routeName,

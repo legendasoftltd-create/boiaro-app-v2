@@ -214,29 +214,53 @@ class _SubscriptionPaymentWebViewState
     final uri = Uri.tryParse(url);
     if (uri == null) return false;
     final path = uri.path.toLowerCase();
+    
+    if (url.startsWith('myapp://payment/')) {
+      return true;
+    }
+    
     final status = uri.queryParameters['status']?.toLowerCase();
     const valid = {'success', 'failed', 'cancelled'};
-    return (path.contains('/payment/callback') && valid.contains(status)) ||
+    
+    final isCallback = (path.contains('/payment/callback') && valid.contains(status)) ||
         path.contains('/subscription/success') ||
         path.contains('/subscription/fail') ||
         path.contains('/subscription/cancel') ||
         path.contains('/checkout/success') ||
         path.contains('/checkout/fail') ||
         path.contains('/checkout/cancel');
+
+    final isSslcommerzRedirect = path.contains('/payments/sslcommerz/success') ||
+        path.contains('/payments/sslcommerz/fail') ||
+        path.contains('/payments/sslcommerz/cancel');
+
+    final redirectParam = uri.queryParameters['redirect']?.toLowerCase() ?? '';
+    final hasPaymentRedirect = redirectParam.startsWith('myapp://payment/');
+
+    return isCallback || isSslcommerzRedirect || hasPaymentRedirect;
   }
 
   Future<void> _handleCallback(String url) async {
     if (_paymentDone) return;
     final uri = Uri.parse(url);
     final status = uri.queryParameters['status']?.toLowerCase();
+    final path = uri.path.toLowerCase();
+    final redirectParam = uri.queryParameters['redirect']?.toLowerCase() ?? '';
+    
     final isSuccess = status == 'success' ||
-        uri.path.toLowerCase().contains('/success');
+        path.contains('/success') ||
+        redirectParam.contains('payment/success');
 
     if (!isSuccess) {
+      final isCancelled = status == 'cancelled' ||
+          path.contains('/cancel') ||
+          redirectParam.contains('payment/failed') || // Cancel also redirects to payment/failed on some endpoints
+          redirectParam.contains('cancel');
+          
       setState(() => _isProcessing = false);
       _showResult(
         success: false,
-        message: status == 'cancelled'
+        message: isCancelled
             ? 'পেমেন্ট বাতিল করা হয়েছে।'
             : 'পেমেন্ট ব্যর্থ হয়েছে। আবার চেষ্টা করুন।',
       );

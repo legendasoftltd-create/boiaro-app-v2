@@ -50,7 +50,8 @@ class _LibraryItem {
 }
 
 class PurchaseHistoryPageWidget extends StatefulWidget {
-  const PurchaseHistoryPageWidget({super.key});
+  final int initialTabIndex;
+  const PurchaseHistoryPageWidget({super.key, this.initialTabIndex = 0});
 
   static String routeName = 'PurchaseHistoryPage';
   static String routePath = '/purchaseHistoryPage';
@@ -66,7 +67,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late TabController _tabController;
-  int _selectedTabIndex = 0;
+  late int _selectedTabIndex;
   int _selectedChipIndex = 0;
 
   String _normalizeContentType(String raw) {
@@ -90,8 +91,13 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
   @override
   void initState() {
     super.initState();
+    _selectedTabIndex = widget.initialTabIndex;
     _model = createModel(context, () => PurchaseHistoryPageModel());
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       setState(() => _selectedTabIndex = _tabController.index);

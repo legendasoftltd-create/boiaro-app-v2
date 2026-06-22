@@ -28,6 +28,19 @@ class CategoryComponentWidget extends StatefulWidget {
 class _CategoryComponentWidgetState extends State<CategoryComponentWidget> {
   late CategoryComponentModel _model;
 
+  String get _resolvedIcon {
+    final iconStr = widget.icon ?? '';
+    final lastHttps = iconStr.lastIndexOf('https://');
+    if (lastHttps > 0) {
+      return iconStr.substring(lastHttps);
+    }
+    final lastHttp = iconStr.lastIndexOf('http://');
+    if (lastHttp > 0) {
+      return iconStr.substring(lastHttp);
+    }
+    return iconStr;
+  }
+
   @override
   void setState(VoidCallback callback) {
     super.setState(callback);
@@ -93,7 +106,7 @@ class _CategoryComponentWidgetState extends State<CategoryComponentWidget> {
                        child: CachedNetworkImage(
                          fadeInDuration: Duration(milliseconds: 200),
                          fadeOutDuration: Duration(milliseconds: 200),
-                         imageUrl: widget.icon!,
+                         imageUrl: _resolvedIcon,
                          fit: BoxFit.cover,
                          errorWidget: (context, error, stackTrace) =>
                              Image.asset(
@@ -164,7 +177,7 @@ class _CategoryComponentWidgetState extends State<CategoryComponentWidget> {
                        child: CachedNetworkImage(
                          fadeInDuration: Duration(milliseconds: 200),
                          fadeOutDuration: Duration(milliseconds: 200),
-                         imageUrl: widget.icon!,
+                         imageUrl: _resolvedIcon,
                          fit: BoxFit.cover,
                          errorWidget: (context, error, stackTrace) =>
                              Image.asset(

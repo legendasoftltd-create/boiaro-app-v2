@@ -117,6 +117,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
       body: {'book_id': bookId, 'format': format},
       authRequired: true,
     );
+    final isHardcopy = format.toLowerCase().trim() == 'hardcopy';
+    if (isHardcopy) {
+      return body?['has_purchase'] == true;
+    }
     return body?['has_access'] == true;
   }
 
@@ -330,16 +334,6 @@ class _HomePageWidgetState extends State<HomePageWidget>
       }
 
       final previewPercent = 15;
-      final rawPreviewTracks = effectiveTracks.length * (previewPercent / 100);
-      final fullPreviewTracks =
-          hasAccess ? effectiveTracks.length : rawPreviewTracks.floor();
-      final hasPartialPreviewTrack = !hasAccess &&
-          rawPreviewTracks > fullPreviewTracks &&
-          fullPreviewTracks < effectiveTracks.length;
-      final previewCount = hasAccess
-          ? effectiveTracks.length
-          : (fullPreviewTracks + (hasPartialPreviewTrack ? 1 : 0))
-              .clamp(1, effectiveTracks.length);
 
       for (var i = 0; i < effectiveTracks.length; i++) {
         final track = effectiveTracks[i];
@@ -407,7 +401,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
               'image': bookImage,
               'author': {'name': authorName},
               'chapters': chapters,
-              'isPreviewMode': !hasAccess,
+              'isPreviewMode': false,
               'previewPercent': previewPercent,
               'isFree': isFree,
             },

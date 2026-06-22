@@ -394,6 +394,9 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     if (index < 0 || index >= _chapters.length) {
       return;
     }
+    if (_isPreviewMode && index != _currentIndex) {
+      return;
+    }
     setState(() {
       _currentIndex = index;
       _currentChapter = _chapters[index];
@@ -406,6 +409,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   }
 
   void _persistAudiobookMeta() {
+    if (_isPreviewMode) return;
     final audiobook = widget.audiobook;
     final id = audiobook['id'] ??
         audiobook['_id'] ??
@@ -429,23 +433,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     if (!_isPreviewMode) {
       return 1.0;
     }
-    final raw = _currentChapter?['previewFraction'];
-    if (raw is num) {
-      final value = raw.toDouble().clamp(0.0, 1.0);
-      if (value > 0.0 && value < 1.0) {
-        return value;
-      }
-      if (value == 0.0) {
-        return 0.0;
-      }
-      if (_chapters.length > 1) {
-        return 1.0;
-      }
-    }
-    if (_currentIndex == 0 && _chapters.length == 1) {
-      return (_previewPercent / 100).clamp(0.0, 1.0);
-    }
-    return 1.0;
+    return (_previewPercent / 100).clamp(0.0, 1.0);
   }
 
   Duration? _currentPreviewLimit() {
@@ -506,6 +494,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       return;
     }
     _previewLimitShown = true;
+    _handler?.pause();
+    if (_videoController != null && _videoController!.value.isPlaying) {
+      _videoController!.pause();
+    }
     if (mounted && _position != limit) {
       setState(() => _position = limit);
     }
@@ -535,6 +527,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   }
 
   void _persistAudiobookProgress(Duration position) {
+    if (_isPreviewMode) return;
     final bookId = _bookId();
     final totalSeconds = _duration.inSeconds;
     if (totalSeconds <= 0) {
@@ -968,15 +961,23 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                     ? Icon(Icons.play_arrow_rounded,
                         color: FlutterFlowTheme.of(context).primary)
                     : null,
-                onTap: isLocked
-                    ? () async {
-                        Navigator.pop(context);
-                        await _unlockChapter(chapter);
-                      }
-                    : () {
-                        Navigator.pop(context);
-                        _playChapterAt(index);
-                      },
+                onTap: isCurrent
+                    ? null
+                    : (isLocked
+                        ? () async {
+                            Navigator.pop(context);
+                            await _unlockChapter(chapter);
+                          }
+                        : (_isPreviewMode
+                            ? () {
+                                Navigator.pop(context);
+                                actions.showCustomToastBottom(
+                                    'Please buy or unlock the audiobook to play other episodes.');
+                              }
+                            : () {
+                                Navigator.pop(context);
+                                _playChapterAt(index);
+                              })),
               );
             },
           ),
@@ -1251,6 +1252,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                   jwtToken: FFAppState().token,
                   userId: FFAppState().userId,
                 ),
+                isChapterUnlock: true,
               ),
             ),
           );
@@ -2275,16 +2277,22 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
-                      icon: Icon(Icons.skip_previous_rounded,
-                          color: FlutterFlowTheme.of(context).primaryText,
-                          size: 30),
-                      onPressed: () {
-                        if (_chapters.isNotEmpty && _currentIndex > 0) {
-                          _playChapterAt(_currentIndex - 1);
-                        } else {
-                          _seekTo(Duration.zero);
-                        }
-                      },
+                      icon: Icon(
+                        Icons.skip_previous_rounded,
+                        color: _isPreviewMode
+                            ? FlutterFlowTheme.of(context).secondaryText
+                            : FlutterFlowTheme.of(context).primaryText,
+                        size: 30,
+                      ),
+                      onPressed: _isPreviewMode
+                          ? () => _seekTo(Duration.zero)
+                          : () {
+                              if (_chapters.isNotEmpty && _currentIndex > 0) {
+                                _playChapterAt(_currentIndex - 1);
+                              } else {
+                                _seekTo(Duration.zero);
+                              }
+                            },
                     ),
                     IconButton(
                       icon: Icon(Icons.replay_10_rounded,
@@ -2424,14 +2432,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                     IconButton(
                       icon: Icon(
                         Icons.skip_next_rounded,
-                        color: (_isPreviewMode &&
-                                _currentIndex >= _chapters.length - 1)
+                        color: _isPreviewMode
                             ? FlutterFlowTheme.of(context).secondaryText
                             : FlutterFlowTheme.of(context).primaryText,
                         size: 30,
                       ),
-                      onPressed: (_isPreviewMode &&
-                              _currentIndex >= _chapters.length - 1)
+                      onPressed: _isPreviewMode
                           ? null
                           : () {
                               if (_chapters.isNotEmpty &&

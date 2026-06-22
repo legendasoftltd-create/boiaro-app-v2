@@ -381,7 +381,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       body: {'book_id': bookId, 'format': format},
       authRequired: true,
     );
-    if (body?['has_access'] == true) return true;
+    final isHardcopy = format.toLowerCase().trim() == 'hardcopy';
+    if (isHardcopy) {
+      if (body?['has_purchase'] == true) return true;
+    } else {
+      if (body?['has_access'] == true) return true;
+    }
     await _checkIfPurchased();
     return _purchasedFormatKeys.contains(formatKey);
   }
@@ -1030,7 +1035,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           );
         }
 
-        if (isEbookFree) {
+        final isAlreadyPurchased = FFAppState().isLogin &&
+            _purchasedFormatKeys.contains('${bookId.toLowerCase()}::ebook');
+        if (isEbookFree && !isAlreadyPurchased) {
           final canShowAd = await AdManager.canShowAd();
           if (canShowAd) {
             showDialog(
@@ -1127,9 +1134,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       final audiobookPrice = _formatPrice(audiobookFormat);
       final audiobookPreviewPercent = _previewPercent(audiobookFormat);
       final isAudiobookFree = isBookFree || audiobookPrice <= 0;
-      final hasAccess = isAudiobookFree ||
-          (FFAppState().isLogin &&
-              await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
+      final hasAccessByApi = FFAppState().isLogin &&
+          await _hasFormatAccess(bookId: bookId, format: 'audiobook');
+      final hasAccess = isAudiobookFree || hasAccessByApi;
       if (hasAccess) {
         final performPlay = () async {
           final opened = await _openAudiobookPlayerFromV2(
@@ -1146,7 +1153,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           }
         };
 
-        if (isAudiobookFree) {
+        final isAlreadyPurchased = FFAppState().isLogin &&
+            _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
+        if (isAudiobookFree && !isAlreadyPurchased) {
           final canShowAd = await AdManager.canShowAd();
           if (canShowAd) {
             showDialog(
@@ -1246,7 +1255,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
     }
 
-    if (isBookFree) {
+    final isAlreadyPurchased = FFAppState().isLogin &&
+        _purchasedFormatKeys.contains('${bookId.toLowerCase()}::ebook');
+    if (isBookFree && !isAlreadyPurchased) {
       final canShowAd = await AdManager.canShowAd();
       if (canShowAd) {
         showDialog(
@@ -1424,24 +1435,51 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   }) {
     final theme = FlutterFlowTheme.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final audiobookFormat =
+        _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
+    final isAlreadyPurchased = FFAppState().isLogin &&
+        _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
+    final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
+    final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+    final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
+
     final isFree = track['is_free'] == true;
     final isUnlocked = track['is_unlocked'] == true;
-    final isLocked = !isFree && !isUnlocked;
+    final isLocked = (!isFree && !isUnlocked) || !hasAudiobookAccess;
     final trackNum = track['track_number'];
     final title = track['title']?.toString() ?? 'Episode ${index + 1}';
     final dur = track['duration']?.toString() ?? '';
 
     Future<void> handlePlay() async {
+      if (audiobookPrice > 0 && !isAlreadyPurchased) {
+        await _handleBuyNow(
+          tab: BookMasterFormatTab.audiobook,
+          bookId: bookId,
+          bookName: bookName,
+          bookImage: bookImage,
+          ebookFormat: _pickFormat(formats, 'ebook'),
+          audiobookFormat: audiobookFormat,
+          hardcopyFormat: _pickFormat(formats, 'hardcopy'),
+        );
+        return;
+      }
       if (!isLocked) {
         final audiobookFormat =
             _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
+        final isAlreadyPurchased = FFAppState().isLogin &&
+            _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
+        final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
+        final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+        final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
+
         final audiobookPreviewPercent = audiobookFormat != null ? _previewPercent(audiobookFormat) : 15;
         await _openAudiobookPlayerFromV2(
           bookId: bookId,
           bookName: bookName,
           bookImage: bookImage,
           authorName: authorName,
-          hasFullAccess: true,
+          hasFullAccess: hasAudiobookAccess,
           previewPercent: audiobookPreviewPercent,
           initialTrackNumber: trackNum,
           isFree: isFree,
@@ -1711,11 +1749,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                       jwtToken: FFAppState().token,
                       userId: FFAppState().userId,
                     ),
+                    isChapterUnlock: true,
                   ),
                 ),
               );
               if (success == true || success == null) {
                 _tracks = null;
+                await _checkIfPurchased();
                 safeSetState(() {});
               }
             } else {
@@ -1735,6 +1775,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       theme: theme,
       isDark: isDark,
       isPreview: isFree,
+      isLocked: isLocked,
       num: num,
       title: title,
       dur: dur,
@@ -1869,21 +1910,42 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               child: _SeeMoreButton(
                 remaining: trackCount - _episodePreviewLimit,
                 onTap: () {
+                  final audiobookFormat = _pickFormat(
+                      formats.cast<Map<String, dynamic>>(),
+                      'audiobook');
+                  final isAlreadyPurchased = FFAppState().isLogin &&
+                      _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
+                  final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
+                  final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+                  final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
+
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => _EpisodesListPage(
                         bookName: bookName,
                         bookImage: bookImage,
                         tracks: tracks,
+                        hasAudiobookAccess: hasAudiobookAccess,
                         onPlayTrack: (track) async {
+                          if (audiobookPrice > 0 && !isAlreadyPurchased) {
+                            await _handleBuyNow(
+                              tab: BookMasterFormatTab.audiobook,
+                              bookId: bookId,
+                              bookName: bookName,
+                              bookImage: bookImage,
+                              ebookFormat: _pickFormat(formats, 'ebook'),
+                              audiobookFormat: audiobookFormat,
+                              hardcopyFormat: _pickFormat(formats, 'hardcopy'),
+                            );
+                            return;
+                          }
+
                           final isFree = track['is_free'] == true;
                           final isUnlocked = track['is_unlocked'] == true;
-                          final isLocked = !isFree && !isUnlocked;
+                          final isLocked = (!isFree && !isUnlocked) || !hasAudiobookAccess;
 
                           if (!isLocked) {
-                            final audiobookFormat = _pickFormat(
-                                formats.cast<Map<String, dynamic>>(),
-                                'audiobook');
+
                             final audiobookPreviewPercent = audiobookFormat != null
                                 ? _previewPercent(audiobookFormat)
                                 : 15;
@@ -1892,7 +1954,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                               bookName: bookName,
                               bookImage: bookImage,
                               authorName: authorName,
-                              hasFullAccess: true,
+                              hasFullAccess: hasAudiobookAccess,
                               previewPercent: audiobookPreviewPercent,
                               initialTrackNumber: track['track_number'],
                               isFree: isFree,
@@ -2165,11 +2227,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           jwtToken: FFAppState().token,
                                           userId: FFAppState().userId,
                                         ),
+                                        isChapterUnlock: true,
                                       ),
                                     ),
                                   );
                                   if (success == true || success == null) {
                                     _tracks = null;
+                                    await _checkIfPurchased();
                                     safeSetState(() {});
                                     if (context.mounted) {
                                       Navigator.of(context).maybePop();
@@ -4502,9 +4566,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
                                                     final audiobookPreviewPercent = _previewPercent(audiobookFormat);
                                                     final isAudiobookFree = isBookFree || audiobookPrice <= 0;
-                                                    final hasAccess = isAudiobookFree ||
-                                                        (FFAppState().isLogin &&
-                                                            await _hasFormatAccess(bookId: bookId, format: 'audiobook'));
+                                                    final hasAccessByApi = FFAppState().isLogin &&
+                                                        await _hasFormatAccess(bookId: bookId, format: 'audiobook');
+                                                    final hasAccess = isAudiobookFree || hasAccessByApi;
 
                                                     if (hasAccess || isPreview) {
                                                       final playAudiobook = () async {
@@ -4520,7 +4584,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         );
                                                       };
 
-                                                      final isAdNeeded = !isPreview && isAudiobookFree;
+                                                      final isAlreadyPurchased = FFAppState().isLogin &&
+                                                          _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
+                                                      final isAdNeeded = !isPreview && isAudiobookFree && !isAlreadyPurchased;
                                                       if (isAdNeeded) {
                                                         final canShowAd = await AdManager.canShowAd();
                                                         if (canShowAd) {
@@ -6263,6 +6329,7 @@ class _AnimatedEpisodeCard extends StatefulWidget {
     required this.theme,
     required this.isDark,
     required this.isPreview,
+    required this.isLocked,
     required this.num,
     required this.title,
     required this.dur,
@@ -6274,6 +6341,7 @@ class _AnimatedEpisodeCard extends StatefulWidget {
   final dynamic theme;
   final bool isDark;
   final bool isPreview;
+  final bool isLocked;
   final dynamic num;
   final String title;
   final String dur;
@@ -6312,8 +6380,7 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
     final theme = widget.theme;
     final isDark = widget.isDark;
     final isFree = widget.track['is_free'] == true;
-    final isUnlocked = widget.track['is_unlocked'] == true;
-    final isLocked = !isFree && !isUnlocked;
+    final isLocked = widget.isLocked;
     final brandColor = theme.primary as Color;
 
     final coinCost = (widget.track['chapter_price_coins'] as num?)?.toInt() ?? 0;
@@ -6340,7 +6407,7 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                 : brandColor.withOpacity(0.05),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: brandColor.withOpacity(isFree ? 0.30 : (isUnlocked ? 0.30 : 0.12)),
+              color: brandColor.withOpacity(isLocked ? 0.12 : 0.30),
               width: 1,
             ),
           ),
@@ -6353,14 +6420,14 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: brandColor.withOpacity(isFree ? 1 : 0.15),
+                    color: brandColor.withOpacity(isLocked ? 0.15 : 1.0),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     '${widget.index + 1}',
                     style: TextStyle(
-                      color: isFree ? Colors.white : brandColor,
+                      color: isLocked ? brandColor : Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'SF Pro Display',
@@ -6416,15 +6483,15 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: brandColor.withOpacity(isFree ? 0.12 : (isUnlocked ? 0.12 : 0.07)),
+                        color: brandColor.withOpacity(isLocked ? 0.07 : 0.12),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: brandColor.withOpacity(isFree ? 0.35 : (isUnlocked ? 0.35 : 0.15)),
+                          color: brandColor.withOpacity(isLocked ? 0.15 : 0.35),
                           width: 1,
                         ),
                       ),
                       child: Text(
-                        isFree ? 'Free' : (isUnlocked ? 'Unlocked' : lockedText),
+                        isLocked ? lockedText : (isFree ? 'Free' : 'Unlocked'),
                         style: TextStyle(
                           fontFamily: 'SF Pro Display',
                           fontSize: 9,
@@ -6546,12 +6613,14 @@ class _EpisodesListPage extends StatelessWidget {
     required this.bookImage,
     required this.tracks,
     required this.onPlayTrack,
+    required this.hasAudiobookAccess,
   });
 
   final String bookName;
   final String bookImage;
   final List<Map<String, dynamic>> tracks;
   final Future<void> Function(Map<String, dynamic> track) onPlayTrack;
+  final bool hasAudiobookAccess;
 
   @override
   Widget build(BuildContext context) {
@@ -6662,6 +6731,9 @@ class _EpisodesListPage extends StatelessWidget {
                     delegate: SliverChildBuilderDelegate(
                       (ctx, i) {
                         final track = tracks[i];
+                        final isFree = track['is_free'] == true;
+                        final isUnlocked = track['is_unlocked'] == true;
+                        final isLocked = (!isFree && !isUnlocked) || !hasAudiobookAccess;
                         final isPreview = track['is_preview'] == true;
                         final num = track['track_number'];
                         final title =
@@ -6675,6 +6747,7 @@ class _EpisodesListPage extends StatelessWidget {
                           theme: theme,
                           isDark: isDark,
                           isPreview: isPreview,
+                          isLocked: isLocked,
                           num: num,
                           title: title,
                           dur: dur,

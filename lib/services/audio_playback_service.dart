@@ -234,24 +234,12 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
     required Map<String, dynamic> audiobook,
     required Map<String, dynamic> chapter,
   }) {
-    final raw = chapter['previewFraction'];
-    if (raw is num) {
-      final value = raw.toDouble().clamp(0.0, 1.0);
-      if (value > 0.0 && value < 1.0) {
-        return value;
-      }
-      if (value == 0.0) {
-        return 0.0;
-      }
+    if (!_isPreviewSession) {
+      return 1.0;
     }
-    final chapters = audiobook['chapters'];
-    final chapterCount = chapters is List ? chapters.length : 0;
-    if (_isPreviewSession && chapterCount <= 1) {
-      final percent =
-          (audiobook['previewPercent'] as num?)?.toDouble() ?? 100.0;
-      return (percent / 100).clamp(0.0, 1.0);
-    }
-    return 1.0;
+    final percent =
+        (audiobook['previewPercent'] as num?)?.toDouble() ?? 100.0;
+    return (percent / 100).clamp(0.0, 1.0);
   }
 
   void _updatePreviewLimit(Duration? duration) {

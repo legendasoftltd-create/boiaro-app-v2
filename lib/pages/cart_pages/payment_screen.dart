@@ -16,6 +16,7 @@ class PaymentWebView extends StatefulWidget {
   final List<String> bookIds;
   final List<String> purchasedFormats;
   final CheckoutController checkoutController;
+  final bool isChapterUnlock;
 
   const PaymentWebView({
     super.key,
@@ -24,6 +25,7 @@ class PaymentWebView extends StatefulWidget {
     required this.bookIds,
     required this.purchasedFormats,
     required this.checkoutController,
+    this.isChapterUnlock = false,
   });
 
   @override
@@ -55,6 +57,11 @@ class _PaymentWebViewState extends State<PaymentWebView> {
     final uri = Uri.tryParse(url);
     if (uri == null) return false;
     final path = uri.path.toLowerCase();
+    
+    if (url.startsWith('myapp://payment/')) {
+      return true;
+    }
+    
     final status = uri.queryParameters['status']?.toLowerCase();
     final validStatus = <String>{'success', 'failed', 'cancelled'};
     final isV2Callback =
@@ -62,7 +69,15 @@ class _PaymentWebViewState extends State<PaymentWebView> {
     final isCheckoutRedirect = path.contains('/checkout/success') ||
         path.contains('/checkout/fail') ||
         path.contains('/checkout/cancel');
-    return isV2Callback || isCheckoutRedirect;
+        
+    final isSslcommerzRedirect = path.contains('/payments/sslcommerz/success') ||
+        path.contains('/payments/sslcommerz/fail') ||
+        path.contains('/payments/sslcommerz/cancel');
+
+    final redirectParam = uri.queryParameters['redirect']?.toLowerCase() ?? '';
+    final hasPaymentRedirect = redirectParam.startsWith('myapp://payment/');
+
+    return isV2Callback || isCheckoutRedirect || isSslcommerzRedirect || hasPaymentRedirect;
   }
 
   @override
@@ -201,9 +216,24 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         widget.orderId;
     final status = uri.queryParameters['status']?.toLowerCase();
 
-    final isSuccess = path.contains('/checkout/success') || status == 'success';
-    final isFail = path.contains('/checkout/fail') || status == 'failed';
-    final isCancel = path.contains('/checkout/cancel') || status == 'cancelled';
+    final redirectParam = uri.queryParameters['redirect']?.toLowerCase() ?? '';
+
+    final isSuccess = path.contains('/checkout/success') ||
+        path.contains('/payments/sslcommerz/success') ||
+        url.startsWith('myapp://payment/success') ||
+        (redirectParam.contains('payment/success') && !path.contains('cancel') && !path.contains('fail')) ||
+        status == 'success';
+
+    final isCancel = path.contains('/checkout/cancel') ||
+        path.contains('/payments/sslcommerz/cancel') ||
+        url.startsWith('myapp://payment/cancelled') ||
+        status == 'cancelled';
+
+    final isFail = !isCancel && (path.contains('/checkout/fail') ||
+        path.contains('/payments/sslcommerz/fail') ||
+        url.startsWith('myapp://payment/failed') ||
+        redirectParam.contains('payment/failed') ||
+        status == 'failed');
 
     // ✅ Success
     if (isSuccess) {
@@ -261,6 +291,10 @@ void _showSuccessDialog(String message) {
           successButtonText: _postSuccessActionLabel,
           onOkPressed: () {
             Navigator.of(context).pop(); // ✅ close manually
+            if (widget.isChapterUnlock) {
+              Navigator.of(context).pop(true);
+              return;
+            }
             context.read<CartProvider>().clear();
             final formats =
                 widget.purchasedFormats.map((e) => e.toLowerCase().trim()).toSet();
@@ -272,7 +306,14 @@ void _showSuccessDialog(String message) {
               return;
             }
             context.goNamed(ProfilePageWidget.routeName);
-            context.pushNamed(PurchaseHistoryPageWidget.routeName);
+            if (formats.contains('audiobook') || formats.contains('audio')) {
+              context.pushNamed(
+                PurchaseHistoryPageWidget.routeName,
+                queryParameters: {'tab': '1'},
+              );
+            } else {
+              context.pushNamed(PurchaseHistoryPageWidget.routeName);
+            }
           },
         ),
       );
