@@ -304,6 +304,12 @@ class BoiaroLegacyAdapter {
       displayName = prof['display_name']?.toString() ?? '';
       avatar = prof['avatar_url']?.toString() ?? '';
     }
+    if (displayName.isEmpty) {
+      displayName = r['display_name']?.toString() ?? '';
+    }
+    if (avatar.isEmpty) {
+      avatar = r['avatar_url']?.toString() ?? '';
+    }
     return {
       'rating': r['rating'],
       'description': r['comment'] ?? '',

@@ -3,8 +3,7 @@ abstract class FFAppConstants {
   static const String webUrl = 'https://boiaro.com';
 
   /// BoiAro REST API for mobile clients.
-  static const String mobileApiBaseUrl =
-      'https://boiaro.com/api/v1';
+  static const String mobileApiBaseUrl ='$webUrl/api/v1';
 
   /// Legacy key kept so older edge-function code paths can remain no-op safe.
   static const String supabaseAnonApiKey = '';

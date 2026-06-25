@@ -222,7 +222,9 @@ class _SubscriptionPaymentWebViewState
     final status = uri.queryParameters['status']?.toLowerCase();
     const valid = {'success', 'failed', 'cancelled'};
     
-    final isCallback = (path.contains('/payment/callback') && valid.contains(status)) ||
+    final isCallback = ((path.contains('/payment/callback') ||
+                path.contains('/subscription/callback')) &&
+            valid.contains(status)) ||
         path.contains('/subscription/success') ||
         path.contains('/subscription/fail') ||
         path.contains('/subscription/cancel') ||
@@ -315,43 +317,118 @@ class _SubscriptionPaymentWebViewState
   }
 
   void _showResult({required bool success, required String message}) {
-    showDialog(
+    showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => PopScope(
+      barrierLabel: "SubscriptionResult",
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, anim1, anim2) => PopScope(
         canPop: false,
-        child: AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(
-                success
-                    ? Icons.check_circle_rounded
-                    : Icons.error_outline_rounded,
-                color: success ? Colors.green : Colors.red,
-              ),
-              const SizedBox(width: 8),
-              Text(success ? 'সফল!' : 'ব্যর্থ'),
-            ],
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24.0),
           ),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                if (success) {
-                  context.safePop();
-                  context.safePop();
-                } else {
-                  context.safePop();
-                }
-              },
-              child: Text(success ? 'ঠিক আছে' : 'বন্ধ করুন'),
+          backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+          elevation: 10,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon Header
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: (success
+                            ? const Color(0xFF10B981) // Emerald Green
+                            : const Color(0xFFEF4444)) // Vivid Red
+                        .withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    success
+                        ? Icons.check_circle_rounded
+                        : Icons.error_outline_rounded,
+                    color: success
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Title
+                Text(
+                  success ? 'সফল!' : 'ব্যর্থ হয়েছে',
+                  style: FlutterFlowTheme.of(context).headlineSmall.override(
+                        fontFamily: 'SF Pro Display',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        color: FlutterFlowTheme.of(context).primaryText,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                // Message description
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                        fontFamily: 'SF Pro Display',
+                        fontSize: 15,
+                        color: FlutterFlowTheme.of(context).secondaryText,
+                        lineHeight: 1.5,
+                      ),
+                ),
+                const SizedBox(height: 28),
+                // Action Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      if (success) {
+                        context.safePop();
+                        context.safePop();
+                      } else {
+                        context.safePop();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: success
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.0),
+                      ),
+                    ),
+                    child: Text(
+                      success ? 'ঠিক আছে' : 'বন্ধ করুন',
+                      style: FlutterFlowTheme.of(context).titleSmall.override(
+                            fontFamily: 'SF Pro Display',
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        return Transform.scale(
+          scale: Curves.easeOutBack.transform(anim1.value),
+          child: Opacity(
+            opacity: anim1.value,
+            child: child,
+          ),
+        );
+      },
     );
   }
 
@@ -376,7 +453,7 @@ class _SubscriptionPaymentWebViewState
           child: Column(
             children: [
               CustomCenterAppbarWidget(
-                title: 'SSLCommerz পেমেন্ট',
+                title: 'পেমেন্ট',
                 backIcon: !_paymentDone,
                 addIcon: false,
                 onTapAdd: () async {},

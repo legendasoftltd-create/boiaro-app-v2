@@ -4,6 +4,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/dialogs/book_review_bottom_sheet/book_review_bottom_sheet_widget.dart';
 import '/index.dart';
+import '/custom_code/widgets/avatar_placeholder.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
@@ -269,43 +270,41 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                                           mainAxisSize:
                                                               MainAxisSize.max,
                                                           children: [
-                                                            Container(
-                                                              width: 48.0,
-                                                              height: 48.0,
-                                                              clipBehavior: Clip
-                                                                  .antiAlias,
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                shape: BoxShape
-                                                                    .circle,
-                                                              ),
-                                                              child:
-                                                                  CachedNetworkImage(
-                                                                fadeInDuration:
-                                                                    Duration(
-                                                                        milliseconds:
-                                                                            200),
-                                                                fadeOutDuration:
-                                                                    Duration(
-                                                                        milliseconds:
-                                                                            200),
-                                                                imageUrl:
-                                                                    '${FFAppConstants.imageUrl}${getJsonField(
-                                                                  reviewListItem,
-                                                                  r'''$.userDetails.image''',
-                                                                ).toString()}',
-                                                                fit: BoxFit
-                                                                    .cover,
-                                                                errorWidget: (context,
-                                                                        error,
-                                                                        stackTrace) =>
-                                                                    Image.asset(
-                                                                  'assets/images/error_image.png',
-                                                                  fit: BoxFit
-                                                                      .cover,
+                                                            () {
+                                                              final userImage = getJsonField(
+                                                                reviewListItem,
+                                                                r'''$.userDetails.image''',
+                                                              )?.toString() ?? '';
+                                                              final userName = getJsonField(
+                                                                reviewListItem,
+                                                                r'''$.userDetails.name''',
+                                                              )?.toString() ?? 'User';
+                                                              
+                                                              if (userImage.isEmpty) {
+                                                                return AvatarPlaceholder(
+                                                                  name: userName,
+                                                                  size: 48.0,
+                                                                );
+                                                              }
+                                                              return Container(
+                                                                width: 48.0,
+                                                                height: 48.0,
+                                                                clipBehavior: Clip.antiAlias,
+                                                                decoration: BoxDecoration(
+                                                                  shape: BoxShape.circle,
                                                                 ),
-                                                              ),
-                                                            ),
+                                                                child: CachedNetworkImage(
+                                                                  fadeInDuration: Duration(milliseconds: 200),
+                                                                  fadeOutDuration: Duration(milliseconds: 200),
+                                                                  imageUrl: userImage.startsWith('http') ? userImage : '${FFAppConstants.imageUrl}$userImage',
+                                                                  fit: BoxFit.cover,
+                                                                  errorWidget: (context, error, stackTrace) => AvatarPlaceholder(
+                                                                    name: userName,
+                                                                    size: 48.0,
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            }(),
                                                             Expanded(
                                                               child: Padding(
                                                                 padding: EdgeInsetsDirectional
@@ -473,6 +472,9 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                                         ?.toList() ??
                                                     <dynamic>[];
                                                 if (comments.isEmpty) {
+                                                  if (reviewList.isNotEmpty) {
+                                                    return const SizedBox.shrink();
+                                                  }
                                                   return Padding(
                                                     padding:
                                                         const EdgeInsets.fromLTRB(
@@ -513,28 +515,44 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                                                         .circular(
                                                                             10),
                                                               ),
-                                                              child: Column(
+                                                              child: Row(
                                                                 crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
+                                                                    CrossAxisAlignment.start,
                                                                 children: [
-                                                                  Text(
-                                                                    getJsonField(
-                                                                      c,
-                                                                      r'''$.profiles.display_name''',
-                                                                    ).toString(),
-                                                                    style: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .bodyMedium,
-                                                                  ),
-                                                                  const SizedBox(
-                                                                      height:
-                                                                          4),
-                                                                  Text(
-                                                                    getJsonField(
-                                                                      c,
-                                                                      r'''$.comment''',
-                                                                    ).toString(),
+                                                                  () {
+                                                                    final name = getJsonField(c, r'''$.profiles.display_name''')?.toString() ?? getJsonField(c, r'''$.display_name''')?.toString() ?? 'User';
+                                                                    return AvatarPlaceholder(
+                                                                      name: name,
+                                                                      size: 40.0,
+                                                                   );
+                                                                 }(),
+                                                                  const SizedBox(width: 12.0),
+                                                                  Expanded(
+                                                                    child: Column(
+                                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                                      children: [
+                                                                        Text(
+                                                                          () {
+                                                                            final name = getJsonField(c, r'''$.profiles.display_name''')?.toString() ?? getJsonField(c, r'''$.display_name''')?.toString() ?? '';
+                                                                            return name.isNotEmpty ? name : 'User';
+                                                                          }(),
+                                                                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                fontFamily: 'SF Pro Display',
+                                                                                fontWeight: FontWeight.w600,
+                                                                              ),
+                                                                        ),
+                                                                        const SizedBox(height: 4.0),
+                                                                        Text(
+                                                                          getJsonField(
+                                                                            c,
+                                                                            r'''$.comment''',
+                                                                          ).toString(),
+                                                                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                fontFamily: 'SF Pro Display',
+                                                                              ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
                                                                   ),
                                                                 ],
                                                               ),

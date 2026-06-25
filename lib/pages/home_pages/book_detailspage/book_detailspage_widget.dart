@@ -66,6 +66,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   bool _isDownloadingEbook = false;
   bool _isBookmarkBusy = false;
   bool _isEbookDownloaded = false;
+  final Map<String, Map<String, dynamic>> _narratorCache = {};
+  final Set<String> _loadingNarratorIds = {};
 
   @override
   void initState() {
@@ -237,6 +239,51 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       if (mounted) {
         safeSetState(() => _isOpeningReader = false);
       }
+    }
+  }
+
+  Future<void> _loadNarratorsForIds(List<dynamic>? ids, Map<String, dynamic>? initialNarrator) async {
+    if (initialNarrator != null) {
+      final initId = initialNarrator['id']?.toString() ?? initialNarrator['_id']?.toString() ?? '';
+      final initName = initialNarrator['name']?.toString() ?? '';
+      final initImageRaw = initialNarrator['avatar_url']?.toString() ?? initialNarrator['image']?.toString() ?? '';
+      final initImage = initImageRaw.isEmpty
+          ? ''
+          : (initImageRaw.startsWith('http')
+              ? initImageRaw
+              : '${FFAppConstants.imageUrl}$initImageRaw');
+      if (initId.isNotEmpty && !_narratorCache.containsKey(initId)) {
+        _narratorCache[initId] = {
+          '_id': initId,
+          'name': initName,
+          'image': initImage,
+        };
+      }
+    }
+
+    if (ids == null || ids.isEmpty) return;
+    final stringIds = ids.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+    for (final id in stringIds) {
+      if (_narratorCache.containsKey(id) || _loadingNarratorIds.contains(id)) {
+        continue;
+      }
+      _loadingNarratorIds.add(id);
+      EbookGroup.getnarratordetailsApiCall.call(narratorId: id).then((res) {
+        _loadingNarratorIds.remove(id);
+        if (res.succeeded && res.jsonBody != null) {
+          final detailsList = getJsonField(res.jsonBody, r'''$.data.narratorDetails''');
+          if (detailsList is List && detailsList.isNotEmpty) {
+            final details = Map<String, dynamic>.from(detailsList.first);
+            if (mounted) {
+              safeSetState(() {
+                _narratorCache[id] = details;
+              });
+            }
+          }
+        }
+      }).catchError((_) {
+        _loadingNarratorIds.remove(id);
+      });
     }
   }
 
@@ -2331,6 +2378,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
             true;
         final ebookFormat = _pickFormat(formats, 'ebook');
         final audiobookFormat = _pickFormat(formats, 'audiobook');
+        final narratorIds = audiobookFormat?['narrator_ids'];
+        final initialNarrator = audiobookFormat?['narrator'];
+        if ((narratorIds is List && narratorIds.isNotEmpty) || initialNarrator != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _loadNarratorsForIds(narratorIds, initialNarrator);
+          });
+        }
         final hardcopyFormat = _pickFormat(formats, 'hardcopy');
         final availableTabs = <BookMasterFormatTab>[
           if (ebookFormat != null) BookMasterFormatTab.ebook,
@@ -3782,7 +3836,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           forcePreview: true,
                                                         ),
                                                         text:
-                                                            'Listen Preview ($previewPercent%)',
+                                                            'Preview ($previewPercent%)',
                                                         icon: Icon(
                                                           Icons
                                                               .headphones_rounded,
@@ -4294,29 +4348,45 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           ) ??
                                           '';
 
-                                  // Extract narrator from audiobook format
-                                  final narratorRaw =
-                                      audiobookFormat?['narrators'] ??
-                                          audiobookFormat?['narrator'];
-                                  final narratorObj = (narratorRaw is List &&
-                                          narratorRaw.isNotEmpty)
-                                      ? narratorRaw.first
-                                      : (narratorRaw is Map
-                                          ? narratorRaw
-                                          : null);
+                                  // Extract narrator details from narrator_ids or from narrator cache
+                                  final narratorIdsRaw = audiobookFormat?['narrator_ids'];
+                                  final narratorIds = narratorIdsRaw is List
+                                      ? narratorIdsRaw.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList()
+                                      : <String>[];
+                                      
+                                  // Fallback to legacy single narrator if narrator_ids is empty
+                                  if (narratorIds.isEmpty) {
+                                    final singleNarratorId = audiobookFormat?['narrator_id']?.toString() ?? '';
+                                    if (singleNarratorId.isNotEmpty) {
+                                      narratorIds.add(singleNarratorId);
+                                    }
+                                  }
 
-                                  final narName =
-                                      narratorObj?['name']?.toString() ?? '';
-                                  final narImageRaw =
-                                      narratorObj?['avatar_url']?.toString() ??
-                                          '';
-                                  final narImage = narImageRaw.isEmpty
-                                      ? ''
-                                      : (narImageRaw.startsWith('http')
-                                          ? narImageRaw
-                                          : '${FFAppConstants.imageUrl}$narImageRaw');
-                                  final narId =
-                                      narratorObj?['id']?.toString() ?? '';
+                                  final List<Map<String, dynamic>> resolvedNarrators = [];
+                                  for (final id in narratorIds) {
+                                    if (_narratorCache.containsKey(id)) {
+                                      resolvedNarrators.add(_narratorCache[id]!);
+                                    } else {
+                                      final initialNarrator = audiobookFormat?['narrator'];
+                                      final initId = initialNarrator is Map
+                                          ? (initialNarrator['id']?.toString() ?? initialNarrator['_id']?.toString() ?? '')
+                                          : '';
+                                      if (id == initId && initialNarrator is Map) {
+                                        final initName = initialNarrator['name']?.toString() ?? '';
+                                        final initImageRaw = initialNarrator['avatar_url']?.toString() ?? initialNarrator['image']?.toString() ?? '';
+                                        final initImage = initImageRaw.isEmpty
+                                            ? ''
+                                            : (initImageRaw.startsWith('http')
+                                                ? initImageRaw
+                                                : '${FFAppConstants.imageUrl}$initImageRaw');
+                                        resolvedNarrators.add({
+                                          '_id': id,
+                                          'name': initName,
+                                          'image': initImage,
+                                        });
+                                      }
+                                    }
+                                  }
 
                                   final publisherName = getJsonField(
                                         bookDetailspageGetbookdetailsApiResponse
@@ -4384,32 +4454,41 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           ),
                                         ),
 
-                                      // Narrator row (audiobook only)
-                                      if (narName.isNotEmpty)
-                                        _buildPersonRow(
-                                          label: 'Narrator',
-                                          name: narName,
-                                          imageUrl: narImage,
-                                          subtitle: '',
-                                          onTap: () {
-                                            if (narId.isNotEmpty) {
-                                              context.pushNamed(
-                                                AboutNarratorPageWidget
-                                                    .routeName,
-                                                queryParameters: {
-                                                  'name': serializeParam(
-                                                      narName,
-                                                      ParamType.String),
-                                                  'narratorImage':
-                                                      serializeParam(narImage,
-                                                          ParamType.String),
-                                                  'narratorId': serializeParam(
-                                                      narId, ParamType.String),
-                                                }.withoutNulls,
-                                              );
-                                            }
-                                          },
-                                        ),
+                                       // Narrator row (audiobook only)
+                                       for (final narrator in resolvedNarrators)
+                                         _buildPersonRow(
+                                           label: 'Narrator',
+                                           name: narrator['name']?.toString() ?? '',
+                                           imageUrl: () {
+                                             final img = narrator['image']?.toString() ?? '';
+                                             return img.isEmpty
+                                                 ? ''
+                                                 : (img.startsWith('http')
+                                                     ? img
+                                                     : '${FFAppConstants.imageUrl}$img');
+                                           }(),
+                                           subtitle: '',
+                                           onTap: () {
+                                             final id = narrator['_id']?.toString() ?? narrator['id']?.toString() ?? '';
+                                             final name = narrator['name']?.toString() ?? '';
+                                             final img = narrator['image']?.toString() ?? '';
+                                             final fullImg = img.isEmpty
+                                                 ? ''
+                                                 : (img.startsWith('http')
+                                                     ? img
+                                                     : '${FFAppConstants.imageUrl}$img');
+                                             if (id.isNotEmpty) {
+                                               context.pushNamed(
+                                                 AboutNarratorPageWidget.routeName,
+                                                 queryParameters: {
+                                                   'name': serializeParam(name, ParamType.String),
+                                                   'narratorImage': serializeParam(fullImg, ParamType.String),
+                                                   'narratorId': serializeParam(id, ParamType.String),
+                                                 }.withoutNulls,
+                                               );
+                                             }
+                                           },
+                                         ),
 
                                       if (publisherName.isNotEmpty)
                                         _buildPersonRow(
@@ -4817,7 +4896,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               .override(
                                                                 fontFamily:
                                                                     'SF Pro Display',
-                                                                fontSize: 20.0,
+                                                                fontSize: 17.0,
                                                                 letterSpacing:
                                                                     0.0,
                                                                 fontWeight:
@@ -4867,7 +4946,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               .override(
                                                                 fontFamily:
                                                                     'SF Pro Display',
-                                                                fontSize: 17.0,
+                                                                fontSize: 15.0,
                                                                 letterSpacing:
                                                                     0.0,
                                                                 lineHeight: 1.5,
@@ -4909,11 +4988,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                 EdgeInsetsDirectional
                                                                     .fromSTEB(
                                                                         0.0,
-                                                                        16.0,
+                                                                        10.0,
                                                                         0.0,
-                                                                        16.0),
+                                                                        10.0),
                                                             child: Container(
-                                                              width: 320.0,
+                                                              width: 290.0,
                                                               decoration:
                                                                   BoxDecoration(
                                                                 color: FlutterFlowTheme.of(
@@ -4942,63 +5021,65 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                 padding:
                                                                     EdgeInsets
                                                                         .all(
-                                                                            16.0),
+                                                                            12.0),
                                                                 child: Column(
                                                                   mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .max,
+                                                                      MainAxisSize.max,
                                                                   crossAxisAlignment:
-                                                                      CrossAxisAlignment
-                                                                          .start,
+                                                                      CrossAxisAlignment.start,
                                                                   children: [
                                                                     Padding(
                                                                       padding: EdgeInsetsDirectional.fromSTEB(
                                                                           0.0,
                                                                           0.0,
                                                                           0.0,
-                                                                          16.0),
-                                                                      child:
-                                                                          Row(
+                                                                          8.0),
+                                                                      child: Row(
                                                                         mainAxisSize:
                                                                             MainAxisSize.max,
                                                                         crossAxisAlignment:
                                                                             CrossAxisAlignment.center,
                                                                         children: [
-                                                                          Container(
-                                                                            width:
-                                                                                48.0,
-                                                                            height:
-                                                                                48.0,
-                                                                            clipBehavior:
-                                                                                Clip.antiAlias,
-                                                                            decoration:
-                                                                                BoxDecoration(
-                                                                              shape: BoxShape.circle,
-                                                                            ),
-                                                                            child:
-                                                                                CachedNetworkImage(
-                                                                              fadeInDuration: Duration(milliseconds: 200),
-                                                                              fadeOutDuration: Duration(milliseconds: 200),
-                                                                              imageUrl: () {
-                                                                                final img = getJsonField(
-                                                                                      reviewListItem,
-                                                                                      r'''$.userDetails.image''',
-                                                                                    )?.toString() ??
-                                                                                    '';
-                                                                                if (img.isEmpty) return '';
-                                                                                return img.startsWith('http') ? img : '${FFAppConstants.imageUrl}$img';
-                                                                              }(),
-                                                                              fit: BoxFit.cover,
-                                                                              errorWidget: (context, error, stackTrace) => Image.asset(
-                                                                                'assets/images/error_image.png',
-                                                                                fit: BoxFit.cover,
+                                                                          () {
+                                                                            final img = getJsonField(
+                                                                                  reviewListItem,
+                                                                                  r'''$.userDetails.image''',
+                                                                                )?.toString() ??
+                                                                                '';
+                                                                            final userName = getJsonField(
+                                                                                  reviewListItem,
+                                                                                  r'''$.userDetails.name''',
+                                                                                )?.toString() ??
+                                                                                'User';
+                                                                            if (img.isEmpty) {
+                                                                              return custom_widgets.AvatarPlaceholder(
+                                                                                name: userName,
+                                                                                size: 36.0,
+                                                                              );
+                                                                            }
+                                                                            return Container(
+                                                                              width: 36.0,
+                                                                              height: 36.0,
+                                                                              clipBehavior: Clip.antiAlias,
+                                                                              decoration: BoxDecoration(
+                                                                                shape: BoxShape.circle,
                                                                               ),
-                                                                            ),
-                                                                          ),
+                                                                              child: CachedNetworkImage(
+                                                                                fadeInDuration: Duration(milliseconds: 200),
+                                                                                fadeOutDuration: Duration(milliseconds: 200),
+                                                                                imageUrl: img.startsWith('http') ? img : '${FFAppConstants.imageUrl}$img',
+                                                                                fit: BoxFit.cover,
+                                                                                errorWidget: (context, error, stackTrace) => custom_widgets.AvatarPlaceholder(
+                                                                                  name: userName,
+                                                                                  size: 36.0,
+                                                                                ),
+                                                                              ),
+                                                                            );
+                                                                          }(),
                                                                           Expanded(
                                                                             child:
                                                                                 Padding(
-                                                                              padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                                                              padding: EdgeInsetsDirectional.fromSTEB(10.0, 0.0, 10.0, 0.0),
                                                                               child: Column(
                                                                                 mainAxisSize: MainAxisSize.max,
                                                                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -5011,7 +5092,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                                     maxLines: 1,
                                                                                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                           fontFamily: 'SF Pro Display',
-                                                                                          fontSize: 16.0,
+                                                                                          fontSize: 14.0,
                                                                                           letterSpacing: 0.0,
                                                                                           lineHeight: 1.5,
                                                                                         ),
@@ -5025,7 +5106,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                           fontFamily: 'SF Pro Display',
                                                                                           color: FlutterFlowTheme.of(context).secondaryText,
-                                                                                          fontSize: 15.0,
+                                                                                          fontSize: 12.0,
                                                                                           letterSpacing: 0.0,
                                                                                           fontWeight: FontWeight.normal,
                                                                                           lineHeight: 1.5,
@@ -5045,8 +5126,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                                   borderRadius: BorderRadius.circular(0.0),
                                                                                   child: Image.asset(
                                                                                     'assets/images/star.png',
-                                                                                    width: 16.0,
-                                                                                    height: 16.0,
+                                                                                    width: 14.0,
+                                                                                    height: 14.0,
                                                                                     fit: BoxFit.cover,
                                                                                   ),
                                                                                 ),
@@ -5058,7 +5139,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                                 ).toString(),
                                                                                 style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                                       fontFamily: 'SF Pro Display',
-                                                                                      fontSize: 15.0,
+                                                                                      fontSize: 13.0,
                                                                                       letterSpacing: 0.0,
                                                                                       fontWeight: FontWeight.normal,
                                                                                       lineHeight: 1.5,
@@ -5083,7 +5164,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                             fontFamily:
                                                                                 'SF Pro Display',
                                                                             fontSize:
-                                                                                17.0,
+                                                                                14.0,
                                                                             letterSpacing:
                                                                                 0.0,
                                                                             lineHeight:
