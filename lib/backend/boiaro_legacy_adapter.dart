@@ -111,6 +111,16 @@ class BoiaroLegacyAdapter {
           (publishers['logo_url'] ?? publishers['image'])?.toString() ?? '';
     }
 
+    final translators = b['translator'] ?? b['translators'];
+    String translatorId = '';
+    String translatorName = '';
+    String translatorImage = '';
+    if (translators is Map) {
+      translatorId = translators['id']?.toString() ?? '';
+      translatorName = translators['name']?.toString() ?? '';
+      translatorImage = translators['avatar_url']?.toString() ?? '';
+    }
+
     final id = b['id']?.toString() ?? '';
     final cover = b['cover_url']?.toString() ?? '';
 
@@ -196,6 +206,11 @@ class BoiaroLegacyAdapter {
         'name': publisherName,
         'image': publisherImage,
       },
+      'translator': {
+        '_id': translatorId,
+        'name': translatorName,
+        'image': translatorImage,
+      },
       'price': price,
       'averageRating': avg,
       'discount_percentage': discPct,
@@ -207,6 +222,7 @@ class BoiaroLegacyAdapter {
       'formats': formats,
       'description': b['description'],
       'is_free': b['is_free'],
+      'total_listens': b['total_listens'],
     };
   }
 
@@ -218,6 +234,7 @@ class BoiaroLegacyAdapter {
         descBn.isNotEmpty ? descBn : (b['description'] ?? '').toString();
     m['reviews_count'] = b['reviews_count'];
     m['total_reads'] = b['total_reads'];
+    m['total_listens'] = b['total_listens'];
     m['tags'] = b['tags'];
     m['coin_price'] = b['coin_price'];
     // accesstype for UI: free / purchase — purchase flow uses separate checks
@@ -288,7 +305,25 @@ class BoiaroLegacyAdapter {
       'followed': n['followed'] == true || n['is_following'] == true,
       'followers_count': n['followers_count'] ?? 0,
       'books_count': n['books_count'] ?? 0,
+      'total_listens': n['total_listens'] ?? 0,
       'description': n['bio'] ?? '',
+      'facebook_url': '',
+      'instagram_url': '',
+      'youtube_url': '',
+      'website_url': '',
+    };
+  }
+
+  static Map<String, dynamic> legacyTranslatorFromV2(Map<String, dynamic> t) {
+    final img = t['avatar_url']?.toString() ?? '';
+    return {
+      '_id': t['id']?.toString() ?? '',
+      'name': t['name'] ?? '',
+      'image': img,
+      'followed': t['followed'] == true || t['is_following'] == true,
+      'followers_count': t['followers_count'] ?? 0,
+      'books_count': t['books_count'] ?? 0,
+      'description': t['bio'] ?? '',
       'facebook_url': '',
       'instagram_url': '',
       'youtube_url': '',
@@ -475,6 +510,20 @@ class BoiaroLegacyAdapter {
     }
     final str = value.toString().trim();
     if (str.startsWith('{') && str.endsWith('}')) {
+      try {
+        final decoded = json.decode(str);
+        if (decoded is Map) {
+          return resolveAuthorName(decoded, fallback: fallback);
+        }
+      } catch (_) {}
+
+      final regExp = RegExp(r'''['"]?name['"]?\s*:\s*(['"]?)(.*?)\1\s*(?:,|\}|$)''');
+      final match = regExp.firstMatch(str);
+      if (match != null) {
+        final nameVal = match.group(2)?.trim() ?? '';
+        if (nameVal.isNotEmpty) return nameVal;
+      }
+
       var s = str.substring(1, str.length - 1).trim();
       if (s.startsWith('name:')) {
         s = s.substring(5).trim();

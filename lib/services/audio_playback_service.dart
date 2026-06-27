@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '/app_constants.dart';
 import '/backend/boiaro_legacy_adapter.dart';
@@ -28,6 +30,38 @@ class AudioPlaybackService {
     );
     return _handler!;
   }
+
+  static Future<Map<String, dynamic>?> get currentAudiobook async {
+    if (_handler?.currentAudiobook != null) {
+      return _handler!.currentAudiobook;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final serialized = prefs.getString('boiaro_active_audiobook');
+      if (serialized != null) {
+        return json.decode(serialized) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('Error reading boiaro_active_audiobook from SharedPreferences: $e');
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> get currentChapter async {
+    if (_handler?.currentChapter != null) {
+      return _handler!.currentChapter;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final serialized = prefs.getString('boiaro_active_chapter');
+      if (serialized != null) {
+        return json.decode(serialized) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('Error reading boiaro_active_chapter from SharedPreferences: $e');
+    }
+    return null;
+  }
 }
 
 class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
@@ -43,6 +77,9 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
   bool ambientEnabled = false;
   double ambientVolume = 0.3;
   int selectedAmbientIndex = 0;
+
+  Map<String, dynamic>? currentAudiobook;
+  Map<String, dynamic>? currentChapter;
 
   AudiobookAudioHandler() {
     _ambientPlayer.setLoopMode(LoopMode.one);
@@ -89,13 +126,27 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
     required Map<String, dynamic> audiobook,
     required Map<String, dynamic> chapter,
   }) async {
+    debugPrint('[Audio Playback Service] playChapter called');
+    debugPrint('  - audiobook: $audiobook');
+    debugPrint('  - chapter: $chapter');
+    currentAudiobook = audiobook;
+    currentChapter = chapter;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('boiaro_active_audiobook', json.encode(audiobook));
+      await prefs.setString('boiaro_active_chapter', json.encode(chapter));
+    } catch (e) {
+      debugPrint('Error saving active audio session to SharedPreferences: $e');
+    }
     await _ensureSession();
     _resetPreviewSession(audiobook: audiobook, chapter: chapter);
     final isPreview =
         chapter['isPreview'] == true || chapter['is_preview'] == true;
     final url = _resolveAudioUrl(chapter['file'] ?? chapter['audio'],
         isPreview: isPreview);
+    debugPrint('  - Resolved play URL: "$url"');
     if (url.isEmpty) {
+      debugPrint('  - ERROR: Resolved play URL is empty. Playback aborted.');
       return;
     }
     final title = chapter['title']?.toString() ??
@@ -109,7 +160,9 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
     final artUri = _resolveBookImage(audiobook['image']?.toString());
 
     try {
+      debugPrint('[Audio Playback Service] Setting player URL: $url');
       await _player.setUrl(url);
+      debugPrint('[Audio Playback Service] URL set successfully. Player duration: ${_player.duration}');
     } on PlayerException catch (e) {
       // Likely a bad/unsupported stream (e.g. HTML/JSON instead of audio).
       debugPrint('Audio load failed: $url -> ${e.code}: ${e.message}');

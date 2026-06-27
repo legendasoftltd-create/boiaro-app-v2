@@ -297,6 +297,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
     required String bookName,
     required String bookImage,
     required String authorName,
+    int? initialTrackNumber,
+    int? initialPositionSec,
+    double? initialProgress,
+    bool? isFree,
   }) async {
     if (!FFAppState().isLogin) {
       context.pushNamed(SignInPageWidget.routeName);
@@ -310,6 +314,25 @@ class _HomePageWidgetState extends State<HomePageWidget>
     try {
       final hasAccess = FFAppState().isLogin &&
           await _hasFormatAccess(bookId: bookId, format: 'audiobook');
+
+      // Update state before opening the player page
+      FFAppState().homePageLastAudioBookId = bookId;
+      FFAppState().homePageLastAudioBookName = bookName;
+      FFAppState().homePageLastAudioBookImage = bookImage;
+      FFAppState().homePageLastAudioBookAuthor = authorName;
+      if (initialProgress != null) {
+        FFAppState().homePageLastAudioProgress = initialProgress;
+      }
+      if (initialPositionSec != null) {
+        FFAppState().homePageLastAudioPositionSec = initialPositionSec;
+      }
+      if (initialTrackNumber != null) {
+        FFAppState().prefs.setInt('ff_homePageLastAudioTrackNumber', initialTrackNumber);
+      }
+      if (isFree != null) {
+        FFAppState().prefs.setBool('ff_homePageLastAudioBookIsFree', isFree);
+      }
+      FFAppState().update(() {});
 
       final tracks = await _fetchAudioTracks(bookId);
       final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
@@ -337,9 +360,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
       for (var i = 0; i < effectiveTracks.length; i++) {
         final track = effectiveTracks[i];
-        final isFree = track['is_free'] == true;
+        final isTrackFree = track['is_free'] == true;
         final isUnlocked = track['is_unlocked'] == true;
-        final isLocked = !isFree && !isUnlocked;
+        final isLocked = !isTrackFree && !isUnlocked;
         
         final trackNumber = (track['track_number'] is num)
             ? (track['track_number'] as num).toInt()
@@ -364,7 +387,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
           'track_number': trackNumber,
           'duration': track['duration']?.toString() ?? '',
           'isLocked': isLocked,
-          'isPreview': isFree,
+          'isPreview': isTrackFree,
           'previewFraction': 1.0,
           'raw': track,
         });
@@ -379,7 +402,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         return;
       }
 
-      final lastTrackNum =
+      final lastTrackNum = initialTrackNumber ??
           FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
       Map<String, dynamic> startChapter = chapters.first;
       final matchedIndex = chapters.indexWhere(
@@ -388,7 +411,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
         startChapter = chapters[matchedIndex];
       }
 
-      final isFree = FFAppState().prefs.getBool('ff_homePageLastAudioBookIsFree') ?? false;
+      final resolvedIsFree = isFree ??
+          FFAppState().prefs.getBool('ff_homePageLastAudioBookIsFree') ?? false;
       final playAudio = () async {
         await context.pushNamed(
           AudioPlayerPageWidget.routeName,
@@ -403,14 +427,14 @@ class _HomePageWidgetState extends State<HomePageWidget>
               'chapters': chapters,
               'isPreviewMode': false,
               'previewPercent': previewPercent,
-              'isFree': isFree,
+              'isFree': resolvedIsFree,
             },
             'chapter': startChapter,
           },
         );
       };
 
-      if (isFree) {
+      if (resolvedIsFree) {
         final canShowAd = await AdManager.canShowAd();
         if (canShowAd) {
           showDialog(
@@ -1607,158 +1631,178 @@ class _HomePageWidgetState extends State<HomePageWidget>
     );
   }
 
-  Widget _buildContinueReadingSection() {
-    return Builder(
-      builder: (context) {
-        final showEbookResume =
-            _allowsEbook &&
-            FFAppState().homePageLiveReadBook.trim().isNotEmpty &&
-            FFAppState().homePageCurrentPdfIndex > 0;
-        final showAudioResume = (_selectedFilter == HomeBookFilter.all ||
-                _selectedFilter == HomeBookFilter.audiobook) &&
-            FFAppState().homePageLastAudioBookId.isNotEmpty;
+  Widget _buildContinueReadingRow(List<dynamic> items) {
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          'Continue Reading',
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: List.generate(items.length, (index) {
+              final item = items[index];
+              final bookData = item['book'] as Map<String, dynamic>? ?? {};
+              final bookId = bookData['_id']?.toString() ?? '';
+              final bookName = bookData['name']?.toString() ?? '';
+              final bookAuthor = BoiaroLegacyAdapter.resolveAuthorName(bookData['author']);
+              final coverUrl = bookData['image']?.toString() ?? '';
 
-        if (!showEbookResume && !showAudioResume) {
-          return const SizedBox.shrink();
-        }
+              final currentPage = (item['current_page'] as num?)?.toInt() ?? 1;
+              final totalPages = (item['total_pages'] as num?)?.toInt() ?? 1;
+              final percentage = (item['percentage'] as num?)?.toDouble() ?? 0.0;
+              final isPercentBased = totalPages == 100;
+              final ebookProgress = percentage / 100.0;
+              final ebookProgressLabel = isPercentBased
+                  ? '${percentage.toStringAsFixed(0)}%'
+                  : '${FFLocalizations.of(context).getText('page')} $currentPage ${FFLocalizations.of(context).getText('of')} $totalPages';
 
-        final totalIndex = FFAppState().homePageTotalPdfPageIndex;
-        final currentIndex = FFAppState().homePageCurrentPdfIndex;
-        final isEpubResume =
-            FFAppState().homePageBookPdf.toLowerCase().contains('.epub');
-        final isPercentBased = isEpubResume && totalIndex == 100;
-        final ebookProgress = isPercentBased
-            ? (currentIndex.clamp(0, 100) / 100)
-            : _safeRatio(currentIndex, totalIndex);
-        final ebookProgressLabel = isPercentBased
-            ? '${currentIndex.clamp(0, 100)}%'
-            : '${FFLocalizations.of(context).getText('page')} $currentIndex ${FFLocalizations.of(context).getText('of')} $totalIndex';
-        final audioProgressLabel = _formatAudioProgressLabel(
-          FFAppState().homePageLastAudioPositionSec,
-          FFAppState().homePageLastAudioDurationSec,
-        );
+              return Padding(
+                padding: EdgeInsets.only(
+                  right: index == items.length - 1 ? 0.0 : 12.0,
+                ),
+                child: SizedBox(
+                  width: 280.0,
+                  child: _buildResumeCard(
+                    context,
+                    title: bookName,
+                    bookAuthor: bookAuthor,
+                    bookType: 'eBook',
+                    progressLabel: ebookProgressLabel,
+                    progressValue: ebookProgress,
+                    imageUrl: coverUrl,
+                    isLoading: _isEbookLoading,
+                    onTap: () async {
+                      if (_isEbookLoading) return;
+                      setState(() {
+                        _isEbookLoading = true;
+                      });
+                      try {
+                        String? freshUrl;
+                        if (FFAppState().isLogin) {
+                          freshUrl = await _fetchEbookSignedUrl(bookId);
+                        }
+                        freshUrl ??= await _fetchEbookSignedUrlGuestAware(bookId);
+                        if (freshUrl == null || freshUrl.trim().isEmpty) {
+                          await actions.showCustomToastBottom(
+                              'Unable to load book link');
+                          return;
+                        }
+                        FFAppState().homePageBookPdf = freshUrl;
+                        FFAppState().homePageBookId = bookId;
+                        FFAppState().homePageBookName = bookName;
+                        FFAppState().homePageBookAuthor = bookAuthor;
+                        FFAppState().homePageLiveReadBook = coverUrl;
+                        FFAppState().homePageCurrentPdfIndex = currentPage;
+                        FFAppState().homePageTotalPdfPageIndex = totalPages;
+                        FFAppState().update(() {});
 
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 4),
-              child: Text(
-                'Continue',
-                maxLines: 1,
-                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      fontFamily: 'SF Pro Display',
-                      fontSize: 17.0,
-                      fontWeight: FontWeight.bold,
-                      lineHeight: 1.5,
-                    ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 6),
-              child: Row(
-                children: [
-                  if (showEbookResume)
-                    Expanded(
-                      child: _buildResumeCard(
-                        context,
-                        title: FFAppState().homePageBookName,
-                        bookAuthor: FFAppState().homePageBookAuthor,
-                        bookType: 'eBook',
-                        progressLabel: ebookProgressLabel,
-                        progressValue: ebookProgress,
-                        imageUrl: FFAppState().homePageLiveReadBook,
-                        isLoading: _isEbookLoading,
-                        onTap: () async {
-                          if (_isEbookLoading) return;
+                        await context.pushNamed(
+                          ReadBookCustomPageWidget.routeName,
+                          queryParameters: {
+                            'pdf': serializeParam(freshUrl, ParamType.String),
+                            'id': serializeParam(bookId, ParamType.String),
+                            'name': serializeParam(bookName, ParamType.String),
+                            'author': serializeParam(bookAuthor, ParamType.String),
+                            'image': serializeParam(coverUrl, ParamType.String),
+                          }.withoutNulls,
+                        );
+                      } catch (_) {
+                        await actions.showCustomToastBottom('Failed to load book');
+                      } finally {
+                        if (mounted) {
                           setState(() {
-                            _isEbookLoading = true;
+                            _isEbookLoading = false;
                           });
-                          try {
-                            final bookId = FFAppState().homePageBookId;
-                            String? freshUrl;
-                            if (FFAppState().isLogin) {
-                              freshUrl = await _fetchEbookSignedUrl(bookId);
-                            }
-                            freshUrl ??= await _fetchEbookSignedUrlGuestAware(bookId);
-                            if (freshUrl == null || freshUrl.trim().isEmpty) {
-                              await actions.showCustomToastBottom(
-                                  'Unable to load book link');
-                              return;
-                            }
-                            FFAppState().homePageBookPdf = freshUrl;
-                            FFAppState().update(() {});
+                        }
+                      }
+                    },
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
 
-                            await context.pushNamed(
-                              ReadBookCustomPageWidget.routeName,
-                              queryParameters: {
-                                'pdf': serializeParam(
-                                  freshUrl,
-                                  ParamType.String,
-                                ),
-                                'id': serializeParam(
-                                  FFAppState().homePageBookId,
-                                  ParamType.String,
-                                ),
-                                'name': serializeParam(
-                                  FFAppState().homePageBookName,
-                                  ParamType.String,
-                                ),
-                                'author': serializeParam(
-                                  FFAppState().homePageBookAuthor,
-                                  ParamType.String,
-                                ),
-                                'image': serializeParam(
-                                  FFAppState().homePageLiveReadBook,
-                                  ParamType.String,
-                                ),
-                              }.withoutNulls,
-                            );
-                          } catch (_) {
-                            await actions.showCustomToastBottom('Failed to load book');
-                          } finally {
-                            if (mounted) {
-                              setState(() {
-                                _isEbookLoading = false;
-                              });
-                            }
-                          }
-                        },
-                      ).animateOnPageLoad(
-                          animationsMap['containerOnPageLoadAnimation']!),
-                    ),
-                  if (showEbookResume && showAudioResume)
-                    const SizedBox(width: 12),
-                  if (showAudioResume)
-                    Expanded(
-                      child: _buildResumeCard(
-                        context,
-                        title: FFAppState().homePageLastAudioBookName,
-                        bookAuthor: FFAppState().homePageLastAudioBookAuthor,
-                        bookType: 'Audiobook',
-                        progressLabel: audioProgressLabel,
-                        progressValue: FFAppState().homePageLastAudioProgress,
-                        imageUrl: FFAppState().homePageLastAudioBookImage,
-                        isLoading: _isAudiobookLoading,
-                        onTap: () async {
-                          await _resumeAudiobookPlayer(
-                            bookId: FFAppState().homePageLastAudioBookId,
-                            bookName: FFAppState().homePageLastAudioBookName,
-                            bookImage: FFAppState().homePageLastAudioBookImage,
-                            authorName:
-                                FFAppState().homePageLastAudioBookAuthor,
-                          );
-                        },
-                      ).animateOnPageLoad(
-                          animationsMap['containerOnPageLoadAnimation']!),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
+  Widget _buildContinueListeningRow(List<dynamic> items) {
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          'Continue Listening',
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: List.generate(items.length, (index) {
+              final item = items[index];
+              final bookData = item['book'] as Map<String, dynamic>? ?? {};
+              final bookId = bookData['_id']?.toString() ?? '';
+              final bookName = bookData['name']?.toString() ?? '';
+              final bookAuthor = BoiaroLegacyAdapter.resolveAuthorName(bookData['author']);
+              final coverUrl = bookData['image']?.toString() ?? '';
+
+              final currentTrack = (item['current_track'] as num?)?.toInt() ?? 1;
+              final currentPosition = (item['current_position'] as num?)?.toInt() ?? 0;
+              final percentage = (item['percentage'] as num?)?.toDouble() ?? 0.0;
+              final totalDuration = (item['total_duration'] as num?)?.toInt() ?? 0;
+
+              final audioProgress = percentage / 100.0;
+              final audioProgressLabel = _formatAudioProgressLabel(
+                currentPosition,
+                totalDuration,
+              );
+
+              final isFree = bookData['is_free'] == true;
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  right: index == items.length - 1 ? 0.0 : 12.0,
+                ),
+                child: SizedBox(
+                  width: 280.0,
+                  child: _buildResumeCard(
+                    context,
+                    title: bookName,
+                    bookAuthor: bookAuthor,
+                    bookType: 'Audiobook',
+                    progressLabel: audioProgressLabel,
+                    progressValue: audioProgress,
+                    imageUrl: coverUrl,
+                    isLoading: _isAudiobookLoading,
+                    onTap: () async {
+                      await _resumeAudiobookPlayer(
+                        bookId: bookId,
+                        bookName: bookName,
+                        bookImage: coverUrl,
+                        authorName: bookAuthor,
+                        initialTrackNumber: currentTrack,
+                        initialPositionSec: currentPosition,
+                        initialProgress: audioProgress,
+                        isFree: isFree,
+                      );
+                    },
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2242,6 +2286,14 @@ class _HomePageWidgetState extends State<HomePageWidget>
             .popularEbookList(homepageJson)
             ?.toList() ??
         [];
+    final continueReading = EbookGroup.getHomepageApiCall
+            .continueReadingList(homepageJson)
+            ?.toList() ??
+        [];
+    final continueListening = EbookGroup.getHomepageApiCall
+            .continueListeningList(homepageJson)
+            ?.toList() ??
+        [];
 
     return RefreshIndicator(
       key: const Key('RefreshIndicator_hiaxgz4b'),
@@ -2264,7 +2316,14 @@ class _HomePageWidgetState extends State<HomePageWidget>
         children: [
           _buildSliderSection(homepageJson),
           _buildCategoriesSection(homepageJson),
-          _buildContinueReadingSection(),
+          if ((_selectedFilter == HomeBookFilter.all ||
+                  _selectedFilter == HomeBookFilter.ebook) &&
+              !widget.embeddedAudiobookMode)
+            _buildContinueReadingRow(continueReading),
+          if ((_selectedFilter == HomeBookFilter.all ||
+                  _selectedFilter == HomeBookFilter.audiobook) ||
+              widget.embeddedAudiobookMode)
+            _buildContinueListeningRow(continueListening),
           _buildBookStripSection(
             title: FFLocalizations.of(context).getText('new_books_title'),
             sectionKey: 'new_books',

@@ -20,6 +20,8 @@ import 'flutter_flow/internationalization.dart';
 import 'index.dart';
 import '/providers/cart_provider.dart';
 import '/providers/pdf_viewer_provider.dart';
+import 'package:audio_service/audio_service.dart';
+import 'services/audio_playback_service.dart';
 import 'custom_code/ad_manager.dart';
 
 void main() async {
@@ -53,6 +55,28 @@ void main() async {
   runApp(
     DevicePreview(
       enabled: kDebugMode,
+      devices: [
+        ...Devices.all,
+        DeviceInfo.genericPhone(
+          platform: TargetPlatform.android,
+          name: 'Vivo Y17',
+          id: 'vivo_y17',
+          screenSize: const Size(360, 772),
+          pixelRatio: 2.0,
+          safeAreas: const EdgeInsets.only(
+            left: 0.0,
+            top: 24.0,
+            right: 0.0,
+            bottom: 20.0,
+          ),
+          rotatedSafeAreas: const EdgeInsets.only(
+            left: 0.0,
+            top: 24.0,
+            right: 0.0,
+            bottom: 20.0,
+          ),
+        ),
+      ],
       builder: (context) => MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (context) => appState),
@@ -110,6 +134,22 @@ class _MyAppState extends State<MyApp> {
     _appStateNotifier = AppStateNotifier.instance;
     _router = createRouter(_appStateNotifier);
     _loadSavedLocale();
+
+    AudioService.notificationClicked.listen((bool clicked) async {
+      if (clicked) {
+        final audiobook = await AudioPlaybackService.currentAudiobook;
+        final chapter = await AudioPlaybackService.currentChapter;
+        if (audiobook != null && chapter != null) {
+          _router.pushNamed(
+            AudioPlayerPageWidget.routeName,
+            extra: <String, dynamic>{
+              'audiobook': audiobook,
+              'chapter': chapter,
+            },
+          );
+        }
+      }
+    });
   }
 
   Future<void> _loadSavedLocale() async {

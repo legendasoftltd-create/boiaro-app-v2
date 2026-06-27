@@ -149,15 +149,20 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
       formatIcons.add(Icons.menu_book_rounded);
     }
 
-    return InkWell(
-      splashColor: Colors.transparent,
-      focusColor: Colors.transparent,
-      hoverColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      onTap: () async {
-        await widget.isMainTap?.call();
-      },
-      child: Container(
+    final mediaQueryData = MediaQuery.of(context);
+    final clampedScale = mediaQueryData.textScaleFactor.clamp(0.8, 1.12);
+
+    return MediaQuery(
+      data: mediaQueryData.copyWith(textScaleFactor: clampedScale),
+      child: InkWell(
+        splashColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        onTap: () async {
+          await widget.isMainTap?.call();
+        },
+        child: Container(
         margin: EdgeInsets.all(2.0),
         width: () {
           if (MediaQuery.sizeOf(context).width < 810.0) {
@@ -641,6 +646,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
           ],
         ),
       ),
+    ),
     );
   }
 }

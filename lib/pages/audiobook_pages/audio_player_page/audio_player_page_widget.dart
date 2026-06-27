@@ -1,3 +1,7 @@
+import 'audio_player_page_model.dart';
+import '/pages/dialogs/rate_app_dialog/rate_app_dialog_widget.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -13,7 +17,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:async';
-import 'audio_player_page_model.dart';
+
 export 'audio_player_page_model.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -107,10 +111,61 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _isPreviewMode = widget.audiobook['isPreviewMode'] == true;
     _previewPercent =
         (widget.audiobook['previewPercent'] as num?)?.toInt() ?? 100;
+    // Initialize favourite status from widget data
+    _isFavorite = widget.audiobook['isFavorite'] == true ||
+        widget.audiobook['is_favorite'] == true ||
+        widget.audiobook['isFavourite'] == true ||
+        widget.audiobook['favourite'] == true;
     _initializeChapters();
     _persistAudiobookMeta();
     _initAudio();
     _loadAmbientTracks();
+    // Async verify favourite status from API
+    _checkFavoriteStatus();
+  }
+
+  /// Checks the backend to confirm whether this audiobook is currently
+  /// bookmarked/favourited by the user, then updates [_isFavorite] in-place.
+  Future<void> _checkFavoriteStatus() async {
+    final bookId = _bookId();
+    if (bookId.isEmpty || !FFAppState().isLogin) return;
+    try {
+      final res = await EbookGroup.getFavouriteBookCall.call(
+        userId: FFAppState().userId,
+        token: FFAppState().token,
+      );
+      if (!res.succeeded || !mounted) return;
+      final details =
+          EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(res.jsonBody) ??
+              [];
+      final bookIds = details
+          .map((item) =>
+              getJsonField(item, r'''$.bookDetails._id''').toString().trim())
+          .toList();
+      if (mounted) {
+        setState(() => _isFavorite = bookIds.contains(bookId.trim()));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _maybeShowRateDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool hasRated = prefs.getBool('boiaro_has_rated_app') ?? false;
+    if (hasRated) return;
+
+    final int lastDismissedMs = prefs.getInt('boiaro_last_rate_dismissed_time_ms') ?? 0;
+    final int currentMs = DateTime.now().millisecondsSinceEpoch;
+    final int cooldownMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+    if (currentMs - lastDismissedMs < cooldownMs) {
+      return;
+    }
+
+    if (mounted) {
+      await showDialog(
+        context: context,
+        builder: (context) => const RateAppDialogWidget(),
+      );
+    }
   }
 
   void _initializeChapters() {
@@ -158,6 +213,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
             if (!isLocked) {
               _playChapterAt(_currentIndex + 1);
             }
+          } else if (_chapters.isNotEmpty && _currentIndex == _chapters.length - 1) {
+            _maybeShowRateDialog();
           }
         }
       }
@@ -926,61 +983,333 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   }
 
   void _showChaptersSheet() {
+    // Resolve cover image URL
+    final coverUrl = () {
+      final raw = (widget.audiobook['image'] ??
+              widget.audiobook['cover'] ??
+              widget.audiobook['coverImage'] ??
+              '')
+          .toString()
+          .trim();
+      if (raw.isEmpty) return '';
+      if (raw.startsWith('http')) return raw;
+      return '${FFAppConstants.bookImagesUrl}$raw';
+    }();
+    final bookName = (widget.audiobook['title'] ??
+            widget.audiobook['name'] ??
+            'Audiobook')
+        .toString();
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: _chapters.length,
-            separatorBuilder: (_, __) => Divider(height: 1),
-            itemBuilder: (context, index) {
-              final chapter = _chapters[index];
-              final title = chapter['title'] ?? 'Chapter ${index + 1}';
-              final isCurrent = index == _currentIndex;
-              final isLocked = chapter['isLocked'] == true;
-              return ListTile(
-                leading: isLocked
-                    ? Icon(Icons.lock_rounded,
-                        size: 18,
-                        color: FlutterFlowTheme.of(context).secondaryText)
-                    : null,
-                title: Text(
-                  title.toString(),
-                  style: TextStyle(
-                    color: isLocked
-                        ? FlutterFlowTheme.of(context).secondaryText
-                        : FlutterFlowTheme.of(context).primaryText,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.60,
+          maxChildSize: 0.92,
+          minChildSize: 0.35,
+          builder: (_, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).secondaryBackground,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  // ── Drag handle ────────────────────────────────
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: FlutterFlowTheme.of(context)
+                          .primaryText
+                          .withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                trailing: isCurrent
-                    ? Icon(Icons.play_arrow_rounded,
-                        color: FlutterFlowTheme.of(context).primary)
-                    : null,
-                onTap: isCurrent
-                    ? null
-                    : (isLocked
-                        ? () async {
-                            Navigator.pop(context);
-                            await _unlockChapter(chapter);
-                          }
-                        : (_isPreviewMode
-                            ? () {
-                                Navigator.pop(context);
-                                actions.showCustomToastBottom(
-                                    'Please buy or unlock the audiobook to play other episodes.');
-                              }
-                            : () {
-                                Navigator.pop(context);
-                                _playChapterAt(index);
-                              })),
-              );
-            },
-          ),
+                  // ── Header ────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                    child: Row(
+                      children: [
+                        // Cover thumbnail
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: coverUrl.isEmpty
+                              ? Container(
+                                  width: 44,
+                                  height: 58,
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context)
+                                        .alternate,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.headphones_rounded,
+                                      size: 22,
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryText),
+                                )
+                              : Image.network(
+                                  coverUrl,
+                                  width: 44,
+                                  height: 58,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 44,
+                                    height: 58,
+                                    color:
+                                        FlutterFlowTheme.of(context).alternate,
+                                    child: Icon(Icons.headphones_rounded,
+                                        size: 22,
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Episodes',
+                                style: FlutterFlowTheme.of(context)
+                                    .headlineSmall
+                                    .override(
+                                      fontFamily: 'SF Pro Display',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_chapters.length} episodes • $bookName',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: FlutterFlowTheme.of(context)
+                                    .bodySmall
+                                    .override(
+                                      fontFamily: 'SF Pro Display',
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryText,
+                                      letterSpacing: 0,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(
+                      height: 1,
+                      color: FlutterFlowTheme.of(context)
+                          .primaryText
+                          .withValues(alpha: 0.08)),
+                  // ── Episode list ───────────────────────────────
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: _chapters.length,
+                      itemBuilder: (ctx2, index) {
+                        final chapter = _chapters[index];
+                        final title =
+                            chapter['title']?.toString() ??
+                                'Episode ${index + 1}';
+                        final isCurrent = index == _currentIndex;
+                        final isLocked = chapter['isLocked'] == true ||
+                            chapter['is_locked'] == true;
+                        final durRaw =
+                            chapter['duration']?.toString().trim() ?? '';
+
+                        final bgColor = isCurrent
+                            ? FlutterFlowTheme.of(context)
+                                .primary
+                                .withValues(alpha: 0.09)
+                            : Colors.transparent;
+
+                        return InkWell(
+                          onTap: isCurrent
+                              ? null
+                              : isLocked
+                                  ? () async {
+                                      Navigator.pop(ctx);
+                                      await _unlockChapter(chapter);
+                                    }
+                                  : _isPreviewMode
+                                      ? () {
+                                          Navigator.pop(ctx);
+                                          actions.showCustomToastBottom(
+                                              'Please buy or unlock the audiobook to play other episodes.');
+                                        }
+                                      : () {
+                                          Navigator.pop(ctx);
+                                          _playChapterAt(index);
+                                        },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            color: bgColor,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                            child: Row(
+                              children: [
+                                // ── Episode number / playing / lock ─
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: isCurrent
+                                        ? FlutterFlowTheme.of(context).primary
+                                        : isLocked
+                                            ? FlutterFlowTheme.of(context)
+                                                .alternate
+                                            : FlutterFlowTheme.of(context)
+                                                .primaryText
+                                                .withValues(alpha: 0.07),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Center(
+                                    child: isLocked
+                                        ? Icon(
+                                            Icons.lock_rounded,
+                                            size: 17,
+                                            color: FlutterFlowTheme.of(context)
+                                                .secondaryText,
+                                          )
+                                        : isCurrent
+                                            ? Icon(
+                                                Icons
+                                                    .equalizer_rounded,
+                                                size: 20,
+                                                color: Colors.white,
+                                              )
+                                            : Text(
+                                                '${index + 1}',
+                                                style: TextStyle(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .secondaryText,
+                                                ),
+                                              ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                // ── Title & duration ────────────────
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily: 'SF Pro Display',
+                                              fontWeight: isCurrent
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                              color: isLocked
+                                                  ? FlutterFlowTheme.of(context)
+                                                      .secondaryText
+                                                  : isCurrent
+                                                      ? FlutterFlowTheme.of(
+                                                              context)
+                                                          .primary
+                                                      : FlutterFlowTheme.of(
+                                                              context)
+                                                          .primaryText,
+                                              letterSpacing: 0,
+                                            ),
+                                      ),
+                                      if (durRaw.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 3),
+                                          child: Text(
+                                            durRaw,
+                                            style: FlutterFlowTheme.of(context)
+                                                .bodySmall
+                                                .override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontSize: 11,
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .secondaryText,
+                                                  letterSpacing: 0,
+                                                ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                // ── Trailing: playing / lock label ──
+                                if (isCurrent)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: FlutterFlowTheme.of(context)
+                                          .primary
+                                          .withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      'Playing',
+                                      style: TextStyle(
+                                        fontFamily: 'SF Pro Display',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: FlutterFlowTheme.of(context)
+                                            .primary,
+                                      ),
+                                    ),
+                                  )
+                                else if (isLocked)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: FlutterFlowTheme.of(context)
+                                          .primaryText
+                                          .withValues(alpha: 0.06),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      'Unlock',
+                                      style: TextStyle(
+                                        fontFamily: 'SF Pro Display',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SafeArea(
+                    top: false,
+                    child: SizedBox(height: 8),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -1481,71 +1810,112 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                           ? 'Remove from Favourites'
                           : 'Add to Favourites',
                       subtitle: 'Save to your wishlist',
-                      onTap: () {
+                      onTap: () async {
                         Navigator.pop(ctx);
-                        setState(() => _isFavorite = !_isFavorite);
-                        actions.showCustomToastBottom(
-                          _isFavorite
-                              ? 'Added to Favourites'
-                              : 'Removed from Favourites',
-                        );
+                        if (!FFAppState().isLogin) {
+                          await actions.showCustomToastBottom(
+                              'Please log in to use Favourites');
+                          return;
+                        }
+                        final bookId = _bookId();
+                        if (bookId.isEmpty) return;
+                        final addingToFav = !_isFavorite;
+                        // Optimistic UI update
+                        setState(() => _isFavorite = addingToFav);
+                        if (addingToFav) {
+                          final res =
+                              await EbookGroup.addFavouriteBookApiCall.call(
+                            userId: FFAppState().userId,
+                            bookId: bookId,
+                            token: FFAppState().token,
+                          );
+                          if (res.succeeded) {
+                            await actions
+                                .showCustomToastBottom('Added to Favourites');
+                          } else {
+                            // Revert on failure
+                            if (mounted) {
+                              setState(() => _isFavorite = false);
+                            }
+                            await actions.showCustomToastBottom(
+                                'Failed to add to Favourites');
+                          }
+                        } else {
+                          final res =
+                              await EbookGroup.removeFavouritebookCall.call(
+                            userId: FFAppState().userId,
+                            bookId: bookId,
+                            token: FFAppState().token,
+                          );
+                          if (res.succeeded) {
+                            await actions.showCustomToastBottom(
+                                'Removed from Favourites');
+                          } else {
+                            // Revert on failure
+                            if (mounted) {
+                              setState(() => _isFavorite = true);
+                            }
+                            await actions.showCustomToastBottom(
+                                'Failed to remove from Favourites');
+                          }
+                        }
                       },
                     ),
-                    // ── Download Offline ───────────────────────────
-                    _moreMenuItem(
-                      icon: _downloadProgress != null
-                          ? Icons.downloading_rounded
-                          : Icons.download_for_offline_rounded,
-                      label: _downloadProgress != null
-                          ? 'Downloading… ${((_downloadProgress ?? 0) * 100).toInt()}%'
-                          : 'Download Offline',
-                      subtitle: 'Listen without internet',
-                      onTap: _downloadProgress != null
-                          ? null
-                          : () async {
-                              Navigator.pop(ctx);
-                              final audioUrl =
-                                  (_currentChapter?['file'] ??
-                                          _currentChapter?['audio'] ??
-                                          '')
-                                      .toString()
-                                      .trim();
-                              if (audioUrl.isEmpty) {
-                                await actions.showCustomToastBottom(
-                                    'No audio file available to download');
-                                return;
-                              }
-                              setState(() => _downloadProgress = 0.0);
-                              try {
-                                await LocalDownloadService.downloadBook(
-                                  bookId: bookId,
-                                  name: bookName,
-                                  image: widget.audiobook['image']
-                                          ?.toString() ??
-                                      '',
-                                  author: authorName,
-                                  remoteUrl: audioUrl,
-                                  onProgress: (received, total) {
-                                    if (total > 0 && mounted) {
-                                      setState(() => _downloadProgress =
-                                          received / total);
-                                    }
-                                  },
-                                );
-                                if (mounted) {
-                                  setState(() => _downloadProgress = null);
-                                  await actions.showCustomToastBottom(
-                                      'Downloaded successfully!');
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  setState(() => _downloadProgress = null);
-                                  await actions.showCustomToastBottom(
-                                      'Download failed: $e');
-                                }
-                              }
-                            },
-                    ),
+                    // // ── Download Offline ───────────────────────────
+                    // _moreMenuItem(
+                    //   icon: _downloadProgress != null
+                    //       ? Icons.downloading_rounded
+                    //       : Icons.download_for_offline_rounded,
+                    //   label: _downloadProgress != null
+                    //       ? 'Downloading… ${((_downloadProgress ?? 0) * 100).toInt()}%'
+                    //       : 'Download Offline',
+                    //   subtitle: 'Listen without internet',
+                    //   onTap: _downloadProgress != null
+                    //       ? null
+                    //       : () async {
+                    //           Navigator.pop(ctx);
+                    //           final audioUrl =
+                    //               (_currentChapter?['file'] ??
+                    //                       _currentChapter?['audio'] ??
+                    //                       '')
+                    //                   .toString()
+                    //                   .trim();
+                    //           if (audioUrl.isEmpty) {
+                    //             await actions.showCustomToastBottom(
+                    //                 'No audio file available to download');
+                    //             return;
+                    //           }
+                    //           setState(() => _downloadProgress = 0.0);
+                    //           try {
+                    //             await LocalDownloadService.downloadBook(
+                    //               bookId: bookId,
+                    //               name: bookName,
+                    //               image: widget.audiobook['image']
+                    //                       ?.toString() ??
+                    //                   '',
+                    //               author: authorName,
+                    //               remoteUrl: audioUrl,
+                    //               onProgress: (received, total) {
+                    //                 if (total > 0 && mounted) {
+                    //                   setState(() => _downloadProgress =
+                    //                       received / total);
+                    //                 }
+                    //               },
+                    //             );
+                    //             if (mounted) {
+                    //               setState(() => _downloadProgress = null);
+                    //               await actions.showCustomToastBottom(
+                    //                   'Downloaded successfully!');
+                    //             }
+                    //           } catch (e) {
+                    //             if (mounted) {
+                    //               setState(() => _downloadProgress = null);
+                    //               await actions.showCustomToastBottom(
+                    //                   'Download failed: $e');
+                    //             }
+                    //           }
+                    //         },
+                    // ),
                     // ── Sleep Timer ────────────────────────────────
                     _moreMenuItem(
                       icon: Icons.bedtime_rounded,
@@ -1826,6 +2196,14 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     if (value == null) return fallback;
     if (value is String) {
       final trimmed = value.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        final regExp = RegExp(r'''['"]?name['"]?\s*:\s*(['"]?)(.*?)\1\s*(?:,|\}|$)''');
+        final match = regExp.firstMatch(trimmed);
+        if (match != null) {
+          final nameVal = match.group(2)?.trim() ?? '';
+          if (nameVal.isNotEmpty) return nameVal;
+        }
+      }
       return trimmed.isNotEmpty ? trimmed : fallback;
     }
     if (value is Map) {
@@ -1845,6 +2223,14 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       return fallback;
     }
     final out = value.toString().trim();
+    if (out.startsWith('{') && out.endsWith('}')) {
+      final regExp = RegExp(r'''['"]?name['"]?\s*:\s*(['"]?)(.*?)\1\s*(?:,|\}|$)''');
+      final match = regExp.firstMatch(out);
+      if (match != null) {
+        final nameVal = match.group(2)?.trim() ?? '';
+        if (nameVal.isNotEmpty) return nameVal;
+      }
+    }
     return out.isNotEmpty ? out : fallback;
   }
 

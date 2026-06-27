@@ -274,6 +274,7 @@ Future<ApiCallResponse> _homepageSectionRequest({
   String? type,
   String? token,
   int? limit,
+  int? offset,
 }) async {
   final normalizedType = _normalizeHomepageTypeValue(type);
   if (normalizedType == '__invalid__') {
@@ -285,7 +286,7 @@ Future<ApiCallResponse> _homepageSectionRequest({
       400,
     );
   }
-  final safeLimit = (limit ?? 10).clamp(1, 50);
+  final safeLimit = (limit ?? 10).clamp(1, 100);
   final baseUrl = EbookGroup.getBaseUrl();
   return ApiManager.instance.makeApiCall(
     callName: 'HomepageSection_$sectionKey',
@@ -294,6 +295,7 @@ Future<ApiCallResponse> _homepageSectionRequest({
     headers: _boiaroAuthHeaders(token),
     params: {
       'limit': '$safeLimit',
+      if (offset != null) 'offset': '$offset',
       if (normalizedType.isNotEmpty) 'type': normalizedType,
     },
     bodyType: BodyType.NONE,
@@ -311,12 +313,14 @@ Future<ApiCallResponse> _homepageSectionAsBooks({
   String? type,
   String? token,
   int? limit,
+  int? offset,
 }) async {
   final res = await _homepageSectionRequest(
     sectionKey: sectionKey,
     type: type,
     token: token,
     limit: limit,
+    offset: offset,
   );
   final body = res.jsonBody;
   if (!res.succeeded || body is! Map) {
@@ -357,15 +361,19 @@ Future<ApiCallResponse> _booksForAuthor({
   required String authorId,
   String? type,
   String? token,
+  int? limit,
+  int? offset,
 }) async {
   final baseUrl = EbookGroup.getBaseUrl();
+  final safeLimit = (limit ?? 10).clamp(1, 100);
   final res = await ApiManager.instance.makeApiCall(
     callName: 'BooksForAuthor',
     apiUrl: '${baseUrl}books',
     callType: ApiCallType.GET,
     headers: _boiaroAuthHeaders(token),
     params: {
-      'limit': '100',
+      'limit': '$safeLimit',
+      if (offset != null) 'offset': '$offset',
       'author': authorId,
       'authorId': authorId,
     },
@@ -414,10 +422,14 @@ Future<ApiCallResponse> _booksQuery({
   Map<String, String>? query,
   String? type,
   String? token,
+  int? limit,
+  int? offset,
 }) async {
   final baseUrl = EbookGroup.getBaseUrl();
+  final safeLimit = (limit ?? 10).clamp(1, 100);
   final qp = <String, dynamic>{
-    'limit': '50',
+    'limit': '$safeLimit',
+    if (offset != null) 'offset': '$offset',
     if (query != null) ...query,
   };
   final res = await ApiManager.instance.makeApiCall(
@@ -498,6 +510,11 @@ class EbookGroup {
       GetpublisherdetailsApiCall();
   static GetauthordetailsApiCall getauthordetailsApiCall =
       GetauthordetailsApiCall();
+  static GettranslatordetailsApiCall gettranslatordetailsApiCall =
+      GettranslatordetailsApiCall();
+  static GettranslatorsApiCall gettranslatorsApiCall = GettranslatorsApiCall();
+  static GetbookbytranslatorApiCall getbookbytranslatorApiCall =
+      GetbookbytranslatorApiCall();
   static GetnarratordetailsApiCall getnarratordetailsApiCall =
       GetnarratordetailsApiCall();
   static GetbookbypublisherApiCall getbookbypublisherApiCall =
@@ -2847,6 +2864,8 @@ class GetLatestbooksApiCall {
     List<String>? categoryIdList,
     String? type = '',
     String? token = '',
+    int? limit,
+    int? offset,
   }) async {
     String? cid;
     if (categoryIdList != null && categoryIdList.isNotEmpty) {
@@ -2859,12 +2878,16 @@ class GetLatestbooksApiCall {
         authorId: authorIdList.first!.trim(),
         type: type,
         token: token,
+        limit: limit,
+        offset: offset,
       );
     }
     return _booksQuery(
       query: cid != null ? {'categoryId': cid} : null,
       type: type,
       token: token,
+      limit: limit,
+      offset: offset,
     );
   }
 
@@ -3079,6 +3102,18 @@ class GetbookdetailsApiCall {
   String? accesstype(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.bookDetails[:].access_type''',
+      ));
+  String? translatorName(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].translator.name''',
+      ));
+  String? translatorid(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].translator._id''',
+      ));
+  String? translatorimage(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].translator.image''',
       ));
   int? success(dynamic response) => castToType<int>(getJsonField(
         response,
@@ -4512,6 +4547,50 @@ class GetHomepageApiCall {
       sectionKey: 'freeBooks',
     );
 
+    List<Map<String, dynamic>> mapContinueList(
+      dynamic raw, {
+      required String format,
+    }) {
+      final rows = <Map<String, dynamic>>[];
+      if (raw is List) {
+        for (final item in raw) {
+          if (item is Map) {
+            final bookRaw = item['book'];
+            if (bookRaw is Map) {
+              final legacyBook = BoiaroLegacyAdapter.legacyBookFromHomepageItem(
+                Map<String, dynamic>.from(bookRaw),
+                preferredFormat: format,
+              );
+              rows.add({
+                'id': item['id']?.toString() ?? '',
+                'book_id': item['book_id']?.toString() ?? '',
+                'created_at': item['created_at']?.toString() ?? '',
+                'current_position': (item['current_position'] as num?)?.toInt() ?? 0,
+                'current_track': (item['current_track'] as num?)?.toInt() ?? 1,
+                'current_page': (item['current_page'] as num?)?.toInt() ?? 1,
+                'percentage': (item['percentage'] as num?)?.toDouble() ?? 0.0,
+                'total_duration': (item['total_duration'] as num?)?.toInt() ?? 0,
+                'total_pages': (item['total_pages'] as num?)?.toInt() ?? 1,
+                'playback_speed': item['playback_speed']?.toString() ?? '',
+                'last_read_at': (item['last_read_at'] ?? item['last_listened_at'])?.toString() ?? '',
+                'book': legacyBook,
+              });
+            }
+          }
+        }
+      }
+      return rows;
+    }
+
+    final continueListening = mapContinueList(
+      body['continueListening'] ?? body['ContinueListening'],
+      format: 'audiobook',
+    );
+    final continueReading = mapContinueList(
+      body['continueReading'] ?? body['ContinueReading'],
+      format: 'ebook',
+    );
+
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
         'sliderDetails': sliderDetails,
@@ -4528,6 +4607,8 @@ class GetHomepageApiCall {
         'popularHardCopies': popularHardCopies,
         'topTenMostRead': topTenMostRead,
         'freeBooks': freeBooks,
+        'continueListening': continueListening,
+        'continueReading': continueReading,
       }),
       res.headers,
       res.statusCode,
@@ -4602,6 +4683,16 @@ class GetHomepageApiCall {
   List? freeBookList(dynamic response) => getJsonField(
         response,
         r'''$.data.freeBooks''',
+        true,
+      ) as List?;
+  List? continueListeningList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.continueListening''',
+        true,
+      ) as List?;
+  List? continueReadingList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.continueReading''',
         true,
       ) as List?;
   int? success(dynamic response) => castToType<int>(getJsonField(
@@ -4716,12 +4807,14 @@ class GetTrendingBooksApiCall {
     String? token = '',
     String? type = '',
     int? limit,
+    int? offset,
   }) async {
     return _homepageSectionAsBooks(
       sectionKey: 'trendingNow',
       type: type,
       token: token,
       limit: limit,
+      offset: offset,
     );
   }
 
@@ -4745,12 +4838,14 @@ class GetNewBooksApiCall {
     String? token = '',
     String? type = '',
     int? limit,
+    int? offset,
   }) async {
     return _homepageSectionAsBooks(
       sectionKey: 'newReleases',
       type: type,
       token: token,
       limit: limit,
+      offset: offset,
     );
   }
 
@@ -4775,6 +4870,7 @@ class GetPopularBooksApiCall {
     String? type = '',
     String? sectionKey = '',
     int? limit,
+    int? offset,
   }) async {
     final normalizedType = _normalizeHomepageTypeValue(type);
     final normalizedSection = (sectionKey ?? '').trim();
@@ -4792,6 +4888,7 @@ class GetPopularBooksApiCall {
       type: type,
       token: token,
       limit: limit,
+      offset: offset,
     );
   }
 
@@ -6605,4 +6702,237 @@ class LogActivityCall {
       alwaysAllowBody: false,
     );
   }
+}
+
+Future<ApiCallResponse> _booksForTranslator({
+  required String translatorId,
+  String? type,
+  String? token,
+  int? limit,
+  int? offset,
+}) async {
+  final baseUrl = EbookGroup.getBaseUrl();
+  final safeLimit = (limit ?? 10).clamp(1, 100);
+  final res = await ApiManager.instance.makeApiCall(
+    callName: 'BooksForTranslator',
+    apiUrl: '${baseUrl}books',
+    callType: ApiCallType.GET,
+    headers: _boiaroAuthHeaders(token),
+    params: {
+      'limit': '$safeLimit',
+      if (offset != null) 'offset': '$offset',
+      'translator': translatorId,
+      'translatorId': translatorId,
+    },
+    bodyType: BodyType.NONE,
+    returnBody: true,
+    encodeBodyUtf8: false,
+    decodeUtf8: false,
+    cache: false,
+    isStreamingApi: false,
+    alwaysAllowBody: false,
+  );
+  final body = res.jsonBody;
+  if (!res.succeeded || body is! Map) {
+    return _v2Error(body, res.statusCode);
+  }
+  final err = BoiaroLegacyAdapter.v2Error(body);
+  if (err != null) {
+    return _v2Error(body, res.statusCode);
+  }
+  final raw = body['books'];
+  if (raw is! List) {
+    return _v2Error(body, res.statusCode);
+  }
+  final tid = translatorId.trim();
+  var leg = raw
+      .whereType<Map>()
+      .map((e) =>
+          BoiaroLegacyAdapter.legacyBookFromV2(Map<String, dynamic>.from(e)))
+      .where((b) {
+        final t = b['translator'];
+        if (t is Map) {
+          return t['_id']?.toString() == tid;
+        }
+        return false;
+      })
+      .where((b) => _matchesBookTypeFilter(b, type))
+      .toList();
+  return ApiCallResponse(
+    BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': leg}),
+    res.headers,
+    res.statusCode,
+  );
+}
+
+class GettranslatordetailsApiCall {
+  Future<ApiCallResponse> call({
+    String? translatorId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final id = Uri.encodeComponent((translatorId ?? '').trim());
+    if (id.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+            success: 0, message: 'translatorId required'),
+        {},
+        400,
+      );
+    }
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'GettranslatordetailsApi',
+      apiUrl: '${baseUrl}translators/$id',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    if (BoiaroLegacyAdapter.v2Error(body) != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg =
+        BoiaroLegacyAdapter.legacyTranslatorFromV2(Map<String, dynamic>.from(body));
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {
+        'translatorDetails': [leg],
+      }),
+      res.headers,
+      res.statusCode,
+    );
+  }
+
+  List? translatorDetails(dynamic response) => getJsonField(
+        response,
+        r'''$.data.translatorDetails''',
+        true,
+      ) as List?;
+  String? name(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.translatorDetails[:].name''',
+      ));
+  String? image(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.translatorDetails[:].image''',
+      ));
+  String? facebookurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.translatorDetails[:].facebook_url''',
+      ));
+  String? instagramurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.translatorDetails[:].instagram_url''',
+      ));
+  String? youtubeurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.translatorDetails[:].youtube_url''',
+      ));
+  String? websiteurl(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.translatorDetails[:].website_url''',
+      ));
+  String? description(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.translatorDetails[:].description''',
+      ));
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GettranslatorsApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'GettranslatorsApi',
+      apiUrl: '${baseUrl}translators',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {'limit': '50', 'offset': '0'},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final raw = body['translators'];
+    if (raw is! List) {
+      return _v2Error(body, res.statusCode);
+    }
+    final leg = raw
+        .whereType<Map>()
+        .map((e) => BoiaroLegacyAdapter.legacyTranslatorFromV2(
+            Map<String, dynamic>.from(e)))
+        .toList();
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'translatorDetails': leg}),
+      res.headers,
+      res.statusCode,
+    );
+  }
+
+  List? translatorDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.translatorDetails''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
+class GetbookbytranslatorApiCall {
+  Future<ApiCallResponse> call({
+    String? translatorId = '',
+    String? type = '',
+    String? token = '',
+  }) async {
+    return _booksForTranslator(
+      translatorId: translatorId ?? '',
+      type: type,
+      token: token,
+    );
+  }
+
+  List? bookDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.bookDetails''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
 }

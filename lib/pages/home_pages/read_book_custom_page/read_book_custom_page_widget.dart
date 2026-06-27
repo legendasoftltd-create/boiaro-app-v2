@@ -63,6 +63,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   int _lastNativeProgressSent = -1;
   String? _openedEpubSource;
   bool _previewLimitShown = false;
+  int _initialPdfPage = 1;
 
   bool get _isEpub => (widget.pdf ?? '').toLowerCase().trim().contains('.epub');
 
@@ -110,12 +111,27 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
 
     if (_isEpub && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       SchedulerBinding.instance.addPostFrameCallback((_) async {
-        await _openEpubWithPlugin();
+        double? initialProgress;
+        final bookId = (widget.id ?? '').trim();
+        if (bookId.isNotEmpty) {
+          final remote = await ProgressSyncService.fetchReadingProgress(bookId);
+          if (remote.hasProgress && remote.currentPage > 0) {
+            initialProgress = remote.currentPage.toDouble();
+          }
+        }
+        await _openEpubWithPlugin(initialProgress: initialProgress);
       });
     } else {
       // Give native/pdf renderer a moment and show a consistent loading state.
       SchedulerBinding.instance.addPostFrameCallback((_) async {
-        await Future.delayed(const Duration(milliseconds: 900));
+        final bookId = (widget.id ?? '').trim();
+        if (bookId.isNotEmpty) {
+          final remote = await ProgressSyncService.fetchReadingProgress(bookId);
+          if (remote.hasProgress && remote.currentPage > 0) {
+            _initialPdfPage = remote.currentPage;
+          }
+          await ReadingReportService.instance.startSession(bookId: bookId);
+        }
         if (!mounted) return;
         safeSetState(() {
           _isPreparingReader = false;
@@ -402,7 +418,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     );
   }
 
-  Future<void> _openEpubWithPlugin() async {
+  Future<void> _openEpubWithPlugin({double? initialProgress}) async {
     final sourcePath = _resolveBookPath(widget.pdf ?? '');
     if (sourcePath.isEmpty || !mounted) {
       return;
@@ -455,6 +471,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
         filePath: path,
         previewPercent: widget.isPreviewMode ? widget.previewPercent : 100,
         bookTitle: widget.name,
+        initialProgress: initialProgress,
       );
       if (!opened) {
         throw Exception('Failed to open EPUB reader');
@@ -474,10 +491,50 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     }
   }
 
+  Future<void> _onPdfPageChanged(int page, int totalPages) async {
+    final bookId = (widget.id ?? '').trim();
+    if (bookId.isEmpty) return;
+    final percentage = (page / totalPages * 100).toInt().clamp(0, 100);
+
+    await ReadingProgressService.upsertProgress(
+      bookId: bookId,
+      percent: percentage.toDouble(),
+      name: widget.name ?? '',
+      imageUrl: widget.image ?? '',
+      author: widget.author ?? '',
+      contentType: 'ebook',
+    );
+    if (!widget.isPreviewMode) {
+      FFAppState().homePageCurrentPdfIndex = page;
+      FFAppState().homePageTotalPdfPageIndex = totalPages;
+      FFAppState().update(() {});
+    }
+    await ProgressSyncService.saveReadingProgress(
+      bookId: bookId,
+      currentPage: page,
+      totalPages: totalPages,
+    );
+    await ReadingReportService.instance.updateProgress(
+      percentage: percentage,
+      force: false,
+    );
+    if (widget.isPreviewMode && !_previewLimitShown && percentage >= widget.previewPercent) {
+      _previewLimitShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showPreviewLimitDialog();
+      });
+    }
+    _showDebugSnack('READING PDF PROGRESS: Page $page of $totalPages ($percentage%)');
+  }
+
   @override
   void dispose() {
     _nativeEpubPageSub?.cancel();
     _nativeEpubPageSub = null;
+
+    if (!_isEpub) {
+      unawaited(ReadingReportService.instance.endSession());
+    }
 
     WidgetsBinding.instance.removeObserver(this);
     _model.dispose();
@@ -497,6 +554,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
         width: double.infinity,
         height: double.infinity,
         horizontalScroll: false,
+        initialPage: _initialPdfPage,
+        onPageChanged: _onPdfPageChanged,
       );
     } else if (resolvedPath.startsWith('assets/')) {
       return FlutterFlowPdfViewer(
@@ -504,6 +563,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
         width: double.infinity,
         height: double.infinity,
         horizontalScroll: false,
+        initialPage: _initialPdfPage,
+        onPageChanged: _onPdfPageChanged,
       );
     } else {
       try {
@@ -515,6 +576,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
             width: double.infinity,
             height: double.infinity,
             horizontalScroll: false,
+            initialPage: _initialPdfPage,
+            onPageChanged: _onPdfPageChanged,
           );
         }
       } catch (e) {
@@ -525,6 +588,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
         width: double.infinity,
         height: double.infinity,
         horizontalScroll: false,
+        initialPage: _initialPdfPage,
+        onPageChanged: _onPdfPageChanged,
       );
     }
   }

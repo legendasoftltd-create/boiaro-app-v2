@@ -221,6 +221,24 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           ),
         ),
         FFRoute(
+          name: AboutTranslatorPageWidget.routeName,
+          path: AboutTranslatorPageWidget.routePath,
+          builder: (context, params) => AboutTranslatorPageWidget(
+            name: params.getParam(
+              'name',
+              ParamType.String,
+            ),
+            translatorImage: params.getParam(
+              'translatorImage',
+              ParamType.String,
+            ),
+            translatorId: params.getParam(
+              'translatorId',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
           name: AboutPublisherPageWidget.routeName,
           path: AboutPublisherPageWidget.routePath,
           builder: (context, params) => AboutPublisherPageWidget(
@@ -258,6 +276,18 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             narratorImage: null,
             narratorId: params.getParam(
               'narratorId',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
+          name: 'TranslatorDeepLink',
+          path: '/translator/:translatorId',
+          builder: (context, params) => AboutTranslatorPageWidget(
+            name: null,
+            translatorImage: null,
+            translatorId: params.getParam(
+              'translatorId',
               ParamType.String,
             ),
           ),

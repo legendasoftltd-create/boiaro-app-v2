@@ -1,48 +1,63 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
-import '/pages/empty_components/no_latest_book/no_latest_book_widget.dart';
+import '/index.dart';
+import 'about_translator_page_widget.dart' show AboutTranslatorPageWidget;
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:lottie/lottie.dart';
-import 'new_books_page_widget.dart' show NewBooksPageWidget;
-import 'package:flutter/scheduler.dart';
 
-class NewBooksPageModel extends FlutterFlowModel<NewBooksPageWidget> {
-  ///  State fields for stateful widgets in this page.
+class AboutTranslatorPageModel extends FlutterFlowModel<AboutTranslatorPageWidget> {
+  ///  Local state fields for this page.
 
-  final unfocusNode = FocusNode();
-  // Models for mainBookComponent dynamic component.
-  late FlutterFlowDynamicModels<MainBookComponentModel> mainBookComponentModels;
-  // Stores action output result for [Backend Call - API (removeFavouritebook)] action in MainBookComponent
-  ApiCallResponse? getPopularDetete;
-  // Stores action output result for [Backend Call - API (addFavouriteBookApi)] action in MainBookComponent
-  ApiCallResponse? getPopularAdd;
-  // Model for noLatestBook component.
-  late NoLatestBookModel noLatestBookModel;
+  bool? isPopular = false;
 
-  bool apiRequestCompleted1 = false;
-  String? apiRequestLastUniqueKey1;
-  bool apiRequestCompleted2 = false;
-  String? apiRequestLastUniqueKey2;
-
-  int newBooksIndex = 0;
-  bool isNewBook = false;
+  int? popularIndex = 0;
 
   List<String> purchasedBookIds = [];
 
+  ///  State fields for stateful widgets in this page.
+
+  // Model for CustomCenterAppbar component.
+  late CustomCenterAppbarModel customCenterAppbarModel;
+  Completer<ApiCallResponse>? apiRequestCompleter2;
+  // Models for MainBookComponent dynamic component.
+  late FlutterFlowDynamicModels<MainBookComponentModel> mainBookComponentModels;
+  // Stores action output result for [Backend Call - API (RemoveFavouritebook)] action in MainBookComponent widget.
+  ApiCallResponse? getPopularDetete;
+  bool apiRequestCompleted1 = false;
+  String? apiRequestLastUniqueKey1;
+  // Stores action output result for [Backend Call - API (AddFavouriteBookApi)] action in MainBookComponent widget.
+  ApiCallResponse? getPopularAdd;
+
   @override
   void initState(BuildContext context) {
+    customCenterAppbarModel =
+        createModel(context, () => CustomCenterAppbarModel());
     mainBookComponentModels =
         FlutterFlowDynamicModels(() => MainBookComponentModel());
-    noLatestBookModel = createModel(context, () => NoLatestBookModel());
   }
 
   @override
   void dispose() {
-    unfocusNode.dispose();
+    customCenterAppbarModel.dispose();
     mainBookComponentModels.dispose();
-    noLatestBookModel.dispose();
+  }
+
+  /// Additional helper methods.
+  Future waitForApiRequestCompleted2({
+    double minWait = 0,
+    double maxWait = double.infinity,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    while (true) {
+      await Future.delayed(Duration(milliseconds: 50));
+      final timeElapsed = stopwatch.elapsedMilliseconds;
+      final requestComplete = apiRequestCompleter2?.isCompleted ?? false;
+      if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
+        break;
+      }
+    }
   }
 
   Future waitForApiRequestCompleted1({
@@ -54,21 +69,6 @@ class NewBooksPageModel extends FlutterFlowModel<NewBooksPageWidget> {
       await Future.delayed(Duration(milliseconds: 50));
       final timeElapsed = stopwatch.elapsedMilliseconds;
       final requestComplete = apiRequestCompleted1;
-      if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
-        break;
-      }
-    }
-  }
-
-  Future waitForApiRequestCompleted2({
-    double minWait = 0,
-    double maxWait = double.infinity,
-  }) async {
-    final stopwatch = Stopwatch()..start();
-    while (true) {
-      await Future.delayed(Duration(milliseconds: 50));
-      final timeElapsed = stopwatch.elapsedMilliseconds;
-      final requestComplete = apiRequestCompleted2;
       if (timeElapsed > maxWait || (requestComplete && timeElapsed > minWait)) {
         break;
       }

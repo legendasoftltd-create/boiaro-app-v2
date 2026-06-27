@@ -12,6 +12,8 @@ class FlutterFlowPdfViewer extends StatefulWidget {
     this.width,
     this.height,
     this.horizontalScroll = false,
+    this.initialPage = 1,
+    this.onPageChanged,
   }) : assert(
             (networkPath != null) ^ (assetPath != null) ^ (fileBytes != null));
 
@@ -21,6 +23,8 @@ class FlutterFlowPdfViewer extends StatefulWidget {
   final double? width;
   final double? height;
   final bool horizontalScroll;
+  final int initialPage;
+  final Function(int page, int totalPages)? onPageChanged;
 
   @override
   State<FlutterFlowPdfViewer> createState() => _FlutterFlowPdfViewerState();
@@ -29,6 +33,7 @@ class FlutterFlowPdfViewer extends StatefulWidget {
 class _FlutterFlowPdfViewerState extends State<FlutterFlowPdfViewer> {
   PdfController? controller;
   bool _isLoading = true;
+  int _totalPages = 0;
   String get networkPath => widget.networkPath ?? '';
   String get assetPath => widget.assetPath ?? '';
   Uint8List get fileBytes => widget.fileBytes ?? Uint8List.fromList([]);
@@ -43,9 +48,16 @@ class _FlutterFlowPdfViewerState extends State<FlutterFlowPdfViewer> {
                     ? await PdfDocument.openData(InternetFile.get(networkPath))
                     : await PdfDocument.openData(Uint8List.fromList(fileBytes))
             : null;
-    controller = pdfDocument != null
-        ? PdfController(document: Future.value(pdfDocument))
-        : null;
+    if (pdfDocument != null) {
+      _totalPages = pdfDocument.pagesCount;
+      controller = PdfController(
+        document: Future.value(pdfDocument),
+        initialPage: widget.initialPage,
+      );
+    } else {
+      _totalPages = 0;
+      controller = null;
+    }
     safeSetState(() => _isLoading = false);
   }
 
@@ -76,6 +88,11 @@ class _FlutterFlowPdfViewerState extends State<FlutterFlowPdfViewer> {
                     scrollDirection: widget.horizontalScroll
                         ? Axis.horizontal
                         : Axis.vertical,
+                    onPageChanged: (page) {
+                      if (widget.onPageChanged != null && _totalPages > 0) {
+                        widget.onPageChanged!(page, _totalPages);
+                      }
+                    },
                     builders: PdfViewBuilders<DefaultBuilderOptions>(
                       options: const DefaultBuilderOptions(),
                       documentLoaderBuilder: (_) =>

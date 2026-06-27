@@ -138,15 +138,20 @@ class _ListMainContainerComponentWidgetState
       formatIcons.add(Icons.menu_book_rounded);
     }
 
-    return InkWell(
-      splashColor: Colors.transparent,
-      focusColor: Colors.transparent,
-      hoverColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      onTap: () async {
-        await widget.onMainTap?.call();
-      },
-      child: Container(
+    final mediaQueryData = MediaQuery.of(context);
+    final clampedScale = mediaQueryData.textScaleFactor.clamp(0.8, 1.12);
+
+    return MediaQuery(
+      data: mediaQueryData.copyWith(textScaleFactor: clampedScale),
+      child: InkWell(
+        splashColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        onTap: () async {
+          await widget.onMainTap?.call();
+        },
+        child: Container(
         width: widget.width,
         height: 160,
         decoration: BoxDecoration(
@@ -628,6 +633,7 @@ class _ListMainContainerComponentWidgetState
           ),
         ),
       ),
+    ),
     );
   }
 }

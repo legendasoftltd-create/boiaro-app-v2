@@ -29,10 +29,19 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  final ScrollController _scrollController = ScrollController();
+  List<dynamic> _books = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _offset = 0;
+  final int _limit = 20;
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => FilterResultPageModel());
+    _scrollController.addListener(_onScroll);
+    _loadMoreBooks(isFirstLoad: true);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (FFAppState().isLogin) {
@@ -40,6 +49,60 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
       }
       safeSetState(() {});
     });
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreBooks();
+    }
+  }
+
+  Future<void> _loadMoreBooks({bool isFirstLoad = false}) async {
+    if (_isLoading || (!_hasMore && !isFirstLoad)) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final res = await EbookGroup.getLatestbooksApiCall.call(
+        authorIdList: FFAppState().authorId,
+        categoryIdList: FFAppState().categoryId,
+        limit: _limit,
+        offset: _offset,
+      );
+      final newBooks =
+          EbookGroup.getLatestbooksApiCall.bookDetailsList(res.jsonBody) ??
+              [];
+      if (newBooks.length < _limit) {
+        _hasMore = false;
+      }
+      setState(() {
+        if (isFirstLoad) {
+          _books.clear();
+        }
+        final existingIds = _books
+            .map((book) => getJsonField(book, r'''$._id''')?.toString())
+            .where((id) => id != null)
+            .toSet();
+        for (final book in newBooks) {
+          final bookId = getJsonField(book, r'''$._id''')?.toString();
+          if (bookId == null || !existingIds.contains(bookId)) {
+            _books.add(book);
+            if (bookId != null) {
+              existingIds.add(bookId);
+            }
+          }
+        }
+        _offset += newBooks.length;
+      });
+    } catch (e) {
+      debugPrint('Error loading filtered books pagination: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadPurchasedBooks() async {
@@ -66,6 +129,7 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _model.dispose();
 
     super.dispose();
@@ -130,416 +194,171 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
                               snapshot.data!;
 
                           return Container(
-                            decoration: BoxDecoration(),
-                            child: FutureBuilder<ApiCallResponse>(
-                              future: (_model.apiRequestCompleter1 ??=
-                                      Completer<ApiCallResponse>()
-                                        ..complete(EbookGroup
-                                            .getLatestbooksApiCall
-                                            .call(
-                                          authorIdList: FFAppState().authorId,
-                                          categoryIdList:
-                                              FFAppState().categoryId,
-                                        )))
-                                  .future,
-                              builder: (context, snapshot) {
-                                // Customize what your widget looks like when it's loading.
-                                if (!snapshot.hasData) {
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: FlutterFlowTheme.of(context)
+                                  .primaryBackground,
+                            ),
+                            child: Builder(
+                              builder: (context) {
+                                if (_books.isEmpty && _isLoading) {
                                   return Center(
                                     child: SizedBox(
                                       width: 50.0,
                                       height: 50.0,
                                       child: CircularProgressIndicator(
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
+                                        valueColor: AlwaysStoppedAnimation<Color>(
                                           FlutterFlowTheme.of(context).primary,
                                         ),
                                       ),
                                     ),
                                   );
                                 }
-                                final containerGetLatestbooksApiResponse =
-                                    snapshot.data!;
+                                if (_books.isEmpty) {
+                                  return wrapWithModel(
+                                    model: _model.noFilterBookModel,
+                                    updateCallback: () => safeSetState(() {}),
+                                    child: NoFilterBookWidget(),
+                                  );
+                                }
 
-                                return Container(
-                                  decoration: BoxDecoration(),
-                                  child: Builder(
-                                    builder: (context) {
-                                      if (EbookGroup.getLatestbooksApiCall
-                                              .success(
-                                            containerGetLatestbooksApiResponse
-                                                .jsonBody,
-                                          ) ==
-                                          2) {
-                                        return Align(
-                                          alignment:
-                                              AlignmentDirectional(0.0, 0.0),
-                                          child: Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    16.0, 0.0, 16.0, 0.0),
-                                            child: Text(
-                                              valueOrDefault<String>(
-                                                EbookGroup.getLatestbooksApiCall
-                                                    .message(
-                                                  containerGetLatestbooksApiResponse
-                                                      .jsonBody,
+                                return RefreshIndicator(
+                                  key: const Key('RefreshIndicator_d0tm108k'),
+                                  color: FlutterFlowTheme.of(context).primary,
+                                  onRefresh: () async {
+                                    setState(() {
+                                      _books.clear();
+                                      _offset = 0;
+                                      _hasMore = true;
+                                    });
+                                    await _loadMoreBooks(isFirstLoad: true);
+                                  },
+                                  child: ListView(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.fromLTRB(0, 16.0, 0, 16.0),
+                                    scrollDirection: Axis.vertical,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                        child: Builder(
+                                          builder: (context) {
+                                            final filterBookList = _books;
+
+                                            return Wrap(
+                                              spacing: 16.0,
+                                              runSpacing: 16.0,
+                                              alignment: WrapAlignment.start,
+                                              crossAxisAlignment: WrapCrossAlignment.start,
+                                              direction: Axis.horizontal,
+                                              runAlignment: WrapAlignment.start,
+                                              verticalDirection: VerticalDirection.down,
+                                              clipBehavior: Clip.none,
+                                              children: List.generate(
+                                                  filterBookList.length,
+                                                  (filterBookListIndex) {
+                                                final filterBookListItem = filterBookList[filterBookListIndex];
+                                                return wrapWithModel(
+                                                  model: _model.mainBookComponentModels.getModel(
+                                                    getJsonField(filterBookListItem, r'''$.name''').toString(),
+                                                    filterBookListIndex,
+                                                  ),
+                                                  updateCallback: () => safeSetState(() {}),
+                                                  child: MainBookComponentWidget(
+                                                    key: Key('Keydgb_${getJsonField(filterBookListItem, r'''$.name''').toString()}'),
+                                                    image: '${FFAppConstants.bookImagesUrl}${getJsonField(filterBookListItem, r'''$.image''').toString()}',
+                                                    bookName: getJsonField(filterBookListItem, r'''$.name''').toString(),
+                                                    id: getJsonField(filterBookListItem, r'''$._id''').toString(),
+                                                    price: getJsonField(filterBookListItem, r'''$.price''').toString(),
+                                                    bookType: getJsonField(filterBookListItem, r'''$.type''')?.toString(),
+                                                    discountAmount: getJsonField(filterBookListItem, r'''$.discount_amount''').toString(),
+                                                    discountPercentage: getJsonField(filterBookListItem, r'''$.discount_percentage''').toString(),
+                                                    authorsName: getJsonField(filterBookListItem, r'''$.author.name''').toString(),
+                                                    isFav: functions.checkFavOrNot(
+                                                          EbookGroup.getFavouriteBookCall
+                                                              .favouriteBookDetailsList(containerGetFavouriteBookResponse.jsonBody)
+                                                              ?.toList(),
+                                                          getJsonField(filterBookListItem, r'''$._id''').toString()) ==
+                                                      true,
+                                                    indicator: (filterBookListIndex == _model.filterIndex) && (_model.isFiler == true),
+                                                    isFavAction: () async {
+                                                      if (FFAppState().isLogin == true) {
+                                                        _model.isFiler = true;
+                                                        _model.filterIndex = filterBookListIndex;
+                                                        safeSetState(() {});
+                                                        if (functions.checkFavOrNot(
+                                                              EbookGroup.getFavouriteBookCall
+                                                                  .favouriteBookDetailsList(containerGetFavouriteBookResponse.jsonBody)
+                                                                  ?.toList(),
+                                                              getJsonField(filterBookListItem, r'''$._id''').toString()) ==
+                                                          true) {
+                                                          _model.getPopularDetete = await EbookGroup.removeFavouritebookCall.call(
+                                                            userId: FFAppState().userId,
+                                                            token: FFAppState().token,
+                                                            bookId: getJsonField(filterBookListItem, r'''$._id''').toString(),
+                                                          );
+
+                                                          safeSetState(() => _model.apiRequestCompleter2 = null);
+                                                          await _model.waitForApiRequestCompleted2();
+                                                          await actions.showCustomToastBottom(FFAppState().unFavText);
+                                                        } else {
+                                                          _model.getPopularAdd = await EbookGroup.addFavouriteBookApiCall.call(
+                                                            userId: FFAppState().userId,
+                                                            token: FFAppState().token,
+                                                            bookId: getJsonField(filterBookListItem, r'''$._id''').toString(),
+                                                          );
+
+                                                          safeSetState(() => _model.apiRequestCompleter2 = null);
+                                                          await _model.waitForApiRequestCompleted2();
+                                                          await actions.showCustomToastBottom(FFAppState().favText);
+                                                        }
+
+                                                        FFAppState().clearGetFavouriteBookCacheCache();
+                                                        _model.isFiler = false;
+                                                        safeSetState(() {});
+                                                      } else {
+                                                        FFAppState().favChange = true;
+                                                        FFAppState().bookId = getJsonField(filterBookListItem, r'''$._id''').toString();
+                                                        FFAppState().update(() {});
+                                                        context.pushNamed(SignInPageWidget.routeName);
+                                                      }
+
+                                                      safeSetState(() {});
+                                                    },
+                                                    isPurchased: _model.purchasedBookIds.contains(getJsonField(filterBookListItem, r'''$._id''').toString()),
+                                                    isMainTap: () async {
+                                                      context.pushNamed(
+                                                        BookDetailspageWidget.routeName,
+                                                        queryParameters: {
+                                                          'name': serializeParam(getJsonField(filterBookListItem, r'''$.name''').toString(), ParamType.String),
+                                                          'price': serializeParam(getJsonField(filterBookListItem, r'''$.price''').toString(), ParamType.String),
+                                                          'image': serializeParam('${FFAppConstants.bookImagesUrl}${getJsonField(filterBookListItem, r'''$.image''').toString()}', ParamType.String),
+                                                          'id': serializeParam(getJsonField(filterBookListItem, r'''$._id''').toString(), ParamType.String),
+                                                        }.withoutNulls,
+                                                      );
+                                                    },
+                                                  ),
+                                                );
+                                              }),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      if (_isLoading)
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                                          child: Center(
+                                            child: SizedBox(
+                                              width: 30.0,
+                                              height: 30.0,
+                                              child: CircularProgressIndicator(
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  FlutterFlowTheme.of(context).primary,
                                                 ),
-                                                'Message',
                                               ),
-                                              textAlign: TextAlign.center,
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        fontFamily:
-                                                            'SF Pro Display',
-                                                        fontSize: 18.0,
-                                                        letterSpacing: 0.0,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        lineHeight: 1.5,
-                                                      ),
                                             ),
                                           ),
-                                        );
-                                      } else {
-                                        return Builder(
-                                          builder: (context) {
-                                            if (EbookGroup.getLatestbooksApiCall
-                                                        .bookDetailsList(
-                                                      containerGetLatestbooksApiResponse
-                                                          .jsonBody,
-                                                    ) !=
-                                                    null &&
-                                                (EbookGroup
-                                                        .getLatestbooksApiCall
-                                                        .bookDetailsList(
-                                                  containerGetLatestbooksApiResponse
-                                                      .jsonBody,
-                                                ))!
-                                                    .isNotEmpty) {
-                                              return RefreshIndicator(
-                                                key: Key(
-                                                    'RefreshIndicator_d0tm108k'),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primary,
-                                                onRefresh: () async {
-                                                  safeSetState(() => _model
-                                                          .apiRequestCompleter1 =
-                                                      null);
-                                                  await _model
-                                                      .waitForApiRequestCompleted1();
-                                                },
-                                                child: ListView(
-                                                  padding: EdgeInsets.fromLTRB(
-                                                    0,
-                                                    16.0,
-                                                    0,
-                                                    16.0,
-                                                  ),
-                                                  scrollDirection:
-                                                      Axis.vertical,
-                                                  children: [
-                                                    Padding(
-                                                      padding:
-                                                          EdgeInsetsDirectional
-                                                              .fromSTEB(
-                                                                  16.0,
-                                                                  0.0,
-                                                                  16.0,
-                                                                  0.0),
-                                                      child: Builder(
-                                                        builder: (context) {
-                                                          final filterBookList = EbookGroup
-                                                                  .getLatestbooksApiCall
-                                                                  .bookDetailsList(
-                                                                    containerGetLatestbooksApiResponse
-                                                                        .jsonBody,
-                                                                  )
-                                                                  ?.toList() ??
-                                                              [];
-
-                                                          return Wrap(
-                                                            spacing: 16.0,
-                                                            runSpacing: 16.0,
-                                                            alignment:
-                                                                WrapAlignment
-                                                                    .start,
-                                                            crossAxisAlignment:
-                                                                WrapCrossAlignment
-                                                                    .start,
-                                                            direction:
-                                                                Axis.horizontal,
-                                                            runAlignment:
-                                                                WrapAlignment
-                                                                    .start,
-                                                            verticalDirection:
-                                                                VerticalDirection
-                                                                    .down,
-                                                            clipBehavior:
-                                                                Clip.none,
-                                                            children: List.generate(
-                                                                filterBookList
-                                                                    .length,
-                                                                (filterBookListIndex) {
-                                                              final filterBookListItem =
-                                                                  filterBookList[
-                                                                      filterBookListIndex];
-                                                              return wrapWithModel(
-                                                                model: _model
-                                                                    .mainBookComponentModels
-                                                                    .getModel(
-                                                                  getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$.name''',
-                                                                  ).toString(),
-                                                                  filterBookListIndex,
-                                                                ),
-                                                                updateCallback: () =>
-                                                                    safeSetState(
-                                                                        () {}),
-                                                                child:
-                                                                    MainBookComponentWidget(
-                                                                  key: Key(
-                                                                    'Keydgb_${getJsonField(
-                                                                      filterBookListItem,
-                                                                      r'''$.name''',
-                                                                    ).toString()}',
-                                                                  ),
-                                                                  image:
-                                                                      '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$.image''',
-                                                                  ).toString()}',
-                                                                  bookName:
-                                                                      getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$.name''',
-                                                                  ).toString(),
-                                                                  id:
-                                                                      getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$._id''',
-                                                                  ).toString(),
-                                                                  price:
-                                                                      getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$.price''',
-                                                                  ).toString(),
-                                                                  bookType:
-                                                                      getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$.type''',
-                                                                  )?.toString(),
-                                                                  discountAmount:
-                                                                      getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$.discount_amount''',
-                                                                  ).toString(),
-                                                                  discountPercentage:
-                                                                      getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$.discount_percentage''',
-                                                                  ).toString(),
-                                                                  authorsName:
-                                                                      getJsonField(
-                                                                    filterBookListItem,
-                                                                    r'''$.author.name''',
-                                                                  ).toString(),
-                                                                  isFav: functions.checkFavOrNot(
-                                                                          EbookGroup.getFavouriteBookCall
-                                                                              .favouriteBookDetailsList(
-                                                                                containerGetFavouriteBookResponse.jsonBody,
-                                                                              )
-                                                                              ?.toList(),
-                                                                          getJsonField(
-                                                                            filterBookListItem,
-                                                                            r'''$._id''',
-                                                                          ).toString()) ==
-                                                                      true,
-                                                                  indicator: (filterBookListIndex ==
-                                                                          _model
-                                                                              .filterIndex) &&
-                                                                      (_model.isFiler ==
-                                                                          true),
-                                                                  isFavAction:
-                                                                      () async {
-                                                                    if (FFAppState()
-                                                                            .isLogin ==
-                                                                        true) {
-                                                                      _model.isFiler =
-                                                                          true;
-                                                                      _model.filterIndex =
-                                                                          filterBookListIndex;
-                                                                      safeSetState(
-                                                                          () {});
-                                                                      if (functions.checkFavOrNot(
-                                                                              EbookGroup.getFavouriteBookCall
-                                                                                  .favouriteBookDetailsList(
-                                                                                    containerGetFavouriteBookResponse.jsonBody,
-                                                                                  )
-                                                                                  ?.toList(),
-                                                                              getJsonField(
-                                                                                filterBookListItem,
-                                                                                r'''$._id''',
-                                                                              ).toString()) ==
-                                                                          true) {
-                                                                        _model.getPopularDetete = await EbookGroup
-                                                                            .removeFavouritebookCall
-                                                                            .call(
-                                                                          userId:
-                                                                              FFAppState().userId,
-                                                                          token:
-                                                                              FFAppState().token,
-                                                                          bookId:
-                                                                              getJsonField(
-                                                                            filterBookListItem,
-                                                                            r'''$._id''',
-                                                                          ).toString(),
-                                                                        );
-
-                                                                        safeSetState(() =>
-                                                                            _model.apiRequestCompleter2 =
-                                                                                null);
-                                                                        await _model
-                                                                            .waitForApiRequestCompleted2();
-                                                                        await actions
-                                                                            .showCustomToastBottom(
-                                                                          FFAppState()
-                                                                              .unFavText,
-                                                                        );
-                                                                      } else {
-                                                                        _model.getPopularAdd = await EbookGroup
-                                                                            .addFavouriteBookApiCall
-                                                                            .call(
-                                                                          userId:
-                                                                              FFAppState().userId,
-                                                                          token:
-                                                                              FFAppState().token,
-                                                                          bookId:
-                                                                              getJsonField(
-                                                                            filterBookListItem,
-                                                                            r'''$._id''',
-                                                                          ).toString(),
-                                                                        );
-
-                                                                        safeSetState(() =>
-                                                                            _model.apiRequestCompleter2 =
-                                                                                null);
-                                                                        await _model
-                                                                            .waitForApiRequestCompleted2();
-                                                                        await actions
-                                                                            .showCustomToastBottom(
-                                                                          FFAppState()
-                                                                              .favText,
-                                                                        );
-                                                                      }
-
-                                                                      FFAppState()
-                                                                          .clearGetFavouriteBookCacheCache();
-                                                                      _model.isFiler =
-                                                                          false;
-                                                                      safeSetState(
-                                                                          () {});
-                                                                    } else {
-                                                                      FFAppState()
-                                                                              .favChange =
-                                                                          true;
-                                                                      FFAppState()
-                                                                              .bookId =
-                                                                          getJsonField(
-                                                                        filterBookListItem,
-                                                                        r'''$._id''',
-                                                                      ).toString();
-                                                                      FFAppState()
-                                                                          .update(
-                                                                              () {});
-
-                                                                      context.pushNamed(
-                                                                          SignInPageWidget
-                                                                              .routeName);
-                                                                    }
-
-                                                                    safeSetState(
-                                                                        () {});
-                                                                  },
-                                                                  isPurchased: _model.purchasedBookIds.contains(
-                                                                    getJsonField(
-                                                                      filterBookListItem,
-                                                                      r'''$._id''',
-                                                                    ).toString(),
-                                                                  ),
-                                                                  isMainTap:
-                                                                      () async {
-                                                                    context
-                                                                        .pushNamed(
-                                                                      BookDetailspageWidget
-                                                                          .routeName,
-                                                                      queryParameters:
-                                                                          {
-                                                                        'name':
-                                                                            serializeParam(
-                                                                          getJsonField(
-                                                                            filterBookListItem,
-                                                                            r'''$.name''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'price':
-                                                                            serializeParam(
-                                                                          getJsonField(
-                                                                            filterBookListItem,
-                                                                            r'''$.price''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'image':
-                                                                            serializeParam(
-                                                                          '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                                            filterBookListItem,
-                                                                            r'''$.image''',
-                                                                          ).toString()}',
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                        'id':
-                                                                            serializeParam(
-                                                                          getJsonField(
-                                                                            filterBookListItem,
-                                                                            r'''$._id''',
-                                                                          ).toString(),
-                                                                          ParamType
-                                                                              .String,
-                                                                        ),
-                                                                      }.withoutNulls,
-                                                                    );
-                                                                  },
-                                                                ),
-                                                              );
-                                                            }),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            } else {
-                                              return wrapWithModel(
-                                                model: _model.noFilterBookModel,
-                                                updateCallback: () =>
-                                                    safeSetState(() {}),
-                                                child: NoFilterBookWidget(),
-                                              );
-                                            }
-                                          },
-                                        );
-                                      }
-                                    },
+                                        ),
+                                    ],
                                   ),
                                 );
                               },

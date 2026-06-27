@@ -42,6 +42,10 @@ export '/pages/home_pages/about_author_page/about_author_page_widget.dart'
     show AboutAuthorPageWidget;
 export '/pages/narrator_screens/about_narrator_page/about_narrator_page_widget.dart'
     show AboutNarratorPageWidget;
+export '/pages/translator_screens/about_translator_page/about_translator_page_widget.dart'
+    show AboutTranslatorPageWidget;
+export '/pages/translator_screens/about_translator_page/about_translator_page_model.dart'
+    show AboutTranslatorPageModel;
 export '/pages/home_pages/read_book_page/read_book_page_widget.dart'
     show ReadBookPageWidget;
 export '/pages/home_pages/search_page/search_page_widget.dart'
@@ -102,5 +106,9 @@ export '/pages/profile_screens/purchase_history_page/purchase_history_page_model
     show PurchaseHistoryPageModel;
 export '/pages/latest_screen/new_books_page_widget.dart'
     show NewBooksPageWidget;
+export '/pages/dialogs/rate_app_dialog/rate_app_dialog_widget.dart'
+    show RateAppDialogWidget;
+export '/pages/dialogs/rate_app_dialog/rate_app_dialog_model.dart'
+    show RateAppDialogModel;
 // export '/pages/home_pages/book_detailspage_copy/book_detailspage_copy_widget.dart'
 //     show BookDetailspageCopyWidget;

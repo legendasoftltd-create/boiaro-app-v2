@@ -17,31 +17,30 @@ import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '/app_constants.dart';
-import 'about_narrator_page_model.dart';
-export 'about_narrator_page_model.dart';
+import 'about_translator_page_model.dart';
+export 'about_translator_page_model.dart';
 
-class AboutNarratorPageWidget extends StatefulWidget {
-  const AboutNarratorPageWidget({
+class AboutTranslatorPageWidget extends StatefulWidget {
+  const AboutTranslatorPageWidget({
     super.key,
     required this.name,
-    required this.narratorImage,
-    required this.narratorId,
+    required this.translatorImage,
+    required this.translatorId,
   });
 
   final String? name;
-  final String? narratorImage;
-  final String? narratorId;
+  final String? translatorImage;
+  final String? translatorId;
 
-  static String routeName = 'AboutNarratorPage';
-  static String routePath = '/aboutNarratorPage';
+  static String routeName = 'AboutTranslatorPage';
+  static String routePath = '/aboutTranslatorPage';
 
   @override
-  State<AboutNarratorPageWidget> createState() =>
-      _AboutNarratorPageWidgetState();
+  State<AboutTranslatorPageWidget> createState() => _AboutTranslatorPageWidgetState();
 }
 
-class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
-  late AboutNarratorPageModel _model;
+class _AboutTranslatorPageWidgetState extends State<AboutTranslatorPageWidget> {
+  late AboutTranslatorPageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isFollowing = false;
@@ -51,13 +50,13 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
   @override
   void initState() {
     super.initState();
-    _model = createModel(context, () => AboutNarratorPageModel());
+    _model = createModel(context, () => AboutTranslatorPageModel());
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (FFAppState().isLogin) {
         await _loadPurchasedBooks();
         await _loadFollowState();
-        await _reloadFollowStateFromNarratorList();
+        await _reloadFollowStateFromTranslatorList();
       }
       safeSetState(() {});
     });
@@ -66,10 +65,10 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
   Future<void> _loadFollowState() async {
     if (!FollowService.supportsFollowEndpoints) return;
     if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
-    final id = (widget.narratorId ?? '').trim();
+    final id = (widget.translatorId ?? '').trim();
     if (id.isEmpty) return;
     final state = await FollowService.fetchState(
-      entityType: 'narrator',
+      entityType: 'translator',
       entityId: id,
       token: FFAppState().token,
     );
@@ -80,14 +79,14 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
     });
   }
 
-  Future<void> _reloadFollowStateFromNarratorList() async {
+  Future<void> _reloadFollowStateFromTranslatorList() async {
     if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
-    final id = (widget.narratorId ?? '').trim();
+    final id = (widget.translatorId ?? '').trim();
     if (id.isEmpty) return;
-    final res = await EbookGroup.getnarratorsApiCall.call(
+    final res = await EbookGroup.gettranslatorsApiCall.call(
       token: FFAppState().token,
     );
-    final list = EbookGroup.getnarratorsApiCall.narratorDetailsList(res.jsonBody)
+    final list = EbookGroup.gettranslatorsApiCall.translatorDetailsList(res.jsonBody)
             ?.toList() ??
         <dynamic>[];
     for (final row in list) {
@@ -113,12 +112,12 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
       context.pushNamed(SignInPageWidget.routeName);
       return;
     }
-    final id = (widget.narratorId ?? '').trim();
+    final id = (widget.translatorId ?? '').trim();
     if (id.isEmpty) return;
     safeSetState(() => _isFollowLoading = true);
     final target = !_isFollowing;
     final ok = await FollowService.setFollow(
-      entityType: 'narrator',
+      entityType: 'translator',
       entityId: id,
       token: FFAppState().token,
       follow: target,
@@ -133,9 +132,9 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
         }
       });
       await actions.showCustomToastBottom(
-        target ? 'Followed narrator' : 'Unfollowed narrator',
+        target ? 'Followed translator' : 'Unfollowed translator',
       );
-      await _reloadFollowStateFromNarratorList();
+      await _reloadFollowStateFromTranslatorList();
     } else {
       await actions.showCustomToastBottom('Unable to update follow status');
     }
@@ -193,7 +192,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'About narrator',
+                  title: 'About translator',
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -202,7 +201,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                     await SharePlus.instance.share(
                       ShareParams(
                         uri: Uri.parse(
-                          "${FFAppConstants.webUrl}/narrator/${widget.narratorId}"
+                          "${FFAppConstants.webUrl}/translator/${widget.translatorId}"
                         ),
                       ),
                     );
@@ -217,8 +216,8 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                         future: (_model.apiRequestCompleter2 ??=
                                 Completer<ApiCallResponse>()
                                   ..complete(
-                                      EbookGroup.getnarratordetailsApiCall.call(
-                                    narratorId: widget.narratorId,
+                                      EbookGroup.gettranslatordetailsApiCall.call(
+                                    translatorId: widget.translatorId,
                                     token: FFAppState().token,
                                   )))
                             .future,
@@ -243,8 +242,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                             decoration: BoxDecoration(),
                             child: Builder(
                               builder: (context) {
-                                if (EbookGroup.getnarratordetailsApiCall
-                                        .success(
+                                if (EbookGroup.gettranslatordetailsApiCall.success(
                                       containerGetauthordetailsApiResponse
                                           .jsonBody,
                                     ) ==
@@ -256,7 +254,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                           16.0, 0.0, 16.0, 0.0),
                                       child: Text(
                                         valueOrDefault<String>(
-                                          EbookGroup.getnarratordetailsApiCall
+                                          EbookGroup.gettranslatordetailsApiCall
                                               .message(
                                             containerGetauthordetailsApiResponse
                                                 .jsonBody,
@@ -277,23 +275,23 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                     ),
                                   );
                                 } else {
-                                  final narratorList = EbookGroup.getnarratordetailsApiCall.narratorDetails(
+                                  final translatorList = EbookGroup.gettranslatordetailsApiCall.translatorDetails(
                                     containerGetauthordetailsApiResponse.jsonBody,
                                   );
-                                  final narratorMap = narratorList != null && narratorList.isNotEmpty
-                                      ? Map<String, dynamic>.from(narratorList.first)
+                                  final translatorMap = translatorList != null && translatorList.isNotEmpty
+                                      ? Map<String, dynamic>.from(translatorList.first)
                                       : null;
-                                  if (narratorMap != null && _followersCount == null) {
-                                    _followersCount = narratorMap['followers_count'] as int? ?? 0;
-                                    _isFollowing = narratorMap['followed'] == true;
+                                  if (translatorMap != null && _followersCount == null) {
+                                    _followersCount = translatorMap['followers_count'] as int? ?? 0;
+                                    _isFollowing = translatorMap['followed'] == true;
                                   }
 
-                                  final narratorName = (widget.name != null && widget.name!.isNotEmpty)
+                                  final translatorName = (widget.name != null && widget.name!.isNotEmpty)
                                       ? widget.name!
-                                      : (narratorMap?['name']?.toString() ?? 'Name');
-                                  final imageUrl = (widget.narratorImage != null && widget.narratorImage!.isNotEmpty)
-                                      ? widget.narratorImage!
-                                      : '${FFAppConstants.imageUrl}${narratorMap?['image'] ?? ""}';
+                                      : (translatorMap?['name']?.toString() ?? 'Name');
+                                  final imageUrl = (widget.translatorImage != null && widget.translatorImage!.isNotEmpty)
+                                      ? widget.translatorImage!
+                                      : '${FFAppConstants.imageUrl}${translatorMap?['image'] ?? ""}';
 
                                   return RefreshIndicator(
                                     key: Key('RefreshIndicator_zhgjuy02'),
@@ -377,7 +375,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                           mainAxisSize: MainAxisSize.min,
                                                           children: [
                                                             Text(
-                                                              narratorName,
+                                                              translatorName,
                                                               style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                     fontFamily: 'SF Pro Display',
                                                                     fontSize: 18.0,
@@ -396,7 +394,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                                 borderRadius: BorderRadius.circular(6.0),
                                                               ),
                                                               child: Text(
-                                                                'Narrator',
+                                                                'Author',
                                                                 style: FlutterFlowTheme.of(context).bodySmall.override(
                                                                       fontFamily: 'SF Pro Display',
                                                                       color: FlutterFlowTheme.of(context).primary,
@@ -425,19 +423,13 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                           _buildStatItem(
                                                             context,
                                                             label: 'Followers',
-                                                            value: _followersCount != null ? '$_followersCount' : '${narratorMap?['followers_count'] ?? 0}',
+                                                            value: _followersCount != null ? '$_followersCount' : '${translatorMap?['followers_count'] ?? 0}',
                                                           ),
                                                           const SizedBox(width: 24.0),
                                                           _buildStatItem(
                                                             context,
                                                             label: 'Books',
-                                                            value: '${narratorMap?['books_count'] ?? 0}',
-                                                          ),
-                                                          const SizedBox(width: 24.0),
-                                                          _buildStatItem(
-                                                            context,
-                                                            label: 'Listens',
-                                                            value: '${narratorMap?['total_listens'] ?? 0}',
+                                                            value: '${translatorMap?['books_count'] ?? 0}',
                                                           ),
                                                         ],
                                                       ),
@@ -497,13 +489,13 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                             ),
                                           ),
                                         ),
-                                        if (EbookGroup.getnarratordetailsApiCall
+                                        if (EbookGroup.gettranslatordetailsApiCall
                                                     .description(
                                                   containerGetauthordetailsApiResponse
                                                       .jsonBody,
                                                 ) !=
                                                 null &&
-                                            EbookGroup.getnarratordetailsApiCall
+                                            EbookGroup.gettranslatordetailsApiCall
                                                     .description(
                                                   containerGetauthordetailsApiResponse
                                                       .jsonBody,
@@ -530,13 +522,13 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                       ),
                                             ),
                                           ),
-                                        if (EbookGroup.getnarratordetailsApiCall
+                                        if (EbookGroup.gettranslatordetailsApiCall
                                                     .description(
                                                   containerGetauthordetailsApiResponse
                                                       .jsonBody,
                                                 ) !=
                                                 null &&
-                                            EbookGroup.getnarratordetailsApiCall
+                                            EbookGroup.gettranslatordetailsApiCall
                                                     .description(
                                                   containerGetauthordetailsApiResponse
                                                       .jsonBody,
@@ -574,7 +566,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                   width: double.infinity,
                                                   height: 80.0,
                                                   htmlContent: EbookGroup
-                                                      .getnarratordetailsApiCall
+                                                      .gettranslatordetailsApiCall
                                                       .description(
                                                     containerGetauthordetailsApiResponse
                                                         .jsonBody,
@@ -584,7 +576,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                               ),
                                             ),
                                           ),
-                                        if ((widget.narratorId ?? '').isEmpty)
+                                        if ((widget.translatorId ?? '').isEmpty)
                                           Padding(
                                             padding:
                                                 EdgeInsetsDirectional.fromSTEB(
@@ -607,7 +599,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                       ),
                                             ),
                                           ),
-                                        if ((widget.narratorId ?? '').isEmpty)
+                                        if ((widget.translatorId ?? '').isEmpty)
                                           Padding(
                                             padding:
                                                 EdgeInsetsDirectional.fromSTEB(
@@ -652,21 +644,21 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                           Colors.transparent,
                                                       onTap: () async {
                                                         if (!(EbookGroup
-                                                                    .getnarratordetailsApiCall
+                                                                    .gettranslatordetailsApiCall
                                                                     .facebookurl(
                                                                   containerGetauthordetailsApiResponse
                                                                       .jsonBody,
                                                                 ) ==
                                                                 null ||
                                                             EbookGroup
-                                                                    .getnarratordetailsApiCall
+                                                                    .gettranslatordetailsApiCall
                                                                     .facebookurl(
                                                                   containerGetauthordetailsApiResponse
                                                                       .jsonBody,
                                                                 ) ==
                                                                 '')) {
                                                           await launchURL(EbookGroup
-                                                              .getnarratordetailsApiCall
+                                                              .gettranslatordetailsApiCall
                                                               .facebookurl(
                                                             containerGetauthordetailsApiResponse
                                                                 .jsonBody,
@@ -696,21 +688,21 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                           Colors.transparent,
                                                       onTap: () async {
                                                         if (!(EbookGroup
-                                                                    .getnarratordetailsApiCall
+                                                                    .gettranslatordetailsApiCall
                                                                     .instagramurl(
                                                                   containerGetauthordetailsApiResponse
                                                                       .jsonBody,
                                                                 ) ==
                                                                 null ||
                                                             EbookGroup
-                                                                    .getnarratordetailsApiCall
+                                                                    .gettranslatordetailsApiCall
                                                                     .instagramurl(
                                                                   containerGetauthordetailsApiResponse
                                                                       .jsonBody,
                                                                 ) ==
                                                                 '')) {
                                                           await launchURL(EbookGroup
-                                                              .getnarratordetailsApiCall
+                                                              .gettranslatordetailsApiCall
                                                               .instagramurl(
                                                             containerGetauthordetailsApiResponse
                                                                 .jsonBody,
@@ -740,21 +732,21 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                           Colors.transparent,
                                                       onTap: () async {
                                                         if (!(EbookGroup
-                                                                    .getnarratordetailsApiCall
+                                                                    .gettranslatordetailsApiCall
                                                                     .youtubeurl(
                                                                   containerGetauthordetailsApiResponse
                                                                       .jsonBody,
                                                                 ) ==
                                                                 null ||
                                                             EbookGroup
-                                                                    .getnarratordetailsApiCall
+                                                                    .gettranslatordetailsApiCall
                                                                     .youtubeurl(
                                                                   containerGetauthordetailsApiResponse
                                                                       .jsonBody,
                                                                 ) ==
                                                                 '')) {
                                                           await launchURL(EbookGroup
-                                                              .getnarratordetailsApiCall
+                                                              .gettranslatordetailsApiCall
                                                               .youtubeurl(
                                                             containerGetauthordetailsApiResponse
                                                                 .jsonBody,
@@ -784,21 +776,21 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                           Colors.transparent,
                                                       onTap: () async {
                                                         if (!(EbookGroup
-                                                                    .getnarratordetailsApiCall
+                                                                    .gettranslatordetailsApiCall
                                                                     .websiteurl(
                                                                   containerGetauthordetailsApiResponse
                                                                       .jsonBody,
                                                                 ) ==
                                                                 null ||
                                                             EbookGroup
-                                                                    .getnarratordetailsApiCall
+                                                                    .gettranslatordetailsApiCall
                                                                     .websiteurl(
                                                                   containerGetauthordetailsApiResponse
                                                                       .jsonBody,
                                                                 ) ==
                                                                 '')) {
                                                           await launchURL(EbookGroup
-                                                              .getnarratordetailsApiCall
+                                                              .gettranslatordetailsApiCall
                                                               .websiteurl(
                                                             containerGetauthordetailsApiResponse
                                                                 .jsonBody,
@@ -854,10 +846,9 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                 child: FutureBuilder<
                                                     ApiCallResponse>(
                                                   future: EbookGroup
-                                                      .getbookbynarratorApiCall
+                                                      .getbookbytranslatorApiCall
                                                       .call(
-                                                    narratorId:
-                                                        widget.narratorId,
+                                                    translatorId: widget.translatorId,
                                                   ),
                                                   builder: (context, snapshot) {
                                                     // Customize what your widget looks like when it's loading.
@@ -875,7 +866,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                               .start,
                                                       children: [
                                                         if (EbookGroup
-                                                                .getbookbynarratorApiCall
+                                                                .getbookbytranslatorApiCall
                                                                 .success(
                                                               columnGetbookbyauthorApiResponse
                                                                   .jsonBody,
@@ -913,7 +904,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                             ),
                                                           ),
                                                         if (EbookGroup
-                                                                .getbookbynarratorApiCall
+                                                                .getbookbytranslatorApiCall
                                                                 .success(
                                                               columnGetbookbyauthorApiResponse
                                                                   .jsonBody,
@@ -931,7 +922,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                               builder:
                                                                   (context) {
                                                                 final bookDetailsList = EbookGroup
-                                                                        .getbookbynarratorApiCall
+                                                                        .getbookbytranslatorApiCall
                                                                         .bookDetailsList(
                                                                           columnGetbookbyauthorApiResponse
                                                                               .jsonBody,

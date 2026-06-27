@@ -772,12 +772,24 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     bool forceIsPreviewMode = false,
     int? initialTrackNumber,
     bool isFree = false,
+    Map<String, dynamic>? audiobookFormat,
   }) async {
+    debugPrint('[Audiobook V2] _openAudiobookPlayerFromV2 called');
+    debugPrint('  - bookId: $bookId');
+    debugPrint('  - bookName: $bookName');
+    debugPrint('  - hasFullAccess: $hasFullAccess');
+    debugPrint('  - previewPercent: $previewPercent');
+    debugPrint('  - forceIsPreviewMode: $forceIsPreviewMode');
+    debugPrint('  - initialTrackNumber: $initialTrackNumber');
+    debugPrint('  - isFree: $isFree');
+    debugPrint('  - audiobookFormat: ${audiobookFormat != null ? "Not Null" : "Null"}');
+
     if (!FFAppState().isLogin) {
       context.pushNamed(SignInPageWidget.routeName);
       return false;
     }
     final tracks = await _fetchAudioTracks(bookId);
+    debugPrint('[Audiobook V2] Fetched ${tracks.length} tracks from chapters API');
     final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
     if (effectiveTracks.isEmpty) {
       final fallback = await _fallbackAudioTrack(bookId);
@@ -803,13 +815,41 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
     for (var i = 0; i < effectiveTracks.length; i++) {
       final track = effectiveTracks[i];
-      final isFree = track['is_free'] == true;
+      var isFreeTrack = _isTrackFreeForPreview(
+        track: track,
+        index: i,
+        audiobookFormat: audiobookFormat,
+      );
       final isUnlocked = track['is_unlocked'] == true;
-      final isLocked = !isFree && !isUnlocked;
+      var isLocked = !isFreeTrack && !isUnlocked;
 
       final trackNumber = (track['track_number'] is num)
           ? (track['track_number'] as num).toInt()
           : (i + 1);
+
+      // Find matching track in audiobookFormat['audiobook_tracks']
+      dynamic detailsTrack;
+      if (audiobookFormat != null && audiobookFormat['audiobook_tracks'] is List) {
+        final detailTracksList = audiobookFormat['audiobook_tracks'] as List;
+        for (var dt in detailTracksList) {
+          if (dt is Map) {
+            final dtNum = (dt['track_number'] is num)
+                ? (dt['track_number'] as num).toInt()
+                : null;
+            if (dtNum == trackNumber) {
+              detailsTrack = dt;
+              break;
+            }
+          }
+        }
+        if (detailsTrack == null && i < detailTracksList.length) {
+          final dt = detailTracksList[i];
+          if (dt is Map) {
+            detailsTrack = dt;
+          }
+        }
+      }
+
       String? signedUrl = track['audio_url']?.toString();
       if (signedUrl == null || signedUrl.isEmpty) {
         if (urlsMap.isNotEmpty) {
@@ -820,9 +860,30 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         }
         signedUrl ??= track['signed_url']?.toString();
       }
+
+      if (signedUrl == null || signedUrl.isEmpty) {
+        if (detailsTrack != null && detailsTrack is Map) {
+          signedUrl = detailsTrack['audio_url']?.toString();
+          debugPrint('[Audiobook V2] Track $trackNumber details audio URL: $signedUrl');
+          if (signedUrl == null || signedUrl.isEmpty) {
+            signedUrl = detailsTrack['preview_audio_url']?.toString();
+            debugPrint('[Audiobook V2] Track $trackNumber details preview URL: $signedUrl');
+          }
+        }
+      }
+
+      if (trackNumber == 1 && (signedUrl != null && signedUrl.isNotEmpty)) {
+        isFreeTrack = true;
+        isLocked = false;
+        debugPrint('[Audiobook V2] Track 1 has preview URL, forcing isFreeTrack=true, isLocked=false');
+      }
+
       if ((signedUrl == null || signedUrl.isEmpty) && !isLocked) {
+        debugPrint('[Audiobook V2] Track $trackNumber has empty URL and is not locked. Skipping.');
         continue;
       }
+
+      debugPrint('[Audiobook V2] Adding chapter $trackNumber: title="${track['title']}", file="$signedUrl", isLocked=$isLocked, isPreview=$isFreeTrack');
 
       chapters.add({
         'title': track['title']?.toString() ?? 'Track $trackNumber',
@@ -830,7 +891,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         'track_number': trackNumber,
         'duration': track['duration']?.toString() ?? '',
         'isLocked': isLocked,
-        'isPreview': isFree,
+        'isPreview': isFreeTrack,
         'previewFraction': 1.0,
         'raw': track,
       });
@@ -1039,6 +1100,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           previewPercent: safePercent,
           forceIsPreviewMode: true,
           isFree: false,
+          audiobookFormat: audiobookFormat,
         );
         return;
       }
@@ -1194,6 +1256,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
             hasFullAccess: hasAccess,
             previewPercent: audiobookPreviewPercent,
             isFree: isAudiobookFree,
+            audiobookFormat: audiobookFormat,
           );
           if (!opened && !FFAppState().isLogin && !isAudiobookFree) {
             context.pushNamed(SignInPageWidget.routeName);
@@ -1230,6 +1293,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         hasFullAccess: false,
         previewPercent: audiobookPreviewPercent,
         isFree: false,
+        audiobookFormat: audiobookFormat,
       );
       return;
     }
@@ -1499,18 +1563,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     final dur = track['duration']?.toString() ?? '';
 
     Future<void> handlePlay() async {
-      if (audiobookPrice > 0 && !isAlreadyPurchased) {
-        await _handleBuyNow(
-          tab: BookMasterFormatTab.audiobook,
-          bookId: bookId,
-          bookName: bookName,
-          bookImage: bookImage,
-          ebookFormat: _pickFormat(formats, 'ebook'),
-          audiobookFormat: audiobookFormat,
-          hardcopyFormat: _pickFormat(formats, 'hardcopy'),
-        );
-        return;
-      }
       if (!isLocked) {
         final audiobookFormat =
             _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
@@ -1530,6 +1582,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           previewPercent: audiobookPreviewPercent,
           initialTrackNumber: trackNum,
           isFree: isFree,
+          audiobookFormat: audiobookFormat,
         );
       } else {
         if (!FFAppState().isLogin) {
@@ -1973,20 +2026,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         bookImage: bookImage,
                         tracks: tracks,
                         hasAudiobookAccess: hasAudiobookAccess,
+                        audiobookFormat: audiobookFormat,
                         onPlayTrack: (track) async {
-                          if (audiobookPrice > 0 && !isAlreadyPurchased) {
-                            await _handleBuyNow(
-                              tab: BookMasterFormatTab.audiobook,
-                              bookId: bookId,
-                              bookName: bookName,
-                              bookImage: bookImage,
-                              ebookFormat: _pickFormat(formats, 'ebook'),
-                              audiobookFormat: audiobookFormat,
-                              hardcopyFormat: _pickFormat(formats, 'hardcopy'),
-                            );
-                            return;
-                          }
-
                           final isFree = track['is_free'] == true;
                           final isUnlocked = track['is_unlocked'] == true;
                           final isLocked = (!isFree && !isUnlocked) || !hasAudiobookAccess;
@@ -2005,6 +2046,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                               previewPercent: audiobookPreviewPercent,
                               initialTrackNumber: track['track_number'],
                               isFree: isFree,
+                              audiobookFormat: audiobookFormat,
                             );
                           } else {
                             if (!FFAppState().isLogin) {
@@ -2848,7 +2890,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               // Author name
                                               GestureDetector(
                                                 onTap: () {
-                                                  final aName = EbookGroup.getbookdetailsApiCall.authorName(
+                                          final aName = EbookGroup.getbookdetailsApiCall.authorName(
                                                         bookDetailspageGetbookdetailsApiResponse
                                                             .jsonBody,
                                                       ) ??
@@ -2954,6 +2996,31 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           letterSpacing: 0.0,
                                                         ),
                                                   ),
+                                                  if (audiobookFormat != null) ...[
+                                                    const SizedBox(width: 12.0),
+                                                    Icon(Icons.headphones_rounded,
+                                                        color:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .secondaryText,
+                                                        size: 14.0),
+                                                    const SizedBox(width: 3.0),
+                                                    Text(
+                                                      '${getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r"$.data.bookDetails[0].total_listens") ?? 0} listens',
+                                                      style: FlutterFlowTheme.of(
+                                                              context)
+                                                          .bodySmall
+                                                          .override(
+                                                            fontFamily:
+                                                                'SF Pro Display',
+                                                            color: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .secondaryText,
+                                                            fontSize: 12.0,
+                                                            letterSpacing: 0.0,
+                                                          ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
 
@@ -3511,8 +3578,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           textStyle:
                                                               FlutterFlowTheme.of(
                                                                       context)
-                                                                  .titleSmall
-                                                                  .override(
+                                                              .titleSmall
+                                                              .override(
                                                                     fontFamily:
                                                                         'SF Pro Display',
                                                                     color: Colors
@@ -3560,8 +3627,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           textStyle:
                                                               FlutterFlowTheme.of(
                                                                       context)
-                                                                  .titleSmall
-                                                                  .override(
+                                                              .titleSmall
+                                                              .override(
                                                                     fontFamily:
                                                                         'SF Pro Display',
                                                                     color: Colors
@@ -3670,8 +3737,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           textStyle:
                                                               FlutterFlowTheme.of(
                                                                       context)
-                                                                  .titleSmall
-                                                                  .override(
+                                                              .titleSmall
+                                                              .override(
                                                                     fontFamily:
                                                                         'SF Pro Display',
                                                                     color: Colors
@@ -3726,8 +3793,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           textStyle:
                                                               FlutterFlowTheme.of(
                                                                       context)
-                                                                  .titleSmall
-                                                                  .override(
+                                                              .titleSmall
+                                                              .override(
                                                                     fontFamily:
                                                                         'SF Pro Display',
                                                                     color: Colors
@@ -3851,8 +3918,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           textStyle:
                                                               FlutterFlowTheme.of(
                                                                       context)
-                                                                  .titleSmall
-                                                                  .override(
+                                                              .titleSmall
+                                                              .override(
                                                                     fontFamily:
                                                                         'SF Pro Display',
                                                                     color: Colors
@@ -3900,8 +3967,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           textStyle:
                                                               FlutterFlowTheme.of(
                                                                       context)
-                                                                  .titleSmall
-                                                                  .override(
+                                                              .titleSmall
+                                                              .override(
                                                                     fontFamily:
                                                                         'SF Pro Display',
                                                                     color: Colors
@@ -4101,49 +4168,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           ),
                                         );
                                       }),
-                                      // SizedBox(height: 16.0),
-                                      // Genre Tags
-                                      // Row(
-                                      //   children: [
-                                      //     Container(
-                                      //       padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                                      //       decoration: BoxDecoration(
-                                      //         color: FlutterFlowTheme.of(context).secondaryBackground,
-                                      //         borderRadius: BorderRadius.circular(20.0),
-                                      //       ),
-                                      //       child: Text(
-                                      //         'Contemporary',
-                                      //         style: FlutterFlowTheme.of(context)
-                                      //             .bodyMedium
-                                      //             .override(
-                                      //               fontFamily: 'SF Pro Display',
-                                      //               fontSize: 12.0,
-                                      //               letterSpacing: 0.0,
-                                      //               fontWeight: FontWeight.normal,
-                                      //             ),
-                                      //       ),
-                                      //     ),
-                                      //     SizedBox(width: 8.0),
-                                      //     Container(
-                                      //       padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                                      //       decoration: BoxDecoration(
-                                      //         color: FlutterFlowTheme.of(context).secondaryBackground,
-                                      //         borderRadius: BorderRadius.circular(20.0),
-                                      //       ),
-                                      //       child: Text(
-                                      //         'Romance',
-                                      //         style: FlutterFlowTheme.of(context)
-                                      //             .bodyMedium
-                                      //             .override(
-                                      //               fontFamily: 'SF Pro Display',
-                                      //               fontSize: 12.0,
-                                      //               letterSpacing: 0.0,
-                                      //               fontWeight: FontWeight.normal,
-                                      //             ),
-                                      //       ),
-                                      //     ),
-                                      //   ],
-                                      // ),
                                     ],
                                   ),
                                 ),
@@ -4331,7 +4355,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     ),
                                   ),
                                 ),
-                                // ── Author / Narrator / Publisher ──────────────────
+                                // ── Author / Narrator / Publisher / Translator ──────────────────
                                 Builder(builder: (context) {
                                   final aName = EbookGroup.getbookdetailsApiCall
                                           .authorName(
@@ -4347,6 +4371,30 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 .jsonBody,
                                           ) ??
                                           '';
+
+                                  final tName = valueOrDefault<String>(
+                                    EbookGroup.getbookdetailsApiCall.translatorName(
+                                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                    ),
+                                    '',
+                                  );
+                                  final tId = valueOrDefault<String>(
+                                    EbookGroup.getbookdetailsApiCall.translatorid(
+                                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                    ),
+                                    '',
+                                  );
+                                  final tImageRaw = valueOrDefault<String>(
+                                    EbookGroup.getbookdetailsApiCall.translatorimage(
+                                      bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                    ),
+                                    '',
+                                  );
+                                  final tImage = tImageRaw.isEmpty
+                                      ? ''
+                                      : (tImageRaw.startsWith('http')
+                                          ? tImageRaw
+                                          : '${FFAppConstants.imageUrl}$tImageRaw');
 
                                   // Extract narrator details from narrator_ids or from narrator cache
                                   final narratorIdsRaw = audiobookFormat?['narrator_ids'];
@@ -4383,6 +4431,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           '_id': id,
                                           'name': initName,
                                           'image': initImage,
+                                          'total_listens': initialNarrator['total_listens']
                                         });
                                       }
                                     }
@@ -4453,6 +4502,23 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                             }.withoutNulls,
                                           ),
                                         ),
+
+                                       // Translator row
+                                       if (tName.isNotEmpty)
+                                         _buildPersonRow(
+                                           label: 'Translator',
+                                           name: tName,
+                                           imageUrl: tImage,
+                                           subtitle: '',
+                                           onTap: () => context.pushNamed(
+                                             AboutTranslatorPageWidget.routeName,
+                                             queryParameters: {
+                                               'name': serializeParam(tName, ParamType.String),
+                                               'translatorImage': serializeParam(tImage, ParamType.String),
+                                               'translatorId': serializeParam(tId, ParamType.String),
+                                             }.withoutNulls,
+                                           ),
+                                         ),
 
                                        // Narrator row (audiobook only)
                                        for (final narrator in resolvedNarrators)
@@ -4658,6 +4724,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           authorName: authorName,
                                                           hasFullAccess: hasAccess,
                                                           previewPercent: audiobookPreviewPercent,
+                                                          audiobookFormat: audiobookFormat,
                                                           initialTrackNumber: trackNum is int ? trackNum : (trackNum is double ? trackNum.toInt() : (trackNum != null ? int.tryParse(trackNum.toString()) : null)),
                                                           isFree: !isPreview && isAudiobookFree,
                                                         );
@@ -4704,6 +4771,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             authorName: authorName,
                                                             hasFullAccess: true,
                                                             previewPercent: audiobookPreviewPercent,
+                                                            audiobookFormat: audiobookFormat,
                                                             initialTrackNumber: trackNum is int ? trackNum : (trackNum is double ? trackNum.toInt() : (trackNum != null ? int.tryParse(trackNum.toString()) : null)),
                                                             isFree: false,
                                                           );
@@ -6695,6 +6763,7 @@ class _EpisodesListPage extends StatelessWidget {
     required this.tracks,
     required this.onPlayTrack,
     required this.hasAudiobookAccess,
+    this.audiobookFormat,
   });
 
   final String bookName;
@@ -6702,6 +6771,7 @@ class _EpisodesListPage extends StatelessWidget {
   final List<Map<String, dynamic>> tracks;
   final Future<void> Function(Map<String, dynamic> track) onPlayTrack;
   final bool hasAudiobookAccess;
+  final Map<String, dynamic>? audiobookFormat;
 
   @override
   Widget build(BuildContext context) {
@@ -6815,7 +6885,7 @@ class _EpisodesListPage extends StatelessWidget {
                         final isFree = track['is_free'] == true;
                         final isUnlocked = track['is_unlocked'] == true;
                         final isLocked = (!isFree && !isUnlocked) || !hasAudiobookAccess;
-                        final isPreview = track['is_preview'] == true;
+                        final isPreview = track['is_preview'] == true || isFree;
                         final num = track['track_number'];
                         final title =
                             track['title']?.toString() ?? 'Episode ${i + 1}';
@@ -6843,4 +6913,43 @@ class _EpisodesListPage extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _isTrackFreeForPreview({
+  required Map<String, dynamic> track,
+  required int index,
+  required Map<String, dynamic>? audiobookFormat,
+}) {
+  debugPrint('[Audiobook V2] _isTrackFreeForPreview check for index $index');
+  if (track['is_free'] == true) {
+    debugPrint('[Audiobook V2]   - is_free is already true in track object');
+    return true;
+  }
+  final trackNum = track['track_number'];
+  final trackNumber = (trackNum is num) ? trackNum.toInt() : (index + 1);
+  if (trackNumber != 1) {
+    debugPrint('[Audiobook V2]   - trackNumber is $trackNumber, not 1. Returning false');
+    return false;
+  }
+
+  if (audiobookFormat != null && audiobookFormat['audiobook_tracks'] is List) {
+    final detailTracksList = audiobookFormat['audiobook_tracks'] as List;
+    for (var dt in detailTracksList) {
+      if (dt is Map) {
+        final dtNum = (dt['track_number'] is num)
+            ? (dt['track_number'] as num).toInt()
+            : null;
+        if (dtNum == 1) {
+          final audioUrl = dt['audio_url']?.toString();
+          final previewUrl = dt['preview_audio_url']?.toString();
+          final hasUrl = (audioUrl != null && audioUrl.trim().isNotEmpty) || 
+                          (previewUrl != null && previewUrl.trim().isNotEmpty);
+          debugPrint('[Audiobook V2]   - Track 1 audio_url: $audioUrl, preview_url: $previewUrl (hasUrl: $hasUrl)');
+          return hasUrl;
+        }
+      }
+    }
+  }
+  debugPrint('[Audiobook V2]   - No preview_audio_url found in details format. Returning false');
+  return false;
 }
