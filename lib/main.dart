@@ -341,7 +341,6 @@ class _NavBarPageState extends State<NavBarPage> {
   }
 }
 
-// - `auto_size_text`
 
 
 // - `currency_symbols`
