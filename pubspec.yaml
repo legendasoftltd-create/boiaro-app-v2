@@ -111,6 +111,7 @@ dependencies:
   epub_reader_kit:
     path: ../epub_reader_kit
   firebase_auth: ^5.7.0
+  flutter_epub_viewer: ^1.2.8
   # vocsy_epub_viewer:
   #   git:
   #     url: https://github.com/ai-rayhan/vocsy_epub_viewer

@@ -17,6 +17,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'read_book_custom_page_model.dart';
+import 'ios_epub_reader_screen.dart';
 export 'read_book_custom_page_model.dart';
 
 class ReadBookCustomPageWidget extends StatefulWidget {
@@ -68,21 +69,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   bool get _isEpub => (widget.pdf ?? '').toLowerCase().trim().contains('.epub');
 
   void _showDebugSnack(String message) {
-    if (!kDebugMode) return;
-    debugPrint(message);
-    final messenger = _scaffoldMessenger;
-    if (messenger == null) return;
-    try {
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(milliseconds: 1200),
-        ),
-      );
-    } catch (_) {
-      // Ignore snackbar calls if route is already torn down.
-    }
+    print('EPUB_DEBUG: $message');
   }
 
   @override
@@ -94,6 +81,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   @override
   void initState() {
     super.initState();
+    print('DEBUG_INIT: widget.pdf = ${widget.pdf}');
+    print('DEBUG_INIT: _isEpub = $_isEpub');
     WidgetsBinding.instance.addObserver(this);
     _model = createModel(context, () => ReadBookCustomPageModel());
 
@@ -109,7 +98,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       }
     });
 
-    if (_isEpub && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (_isEpub && !kIsWeb) {
       SchedulerBinding.instance.addPostFrameCallback((_) async {
         double? initialProgress;
         final bookId = (widget.id ?? '').trim();
@@ -119,7 +108,11 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
             initialProgress = remote.currentPage.toDouble();
           }
         }
-        await _openEpubWithPlugin(initialProgress: initialProgress);
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          await _openIosEpub(initialProgress: initialProgress);
+        } else if (defaultTargetPlatform == TargetPlatform.android) {
+          await _openEpubWithPlugin(initialProgress: initialProgress);
+        }
       });
     } else {
       // Give native/pdf renderer a moment and show a consistent loading state.
@@ -249,10 +242,12 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   }
 
   Future<String> _prepareNativeEpubPath(String sourcePath) async {
+    print('EPUB_DEBUG: _prepareNativeEpubPath started with sourcePath=$sourcePath');
     final isRemote = sourcePath.startsWith('http://') ||
         sourcePath.startsWith('https://');
     if (!isRemote) {
       _openedEpubSource = _resolveEpubSource(sourcePath);
+      print('EPUB_DEBUG: Returning local path: $_openedEpubSource');
       return sourcePath;
     }
 
@@ -418,7 +413,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     );
   }
 
-  Future<void> _openEpubWithPlugin({double? initialProgress}) async {
+  Future<void> _openIosEpub({double? initialProgress}) async {
+    print('EPUB_DEBUG: _openIosEpub started');
     final sourcePath = _resolveBookPath(widget.pdf ?? '');
     if (sourcePath.isEmpty || !mounted) {
       return;
@@ -434,15 +430,72 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       final bookId = (widget.id ?? '').trim();
       if (bookId.isNotEmpty) {
         await ReadingReportService.instance.startSession(bookId: bookId);
+        unawaited(EbookGroup.registerBookReadApiCall.call(
+          bookId: bookId,
+          token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
+        ));
+      }
+      
+      final path = await _prepareNativeEpubPath(sourcePath);
+      print('EPUB_DEBUG: Launching IosEpubReaderScreen with path=$path');
+      
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => IosEpubReaderScreen(
+            epubPath: path,
+            bookTitle: widget.name ?? 'Book',
+            initialProgress: initialProgress,
+            bookId: bookId,
+          ),
+        ),
+      );
+      
+      if (mounted) {
+        setState(() => _isOpeningEpub = false);
+        Navigator.of(context).maybePop();
+      }
+    } catch (e) {
+      print('EPUB_DEBUG: Error opening iOS EPUB: $e');
+      if (mounted) {
+        setState(() {
+          _epubError = 'Failed to load EPUB: $e';
+          _isOpeningEpub = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openEpubWithPlugin({double? initialProgress}) async {
+    print('EPUB_DEBUG: _openEpubWithPlugin started');
+    final sourcePath = _resolveBookPath(widget.pdf ?? '');
+    print('EPUB_DEBUG: resolved sourcePath=$sourcePath');
+    if (sourcePath.isEmpty || !mounted) {
+      print('EPUB_DEBUG: sourcePath is empty or not mounted');
+      return;
+    }
+
+    setState(() {
+      _isPreparingReader = false;
+      _isOpeningEpub = true;
+      _epubError = null;
+    });
+
+    try {
+      final bookId = (widget.id ?? '').trim();
+      print('EPUB_DEBUG: bookId=$bookId');
+      if (bookId.isNotEmpty) {
+        await ReadingReportService.instance.startSession(bookId: bookId);
+        print('EPUB_DEBUG: startSession finished');
 
         // Register book read/view — fire-and-forget, auth optional
         unawaited(EbookGroup.registerBookReadApiCall.call(
           bookId: bookId,
           token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
         ));
+        print('EPUB_DEBUG: registerBookReadApiCall dispatched');
 
-        // Pre-load TTS context into native layer so the in-reader ⚙ button
-        // can open Premium settings without a Flutter round-trip.
+        // Pre-load TTS context into native layer (Android only)
         unawaited(EpubReaderService.ttsSetContext(
           bookId   : bookId,
           apiBase  : FFAppConstants.mobileApiBaseUrl,
@@ -462,11 +515,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
             });
           }
         });
+        
         _nativeEpubLaunchInProgress = true;
         _nativeEpubWentBackground = false;
         _showDebugSnack('READING NATIVE EPUB START: bookId=$bookId');
       }
       final path = await _prepareNativeEpubPath(sourcePath);
+      
       final opened = await EpubReaderService.readBook(
         filePath: path,
         previewPercent: widget.isPreviewMode ? widget.previewPercent : 100,
@@ -612,7 +667,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
             children: [
               _isEpub &&
                       !kIsWeb &&
-                      defaultTargetPlatform == TargetPlatform.android
+                      (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
                   ? (_epubError == null
                       ? const SizedBox.shrink()
                       : Center(
@@ -629,7 +684,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton(
-                                  onPressed: _openEpubWithPlugin,
+                                  onPressed: () {
+                                    if (defaultTargetPlatform == TargetPlatform.iOS) {
+                                      _openIosEpub();
+                                    } else {
+                                      _openEpubWithPlugin();
+                                    }
+                                  },
                                   child: const Text('Retry'),
                                 ),
                               ],
@@ -637,7 +698,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
                           ),
                         ))
                   : _buildPdfViewer(),
-              if (_isPreparingReader && !_isEpub)
+              if ((_isPreparingReader && !_isEpub) || _isOpeningEpub)
                 Container(
                   width: double.infinity,
                   height: double.infinity,

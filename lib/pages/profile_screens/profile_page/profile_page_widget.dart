@@ -2,7 +2,9 @@ import 'dart:developer';
 import '/main.dart';
 
 import '/backend/api_requests/api_calls.dart';
+import '/services/revenue_cat_service.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
+import 'dart:io';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/single_appbar/single_appbar_widget.dart';
@@ -1145,7 +1147,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                               ).animateOnPageLoad(animationsMap[
                                   'containerOnPageLoadAnimation3']!),
                             ),
-                          if (FFAppState().isLogin == true)
+                          if (FFAppState().isLogin == true && !Platform.isIOS)
                             Padding(
                               padding: EdgeInsetsDirectional.fromSTEB(
                                   16.0, 0.0, 16.0, 16.0),
@@ -1809,6 +1811,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                   FFAppState().userDetail =
                                                       null;
                                                   FFAppState().update(() {});
+                                                  await RevenueCatService.logOut();
                                                   FFAppState()
                                                       .clearGetFavouriteBookCacheCache();
                                                   await actions
@@ -1872,6 +1875,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                     FFAppState().userDetail =
                                                         null;
                                                     FFAppState().update(() {});
+                                                    await RevenueCatService.logOut();
                                                     FFAppState()
                                                         .clearGetFavouriteBookCacheCache();
                                                     await actions

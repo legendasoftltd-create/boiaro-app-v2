@@ -1,4 +1,5 @@
 import '/backend/api_requests/api_calls.dart';
+import '/services/revenue_cat_service.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -195,6 +196,7 @@ class _DeleteAccountInstructionPageWidgetState
                                               FFAppState().token = '';
                                               FFAppState().refreshToken = '';
                                               FFAppState().update(() {});
+                                              await RevenueCatService.logOut();
                                               FFAppState()
                                                   .clearGetFavouriteBookCacheCache();
 

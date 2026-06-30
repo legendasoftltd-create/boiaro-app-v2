@@ -87,7 +87,7 @@ class AdManager {
     if (Platform.isAndroid) {
       return 'ca-app-pub-1401510952827121/6858828755';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-1401510952827121/2605414398'; // Fallback to iOS Rewarded ID
+      return 'ca-app-pub-1401510952827121/5772023815'; // RI001
     } else {
       throw UnsupportedError("Unsupported platform");
     }

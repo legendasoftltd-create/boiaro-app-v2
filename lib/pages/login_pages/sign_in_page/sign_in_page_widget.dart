@@ -1,4 +1,5 @@
 import '/backend/api_requests/api_calls.dart';
+import '/services/revenue_cat_service.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -583,6 +584,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                   (_model.loginApiFunction?.jsonBody ?? ''),
                                 );
                                  FFAppState().update(() {});
+                                 await RevenueCatService.logIn(FFAppState().userId);
                                  if (FFAppState().tokenFcm.isNotEmpty) {
                                    final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
                                    EbookGroup.registerNotificationTokenApiCall.call(
@@ -749,6 +751,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                             ) ??
                                             '';
                                         FFAppState().update(() {});
+                                        await RevenueCatService.logIn(FFAppState().userId);
                                         if (FFAppState().tokenFcm.isNotEmpty) {
                                           final platform = 'ios';
                                           EbookGroup.registerNotificationTokenApiCall.call(
@@ -866,102 +869,105 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                   ),
                                 ),
                                 SizedBox(height: 16),
-                                GestureDetector(
-                                  onTap: () async {
-                                    final socialLoginRepository =
-                                        SocialLoginRepository();
-                                    final response = await socialLoginRepository
-                                        .signInWithGoogle();
-                                    if (response != null &&
-                                        EbookGroup.socialLoginCall.success(
+                                if (Theme.of(context).platform != TargetPlatform.iOS) ...[
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final socialLoginRepository =
+                                          SocialLoginRepository();
+                                      final response = await socialLoginRepository
+                                          .signInWithGoogle();
+                                      if (response != null &&
+                                          EbookGroup.socialLoginCall.success(
+                                                (response.jsonBody ?? ''),
+                                              ) ==
+                                              1) {
+                                        FFAppState().isLogin = true;
+                                        FFAppState().token =
+                                            EbookGroup.socialLoginCall.token(
+                                                  (response.jsonBody ?? ''),
+                                                ) ??
+                                                '';
+                                        FFAppState().userId =
+                                            EbookGroup.socialLoginCall.userId(
+                                                  (response.jsonBody ?? ''),
+                                                ) ??
+                                                '';
+                                        FFAppState().userDetail = EbookGroup
+                                                .socialLoginCall
+                                                .userDetails(
                                               (response.jsonBody ?? ''),
-                                            ) ==
-                                            1) {
-                                      FFAppState().isLogin = true;
-                                      FFAppState().token =
-                                          EbookGroup.socialLoginCall.token(
-                                                (response.jsonBody ?? ''),
-                                              ) ??
-                                              '';
-                                      FFAppState().userId =
-                                          EbookGroup.socialLoginCall.userId(
-                                                (response.jsonBody ?? ''),
-                                              ) ??
-                                              '';
-                                      FFAppState().userDetail = EbookGroup
-                                              .socialLoginCall
-                                              .userDetails(
-                                            (response.jsonBody ?? ''),
-                                          ) ??
-                                          '';
-                                      FFAppState().update(() {});
-                                      if (FFAppState().tokenFcm.isNotEmpty) {
-                                        final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
-                                        EbookGroup.registerNotificationTokenApiCall.call(
-                                          tokenFcm: FFAppState().tokenFcm,
-                                          platform: platform,
-                                          token: FFAppState().token,
-                                        );
-                                      }
-                                      context.safePop();
-                                    } else {
-                                      print('Google Login UI Handler: response is ${response == null ? 'NULL' : 'NOT NULL'}');
-                                      if (response != null) {
-                                        print('API Success Code: ${EbookGroup.socialLoginCall.success(response.jsonBody ?? '')}');
-                                        final message = EbookGroup.socialLoginCall.message(
-                                          response.jsonBody ?? '',
-                                        );
-                                        print('API Message: $message');
-                                        if (message != null) {
-                                          await actions.showCustomToastBottom(message);
+                                            ) ??
+                                            '';
+                                        FFAppState().update(() {});
+                                        await RevenueCatService.logIn(FFAppState().userId);
+                                        if (FFAppState().tokenFcm.isNotEmpty) {
+                                          final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
+                                          EbookGroup.registerNotificationTokenApiCall.call(
+                                            tokenFcm: FFAppState().tokenFcm,
+                                            platform: platform,
+                                            token: FFAppState().token,
+                                          );
                                         }
+                                        context.safePop();
                                       } else {
-                                        print('Sign-in was cancelled by user or encountered a local error.');
+                                        print('Google Login UI Handler: response is ${response == null ? 'NULL' : 'NOT NULL'}');
+                                        if (response != null) {
+                                          print('API Success Code: ${EbookGroup.socialLoginCall.success(response.jsonBody ?? '')}');
+                                          final message = EbookGroup.socialLoginCall.message(
+                                            response.jsonBody ?? '',
+                                          );
+                                          print('API Message: $message');
+                                          if (message != null) {
+                                            await actions.showCustomToastBottom(message);
+                                          }
+                                        } else {
+                                          print('Sign-in was cancelled by user or encountered a local error.');
+                                        }
                                       }
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.all(12),
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryBackground,
-                                      borderRadius: BorderRadius.circular(16.0),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: FlutterFlowTheme.of(context)
-                                              .shadowColor,
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2),
-                                        )
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Image.asset(
-                                          "assets/images/google_ic.png",
-                                          height: 30,
-                                          width: 30,
-                                        ),
-                                        SizedBox(width: 10),
-                                        Text(
-                                          "Continue with Google",
-                                          style: FlutterFlowTheme.of(context)
-                                              .bodyMedium
-                                              .override(
-                                                fontFamily: 'SF Pro Display',
-                                                fontSize: 16.0,
-                                                letterSpacing: 0.0,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                        ),
-                                      ],
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.all(12),
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryBackground,
+                                        borderRadius: BorderRadius.circular(16.0),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: FlutterFlowTheme.of(context)
+                                                .shadowColor,
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2),
+                                          )
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            "assets/images/google_ic.png",
+                                            height: 30,
+                                            width: 30,
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text(
+                                            "Continue with Google",
+                                            style: FlutterFlowTheme.of(context)
+                                                .bodyMedium
+                                                .override(
+                                                  fontFamily: 'SF Pro Display',
+                                                  fontSize: 16.0,
+                                                  letterSpacing: 0.0,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                                SizedBox(height: 16),
+                                  SizedBox(height: 16),
+                                ],
                                 GestureDetector(
                                   onTap: () async {
                                     final socialLoginRepository =
@@ -1018,6 +1024,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                               ) ??
                                               '';
                                           FFAppState().update(() {});
+                                          await RevenueCatService.logIn(FFAppState().userId);
                                           if (FFAppState().tokenFcm.isNotEmpty) {
                                             final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
                                             EbookGroup.registerNotificationTokenApiCall.call(
@@ -1066,6 +1073,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                           ) ??
                                           '';
                                       FFAppState().update(() {});
+                                      await RevenueCatService.logIn(FFAppState().userId);
                                       if (FFAppState().tokenFcm.isNotEmpty) {
                                         final platform = Theme.of(context).platform == TargetPlatform.iOS ? 'ios' : 'android';
                                         EbookGroup.registerNotificationTokenApiCall.call(

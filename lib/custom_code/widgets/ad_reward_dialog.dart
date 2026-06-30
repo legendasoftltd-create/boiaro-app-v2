@@ -145,7 +145,7 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Skip Ad',
+                            'Close',
                             style: FlutterFlowTheme.of(context)
                                 .bodyMedium
                                 .override(

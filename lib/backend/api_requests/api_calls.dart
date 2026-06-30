@@ -618,6 +618,10 @@ class EbookGroup {
   static ClaimRewardedAdRewardCall claimRewardedAdRewardCall =
       ClaimRewardedAdRewardCall();
   static GetAdPlacementsCall getAdPlacementsCall = GetAdPlacementsCall();
+  static UnlockChapterWithIAPCall unlockChapterWithIAPCall =
+      UnlockChapterWithIAPCall();
+  static UnlockBookWithIAPCall unlockBookWithIAPCall =
+      UnlockBookWithIAPCall();
   static PostAdImpressionCall postAdImpressionCall = PostAdImpressionCall();
   static PostAdClickCall postAdClickCall = PostAdClickCall();
   static GetGamificationSummaryCall getGamificationSummaryCall =
@@ -6936,3 +6940,74 @@ class GetbookbytranslatorApiCall {
         r'''$.data.success''',
       ));
 }
+
+class UnlockBookWithIAPCall {
+  Future<ApiCallResponse> call({
+    String? bookId = '',
+    String? transactionId = '',
+    String? productId = '',
+    String? format = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    
+    final ffApiRequestBody = '''
+{
+  "transaction_id": "${transactionId}",
+  "product_id": "${productId}",
+  "format": "${format}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'UnlockBookWithIAP',
+      apiUrl: '${baseUrl}books/${bookId}/unlock-iap',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class UnlockChapterWithIAPCall {
+  Future<ApiCallResponse> call({
+    String? trackId = '',
+    String? bookId = '',
+    String? transactionId = '',
+    String? productId = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    
+    final ffApiRequestBody = '''
+{
+  "book_id": "${bookId}",
+  "transaction_id": "${transactionId}",
+  "product_id": "${productId}"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'UnlockChapterWithIAP',
+      apiUrl: '${baseUrl}chapters/${trackId}/unlock-iap',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+

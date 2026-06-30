@@ -1,5 +1,7 @@
 import 'audio_player_page_model.dart';
 import '/pages/dialogs/rate_app_dialog/rate_app_dialog_widget.dart';
+import 'dart:io';
+import 'package:a_i_ebook_app/services/revenue_cat_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
@@ -1487,25 +1489,36 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                           ),
                         ),
                         const SizedBox(height: 24),
-                        if (coinPrice > 0) ...[
+                        if (Platform.isIOS) ...[
                           buildUnlockOptionCard(
-                            icon: Icons.monetization_on_rounded,
-                            iconColor: const Color(0xFFFFB03A),
-                            label: 'Use Coins',
-                            value: '$coinPrice Coins',
-                            onTap: () => Navigator.of(ctx).pop('coins'),
+                            icon: Icons.apple,
+                            iconColor: theme.primaryText,
+                            label: 'Unlock with Apple Pay',
+                            value: 'Apple IAP',
+                            onTap: () => Navigator.of(ctx).pop('apple_iap'),
                           ),
                           const SizedBox(height: 12),
-                        ],
-                        if (bdtPrice > 0) ...[
-                          buildUnlockOptionCard(
-                            icon: Icons.account_balance_wallet_rounded,
-                            iconColor: const Color(0xFF2EC4B6),
-                            label: 'Pay with Cash',
-                            value: '৳${bdtPrice.toStringAsFixed(0)}',
-                            onTap: () => Navigator.of(ctx).pop('payment'),
-                          ),
-                          const SizedBox(height: 12),
+                        ] else ...[
+                          if (coinPrice > 0) ...[
+                            buildUnlockOptionCard(
+                              icon: Icons.monetization_on_rounded,
+                              iconColor: const Color(0xFFFFB03A),
+                              label: 'Use Coins',
+                              value: '$coinPrice Coins',
+                              onTap: () => Navigator.of(ctx).pop('coins'),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          if (bdtPrice > 0) ...[
+                            buildUnlockOptionCard(
+                              icon: Icons.account_balance_wallet_rounded,
+                              iconColor: const Color(0xFF2EC4B6),
+                              label: 'Pay with Cash',
+                              value: '৳${bdtPrice.toStringAsFixed(0)}',
+                              onTap: () => Navigator.of(ctx).pop('payment'),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                         ],
                         const SizedBox(height: 8),
                         SizedBox(
@@ -1540,7 +1553,37 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       },
     );
 
-    if (option == 'coins') {
+    if (option == 'apple_iap') {
+      final productId = RevenueCatService.getProductIdForCoinCost(coinPrice);
+      
+      final purchaseResult = await RevenueCatService.purchaseChapter(productId);
+      
+      if (purchaseResult['success'] == true) {
+        final transactionId = purchaseResult['transactionId'];
+        
+        final res = await EbookGroup.unlockChapterWithIAPCall.call(
+          trackId: trackId.toString(),
+          bookId: bookId,
+          transactionId: transactionId,
+          productId: productId,
+          token: FFAppState().token,
+        );
+
+        if (res.statusCode == 200 || res.succeeded) {
+          await actions.showCustomToastBottom('Chapter unlocked successfully!');
+          await _refreshChapters();
+        } else {
+          final msg = getJsonField(res.jsonBody, r'''$.error''') ?? 
+                      getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock verification failed';
+          await actions.showCustomToastBottom(msg.toString());
+        }
+      } else {
+        final error = purchaseResult['errorMessage'];
+        if (error != null) {
+          await actions.showCustomToastBottom(error);
+        }
+      }
+    } else if (option == 'coins') {
       final balance = await _walletBalance();
       if (balance == null || balance < coinPrice) {
         await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');

@@ -24,6 +24,9 @@ import '/custom_code/ad_manager.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/services.dart';
+import 'dart:io';
+import 'package:a_i_ebook_app/services/revenue_cat_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -953,6 +956,150 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       context.pushNamed(SignInPageWidget.routeName);
       return;
     }
+
+    if (Platform.isIOS && type != 'hardcopy') {
+      final theme = FlutterFlowTheme.of(context);
+      final confirm = await showModalBottomSheet<bool>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (ctx) {
+          return Padding(
+            padding: MediaQuery.viewInsetsOf(ctx),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              decoration: BoxDecoration(
+                color: theme.secondaryBackground,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24.0),
+                  topRight: Radius.circular(24.0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 20,
+                    color: Colors.black.withOpacity(0.1),
+                    offset: const Offset(0, -4),
+                  )
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.alternate,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Unlock Full Book',
+                    style: TextStyle(
+                      fontFamily: 'SF Pro Display',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: theme.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Unlock "$bookName" ($type) using Apple Pay.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'SF Pro Display',
+                      fontSize: 14,
+                      color: theme.secondaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  InkWell(
+                    onTap: () => Navigator.of(ctx).pop(true),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: theme.primaryBackground,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: theme.primaryText.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.apple, color: theme.primaryText, size: 24),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Pay with Apple IAP',
+                            style: TextStyle(
+                              fontFamily: 'SF Pro Display',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: theme.primaryText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontFamily: 'SF Pro Display',
+                        fontSize: 14,
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      if (confirm == true) {
+        await RevenueCatService.initialize();
+        final productId = RevenueCatService.getProductIdForBdtPrice(price);
+        final purchaseResult = await RevenueCatService.purchaseChapter(productId);
+        
+        if (purchaseResult['success'] == true) {
+          final transactionId = purchaseResult['transactionId'];
+          final res = await EbookGroup.unlockBookWithIAPCall.call(
+            bookId: bookId,
+            transactionId: transactionId,
+            productId: productId,
+            format: type,
+            token: FFAppState().token,
+          );
+
+          if (res.statusCode == 200 || res.succeeded) {
+            await actions.showCustomToastBottom('Book unlocked successfully!');
+            _purchasedFormatKeys.add('${bookId.toLowerCase()}::${type.toLowerCase().trim()}');
+            if (!_model.purchasedBookIds.contains(bookId)) {
+              _model.purchasedBookIds.add(bookId);
+            }
+            safeSetState(() {});
+          } else {
+            final msg = getJsonField(res.jsonBody, r'''$.error''') ?? 
+                        getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock verification failed';
+            await actions.showCustomToastBottom(msg.toString());
+          }
+        } else {
+          final error = purchaseResult['errorMessage'];
+          if (error != null) {
+            await actions.showCustomToastBottom(error);
+          }
+        }
+      }
+      return;
+    }
+
     final cart = Provider.of<CartProvider>(context, listen: false);
     cart.addItem(
       bookId,
@@ -1754,25 +1901,36 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                               ),
                             ),
                             const SizedBox(height: 24),
-                            if (coinPrice > 0) ...[
+                            if (Platform.isIOS) ...[
                               buildUnlockOptionCard(
-                                icon: Icons.monetization_on_rounded,
-                                iconColor: const Color(0xFFFFB03A),
-                                label: 'Use Coins',
-                                value: '$coinPrice Coins',
-                                onTap: () => Navigator.of(ctx).pop('coins'),
+                                icon: Icons.apple,
+                                iconColor: theme.primaryText,
+                                label: 'Unlock with Apple Pay',
+                                value: 'Apple IAP',
+                                onTap: () => Navigator.of(ctx).pop('apple_iap'),
                               ),
                               const SizedBox(height: 12),
-                            ],
-                            if (bdtPrice > 0) ...[
-                              buildUnlockOptionCard(
-                                icon: Icons.account_balance_wallet_rounded,
-                                iconColor: const Color(0xFF2EC4B6),
-                                label: 'Pay with Cash',
-                                value: '৳${bdtPrice.toStringAsFixed(0)}',
-                                onTap: () => Navigator.of(ctx).pop('payment'),
-                              ),
-                              const SizedBox(height: 12),
+                            ] else ...[
+                              if (coinPrice > 0) ...[
+                                buildUnlockOptionCard(
+                                  icon: Icons.monetization_on_rounded,
+                                  iconColor: const Color(0xFFFFB03A),
+                                  label: 'Use Coins',
+                                  value: '$coinPrice Coins',
+                                  onTap: () => Navigator.of(ctx).pop('coins'),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (bdtPrice > 0) ...[
+                                buildUnlockOptionCard(
+                                  icon: Icons.account_balance_wallet_rounded,
+                                  iconColor: const Color(0xFF2EC4B6),
+                                  label: 'Pay with Cash',
+                                  value: '৳${bdtPrice.toStringAsFixed(0)}',
+                                  onTap: () => Navigator.of(ctx).pop('payment'),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                             ],
                             const SizedBox(height: 8),
                             SizedBox(
@@ -1807,7 +1965,38 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           },
         );
 
-        if (option == 'coins') {
+        if (option == 'apple_iap') {
+          final productId = RevenueCatService.getProductIdForCoinCost(coinPrice);
+          final purchaseResult = await RevenueCatService.purchaseChapter(productId);
+          
+          if (purchaseResult['success'] == true) {
+            final transactionId = purchaseResult['transactionId'];
+            
+            final res = await EbookGroup.unlockChapterWithIAPCall.call(
+              trackId: trackId.toString(),
+              bookId: bookId,
+              transactionId: transactionId,
+              productId: productId,
+              token: FFAppState().token,
+            );
+
+            if (res.statusCode == 200 || res.succeeded) {
+              await actions.showCustomToastBottom('Chapter unlocked successfully!');
+              _tracks = null;
+              await _checkIfPurchased();
+              safeSetState(() {});
+            } else {
+              final msg = getJsonField(res.jsonBody, r'''$.error''') ?? 
+                          getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock verification failed';
+              await actions.showCustomToastBottom(msg.toString());
+            }
+          } else {
+            final error = purchaseResult['errorMessage'];
+            if (error != null) {
+              await actions.showCustomToastBottom(error);
+            }
+          }
+        } else if (option == 'coins') {
           final balance = await _walletBalance();
           if (balance == null || balance < coinPrice) {
             await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');
@@ -2218,25 +2407,36 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   ),
                                                 ),
                                                 const SizedBox(height: 24),
-                                                if (coinPrice > 0) ...[
+                                                if (Platform.isIOS) ...[
                                                   buildUnlockOptionCard(
-                                                    icon: Icons.monetization_on_rounded,
-                                                    iconColor: const Color(0xFFFFB03A),
-                                                    label: 'Use Coins',
-                                                    value: '$coinPrice Coins',
-                                                    onTap: () => Navigator.of(ctx).pop('coins'),
+                                                    icon: Icons.apple,
+                                                    iconColor: theme.primaryText,
+                                                    label: 'Unlock with Apple Pay',
+                                                    value: 'Apple IAP',
+                                                    onTap: () => Navigator.of(ctx).pop('apple_iap'),
                                                   ),
                                                   const SizedBox(height: 12),
-                                                ],
-                                                if (bdtPrice > 0) ...[
-                                                  buildUnlockOptionCard(
-                                                    icon: Icons.account_balance_wallet_rounded,
-                                                    iconColor: const Color(0xFF2EC4B6),
-                                                    label: 'Pay with Cash',
-                                                    value: '৳${bdtPrice.toStringAsFixed(0)}',
-                                                    onTap: () => Navigator.of(ctx).pop('payment'),
-                                                  ),
-                                                  const SizedBox(height: 12),
+                                                ] else ...[
+                                                  if (coinPrice > 0) ...[
+                                                    buildUnlockOptionCard(
+                                                      icon: Icons.monetization_on_rounded,
+                                                      iconColor: const Color(0xFFFFB03A),
+                                                      label: 'Use Coins',
+                                                      value: '$coinPrice Coins',
+                                                      onTap: () => Navigator.of(ctx).pop('coins'),
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                  ],
+                                                  if (bdtPrice > 0) ...[
+                                                    buildUnlockOptionCard(
+                                                      icon: Icons.account_balance_wallet_rounded,
+                                                      iconColor: const Color(0xFF2EC4B6),
+                                                      label: 'Pay with Cash',
+                                                      value: '৳${bdtPrice.toStringAsFixed(0)}',
+                                                      onTap: () => Navigator.of(ctx).pop('payment'),
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                  ],
                                                 ],
                                                 const SizedBox(height: 8),
                                                 SizedBox(
@@ -2271,7 +2471,38 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                               },
                             );
 
-                            if (option == 'coins') {
+                            if (option == 'apple_iap') {
+                              final productId = RevenueCatService.getProductIdForCoinCost(coinPrice);
+                              final purchaseResult = await RevenueCatService.purchaseChapter(productId);
+                              
+                              if (purchaseResult['success'] == true) {
+                                final transactionId = purchaseResult['transactionId'];
+                                
+                                final res = await EbookGroup.unlockChapterWithIAPCall.call(
+                                  trackId: trackId.toString(),
+                                  bookId: bookId,
+                                  transactionId: transactionId,
+                                  productId: productId,
+                                  token: FFAppState().token,
+                                );
+
+                                if (res.statusCode == 200 || res.succeeded) {
+                                  await actions.showCustomToastBottom('Chapter unlocked successfully!');
+                                  _tracks = null;
+                                  await _checkIfPurchased();
+                                  safeSetState(() {});
+                                } else {
+                                  final msg = getJsonField(res.jsonBody, r'''$.error''') ?? 
+                                              getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock verification failed';
+                                  await actions.showCustomToastBottom(msg.toString());
+                                }
+                              } else {
+                                final error = purchaseResult['errorMessage'];
+                                if (error != null) {
+                                  await actions.showCustomToastBottom(error);
+                                }
+                              }
+                            } else if (option == 'coins') {
                               final balance = await _walletBalance();
                               if (balance == null || balance < coinPrice) {
                                 await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');
@@ -2285,9 +2516,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 await actions.showCustomToastBottom('Chapter unlocked successfully!');
                                 _tracks = null;
                                 safeSetState(() {});
-                                if (context.mounted) {
-                                  Navigator.of(context).maybePop();
-                                }
                               } else {
                                 final msg = getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock failed';
                                 await actions.showCustomToastBottom(msg.toString());
@@ -2324,9 +2552,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     _tracks = null;
                                     await _checkIfPurchased();
                                     safeSetState(() {});
-                                    if (context.mounted) {
-                                      Navigator.of(context).maybePop();
-                                    }
                                   }
                                 } else {
                                   await actions.showCustomToastBottom('Failed to get gateway URL');
