@@ -1,5 +1,6 @@
 import 'package:a_i_ebook_app/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import 'package:a_i_ebook_app/pages/home_pages/book_detailspage/book_detailspage_widget.dart';
+import 'package:a_i_ebook_app/pages/home_pages/read_book_custom_page/read_book_custom_page_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '/backend/api_requests/api_calls.dart';
@@ -75,7 +76,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late TabController _tabController;
   late int _selectedTabIndex;
-  int _selectedChipIndex = 0;
+  int _selectedChipIndex = 1;
 
   String _normalizeContentType(String raw) {
     final value = raw.toLowerCase();
@@ -109,6 +110,9 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
       if (_tabController.indexIsChanging) return;
       setState(() => _selectedTabIndex = _tabController.index);
     });
+    if (FFAppState().connected == false) {
+      _selectedChipIndex = 2;
+    }
   }
 
   @override
@@ -123,11 +127,11 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
       EbookGroup.userBookPurchaseRecordsApiCall.call(
         userId: FFAppState().userId,
         token: FFAppState().token,
-      ),
+      ).catchError((_) => ApiCallResponse({}, {}, 0)),
       EbookGroup.getFavouriteBookCall.call(
         userId: FFAppState().userId,
         token: FFAppState().token,
-      ),
+      ).catchError((_) => ApiCallResponse({}, {}, 0)),
       LocalDownloadService.getAllDownloads(),
       ReadingProgressService.getAllProgress(),
       // Fetch homepage data for continue reading/listening (best-effort)
@@ -663,29 +667,6 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                             child: Row(
                               children: [
                                 ChoiceChip(
-                                  label: const Text('All'),
-                                  selected: _selectedChipIndex == 0,
-                                  onSelected: (_) => setState(() => _selectedChipIndex = 0),
-                                  showCheckmark: false,
-                                  labelStyle: FlutterFlowTheme.of(context).bodySmall.override(
-                                        fontFamily: 'SF Pro Display',
-                                        color: _selectedChipIndex == 0
-                                            ? FlutterFlowTheme.of(context).primary
-                                            : FlutterFlowTheme.of(context).secondaryText,
-                                        letterSpacing: 0.0,
-                                      ),
-                                  selectedColor:
-                                      FlutterFlowTheme.of(context).primary.withOpacity(0.12),
-                                  backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20.0),
-                                  ),
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-                                  padding: const EdgeInsetsDirectional.fromSTEB(12.0, 6.0, 12.0, 6.0),
-                                ),
-                                const SizedBox(width: 8.0),
-                                ChoiceChip(
                                   label: const Text('Read'),
                                   selected: _selectedChipIndex == 1,
                                   onSelected: (_) => setState(() => _selectedChipIndex = 1),
@@ -781,16 +762,38 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
   // ─────────────────────────────────────────────────────────────────────
   Widget _buildLibraryBookTile(_LibraryItem item) {
     return GestureDetector(
-      onTap: () {
-        context.pushNamed(
-          BookDetailspageWidget.routeName,
-          queryParameters: {
-            'name': item.name,
-            'image': item.imageUrl,
-            'id': item.id,
-            'authorName': item.author,
-          }.withoutNulls,
-        );
+      onTap: () async {
+        if (item.isDownloaded && _normalizeContentType(item.contentType) == 'ebook') {
+          final d = await LocalDownloadService.getDownloadByBookId(item.id);
+          if (d != null && d.existsOnDisk) {
+            if (mounted) {
+              context.pushNamed(
+                ReadBookCustomPageWidget.routeName,
+                queryParameters: {
+                  'pdf': serializeParam(d.localPath, ParamType.String),
+                  'id': serializeParam(item.id, ParamType.String),
+                  'name': serializeParam(item.name, ParamType.String),
+                  'author': serializeParam(item.author, ParamType.String),
+                  'image': serializeParam(item.imageUrl, ParamType.String),
+                  'isPreviewMode': serializeParam(false, ParamType.bool),
+                  'previewPercent': serializeParam(100, ParamType.int),
+                }.withoutNulls,
+              );
+            }
+            return;
+          }
+        }
+        if (mounted) {
+          context.pushNamed(
+            BookDetailspageWidget.routeName,
+            queryParameters: {
+              'name': item.name,
+              'image': item.imageUrl,
+              'id': item.id,
+              'authorName': item.author,
+            }.withoutNulls,
+          );
+        }
       },
       child: Padding(
         padding: const EdgeInsetsDirectional.fromSTEB(16.0, 8.0, 16.0, 8.0),
@@ -824,12 +827,12 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                             color: FlutterFlowTheme.of(context).primaryText,
                           ),
                         )
-                      : Image.network(
-                          item.imageUrl,
+                      : CachedNetworkImage(
+                          imageUrl: item.imageUrl,
                           width: 64.0,
                           height: 96.0,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
+                          errorWidget: (context, url, error) =>
                               Container(
                             width: 64.0,
                             height: 96.0,
@@ -965,16 +968,38 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          context.pushNamed(
-            BookDetailspageWidget.routeName,
-            queryParameters: {
-              'name': bookName,
-              'image': coverUrl,
-              'id': bookId,
-              'authorName': author,
-            }.withoutNulls,
-          );
+        onTap: () async {
+          if (!isAudio) {
+            final d = await LocalDownloadService.getDownloadByBookId(bookId);
+            if (d != null && d.existsOnDisk) {
+              if (mounted) {
+                context.pushNamed(
+                  ReadBookCustomPageWidget.routeName,
+                  queryParameters: {
+                    'pdf': serializeParam(d.localPath, ParamType.String),
+                    'id': serializeParam(bookId, ParamType.String),
+                    'name': serializeParam(bookName, ParamType.String),
+                    'author': serializeParam(author, ParamType.String),
+                    'image': serializeParam(coverUrl, ParamType.String),
+                    'isPreviewMode': serializeParam(false, ParamType.bool),
+                    'previewPercent': serializeParam(100, ParamType.int),
+                  }.withoutNulls,
+                );
+              }
+              return;
+            }
+          }
+          if (mounted) {
+            context.pushNamed(
+              BookDetailspageWidget.routeName,
+              queryParameters: {
+                'name': bookName,
+                'image': coverUrl,
+                'id': bookId,
+                'authorName': author,
+              }.withoutNulls,
+            );
+          }
         },
         child: Container(
           decoration: BoxDecoration(

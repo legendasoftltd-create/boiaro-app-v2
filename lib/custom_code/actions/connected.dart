@@ -10,43 +10,81 @@ import 'package:flutter/material.dart';
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
 import 'dart:async';
-
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 StreamSubscription<List<ConnectivityResult>>? subscription;
+Timer? _offlineTimer;
+LifecycleConnectivityObserver? _lifecycleObserver;
 
-Future connected() async {
-  // Add your function code here!
-  subscription = Connectivity()
-      .onConnectivityChanged
-      .listen((List<ConnectivityResult> results) async {
-    // Typically, you'd handle the results here, but if you just need to
-    // check if there's any connectivity change, you can simplify it.
+class LifecycleConnectivityObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      await updateConnectionState();
+    }
+  }
+}
+
+Future<void> updateConnectionState() async {
+  bool hasConnection = await checkConnection();
+  FFAppState().update(() {
+    FFAppState().connected = hasConnection;
+  });
+  FFAppState().notifyListeners();
+
+  if (!hasConnection) {
+    _startOfflineTimer();
+  } else {
+    _stopOfflineTimer();
+  }
+}
+
+void _startOfflineTimer() {
+  _offlineTimer?.cancel();
+  _offlineTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
     bool hasConnection = await checkConnection();
-
-    FFAppState().update(() {
-      FFAppState().connected = hasConnection;
-    });
-    FFAppState().notifyListeners();
+    if (hasConnection) {
+      timer.cancel();
+      _offlineTimer = null;
+      FFAppState().update(() {
+        FFAppState().connected = true;
+      });
+      FFAppState().notifyListeners();
+    }
   });
 }
 
-Future<bool> checkConnection() async {
-  bool hasConnection = false;
-
-  try {
-    final result = await InternetAddress.lookup('google.com');
-    if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-      hasConnection = true;
-    } else {
-      hasConnection = false;
-    }
-  } on SocketException catch (_) {
-    hasConnection = false;
-  }
-
-  return hasConnection;
+void _stopOfflineTimer() {
+  _offlineTimer?.cancel();
+  _offlineTimer = null;
 }
-// Set your action name, define your arguments and return parameter,
-// and then add the boilerplate code using the green button on the right!
+
+Future connected() async {
+  // Check initial connection
+  await updateConnectionState();
+
+  // Register connectivity listener
+  subscription?.cancel();
+  subscription = Connectivity()
+      .onConnectivityChanged
+      .listen((List<ConnectivityResult> results) async {
+    await updateConnectionState();
+  });
+
+  // Register lifecycle observer
+  if (_lifecycleObserver == null) {
+    _lifecycleObserver = LifecycleConnectivityObserver();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver!);
+  }
+}
+
+Future<bool> checkConnection() async {
+  try {
+    final result = await InternetAddress.lookup('google.com')
+        .timeout(const Duration(seconds: 4));
+    return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+  } catch (_) {
+    return false;
+  }
+}

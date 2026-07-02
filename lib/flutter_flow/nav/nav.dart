@@ -372,6 +372,27 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => SettingsPageWidget(),
         ),
         FFRoute(
+          name: SupportTicketsListPageWidget.routeName,
+          path: SupportTicketsListPageWidget.routePath,
+          builder: (context, params) => SupportTicketsListPageWidget(),
+        ),
+        FFRoute(
+          name: CreateTicketPageWidget.routeName,
+          path: CreateTicketPageWidget.routePath,
+          builder: (context, params) => CreateTicketPageWidget(),
+        ),
+        FFRoute(
+          name: TicketDetailPageWidget.routeName,
+          path: TicketDetailPageWidget.routePath,
+          builder: (context, params) => TicketDetailPageWidget(
+            ticketId: params.getParam(
+              'id',
+              ParamType.String,
+            ) ?? '',
+          ),
+        ),
+
+        FFRoute(
           name: ChangePasswordPageWidget.routeName,
           path: ChangePasswordPageWidget.routePath,
           builder: (context, params) => ChangePasswordPageWidget(),

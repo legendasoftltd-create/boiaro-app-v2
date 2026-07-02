@@ -112,3 +112,10 @@ export '/pages/dialogs/rate_app_dialog/rate_app_dialog_model.dart'
     show RateAppDialogModel;
 // export '/pages/home_pages/book_detailspage_copy/book_detailspage_copy_widget.dart'
 //     show BookDetailspageCopyWidget;
+export '/pages/profile_screens/support_tickets/support_tickets_list_page.dart'
+    show SupportTicketsListPageWidget;
+export '/pages/profile_screens/support_tickets/create_ticket_page.dart'
+    show CreateTicketPageWidget;
+export '/pages/profile_screens/support_tickets/ticket_detail_page.dart'
+    show TicketDetailPageWidget;
+

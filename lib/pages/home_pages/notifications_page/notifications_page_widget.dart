@@ -36,6 +36,7 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
   void initState() {
     super.initState();
     _model = createModel(context, () => NotificationsPageModel());
+    _model.apiRequestCompleter = null;
 
     animationsMap.addAll({
       'listViewOnPageLoadAnimation': AnimationInfo(

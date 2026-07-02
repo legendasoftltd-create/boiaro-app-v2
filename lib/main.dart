@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'custom_code/actions/notification_init.dart' show selectNotificationStream;
 import 'package:a_i_ebook_app/custom_code/widgets/app_update.dart';
 import 'package:a_i_ebook_app/pages/audiobook_pages/audiobook_page/audiobook_page_widget.dart';
 import 'package:a_i_ebook_app/services/presence_tracking_service.dart';
@@ -150,6 +153,55 @@ class _MyAppState extends State<MyApp> {
         }
       }
     });
+
+    selectNotificationStream.stream.listen((String? payload) {
+      if (payload != null) {
+        try {
+          final data = json.decode(payload);
+          final String? link = data['link'];
+          if (link != null && link.isNotEmpty) {
+            _handleLinkNavigation(link);
+          }
+        } catch (e) {
+          debugPrint('Error parsing notification payload: $e');
+        }
+      }
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      final String? link = message.data['link'];
+      if (link != null && link.isNotEmpty) {
+        _handleLinkNavigation(link);
+      }
+    });
+
+    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        final String? link = message.data['link'];
+        if (link != null && link.isNotEmpty) {
+          _handleLinkNavigation(link);
+        }
+      }
+    });
+  }
+
+  void _handleLinkNavigation(String link) {
+    if (link.isEmpty) return;
+    if (link.startsWith('/support/tickets/')) {
+      final ticketId = link.replaceAll('/support/tickets/', '').trim();
+      if (ticketId.isNotEmpty) {
+        _router.pushNamed(
+          'TicketDetailPage',
+          pathParameters: {'id': ticketId},
+        );
+        return;
+      }
+    }
+    try {
+      _router.push(link);
+    } catch (e) {
+      debugPrint('Error pushing route from link: $e');
+    }
   }
 
   Future<void> _loadSavedLocale() async {

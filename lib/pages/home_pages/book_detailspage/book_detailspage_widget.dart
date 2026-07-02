@@ -69,6 +69,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   bool _isDownloadingEbook = false;
   bool _isBookmarkBusy = false;
   bool _isEbookDownloaded = false;
+  bool _isEbookDownloadStale = false;
   final Map<String, Map<String, dynamic>> _narratorCache = {};
   final Set<String> _loadingNarratorIds = {};
 
@@ -89,11 +90,37 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   }
 
   Future<void> _checkDownloadStatus() async {
-    final d = await LocalDownloadService.getDownloadByBookId(widget.id ?? '');
-    if (mounted) {
-      safeSetState(() {
-        _isEbookDownloaded = d != null;
-      });
+    final bookId = (widget.id ?? '').trim();
+    if (bookId.isEmpty) return;
+
+    final d = await LocalDownloadService.getDownloadByBookId(bookId);
+    if (d != null) {
+      bool stale = false;
+      try {
+        String? liveUrl = await _fetchEbookSignedUrl(bookId);
+        liveUrl ??= await _fetchEbookSignedUrlGuestAware(bookId);
+        if (liveUrl != null && liveUrl.trim().isNotEmpty) {
+          stale = await LocalDownloadService.isRemoteUrlChanged(
+            bookId: bookId,
+            newRemoteUrl: liveUrl,
+          );
+        }
+      } catch (e) {
+        debugPrint('Error checking download stale status: $e');
+      }
+      if (mounted) {
+        safeSetState(() {
+          _isEbookDownloaded = true;
+          _isEbookDownloadStale = stale;
+        });
+      }
+    } else {
+      if (mounted) {
+        safeSetState(() {
+          _isEbookDownloaded = false;
+          _isEbookDownloadStale = false;
+        });
+      }
     }
   }
 
@@ -3872,7 +3899,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     ),
                                                   ],
                                                 )
-                                              else if (_isEbookDownloaded)
+                                              else if (_isEbookDownloaded && !_isEbookDownloadStale)
                                                 // Owned/Free & Already Downloaded -> Only Read Now
                                                 FFButtonWidget(
                                                   onPressed: () =>
@@ -4002,11 +4029,14 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                   },
                                                         text:
                                                             _isDownloadingEbook
-                                                                ? '...'
-                                                                : 'Download',
-                                                        icon: Icon(
-                                                          Icons
-                                                              .download_rounded,
+                                                                ? 'Downloading...'
+                                                                : (_isEbookDownloadStale
+                                                                    ? 'Update'
+                                                                    : 'Download'),
+                                                        icon:_isDownloadingEbook?null: Icon(
+                                                          _isEbookDownloadStale
+                                                              ? Icons.update_rounded
+                                                              : Icons.download_rounded,
                                                           color: Colors.white,
                                                         ),
                                                         options:
@@ -4570,6 +4600,34 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             ),
                                                       ),
                                                     ),
+                                                    Padding(
+                                                      padding:
+                                                          EdgeInsetsDirectional
+                                                              .fromSTEB(
+                                                                  4.0,
+                                                                  0.0,
+                                                                  0.0,
+                                                                  0.0),
+                                                      child: Text(
+                                                        '(${EbookGroup.getbookdetailsApiCall.reviewsCount(bookDetailspageGetbookdetailsApiResponse.jsonBody) ?? 0})',
+                                                        maxLines: 1,
+                                                        style: FlutterFlowTheme
+                                                                .of(context)
+                                                            .bodyMedium
+                                                            .override(
+                                                              fontFamily:
+                                                                  'SF Pro Display',
+                                                              color:
+                                                                  FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .secondaryText,
+                                                              fontSize: 14.0,
+                                                              letterSpacing:
+                                                                  0.0,
+                                                              lineHeight: 1.5,
+                                                              ),
+                                                        ),
+                                                      ),
                                                   ],
                                                 ),
                                               ].divide(SizedBox(height: 8.0)),

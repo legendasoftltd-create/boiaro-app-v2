@@ -644,6 +644,14 @@ class EbookGroup {
   static GetMyGoalsCall getMyGoalsCall = GetMyGoalsCall();
   static AddGoalCall addGoalCall = AddGoalCall();
   static LogActivityCall logActivityCall = LogActivityCall();
+  static CreateSupportTicketApiCall createSupportTicketApiCall =
+      CreateSupportTicketApiCall();
+  static ListSupportTicketsApiCall listSupportTicketsApiCall =
+      ListSupportTicketsApiCall();
+  static GetSupportTicketDetailApiCall getSupportTicketDetailApiCall =
+      GetSupportTicketDetailApiCall();
+  static ReplySupportTicketApiCall replySupportTicketApiCall =
+      ReplySupportTicketApiCall();
 }
 
 class PhoneSendOtpApiCall {
@@ -3102,6 +3110,10 @@ class GetbookdetailsApiCall {
   double? averageRating(dynamic response) => castToType<double>(getJsonField(
         response,
         r'''$.data.bookDetails[:].averageRating''',
+      ));
+  int? reviewsCount(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.bookDetails[:].reviews_count''',
       ));
   String? accesstype(dynamic response) => castToType<String>(getJsonField(
         response,
@@ -7010,4 +7022,119 @@ class UnlockChapterWithIAPCall {
     );
   }
 }
+
+class CreateSupportTicketApiCall {
+  Future<ApiCallResponse> call({
+    required String subject,
+    required String description,
+    String? category = 'general',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final bodyMap = {
+      'subject': subject,
+      'description': description,
+      if (category != null && category.isNotEmpty) 'category': category,
+    };
+    final ffApiRequestBody = json.encode(bodyMap);
+    return ApiManager.instance.makeApiCall(
+      callName: 'CreateSupportTicket',
+      apiUrl: '${baseUrl}support/tickets',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ListSupportTicketsApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'ListSupportTickets',
+      apiUrl: '${baseUrl}support/tickets',
+      callType: ApiCallType.GET,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class GetSupportTicketDetailApiCall {
+  Future<ApiCallResponse> call({
+    required String ticketId,
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetSupportTicketDetail',
+      apiUrl: '${baseUrl}support/tickets/$ticketId',
+      callType: ApiCallType.GET,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      params: {},
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
+class ReplySupportTicketApiCall {
+  Future<ApiCallResponse> call({
+    required String ticketId,
+    required String message,
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final bodyMap = {
+      'message': message,
+    };
+    final ffApiRequestBody = json.encode(bodyMap);
+    return ApiManager.instance.makeApiCall(
+      callName: 'ReplySupportTicket',
+      apiUrl: '${baseUrl}support/tickets/$ticketId/reply',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
 

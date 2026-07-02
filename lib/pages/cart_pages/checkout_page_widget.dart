@@ -54,6 +54,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   List<Map<String, dynamic>> _areas = [];
   Map<String, dynamic>? _selectedArea;
   bool _isLoadingAreas = false;
+  String _areaSearchQuery = '';
 
   @override
   void initState() {
@@ -152,6 +153,13 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   bool _hasHardcopy(CartProvider cart) {
     return cart.items.values
         .any((item) => (item.type).toLowerCase() == 'hardcopy');
+  }
+
+  bool _hasDigital(CartProvider cart) {
+    return cart.items.values.any((item) {
+      final t = item.type.toLowerCase().trim();
+      return t == 'ebook' || t == 'audiobook';
+    });
   }
 
   String _formatCartType(String? type) {
@@ -333,9 +341,13 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
             'name': m['name']?.toString() ?? '',
           });
         }
+        areas.sort((a, b) => (a['name'] as String)
+            .toLowerCase()
+            .compareTo((b['name'] as String).toLowerCase()));
       }
       setState(() {
         _areas = areas;
+        _areaSearchQuery = '';
       });
     } catch (e) {
       debugPrint('Error fetching areas: $e');
@@ -344,6 +356,135 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
         _isLoadingAreas = false;
       });
     }
+  }
+
+  void _showAreaSelectionBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateBottomSheet) {
+            final filtered = _areas
+                .where((a) => a['name']
+                    .toString()
+                    .toLowerCase()
+                    .contains(_areaSearchQuery.toLowerCase()))
+                .toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).secondaryBackground,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.0)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: EdgeInsets.symmetric(vertical: 12.0),
+                    width: 40.0,
+                    height: 4.0,
+                    decoration: BoxDecoration(
+                      color: FlutterFlowTheme.of(context).alternate,
+                      borderRadius: BorderRadius.circular(2.0),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Select Area',
+                          style: FlutterFlowTheme.of(context).headlineSmall.override(
+                                fontFamily: 'SF Pro Display',
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Search Area',
+                        hintText: 'Type area name...',
+                        prefixIcon: Icon(Icons.search_rounded),
+                        filled: true,
+                        fillColor: FlutterFlowTheme.of(context).primaryBackground,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                          borderSide: BorderSide.none,
+                        ),
+                        isDense: true,
+                      ),
+                      onChanged: (val) {
+                        setStateBottomSheet(() {
+                          _areaSearchQuery = val;
+                        });
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No areas found',
+                              style: FlutterFlowTheme.of(context).bodyMedium,
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final item = filtered[index];
+                              final isSelected = _selectedArea != null &&
+                                  _selectedArea!['id'] == item['id'];
+
+                              return ListTile(
+                                title: Text(
+                                  item['name']?.toString() ?? '',
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .override(
+                                        fontFamily: 'SF Pro Display',
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        color: isSelected
+                                            ? FlutterFlowTheme.of(context).primary
+                                            : FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                      ),
+                                ),
+                                trailing: isSelected
+                                    ? Icon(
+                                        Icons.check_circle_rounded,
+                                        color: FlutterFlowTheme.of(context).primary,
+                                      )
+                                    : null,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedArea = item;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   /// Shape expected by [CheckoutController] / v2 `shipping_address` (fullName-style keys OK).
@@ -531,31 +672,40 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
              ),
           if (!_isLoadingAreas && _areas.isNotEmpty) ...[
             SizedBox(height: 8.0),
-            DropdownButtonFormField<Map<String, dynamic>>(
-              value: _selectedArea,
-              decoration: InputDecoration(
-                labelText: 'Area',
-                hintText: 'Select area (e.g. Dhanmondi)',
-                filled: true,
-                fillColor: FlutterFlowTheme.of(context).secondaryBackground,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                isDense: true,
-              ),
-              items: _areas
-                  .map(
-                    (a) => DropdownMenuItem<Map<String, dynamic>>(
-                      value: a,
-                      child: Text(a['name']?.toString() ?? ''),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                setState(() {
-                  _selectedArea = v;
-                });
+            InkWell(
+              onTap: () {
+                _showAreaSelectionBottomSheet();
               },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
+                decoration: BoxDecoration(
+                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                  borderRadius: BorderRadius.circular(12.0),
+                  border: Border.all(
+                    color: FlutterFlowTheme.of(context).alternate,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _selectedArea != null
+                          ? _selectedArea!['name']?.toString() ?? ''
+                          : 'Select Area',
+                      style: FlutterFlowTheme.of(context).bodyMedium.override(
+                            fontFamily: 'SF Pro Display',
+                            color: _selectedArea != null
+                                ? FlutterFlowTheme.of(context).primaryText
+                                : FlutterFlowTheme.of(context).secondaryText,
+                          ),
+                    ),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
           SizedBox(height: 6.0),
@@ -713,10 +863,12 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                       value == 'bkash' ? Icons.account_balance_wallet :
                       value == 'ssl' ? Icons.credit_card :
                       value == 'wallet' ? Icons.account_balance_wallet_rounded :
+                      value == 'cod' ? Icons.local_shipping_rounded :
                       Icons.payment,
                       color: value == 'bkash' ? Colors.pink : 
                              value == 'ssl' ? Colors.blue :
-                             value == 'wallet' ? Colors.amber.shade700 : Colors.grey,
+                             value == 'wallet' ? Colors.amber.shade700 :
+                             value == 'cod' ? Colors.green.shade700 : Colors.grey,
                     ),
                 //   },
                 // ),
@@ -758,6 +910,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     final baseTotal =
         (subtotalAfterBookDiscounts - _discountAmount).clamp(0.0, double.infinity);
     final hasHardcopy = _hasHardcopy(cart);
+    final hasDigital = _hasDigital(cart);
     final finalTotal =
         hasHardcopy ? (baseTotal + _shippingCost) : baseTotal;
 
@@ -1188,12 +1341,19 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                         'assets/images/ssl_logo.png',
                         
                       ),
-                      _buildPaymentOption(
-                        'wallet',
-                        'Wallet Coins',
-                        'Unlock ebook/audiobook using your coin balance',
-                        'assets/images/coin.png',
-                      ),
+                      // _buildPaymentOption(
+                      //   'wallet',
+                      //   'Wallet Coins',
+                      //   'Unlock ebook/audiobook using your coin balance',
+                      //   'assets/images/coin.png',
+                      // ),
+                      if (hasHardcopy && !hasDigital)
+                        _buildPaymentOption(
+                          'cod',
+                          'Cash on Delivery (COD)',
+                          'Pay with cash when your hardcopy is delivered',
+                          'assets/images/cod.png',
+                        ),
         
                       SizedBox(height: 24.0),
         

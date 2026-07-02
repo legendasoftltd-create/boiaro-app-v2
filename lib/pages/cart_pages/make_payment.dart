@@ -101,11 +101,78 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
           );
           return;
         }
-        setState(() {
-          _successMessage = response['message']?.toString() ??
-              'Wallet unlock completed successfully.';
-          _isLoading = false;
-        });
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        color: Colors.green,
+                        size: 48,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Order Successful!',
+                      style: FlutterFlowTheme.of(dialogContext).headlineSmall.override(
+                            fontFamily: 'SF Pro Display',
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      response['message']?.toString() ??
+                          'Order placed successfully.',
+                      textAlign: TextAlign.center,
+                      style: FlutterFlowTheme.of(dialogContext).bodyMedium.override(
+                            fontFamily: 'SF Pro Display',
+                            color: FlutterFlowTheme.of(dialogContext).secondaryText,
+                          ),
+                    ),
+                    SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(dialogContext); // Close dialog
+                        Navigator.pop(context, true); // Pop MakeCheckOutScreen with success
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: FlutterFlowTheme.of(dialogContext).primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'OK',
+                        style: TextStyle(
+                          fontFamily: 'SF Pro Display',
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        }
       } else {
         setState(() {
           _error = response['message'] ?? 'Payment initiation failed';
@@ -123,15 +190,27 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('SSLCOMMERZ Payment'),
-      //   leading: IconButton(
-      //     icon: const Icon(Icons.arrow_back),
-      //     onPressed: () {
-      //       Navigator.of(context).pop(false);
-      //     },
-      //   ),
-      // ),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      appBar: AppBar(
+        title: Text(
+          'Processing Payment',
+          style: FlutterFlowTheme.of(context).bodyLarge.override(
+                fontFamily: 'SF Pro Display',
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: FlutterFlowTheme.of(context).primaryText,
+          ),
+          onPressed: () {
+            Navigator.of(context).pop(false);
+          },
+        ),
+        elevation: 0,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _successMessage != null
@@ -337,6 +416,59 @@ class CheckoutController {
           'success': 1,
           'message': 'Wallet unlock completed successfully.',
           'payment_method': 'wallet',
+        };
+      }
+
+      if (normalizedPaymentMethod == 'cod') {
+        final subtotal = cartLines.fold(0.0, (sum, item) => sum + (item.discountedPrice * item.quantity));
+        final grandTotal = (subtotal - (couponDiscount ?? 0.0)) + (shippingCost ?? 0.0);
+
+        final body = <String, dynamic>{
+          'items': items,
+          'payment_method': 'cod',
+          'grand_total': grandTotal,
+          if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
+          if (couponDiscount != null && couponDiscount > 0) 'coupon_discount': couponDiscount,
+          if (appliedCouponId != null && appliedCouponId.isNotEmpty) 'applied_coupon_id': appliedCouponId,
+          if (shippingMethodId != null && shippingMethodId.isNotEmpty) 'shipping_method_id': shippingMethodId,
+          if (shippingMethodName != null && shippingMethodName.isNotEmpty) 'shipping_method_name': shippingMethodName,
+          if (shippingCarrier != null && shippingCarrier.isNotEmpty) 'shipping_carrier': shippingCarrier,
+          if (shippingCost != null) 'shipping_cost': shippingCost,
+          if (estimatedDeliveryDays != null && estimatedDeliveryDays.isNotEmpty) 'estimated_delivery_days': estimatedDeliveryDays,
+        };
+
+        if (_needsShipping(cartLines) && shippingAddress != null) {
+          body['shipping_name'] = shippingAddress['fullName'] ?? shippingAddress['name'] ?? '';
+          body['shipping_phone'] = shippingAddress['phone'] ?? '';
+          body['shipping_address'] = shippingAddress['addressLine1'] ?? shippingAddress['address'] ?? '';
+          body['shipping_city'] = shippingAddress['city'] ?? '';
+          body['shipping_district'] = shippingAddress['city'] ?? '';
+          body['shipping_area'] = shippingAddress['shipping_area'] ?? shippingAddress['state'] ?? '';
+          body['shipping_area_id'] = shippingAddress['shipping_area_id'];
+          body['shipping_zip'] = shippingAddress['postalCode'] ?? '';
+        }
+
+        final orderRes = await http.post(
+          Uri.parse('$baseUrl/orders'),
+          headers: _headers,
+          body: jsonEncode(body),
+        );
+
+        final orderDecoded = jsonDecode(orderRes.body);
+        log('Create order response for COD (${orderRes.statusCode}): $orderDecoded');
+        if (orderRes.statusCode != 201 && orderRes.statusCode != 200) {
+          final err =
+              orderDecoded is Map ? orderDecoded['error']?.toString() : null;
+          return {
+            'success': 0,
+            'message': err ?? 'Failed to create order (${orderRes.statusCode})',
+          };
+        }
+        return {
+          'success': 1,
+          'message': 'Order placed successfully using Cash on Delivery.',
+          'payment_method': 'cod',
+          'order_id': _extractOrderId(orderDecoded),
         };
       }
 

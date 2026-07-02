@@ -39,7 +39,9 @@ class _SplashPageWidgetState extends State<SplashPageWidget>
       await Future.delayed(const Duration(milliseconds: 500));
       await actions.getDeviceId();
       await actions.getCountryCodeLocal();
-      if (FFAppState().isIntro == true) {
+      if (FFAppState().connected == false) {
+        context.goNamed(PurchaseHistoryPageWidget.routeName);
+      } else if (FFAppState().isIntro == true) {
         context.goNamed(HomePageWidget.routeName);
       } else {
         context.goNamed(OnboardingPageWidget.routeName);

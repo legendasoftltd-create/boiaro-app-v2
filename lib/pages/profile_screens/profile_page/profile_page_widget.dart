@@ -1645,103 +1645,103 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                 'containerOnPageLoadAnimation5']!),
                           ),
 
-                          // Padding(
-                          //   padding: EdgeInsetsDirectional.fromSTEB(
-                          //       16.0, 0.0, 16.0, 16.0),
-                          //   child: InkWell(
-                          //     splashColor: Colors.transparent,
-                          //     focusColor: Colors.transparent,
-                          //     hoverColor: Colors.transparent,
-                          //     highlightColor: Colors.transparent,
-                          //     onTap: () async {
-                          //       await actions.showCustomToastBottom(
-                          //         FFLocalizations.of(context)
-                          //             .getText('coming_soon'),
-                          //       );
-                          //     },
-                          //     child: Container(
-                          //       width: double.infinity,
-                          //       decoration: BoxDecoration(
-                          //         color: FlutterFlowTheme.of(context)
-                          //             .secondaryBackground,
-                          //         boxShadow: [
-                          //           BoxShadow(
-                          //             blurRadius: 16.0,
-                          //             color: FlutterFlowTheme.of(context)
-                          //                 .shadowColor,
-                          //             offset: Offset(
-                          //               0.0,
-                          //               4.0,
-                          //             ),
-                          //           )
-                          //         ],
-                          //         borderRadius: BorderRadius.circular(12.0),
-                          //       ),
-                          //       child: Padding(
-                          //         padding: EdgeInsetsDirectional.fromSTEB(
-                          //             8.0, 8.0, 16.0, 8.0),
-                          //         child: Row(
-                          //           mainAxisSize: MainAxisSize.max,
-                          //           children: [
-                          //             Container(
-                          //               width: 48.0,
-                          //               height: 48.0,
-                          //               decoration: BoxDecoration(
-                          //                 color: FlutterFlowTheme.of(context)
-                          //                     .lightGrey,
-                          //                 shape: BoxShape.circle,
-                          //               ),
-                          //               alignment:
-                          //                   AlignmentDirectional(0.0, 0.0),
-                          //               child: Icon(
-                          //                 Icons.help_outline_rounded,
-                          //                 color: FlutterFlowTheme.of(context)
-                          //                     .primaryText,
-                          //                 size: 24.0,
-                          //               ),
-                          //             ),
-                          //             Expanded(
-                          //               child: Padding(
-                          //                 padding:
-                          //                     EdgeInsetsDirectional.fromSTEB(
-                          //                         16.0, 0.0, 0.0, 0.0),
-                          //                 child: Text(
-                          //                   'Help & Support',
-                          //                   style:
-                          //                       FlutterFlowTheme.of(context)
-                          //                           .bodyMedium
-                          //                           .override(
-                          //                             fontFamily:
-                          //                                 'SF Pro Display',
-                          //                             fontSize: 17.0,
-                          //                             letterSpacing: 0.0,
-                          //                             lineHeight: 1.5,
-                          //                           ),
-                          //                 ),
-                          //               ),
-                          //             ),
-                          //             ClipRRect(
-                          //               borderRadius:
-                          //                   BorderRadius.circular(0.0),
-                          //               child: SvgPicture.asset(
-                          //                 'assets/images/arrow_right_ic.svg',
-                          //                 width: 20.0,
-                          //                 height: 20.0,
-                          //                 colorFilter: ColorFilter.mode(
-                          //                   FlutterFlowTheme.of(context)
-                          //                       .primaryText,
-                          //                   BlendMode.srcIn,
-                          //                 ),
-                          //                 alignment: Alignment(0.0, 0.0),
-                          //               ),
-                          //             ),
-                          //           ],
-                          //         ),
-                          //       ),
-                          //     ),
-                          //   ).animateOnPageLoad(animationsMap[
-                          //       'containerOnPageLoadAnimation5']!),
-                          // ),
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 16.0),
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              focusColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: () async {
+                                if (FFAppState().isLogin == true) {
+                                  context.pushNamed(SupportTicketsListPageWidget.routeName);
+                                } else {
+                                  context.pushNamed(SignInPageWidget.routeName);
+                                }
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 16.0,
+                                      color: FlutterFlowTheme.of(context)
+                                          .shadowColor,
+                                      offset: Offset(
+                                        0.0,
+                                        4.0,
+                                      ),
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      8.0, 8.0, 16.0, 8.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Container(
+                                        width: 48.0,
+                                        height: 48.0,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .lightGrey,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment:
+                                            AlignmentDirectional(0.0, 0.0),
+                                        child: Icon(
+                                           Icons.support_agent,
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryText,
+                                          size: 24.0,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding:
+                                              EdgeInsetsDirectional.fromSTEB(
+                                                  16.0, 0.0, 0.0, 0.0),
+                                          child: Text(
+                                            'Help & Support',
+                                            style:
+                                                FlutterFlowTheme.of(context)
+                                                    .bodyMedium
+                                                    .override(
+                                                      fontFamily:
+                                                          'SF Pro Display',
+                                                      fontSize: 17.0,
+                                                      letterSpacing: 0.0,
+                                                      lineHeight: 1.5,
+                                                    ),
+                                          ),
+                                        ),
+                                      ),
+                                      ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(0.0),
+                                        child: SvgPicture.asset(
+                                          'assets/images/arrow_right_ic.svg',
+                                          width: 20.0,
+                                          height: 20.0,
+                                          colorFilter: ColorFilter.mode(
+                                            FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                            BlendMode.srcIn,
+                                          ),
+                                          alignment: Alignment(0.0, 0.0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                           
                           SizedBox(height: 16),
                           Builder(
