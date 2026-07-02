@@ -21,6 +21,7 @@ class MainBookComponentWidget extends StatefulWidget {
     required this.id,
     required this.authorsName,
     this.bookType,
+    this.imageHeight,
     bool? isFav,
     required this.isFavAction,
     required this.isMainTap,
@@ -38,6 +39,7 @@ class MainBookComponentWidget extends StatefulWidget {
   final String? price;
   final String? authorsName;
   final String? bookType;
+  final double? imageHeight;
   final bool isFav;
   final Future Function()? isFavAction;
   final Future Function()? isMainTap;
@@ -228,7 +230,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                             fadeOutDuration: Duration(milliseconds: 200),
                             imageUrl: widget.image!,
                             width: double.infinity,
-                            height: 160.0,
+                            height: widget.imageHeight ?? 160.0,
                             fit: BoxFit.fill,
                             alignment: Alignment(0.0, 0.0),
                             errorWidget: (context, error, stackTrace) =>

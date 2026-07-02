@@ -954,11 +954,11 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                     crossAxisCount:
                                                                         crossAxisCount,
                                                                     crossAxisSpacing:
-                                                                        10.0,
+                                                                       8.0,
                                                                     mainAxisSpacing:
-                                                                        10.0,
+                                                                        8.0,
                                                                     mainAxisExtent:
-                                                                        240.0,
+                                                                        235.0,
                                                                   ),
                                                                   itemCount:
                                                                       bookDetailsList
@@ -991,6 +991,7 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                                             r'''$.name''',
                                                                           ).toString()}',
                                                                         ),
+                                                                        imageHeight: 155,
                                                                         image:
                                                                             '${FFAppConstants.bookImagesUrl}${getJsonField(
                                                                           bookDetailsListItem,

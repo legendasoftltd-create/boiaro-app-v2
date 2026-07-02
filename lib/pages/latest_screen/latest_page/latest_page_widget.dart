@@ -284,8 +284,8 @@ class _LatestPageWidgetState extends State<LatestPageWidget>
                                                               [];
 
                                                           return Wrap(
-                                                            spacing: 16.0,
-                                                            runSpacing: 16.0,
+                                                            spacing: 8.0,
+                                                            runSpacing: 8.0,
                                                             alignment:
                                                                 WrapAlignment
                                                                     .start,
@@ -330,6 +330,7 @@ class _LatestPageWidgetState extends State<LatestPageWidget>
                                                                       r'''$.name''',
                                                                     ).toString()}',
                                                                   ),
+                                                                  imageHeight: 155,
                                                                   image:
                                                                       '${FFAppConstants.bookImagesUrl}${getJsonField(
                                                                     bookDetailsListItem,

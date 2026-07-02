@@ -963,11 +963,11 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                                     crossAxisCount:
                                                                         crossAxisCount,
                                                                     crossAxisSpacing:
-                                                                        10.0,
+                                                                        8.0,
                                                                     mainAxisSpacing:
-                                                                        10.0,
+                                                                        8.0,
                                                                     mainAxisExtent:
-                                                                        240.0,
+                                                                        235.0,
                                                                   ),
                                                                   itemCount:
                                                                       bookDetailsList
@@ -1000,6 +1000,7 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                                             r'''$.name''',
                                                                           ).toString()}',
                                                                         ),
+                                                                        imageHeight: 155,
                                                                         image:
                                                                             '${FFAppConstants.bookImagesUrl}${getJsonField(
                                                                           bookDetailsListItem,

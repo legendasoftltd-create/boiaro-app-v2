@@ -205,6 +205,7 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                 width: 20.0,
                                 height: 20.0,
                                 fit: BoxFit.contain,
+                                color: FlutterFlowTheme.of(context).primaryText,
                               ),
                             ),
                           ),
@@ -254,6 +255,7 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                 width: 20.0,
                                 height: 20.0,
                                 fit: BoxFit.cover,
+                                color: FlutterFlowTheme.of(context).primaryText,
                               ),
                             ),
                           ),
@@ -359,9 +361,9 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                               physics: const NeverScrollableScrollPhysics(),
                                               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                                 crossAxisCount: crossAxisCount,
-                                                crossAxisSpacing: 16.0,
-                                                mainAxisSpacing: 16.0,
-                                                mainAxisExtent: 240.0,
+                                                crossAxisSpacing: 8.0,
+                                                mainAxisSpacing: 8.0,
+                                                mainAxisExtent: 235.0,
                                               ),
                                               itemCount: trendingBooksList.length,
                                               itemBuilder: (context, trendingBooksListIndex) {
@@ -375,6 +377,7 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                                                   child: MainBookComponentWidget(
                                                     key: Key('Keyush_${getJsonField(trendingBooksListItem, r'''$.name''').toString()}'),
                                                     image: '${FFAppConstants.bookImagesUrl}${getJsonField(trendingBooksListItem, r'''$.image''').toString()}',
+                                                    imageHeight: 155,
                                                     bookName: getJsonField(trendingBooksListItem, r'''$.name''').toString(),
                                                     id: getJsonField(trendingBooksListItem, r'''$._id''').toString(),
                                                     price: getJsonField(trendingBooksListItem, r'''$.price''').toString(),

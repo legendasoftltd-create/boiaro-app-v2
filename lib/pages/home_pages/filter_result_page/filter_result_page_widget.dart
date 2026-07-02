@@ -245,8 +245,8 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
                                             final filterBookList = _books;
 
                                             return Wrap(
-                                              spacing: 16.0,
-                                              runSpacing: 16.0,
+                                              spacing: 8.0,
+                                              runSpacing: 8.0,
                                               alignment: WrapAlignment.start,
                                               crossAxisAlignment: WrapCrossAlignment.start,
                                               direction: Axis.horizontal,
@@ -266,6 +266,7 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
                                                   child: MainBookComponentWidget(
                                                     key: Key('Keydgb_${getJsonField(filterBookListItem, r'''$.name''').toString()}'),
                                                     image: '${FFAppConstants.bookImagesUrl}${getJsonField(filterBookListItem, r'''$.image''').toString()}',
+                                                    imageHeight: 155,
                                                     bookName: getJsonField(filterBookListItem, r'''$.name''').toString(),
                                                     id: getJsonField(filterBookListItem, r'''$._id''').toString(),
                                                     price: getJsonField(filterBookListItem, r'''$.price''').toString(),

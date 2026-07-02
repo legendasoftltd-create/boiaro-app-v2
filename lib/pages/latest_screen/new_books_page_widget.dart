@@ -363,9 +363,9 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                               physics: const NeverScrollableScrollPhysics(),
                                               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                                 crossAxisCount: crossAxisCount,
-                                                crossAxisSpacing: 16.0,
-                                                mainAxisSpacing: 16.0,
-                                                mainAxisExtent: 240.0,
+                                                crossAxisSpacing: 8.0,
+                                                mainAxisSpacing: 8.0,
+                                                mainAxisExtent: 235.0,
                                               ),
                                               itemCount: newBooksList.length,
                                               itemBuilder: (context, newBooksListIndex) {
@@ -381,6 +381,7 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                                                     image: '${FFAppConstants.bookImagesUrl}${getJsonField(newBooksListItem, r'''$.image''').toString()}',
                                                     bookName: getJsonField(newBooksListItem, r'''$.name''').toString(),
                                                     id: getJsonField(newBooksListItem, r'''$._id''').toString(),
+                                                    imageHeight: 155,
                                                     price: getJsonField(newBooksListItem, r'''$.price''').toString(),
                                                     bookType: getJsonField(newBooksListItem, r'''$.type''')?.toString(),
                                                     discountAmount: getJsonField(newBooksListItem, r'''$.discount_amount''').toString(),

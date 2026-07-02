@@ -441,9 +441,9 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                                                       SliverGridDelegateWithFixedCrossAxisCount(
                                                     crossAxisCount:
                                                         crossAxisCount,
-                                                    crossAxisSpacing: 10.0,
-                                                    mainAxisSpacing: 10.0,
-                                                    mainAxisExtent: 240,
+                                                    crossAxisSpacing: 8.0,
+                                                    mainAxisSpacing: 8.0,
+                                                    mainAxisExtent: 235,
                                                     // childAspectRatio:
                                                     //     cardWidth / cardHeight,
                                                   ),
@@ -473,6 +473,7 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                                                           'Key_${getJsonField(bookItem, r'''$._id''').toString()}'),
                                                       image:
                                                           '${isAllSelected ? FFAppConstants.bookImagesUrl : FFAppConstants.bookImagesUrl}${getJsonField(bookItem, r'''$.image''').toString()}',
+                                                      imageHeight: 155,
                                                       price:
                                                           '${getJsonField(bookItem, r'''$.price''').toString()}',
                                                       bookType: bookTypeValue,

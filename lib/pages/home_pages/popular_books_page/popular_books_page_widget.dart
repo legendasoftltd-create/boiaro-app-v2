@@ -277,9 +277,9 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                               physics: const NeverScrollableScrollPhysics(),
                                               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                                 crossAxisCount: crossAxisCount,
-                                                crossAxisSpacing: 16.0,
-                                                mainAxisSpacing: 16.0,
-                                                mainAxisExtent: 240.0,
+                                                crossAxisSpacing: 8.0,
+                                                mainAxisSpacing: 8.0,
+                                                mainAxisExtent: 235.0,
                                               ),
                                               itemCount: popularBookList.length,
                                               itemBuilder: (context, popularBookListIndex) {
@@ -293,6 +293,7 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                                                   child: MainBookComponentWidget(
                                                     key: Key('Keyc76_${getJsonField(popularBookListItem, r'''$.name''').toString()}'),
                                                     image: '${FFAppConstants.bookImagesUrl}${getJsonField(popularBookListItem, r'''$.image''').toString()}',
+                                                    imageHeight: 155,
                                                     bookName: getJsonField(popularBookListItem, r'''$.name''').toString(),
                                                     id: getJsonField(popularBookListItem, r'''$._id''').toString(),
                                                     price: getJsonField(popularBookListItem, r'''$.price''').toString(),

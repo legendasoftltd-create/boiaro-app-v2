@@ -278,15 +278,15 @@ class _HistoryDetailsPageWidgetState extends State<HistoryDetailsPageWidget> {
                                                             return Container(
                                                               width: double
                                                                   .infinity,
-                                                              height: 391.0,
+                                                              height: 235.0,
                                                               child:
                                                                   NoCategoriesYetWidget(),
                                                             );
                                                           }
 
                                                           return Wrap(
-                                                            spacing: 16.0,
-                                                            runSpacing: 16.0,
+                                                            spacing: 8.0,
+                                                            runSpacing: 8.0,
                                                             alignment:
                                                                 WrapAlignment
                                                                     .start,
@@ -331,6 +331,7 @@ class _HistoryDetailsPageWidgetState extends State<HistoryDetailsPageWidget> {
                                                                       r'''$.name''',
                                                                     ).toString()}',
                                                                   ),
+                                                                  imageHeight: 155,
                                                                   image:
                                                                       '${FFAppConstants.bookImagesUrl}${getJsonField(
                                                                     bookDetailsListItem,

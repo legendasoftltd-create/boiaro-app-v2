@@ -5907,6 +5907,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             image: '${FFAppConstants.bookImagesUrl}${getJsonField(item, r'''$.image''').toString()}',
                                                             bookName: itemName,
                                                             id: itemId,
+                                                            imageHeight: 155,
                                                             isPurchased: _model.purchasedBookIds.contains(itemId),
                                                             price: getJsonField(item, r'''$.price''').toString(),
                                                             bookType: getJsonField(item, r'''$.type''')?.toString(),
@@ -6121,6 +6122,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                 r'''$.name''',
                                                               ).toString()}',
                                                             ),
+                                                            imageHeight: 155,
                                                             image:
                                                                 '${FFAppConstants.bookImagesUrl}${getJsonField(
                                                               authorRelatedbookDetailslistItem,

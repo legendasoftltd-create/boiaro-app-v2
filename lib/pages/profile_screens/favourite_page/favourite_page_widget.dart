@@ -233,9 +233,9 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                           SliverGridDelegateWithFixedCrossAxisCount(
                                                         crossAxisCount:
                                                             crossAxisCount,
-                                                        crossAxisSpacing: 16.0,
-                                                        mainAxisSpacing: 16.0,
-                                                        mainAxisExtent: 240.0,
+                                                        crossAxisSpacing: 8.0,
+                                                        mainAxisSpacing: 8.0,
+                                                        mainAxisExtent: 235.0,
                                                       ),
                                                       itemCount: favList.length,
                                                       itemBuilder: (context,
@@ -264,6 +264,7 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                                                                 r'''$.bookDetails.name''',
                                                               ).toString()}',
                                                             ),
+                                                            imageHeight: 155,
                                                             image:
                                                                 '${FFAppConstants.bookImagesUrl}${getJsonField(
                                                               favListItem,
