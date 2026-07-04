@@ -126,26 +126,30 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _checkFavoriteStatus();
   }
 
+  Map<String, String> _apiHeaders({required bool authRequired}) {
+    final h = <String, String>{
+      'apikey': FFAppConstants.supabaseAnonApiKey,
+      'Content-Type': 'application/json',
+    };
+    if (authRequired && FFAppState().token.trim().isNotEmpty) {
+      h['Authorization'] = 'Bearer ${FFAppState().token}';
+    }
+    return h;
+  }
+
   /// Checks the backend to confirm whether this audiobook is currently
   /// bookmarked/favourited by the user, then updates [_isFavorite] in-place.
   Future<void> _checkFavoriteStatus() async {
     final bookId = _bookId();
     if (bookId.isEmpty || !FFAppState().isLogin) return;
     try {
-      final res = await EbookGroup.getFavouriteBookCall.call(
-        userId: FFAppState().userId,
-        token: FFAppState().token,
-      );
-      if (!res.succeeded || !mounted) return;
-      final details =
-          EbookGroup.getFavouriteBookCall.favouriteBookDetailsList(res.jsonBody) ??
-              [];
-      final bookIds = details
-          .map((item) =>
-              getJsonField(item, r'''$.bookDetails._id''').toString().trim())
-          .toList();
-      if (mounted) {
-        setState(() => _isFavorite = bookIds.contains(bookId.trim()));
+      final uri = Uri.parse(
+          '${FFAppConstants.mobileApiBaseUrl}/books/$bookId/bookmark');
+      final res = await http.get(uri, headers: _apiHeaders(authRequired: true));
+      if (res.statusCode != 200) return;
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic> && mounted) {
+        setState(() => _isFavorite = decoded['bookmarked'] == true);
       }
     } catch (_) {}
   }
@@ -209,14 +213,13 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       }
       if (state.processingState == AudioProcessingState.completed) {
         if (!_previewLimitShown) {
-          if (_chapters.isNotEmpty && _currentIndex < _chapters.length - 1) {
-            final nextChapter = _chapters[_currentIndex + 1];
-            final isLocked = nextChapter['isLocked'] == true || nextChapter['is_locked'] == true;
-            if (!isLocked) {
-              _playChapterAt(_currentIndex + 1);
+          if (_chapters.isNotEmpty) {
+            final nextIdx = _nextUnlockedChapterIndex(_currentIndex + 1);
+            if (nextIdx != null) {
+              _playChapterAt(nextIdx);
+            } else {
+              _maybeShowRateDialog();
             }
-          } else if (_chapters.isNotEmpty && _currentIndex == _chapters.length - 1) {
-            _maybeShowRateDialog();
           }
         }
       }
@@ -259,6 +262,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     if (remote == null || !remote.hasProgress) {
       return;
     }
+    final initialTrackNum = widget.audiobook['initialTrackNumber'];
+    if (initialTrackNum != null) {
+      return;
+    }
     final targetIndex = _chapters.indexWhere((chapter) {
       final chapterTrack =
           int.tryParse((chapter['track_number'] ?? '').toString()) ??
@@ -273,8 +280,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
 
   Future<void> _restoreSavedAudioPosition(AudiobookAudioHandler handler) async {
     final remote = _remoteListeningProgress;
+    final currentTrack =
+        int.tryParse((_currentChapter?['track_number'] ?? '').toString()) ??
+            (_currentIndex + 1);
+
     if (remote != null && remote.hasProgress) {
-      if (remote.positionSeconds > 0) {
+      if (remote.currentTrack == currentTrack && remote.positionSeconds > 0) {
         await handler.seek(Duration(seconds: remote.positionSeconds));
       }
       return;
@@ -293,9 +304,6 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     }
     final lastTrack =
         FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
-    final currentTrack =
-        int.tryParse((_currentChapter?['track_number'] ?? '').toString()) ??
-            (_currentIndex + 1);
     if (currentTrack == lastTrack) {
       await handler.seek(Duration(seconds: savedSec));
     }
@@ -447,6 +455,30 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       );
       await _restoreSavedAudioPosition(handler);
     }
+  }
+
+  int? _nextUnlockedChapterIndex(int startIndex) {
+    if (_chapters.isEmpty) return null;
+    for (int i = startIndex; i < _chapters.length; i++) {
+      final ch = _chapters[i];
+      final isLocked = ch['isLocked'] == true || ch['is_locked'] == true;
+      if (!isLocked) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  int? _previousUnlockedChapterIndex(int startIndex) {
+    if (_chapters.isEmpty) return null;
+    for (int i = startIndex; i >= 0; i--) {
+      final ch = _chapters[i];
+      final isLocked = ch['isLocked'] == true || ch['is_locked'] == true;
+      if (!isLocked) {
+        return i;
+      }
+    }
+    return null;
   }
 
   Future<void> _playChapterAt(int index) async {
@@ -778,11 +810,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
         position >= duration &&
         !val.isPlaying &&
         !_previewLimitShown) {
-      if (_chapters.isNotEmpty && _currentIndex < _chapters.length - 1) {
-        final nextChapter = _chapters[_currentIndex + 1];
-        final isLocked = nextChapter['isLocked'] == true || nextChapter['is_locked'] == true;
-        if (!isLocked) {
-          _playChapterAt(_currentIndex + 1);
+      if (_chapters.isNotEmpty) {
+        final nextIdx = _nextUnlockedChapterIndex(_currentIndex + 1);
+        if (nextIdx != null) {
+          _playChapterAt(nextIdx);
         }
       }
     }
@@ -1745,7 +1776,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     final shareUrl = bookSlug.isNotEmpty
         ? '${FFAppConstants.webUrl}/book/$bookSlug'
         : bookId.isNotEmpty
-            ? '${FFAppConstants.webUrl}/book/$bookId'
+            ? '${FFAppConstants.webUrl}/b/$bookId'
             : FFAppConstants.webUrl;
 
     // Publisher / copyright info
@@ -1865,42 +1896,34 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                         final addingToFav = !_isFavorite;
                         // Optimistic UI update
                         setState(() => _isFavorite = addingToFav);
-                        if (addingToFav) {
-                          final res =
-                              await EbookGroup.addFavouriteBookApiCall.call(
-                            userId: FFAppState().userId,
-                            bookId: bookId,
-                            token: FFAppState().token,
+                        try {
+                          final uri = Uri.parse(
+                              '${FFAppConstants.mobileApiBaseUrl}/books/$bookId/bookmark');
+                          final res = await http.post(
+                            uri,
+                            headers: _apiHeaders(authRequired: true),
+                            body: jsonEncode({'bookmarked': addingToFav}),
                           );
-                          if (res.succeeded) {
-                            await actions
-                                .showCustomToastBottom('Added to Favourites');
+                          if (res.statusCode >= 200 && res.statusCode < 300) {
+                            await actions.showCustomToastBottom(addingToFav
+                                ? 'Added to Favourites'
+                                : 'Removed from Favourites');
                           } else {
                             // Revert on failure
                             if (mounted) {
-                              setState(() => _isFavorite = false);
+                              setState(() => _isFavorite = !addingToFav);
                             }
-                            await actions.showCustomToastBottom(
-                                'Failed to add to Favourites');
+                            await actions.showCustomToastBottom(addingToFav
+                                ? 'Failed to add to Favourites'
+                                : 'Failed to remove from Favourites');
                           }
-                        } else {
-                          final res =
-                              await EbookGroup.removeFavouritebookCall.call(
-                            userId: FFAppState().userId,
-                            bookId: bookId,
-                            token: FFAppState().token,
-                          );
-                          if (res.succeeded) {
-                            await actions.showCustomToastBottom(
-                                'Removed from Favourites');
-                          } else {
-                            // Revert on failure
-                            if (mounted) {
-                              setState(() => _isFavorite = true);
-                            }
-                            await actions.showCustomToastBottom(
-                                'Failed to remove from Favourites');
+                        } catch (_) {
+                          if (mounted) {
+                            setState(() => _isFavorite = !addingToFav);
                           }
+                          await actions.showCustomToastBottom(addingToFav
+                              ? 'Failed to add to Favourites'
+                              : 'Failed to remove from Favourites');
                         }
                       },
                     ),
@@ -2716,8 +2739,13 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                       onPressed: _isPreviewMode
                           ? () => _seekTo(Duration.zero)
                           : () {
-                              if (_chapters.isNotEmpty && _currentIndex > 0) {
-                                _playChapterAt(_currentIndex - 1);
+                              if (_chapters.isNotEmpty) {
+                                final prevIdx = _previousUnlockedChapterIndex(_currentIndex - 1);
+                                if (prevIdx != null) {
+                                  _playChapterAt(prevIdx);
+                                } else {
+                                  _seekTo(Duration.zero);
+                                }
                               } else {
                                 _seekTo(Duration.zero);
                               }
@@ -2869,9 +2897,11 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                       onPressed: _isPreviewMode
                           ? null
                           : () {
-                              if (_chapters.isNotEmpty &&
-                                  _currentIndex < _chapters.length - 1) {
-                                _playChapterAt(_currentIndex + 1);
+                              if (_chapters.isNotEmpty) {
+                                final nextIdx = _nextUnlockedChapterIndex(_currentIndex + 1);
+                                if (nextIdx != null) {
+                                  _playChapterAt(nextIdx);
+                                }
                               }
                             },
                     ),

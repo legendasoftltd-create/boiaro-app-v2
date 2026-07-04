@@ -72,6 +72,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   bool _isEbookDownloadStale = false;
   final Map<String, Map<String, dynamic>> _narratorCache = {};
   final Set<String> _loadingNarratorIds = {};
+  String? _audiobookPricingMode;
+  String? _bookSlug;
 
   @override
   void initState() {
@@ -741,56 +743,106 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     return _unlockWithCoins(bookId: bookId, format: format, coinCost: coinCost);
   }
 
-  Future<Map<String, dynamic>?> _fallbackAudioTrack(String bookId) async {
-    final guestUrl = await _fetchAudioTrackSignedUrl(
-      bookId: bookId,
-      trackNumber: 1,
-      authRequired: false,
-    );
-    final authUrl = guestUrl ??
-        (FFAppState().isLogin
-            ? await _fetchAudioTrackSignedUrl(
-                bookId: bookId,
-                trackNumber: 1,
-                authRequired: true,
-              )
-            : null);
-    if (authUrl == null || authUrl.isEmpty) return null;
-    return <String, dynamic>{
-      'track_number': 1,
-      'title': 'Episode 1',
-      'duration': '',
-      'is_preview': true,
-      'signed_url': authUrl,
-    };
-  }
 
-  Future<String?> _fetchAudioTrackSignedUrl({
+
+  Future<void> _playAudiobookPreview({
     required String bookId,
-    required int trackNumber,
-    required bool authRequired,
+    required String bookName,
+    required String bookImage,
+    required String authorName,
   }) async {
-    final body = await _postV2(
-      'content/audio-url',
-      body: {'book_id': bookId, 'track_number': trackNumber},
-      authRequired: authRequired,
-    );
-    final url = body?['signed_url']?.toString();
-    if (url != null && url.trim().isNotEmpty) return url;
-    return null;
+    try {
+      final uri = Uri.parse('https://boiaro.com/api/v1/books/$bookId');
+      final res = await http.get(uri);
+      if (res.statusCode != 200) {
+        await actions.showCustomToastBottom('Failed to load preview metadata');
+        return;
+      }
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        await actions.showCustomToastBottom('Invalid preview response');
+        return;
+      }
+      final formats = decoded['formats'];
+      if (formats is! List) {
+        await actions.showCustomToastBottom('Formats not found in book data');
+        return;
+      }
+      Map<String, dynamic>? audiobookFormat;
+      for (final fmt in formats) {
+        if (fmt is Map && fmt['format'] == 'audiobook') {
+          audiobookFormat = Map<String, dynamic>.from(fmt);
+          break;
+        }
+      }
+      if (audiobookFormat == null) {
+        await actions.showCustomToastBottom('Audiobook format details not found');
+        return;
+      }
+      final previewPercent = (audiobookFormat['preview_percentage'] as num?)?.toInt() ?? 15;
+      final tracks = audiobookFormat['audiobook_tracks'];
+      if (tracks is! List || tracks.isEmpty) {
+        await actions.showCustomToastBottom('No preview tracks available');
+        return;
+      }
+      final firstTrack = Map<String, dynamic>.from(tracks.first);
+      final audioUrl = firstTrack['audio_url']?.toString() ?? '';
+      if (audioUrl.isEmpty) {
+        await actions.showCustomToastBottom('Preview audio file not found');
+        return;
+      }
+
+      await _markPreviewSeen(bookId);
+
+      await actions.showCustomToastBottom(
+          'Preview limit: $previewPercent%. Buy or unlock to listen full audiobook.');
+
+      await context.pushNamed(
+        AudioPlayerPageWidget.routeName,
+        extra: <String, dynamic>{
+          'audiobook': {
+            '_id': bookId,
+            'id': bookId,
+            'name': bookName,
+            'title': bookName,
+            'image': bookImage,
+            'author': {'name': authorName},
+            'chapters': [
+              {
+                'title': firstTrack['title']?.toString() ?? 'Preview - Chapter 1',
+                'file': audioUrl,
+                'track_number': 1,
+                'duration': firstTrack['duration']?.toString() ?? '',
+                'isLocked': false,
+                'isPreview': true,
+                'previewFraction': 1.0,
+                'raw': firstTrack,
+              }
+            ],
+            'isPreviewMode': true,
+            'previewPercent': previewPercent,
+            'isFree': false,
+            'initialTrackNumber': 1,
+          },
+          'chapter': {
+            'title': firstTrack['title']?.toString() ?? 'Preview - Chapter 1',
+            'file': audioUrl,
+            'track_number': 1,
+            'duration': firstTrack['duration']?.toString() ?? '',
+            'isLocked': false,
+            'isPreview': true,
+            'previewFraction': 1.0,
+            'raw': firstTrack,
+          },
+        },
+      );
+    } catch (e) {
+      debugPrint('Error starting preview playback: $e');
+      await actions.showCustomToastBottom('Failed to load preview');
+    }
   }
 
-  Future<Map<String, dynamic>> _fetchBatchAudioUrls(String bookId) async {
-    final body = await _postV2(
-      'content/batch-audio-urls',
-      body: {'book_id': bookId},
-      authRequired: true,
-    );
-    if (body is Map<String, dynamic>) {
-      return body;
-    }
-    return <String, dynamic>{};
-  }
+
 
   Future<bool> _openAudiobookPlayerFromV2({
     required String bookId,
@@ -822,93 +874,25 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     debugPrint('[Audiobook V2] Fetched ${tracks.length} tracks from chapters API');
     final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
     if (effectiveTracks.isEmpty) {
-      final fallback = await _fallbackAudioTrack(bookId);
-      if (fallback != null) {
-        effectiveTracks.add(fallback);
-      } else {
-        await actions.showCustomToastBottom('No tracks available');
-        return false;
-      }
+      await actions.showCustomToastBottom('No tracks available');
+      return false;
     }
 
     final chapters = <Map<String, dynamic>>[];
-    Map<String, dynamic> urlsMap = const <String, dynamic>{};
-    // Always fetch authenticated batch URLs when the user is logged in,
-    // regardless of preview mode — preview just limits how many we show.
-    if (hasFullAccess && FFAppState().isLogin) {
-      final batch = await _fetchBatchAudioUrls(bookId);
-      final rawUrls = batch['urls'];
-      if (rawUrls is Map) {
-        urlsMap = Map<String, dynamic>.from(rawUrls);
-      }
-    }
 
     for (var i = 0; i < effectiveTracks.length; i++) {
       final track = effectiveTracks[i];
-      var isFreeTrack = _isTrackFreeForPreview(
-        track: track,
-        index: i,
-        audiobookFormat: audiobookFormat,
-      );
+      final isFreeTrack = track['is_free'] == true || track['is_preview'] == true;
       final isUnlocked = track['is_unlocked'] == true;
-      var isLocked = !isFreeTrack && !isUnlocked;
+      final isLocked = !hasFullAccess && !isFreeTrack && !isUnlocked;
 
       final trackNumber = (track['track_number'] is num)
           ? (track['track_number'] as num).toInt()
           : (i + 1);
 
-      // Find matching track in audiobookFormat['audiobook_tracks']
-      dynamic detailsTrack;
-      if (audiobookFormat != null && audiobookFormat['audiobook_tracks'] is List) {
-        final detailTracksList = audiobookFormat['audiobook_tracks'] as List;
-        for (var dt in detailTracksList) {
-          if (dt is Map) {
-            final dtNum = (dt['track_number'] is num)
-                ? (dt['track_number'] as num).toInt()
-                : null;
-            if (dtNum == trackNumber) {
-              detailsTrack = dt;
-              break;
-            }
-          }
-        }
-        if (detailsTrack == null && i < detailTracksList.length) {
-          final dt = detailTracksList[i];
-          if (dt is Map) {
-            detailsTrack = dt;
-          }
-        }
-      }
+      final signedUrl = track['audio_url']?.toString() ?? track['file']?.toString() ?? track['signed_url']?.toString() ?? '';
 
-      String? signedUrl = track['audio_url']?.toString();
-      if (signedUrl == null || signedUrl.isEmpty) {
-        if (urlsMap.isNotEmpty) {
-          final candidate = urlsMap['$trackNumber'];
-          if (candidate is Map) {
-            signedUrl = candidate['signed_url']?.toString();
-          }
-        }
-        signedUrl ??= track['signed_url']?.toString();
-      }
-
-      if (signedUrl == null || signedUrl.isEmpty) {
-        if (detailsTrack != null && detailsTrack is Map) {
-          signedUrl = detailsTrack['audio_url']?.toString();
-          debugPrint('[Audiobook V2] Track $trackNumber details audio URL: $signedUrl');
-          if (signedUrl == null || signedUrl.isEmpty) {
-            signedUrl = detailsTrack['preview_audio_url']?.toString();
-            debugPrint('[Audiobook V2] Track $trackNumber details preview URL: $signedUrl');
-          }
-        }
-      }
-
-      if (trackNumber == 1 && (signedUrl != null && signedUrl.isNotEmpty)) {
-        isFreeTrack = true;
-        isLocked = false;
-        debugPrint('[Audiobook V2] Track 1 has preview URL, forcing isFreeTrack=true, isLocked=false');
-      }
-
-      if ((signedUrl == null || signedUrl.isEmpty) && !isLocked) {
+      if (signedUrl.isEmpty && !isLocked) {
         debugPrint('[Audiobook V2] Track $trackNumber has empty URL and is not locked. Skipping.');
         continue;
       }
@@ -917,7 +901,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
       chapters.add({
         'title': track['title']?.toString() ?? 'Track $trackNumber',
-        'file': signedUrl ?? '',
+        'file': signedUrl,
         'track_number': trackNumber,
         'duration': track['duration']?.toString() ?? '',
         'isLocked': isLocked,
@@ -928,15 +912,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
 
     if (chapters.isEmpty) {
-      await actions.showCustomToastBottom(
-        hasFullAccess
-            ? 'Unable to load audiobook tracks'
-            : 'No preview tracks available',
-      );
+      await actions.showCustomToastBottom('Unable to load audiobook tracks');
       return false;
     }
 
-    final isPreviewMode = forceIsPreviewMode || !hasFullAccess;
+    final isPreviewMode = forceIsPreviewMode;
 
     if (isPreviewMode) {
       await actions.showCustomToastBottom(
@@ -945,7 +925,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
     final initialChapter = initialTrackNumber != null
         ? chapters.firstWhere(
-            (ch) => ch['track_number'] == initialTrackNumber,
+            (ch) => ch['track_number'].toString() == initialTrackNumber.toString(),
             orElse: () => chapters.first,
           )
         : chapters.first;
@@ -960,10 +940,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           'title': bookName,
           'image': bookImage,
           'author': {'name': authorName},
+          'slug': _bookSlug ?? '',
+          'book_slug': _bookSlug ?? '',
           'chapters': chapters,
           'isPreviewMode': isPreviewMode,
           'previewPercent': previewPercent,
           'isFree': isFree,
+          'initialTrackNumber': initialTrackNumber,
         },
         'chapter': initialChapter,
       },
@@ -1264,17 +1247,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         final safePercent = _previewPercent(audiobookFormat);
         // hasFullAccess=true fetches authenticated track URLs (same as Listen Now)
         // isPreviewMode is forced true so the player enforces the limit
-        await _markPreviewSeen(bookId);
-        await _openAudiobookPlayerFromV2(
+        await _playAudiobookPreview(
           bookId: bookId,
           bookName: bookName,
           bookImage: bookImage,
           authorName: authorName,
-          hasFullAccess: FFAppState().isLogin,
-          previewPercent: safePercent,
-          forceIsPreviewMode: true,
-          isFree: false,
-          audiobookFormat: audiobookFormat,
         );
         return;
       }
@@ -1416,7 +1393,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
       final audiobookPrice = _formatPrice(audiobookFormat);
       final audiobookPreviewPercent = _previewPercent(audiobookFormat);
-      final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+      final isAudiobookFree = _audiobookPricingMode == 'per_chapter'
+          ? false
+          : (isBookFree || audiobookPrice <= 0);
       final hasAccessByApi = FFAppState().isLogin &&
           await _hasFormatAccess(bookId: bookId, format: 'audiobook');
       final hasAccess = isAudiobookFree || hasAccessByApi;
@@ -1459,15 +1438,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         }
         return;
       }
-      await _openAudiobookPlayerFromV2(
+      await _playAudiobookPreview(
         bookId: bookId,
         bookName: bookName,
         bookImage: bookImage,
         authorName: authorName,
-        hasFullAccess: false,
-        previewPercent: audiobookPreviewPercent,
-        isFree: false,
-        audiobookFormat: audiobookFormat,
       );
       return;
     }
@@ -1576,31 +1551,18 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           await http.get(uri, headers: _apiHeaders(authRequired: FFAppState().isLogin));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map?;
+        final pricingMode = body?['pricing_mode']?.toString();
         final raw = body?['chapters'];
         if (raw is List) {
           final parsed = raw
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
-          if (parsed.isEmpty) {
-            final fallback = await _fallbackAudioTrack(bookId);
-            if (fallback != null) {
-              if (mounted) {
-                safeSetState(() => _tracks = <Map<String, dynamic>>[
-                      {
-                        'track_number': fallback['track_number'],
-                        'title': fallback['title'],
-                        'duration': fallback['duration'],
-                        'is_preview': true,
-                      }
-                    ]);
-              }
-              if (mounted) safeSetState(() => _tracksLoading = false);
-              return;
-            }
-          }
           if (mounted) {
-            safeSetState(() => _tracks = parsed);
+            safeSetState(() {
+              _tracks = parsed;
+              _audiobookPricingMode = pricingMode;
+            });
           }
         } else {
           if (mounted) safeSetState(() => _tracks = []);
@@ -1726,12 +1688,14 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     final isAlreadyPurchased = FFAppState().isLogin &&
         _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
     final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
-    final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+    final isAudiobookFree = _audiobookPricingMode == 'per_chapter'
+        ? false
+        : (isBookFree || audiobookPrice <= 0);
     final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
 
     final isFree = track['is_free'] == true;
     final isUnlocked = track['is_unlocked'] == true;
-    final isLocked = (!isFree && !isUnlocked) || !hasAudiobookAccess;
+    final isLocked = !hasAudiobookAccess && !isFree && !isUnlocked;
     final trackNum = track['track_number'];
     final title = track['title']?.toString() ?? 'Episode ${index + 1}';
     final dur = track['duration']?.toString() ?? '';
@@ -1743,21 +1707,45 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         final isAlreadyPurchased = FFAppState().isLogin &&
             _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
         final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
-        final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+        final isAudiobookFree = _audiobookPricingMode == 'per_chapter'
+            ? false
+            : (isBookFree || audiobookPrice <= 0);
         final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
 
         final audiobookPreviewPercent = audiobookFormat != null ? _previewPercent(audiobookFormat) : 15;
-        await _openAudiobookPlayerFromV2(
-          bookId: bookId,
-          bookName: bookName,
-          bookImage: bookImage,
-          authorName: authorName,
-          hasFullAccess: hasAudiobookAccess,
-          previewPercent: audiobookPreviewPercent,
-          initialTrackNumber: trackNum,
-          isFree: isFree,
-          audiobookFormat: audiobookFormat,
-        );
+        final performPlay = () async {
+          await _openAudiobookPlayerFromV2(
+            bookId: bookId,
+            bookName: bookName,
+            bookImage: bookImage,
+            authorName: authorName,
+            hasFullAccess: hasAudiobookAccess,
+            previewPercent: audiobookPreviewPercent,
+            initialTrackNumber: trackNum,
+            isFree: isFree,
+            audiobookFormat: audiobookFormat,
+          );
+        };
+
+        final isEpisodeFree = isFree || track['is_preview'] == true;
+        if (isEpisodeFree && !isAlreadyPurchased) {
+          final canShowAd = await AdManager.canShowAd();
+          if (canShowAd) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => custom_widgets.AdRewardDialog(
+                bookImage: bookImage,
+                onWatchAd: performPlay,
+                adType: 'rewarded',
+              ),
+            );
+          } else {
+            await performPlay();
+          }
+        } else {
+          await performPlay();
+        }
       } else {
         if (!FFAppState().isLogin) {
           context.pushNamed(SignInPageWidget.routeName);
@@ -2232,7 +2220,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                   final isAlreadyPurchased = FFAppState().isLogin &&
                       _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
                   final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
-                  final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+                  final isAudiobookFree = _audiobookPricingMode == 'per_chapter'
+                      ? false
+                      : (isBookFree || audiobookPrice <= 0);
                   final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
 
                   Navigator.of(context).push(
@@ -2246,24 +2236,46 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         onPlayTrack: (track) async {
                           final isFree = track['is_free'] == true;
                           final isUnlocked = track['is_unlocked'] == true;
-                          final isLocked = (!isFree && !isUnlocked) || !hasAudiobookAccess;
+                          final isLocked = !hasAudiobookAccess && !isFree && !isUnlocked;
 
                           if (!isLocked) {
 
                             final audiobookPreviewPercent = audiobookFormat != null
                                 ? _previewPercent(audiobookFormat)
                                 : 15;
-                            await _openAudiobookPlayerFromV2(
-                              bookId: bookId,
-                              bookName: bookName,
-                              bookImage: bookImage,
-                              authorName: authorName,
-                              hasFullAccess: hasAudiobookAccess,
-                              previewPercent: audiobookPreviewPercent,
-                              initialTrackNumber: track['track_number'],
-                              isFree: isFree,
-                              audiobookFormat: audiobookFormat,
-                            );
+                            final performPlay = () async {
+                              await _openAudiobookPlayerFromV2(
+                                bookId: bookId,
+                                bookName: bookName,
+                                bookImage: bookImage,
+                                authorName: authorName,
+                                hasFullAccess: hasAudiobookAccess,
+                                previewPercent: audiobookPreviewPercent,
+                                initialTrackNumber: track['track_number'],
+                                isFree: isFree,
+                                audiobookFormat: audiobookFormat,
+                              );
+                            };
+
+                            final isEpisodeFree = isFree || track['is_preview'] == true;
+                            if (isEpisodeFree && !isAlreadyPurchased) {
+                              final canShowAd = await AdManager.canShowAd();
+                              if (canShowAd) {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (ctx) => custom_widgets.AdRewardDialog(
+                                    bookImage: bookImage,
+                                    onWatchAd: performPlay,
+                                    adType: 'rewarded',
+                                  ),
+                                );
+                              } else {
+                                await performPlay();
+                              }
+                            } else {
+                              await performPlay();
+                            }
                           } else {
                             if (!FFAppState().isLogin) {
                               context.pushNamed(SignInPageWidget.routeName);
@@ -2646,6 +2658,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               bookDetailspageGetbookdetailsApiResponse.jsonBody,
             ),
             "");
+        if (bookSlug.isNotEmpty && _bookSlug != bookSlug) {
+          _bookSlug = bookSlug;
+        }
         String bookName = valueOrDefault<String>(
             EbookGroup.getbookdetailsApiCall.name(
               bookDetailspageGetbookdetailsApiResponse.jsonBody,
@@ -2665,6 +2680,13 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         final formats = _formatsFromResponse(
           bookDetailspageGetbookdetailsApiResponse.jsonBody,
         );
+        final pricingModeVal = getJsonField(
+          bookDetailspageGetbookdetailsApiResponse.jsonBody,
+          r'''$.data.bookDetails[0].pricing_mode''',
+        )?.toString();
+        if (pricingModeVal != null && _audiobookPricingMode != pricingModeVal) {
+          _audiobookPricingMode = pricingModeVal;
+        }
         final isBookFree = getJsonField(
               bookDetailspageGetbookdetailsApiResponse.jsonBody,
               r'''$.data.bookDetails[0].is_free''',
@@ -2905,7 +2927,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   ShareParams(
                                                       text: bookSlug.isNotEmpty
                                                           ? "${FFAppConstants.webUrl}/book/$bookSlug"
-                                                          : "${FFAppConstants.webUrl}/book/$bookId"));
+                                                          : "${FFAppConstants.webUrl}/b/$bookId"));
                                             },
                                             child: Container(
                                               width: 40.0,
@@ -4993,29 +5015,31 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     final audiobookPrice = _formatPrice(audiobookFormat);
                                                     final audiobookCoinPrice = _formatCoinPrice(audiobookFormat);
                                                     final audiobookPreviewPercent = _previewPercent(audiobookFormat);
-                                                    final isAudiobookFree = isBookFree || audiobookPrice <= 0;
+                                                    final isAudiobookFree = _audiobookPricingMode == 'per_chapter'
+                                                        ? false
+                                                        : (isBookFree || audiobookPrice <= 0);
                                                     final hasAccessByApi = FFAppState().isLogin &&
                                                         await _hasFormatAccess(bookId: bookId, format: 'audiobook');
                                                     final hasAccess = isAudiobookFree || hasAccessByApi;
 
-                                                    if (hasAccess || isPreview) {
+                                                    if (hasAccess) {
                                                       final playAudiobook = () async {
                                                         await _openAudiobookPlayerFromV2(
                                                           bookId: bookId,
                                                           bookName: bookName,
                                                           bookImage: bookImage,
                                                           authorName: authorName,
-                                                          hasFullAccess: hasAccess,
+                                                          hasFullAccess: true,
                                                           previewPercent: audiobookPreviewPercent,
                                                           audiobookFormat: audiobookFormat,
                                                           initialTrackNumber: trackNum is int ? trackNum : (trackNum is double ? trackNum.toInt() : (trackNum != null ? int.tryParse(trackNum.toString()) : null)),
-                                                          isFree: !isPreview && isAudiobookFree,
+                                                          isFree: isAudiobookFree,
                                                         );
                                                       };
 
                                                       final isAlreadyPurchased = FFAppState().isLogin &&
                                                           _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
-                                                      final isAdNeeded = !isPreview && isAudiobookFree && !isAlreadyPurchased;
+                                                      final isAdNeeded = isAudiobookFree && !isAlreadyPurchased;
                                                       if (isAdNeeded) {
                                                         final canShowAd = await AdManager.canShowAd();
                                                         if (canShowAd) {
@@ -7169,7 +7193,7 @@ class _EpisodesListPage extends StatelessWidget {
                         final track = tracks[i];
                         final isFree = track['is_free'] == true;
                         final isUnlocked = track['is_unlocked'] == true;
-                        final isLocked = (!isFree && !isUnlocked) || !hasAudiobookAccess;
+                        final isLocked = !hasAudiobookAccess && !isFree && !isUnlocked;
                         final isPreview = track['is_preview'] == true || isFree;
                         final num = track['track_number'];
                         final title =
@@ -7200,41 +7224,3 @@ class _EpisodesListPage extends StatelessWidget {
   }
 }
 
-bool _isTrackFreeForPreview({
-  required Map<String, dynamic> track,
-  required int index,
-  required Map<String, dynamic>? audiobookFormat,
-}) {
-  debugPrint('[Audiobook V2] _isTrackFreeForPreview check for index $index');
-  if (track['is_free'] == true) {
-    debugPrint('[Audiobook V2]   - is_free is already true in track object');
-    return true;
-  }
-  final trackNum = track['track_number'];
-  final trackNumber = (trackNum is num) ? trackNum.toInt() : (index + 1);
-  if (trackNumber != 1) {
-    debugPrint('[Audiobook V2]   - trackNumber is $trackNumber, not 1. Returning false');
-    return false;
-  }
-
-  if (audiobookFormat != null && audiobookFormat['audiobook_tracks'] is List) {
-    final detailTracksList = audiobookFormat['audiobook_tracks'] as List;
-    for (var dt in detailTracksList) {
-      if (dt is Map) {
-        final dtNum = (dt['track_number'] is num)
-            ? (dt['track_number'] as num).toInt()
-            : null;
-        if (dtNum == 1) {
-          final audioUrl = dt['audio_url']?.toString();
-          final previewUrl = dt['preview_audio_url']?.toString();
-          final hasUrl = (audioUrl != null && audioUrl.trim().isNotEmpty) || 
-                          (previewUrl != null && previewUrl.trim().isNotEmpty);
-          debugPrint('[Audiobook V2]   - Track 1 audio_url: $audioUrl, preview_url: $previewUrl (hasUrl: $hasUrl)');
-          return hasUrl;
-        }
-      }
-    }
-  }
-  debugPrint('[Audiobook V2]   - No preview_audio_url found in details format. Returning false');
-  return false;
-}

@@ -146,54 +146,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
     }
   }
 
-  Future<Map<String, dynamic>> _fetchBatchAudioUrls(String bookId) async {
-    final body = await _postV2(
-      'content/batch-audio-urls',
-      body: {'book_id': bookId},
-      authRequired: true,
-    );
-    if (body is Map<String, dynamic>) {
-      return body;
-    }
-    return <String, dynamic>{};
-  }
 
-  Future<String?> _fetchAudioTrackSignedUrl({
-    required String bookId,
-    required int trackNumber,
-    required bool authRequired,
-  }) async {
-    final body = await _postV2(
-      'content/audio-url',
-      body: {'book_id': bookId, 'track_number': trackNumber},
-      authRequired: authRequired,
-    );
-    return body?['signed_url']?.toString();
-  }
-
-  Future<Map<String, dynamic>?> _fallbackAudioTrack(String bookId) async {
-    final guestUrl = await _fetchAudioTrackSignedUrl(
-      bookId: bookId,
-      trackNumber: 1,
-      authRequired: false,
-    );
-    final authUrl = guestUrl ??
-        (FFAppState().isLogin
-            ? await _fetchAudioTrackSignedUrl(
-                bookId: bookId,
-                trackNumber: 1,
-                authRequired: true,
-              )
-            : null);
-    if (authUrl == null || authUrl.isEmpty) return null;
-    return <String, dynamic>{
-      'track_number': 1,
-      'title': 'Episode 1',
-      'duration': '',
-      'is_preview': true,
-      'signed_url': authUrl,
-    };
-  }
 
   Future<String?> _fetchEbookSignedUrl(String bookId) async {
     try {
@@ -337,53 +290,30 @@ class _HomePageWidgetState extends State<HomePageWidget>
       final tracks = await _fetchAudioTracks(bookId);
       final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
       if (effectiveTracks.isEmpty) {
-        final fallback = await _fallbackAudioTrack(bookId);
-        if (fallback != null) {
-          effectiveTracks.add(fallback);
-        } else {
-          await actions.showCustomToastBottom('No tracks available');
-          return;
-        }
+        await actions.showCustomToastBottom('No tracks available');
+        return;
       }
 
       final chapters = <Map<String, dynamic>>[];
-      Map<String, dynamic> urlsMap = const <String, dynamic>{};
-      if (hasAccess && FFAppState().isLogin) {
-        final batch = await _fetchBatchAudioUrls(bookId);
-        final rawUrls = batch['urls'];
-        if (rawUrls is Map) {
-          urlsMap = Map<String, dynamic>.from(rawUrls);
-        }
-      }
-
       final previewPercent = 15;
 
       for (var i = 0; i < effectiveTracks.length; i++) {
         final track = effectiveTracks[i];
-        final isTrackFree = track['is_free'] == true;
+        final isTrackFree = track['is_free'] == true || track['is_preview'] == true;
         final isUnlocked = track['is_unlocked'] == true;
-        final isLocked = !isTrackFree && !isUnlocked;
+        final isLocked = !hasAccess && !isTrackFree && !isUnlocked;
         
         final trackNumber = (track['track_number'] is num)
             ? (track['track_number'] as num).toInt()
             : (i + 1);
-        String? signedUrl = track['audio_url']?.toString();
-        if (signedUrl == null || signedUrl.isEmpty) {
-          if (urlsMap.isNotEmpty) {
-            final candidate = urlsMap['$trackNumber'];
-            if (candidate is Map) {
-              signedUrl = candidate['signed_url']?.toString();
-            }
-          }
-          signedUrl ??= track['signed_url']?.toString();
-        }
-        if ((signedUrl == null || signedUrl.isEmpty) && !isLocked) {
+        final signedUrl = track['audio_url']?.toString() ?? track['file']?.toString() ?? track['signed_url']?.toString() ?? '';
+        if (signedUrl.isEmpty && !isLocked) {
           continue;
         }
 
         chapters.add({
           'title': track['title']?.toString() ?? 'Track $trackNumber',
-          'file': signedUrl ?? '',
+          'file': signedUrl,
           'track_number': trackNumber,
           'duration': track['duration']?.toString() ?? '',
           'isLocked': isLocked,
@@ -394,11 +324,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
       }
 
       if (chapters.isEmpty) {
-        await actions.showCustomToastBottom(
-          hasAccess
-              ? 'Unable to load audiobook tracks'
-              : 'No preview tracks available',
-        );
+        await actions.showCustomToastBottom('Unable to load audiobook tracks');
         return;
       }
 
@@ -428,6 +354,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
               'isPreviewMode': false,
               'previewPercent': previewPercent,
               'isFree': resolvedIsFree,
+              'initialTrackNumber': lastTrackNum,
             },
             'chapter': startChapter,
           },
