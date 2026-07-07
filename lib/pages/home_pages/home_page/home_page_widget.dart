@@ -157,7 +157,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         headers: _apiHeaders(authRequired: true),
         body: jsonEncode({'book_id': bookId}),
       );
-      if (res.statusCode >= 400 && res.statusCode < 500) {
+      if (res.statusCode == 401) {
         final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
@@ -174,6 +174,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
         if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
+        return null;
+      } else if (res.statusCode >= 400 && res.statusCode < 500) {
         return null;
       }
       final decoded = jsonDecode(res.body);
@@ -193,7 +195,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         headers: _apiHeaders(authRequired: false),
         body: jsonEncode({'book_id': bookId}),
       );
-      if (guestRes.statusCode >= 400 && guestRes.statusCode < 500) {
+      if (guestRes.statusCode == 401) {
         final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
@@ -210,6 +212,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
         if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
+        return null;
+      } else if (guestRes.statusCode >= 400 && guestRes.statusCode < 500) {
         return null;
       }
       final decoded = jsonDecode(guestRes.body);

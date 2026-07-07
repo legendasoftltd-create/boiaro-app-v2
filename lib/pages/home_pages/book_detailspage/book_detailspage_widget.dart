@@ -5,6 +5,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/pages/cart_pages/checkout_page_widget.dart';
 import '/pages/cart_pages/payment_screen.dart';
@@ -479,7 +480,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         headers: _apiHeaders(authRequired: true),
         body: jsonEncode({'book_id': bookId}),
       );
-      if (res.statusCode >= 400 && res.statusCode < 500) {
+      if (res.statusCode == 401) {
         final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
@@ -496,6 +497,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
+        return null;
+      } else if (res.statusCode >= 400 && res.statusCode < 500) {
         return null;
       }
       final decoded = jsonDecode(res.body);
@@ -590,7 +593,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         headers: _apiHeaders(authRequired: false),
         body: jsonEncode({'book_id': bookId}),
       );
-      if (guestRes.statusCode >= 400 && guestRes.statusCode < 500) {
+      if (guestRes.statusCode == 401) {
         final wasLoggedIn = FFAppState().isLogin;
         FFAppState().isLogin = false;
         FFAppState().token = '';
@@ -607,6 +610,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         if (mounted && wasLoggedIn) {
           context.pushNamed(SignInPageWidget.routeName);
         }
+        return null;
+      } else if (guestRes.statusCode >= 400 && guestRes.statusCode < 500) {
         return null;
       }
       final decoded = jsonDecode(guestRes.body);
@@ -1202,6 +1207,12 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required dynamic responseJson,
     bool forcePreview = false,
   }) async {
+    if (tab == BookMasterFormatTab.ebook || tab == BookMasterFormatTab.audiobook) {
+      if (!FFAppState().isLogin) {
+        context.pushNamed(SignInPageWidget.routeName);
+        return;
+      }
+    }
     // --- FORCE PREVIEW: always open in preview mode, ignore purchase status ---
     // Uses the same URL/tracks as Read Now but enforces the preview % limit
     // on the client (native epub reader / audio player).
@@ -1701,6 +1712,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     final dur = track['duration']?.toString() ?? '';
 
     Future<void> handlePlay() async {
+      if (!FFAppState().isLogin) {
+        context.pushNamed(SignInPageWidget.routeName);
+        return;
+      }
       if (!isLocked) {
         final audiobookFormat =
             _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
@@ -2182,7 +2197,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'No episodes available.',
+                    FFLocalizations.of(context).getVariableText(enText: 'No episodes available.', bnText: 'কোনো পর্ব উপলব্ধ নেই।'),
                     style: theme.bodySmall.override(
                       fontFamily: 'SF Pro Display',
                       color: theme.secondaryText,
@@ -2214,6 +2229,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               child: _SeeMoreButton(
                 remaining: trackCount - _episodePreviewLimit,
                 onTap: () {
+                  if (!FFAppState().isLogin) {
+                    context.pushNamed(SignInPageWidget.routeName);
+                    return;
+                  }
                   final audiobookFormat = _pickFormat(
                       formats.cast<Map<String, dynamic>>(),
                       'audiobook');
@@ -2234,6 +2253,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                         hasAudiobookAccess: hasAudiobookAccess,
                         audiobookFormat: audiobookFormat,
                         onPlayTrack: (track) async {
+                          if (!FFAppState().isLogin) {
+                            context.pushNamed(SignInPageWidget.routeName);
+                            return;
+                          }
                           final isFree = track['is_free'] == true;
                           final isUnlocked = track['is_unlocked'] == true;
                           final isLocked = !hasAudiobookAccess && !isFree && !isUnlocked;
@@ -3162,59 +3185,100 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               
                                               SizedBox(height: 8.0),
                                               // Author name
-                                              GestureDetector(
-                                                onTap: () {
-                                          final aName = EbookGroup.getbookdetailsApiCall.authorName(
-                                                        bookDetailspageGetbookdetailsApiResponse
-                                                            .jsonBody,
-                                                      ) ??
-                                                      '';
-                                                  final aImage =
-                                                      '${FFAppConstants.imageUrl}${EbookGroup.getbookdetailsApiCall.authorimage(bookDetailspageGetbookdetailsApiResponse.jsonBody) ?? ''}';
-                                                  final aId =
-                                                      EbookGroup.getbookdetailsApiCall.authorid(
-                                                            bookDetailspageGetbookdetailsApiResponse
-                                                                .jsonBody,
-                                                          ) ??
-                                                          '';
-                                                  if (aId.isNotEmpty) {
-                                                    context.pushNamed(
-                                                      AboutAuthorPageWidget.routeName,
-                                                      queryParameters: {
-                                                        'name': serializeParam(
-                                                            aName, ParamType.String),
-                                                        'authorImage': serializeParam(
-                                                            aImage, ParamType.String),
-                                                        'authorId': serializeParam(
-                                                            aId, ParamType.String),
-                                                      }.withoutNulls,
-                                                    );
-                                                  }
-                                                },
-                                                child: Text(
-                                                  'By ${EbookGroup.getbookdetailsApiCall.authorName(
-                                                        bookDetailspageGetbookdetailsApiResponse
-                                                            .jsonBody,
-                                                      ) ?? ''}',
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style:
-                                                      FlutterFlowTheme.of(context)
-                                                          .bodyMedium
-                                                          .override(
-                                                            fontFamily:
-                                                                'SF Pro Display',
-                                                            color: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .primary,
-                                                            fontSize: 13.0,
-                                                            letterSpacing: 0.0,
-                                                            fontWeight:
-                                                                FontWeight.normal,
-                                                            lineHeight: 1.3,
-                                                          ),
-                                                ),
-                                              ),
+                                               Builder(builder: (context) {
+                                                 final aName = EbookGroup.getbookdetailsApiCall.authorName(
+                                                       bookDetailspageGetbookdetailsApiResponse
+                                                           .jsonBody,
+                                                     ) ??
+                                                     '';
+                                                 final rawImage = EbookGroup.getbookdetailsApiCall.authorimage(
+                                                       bookDetailspageGetbookdetailsApiResponse
+                                                           .jsonBody,
+                                                     ) ??
+                                                     '';
+                                                 final aImage = rawImage.isNotEmpty
+                                                     ? '${FFAppConstants.imageUrl}$rawImage'
+                                                     : '';
+                                                 final aId = EbookGroup.getbookdetailsApiCall.authorid(
+                                                       bookDetailspageGetbookdetailsApiResponse
+                                                           .jsonBody,
+                                                     ) ??
+                                                     '';
+                                                 return GestureDetector(
+                                                   onTap: () {
+                                                     if (aId.isNotEmpty) {
+                                                       context.pushNamed(
+                                                         AboutAuthorPageWidget.routeName,
+                                                         queryParameters: {
+                                                           'name': serializeParam(
+                                                               aName, ParamType.String),
+                                                           'authorImage': serializeParam(
+                                                               aImage, ParamType.String),
+                                                           'authorId': serializeParam(
+                                                               aId, ParamType.String),
+                                                         }.withoutNulls,
+                                                       );
+                                                     }
+                                                   },
+                                                   child: Row(
+                                                     mainAxisSize: MainAxisSize.min,
+                                                     children: [
+                                                       Container(
+                                                         margin: const EdgeInsets.only(right: 6.0),
+                                                         child: ClipRRect(
+                                                           borderRadius: BorderRadius.circular(12.0),
+                                                           child: aImage.isNotEmpty
+                                                               ? CachedNetworkImage(
+                                                                   fadeInDuration: const Duration(milliseconds: 200),
+                                                                   fadeOutDuration: const Duration(milliseconds: 200),
+                                                                   imageUrl: aImage,
+                                                                   width: 24.0,
+                                                                   height: 24.0,
+                                                                   fit: BoxFit.cover,
+                                                                   errorWidget: (context, error, stackTrace) => Container(
+                                                                     width: 24.0,
+                                                                     height: 24.0,
+                                                                     color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                     child: Icon(
+                                                                       Icons.person,
+                                                                       size: 14.0,
+                                                                       color: FlutterFlowTheme.of(context).secondaryText,
+                                                                     ),
+                                                                   ),
+                                                                 )
+                                                               : Container(
+                                                                   width: 24.0,
+                                                                   height: 24.0,
+                                                                   color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                   child: Icon(
+                                                                     Icons.person,
+                                                                     size: 14.0,
+                                                                     color: FlutterFlowTheme.of(context).secondaryText,
+                                                                   ),
+                                                                 ),
+                                                         ),
+                                                       ),
+                                                       Flexible(
+                                                         child: Text(
+                                                           aName,
+                                                           maxLines: 1,
+                                                           overflow: TextOverflow.ellipsis,
+                                                           style: FlutterFlowTheme.of(context)
+                                                               .bodyMedium
+                                                               .override(
+                                                                 fontFamily: 'SF Pro Display',
+                                                                 color: FlutterFlowTheme.of(context).primary,
+                                                                 fontSize: 13.0,
+                                                                 letterSpacing: 0.0,
+                                                                 fontWeight: FontWeight.normal,
+                                                                 lineHeight: 1.3,
+                                                               ),
+                                                         ),
+                                                       ),
+                                                     ],
+                                                   ),
+                                                 );
+                                               }),
                                               SizedBox(height: 12.0),
 
                                               // Rating + reads row
@@ -3256,7 +3320,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       size: 14.0),
                                                   const SizedBox(width: 3.0),
                                                   Text(
-                                                    '${getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r"$.data.bookDetails[0].total_reads") ?? 0} reads',
+                                                    '${getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r"$.data.bookDetails[0].total_reads") ?? 0} ' + FFLocalizations.of(context).getVariableText(enText: 'reads', bnText: 'পঠিত'),
                                                     style: FlutterFlowTheme.of(
                                                             context)
                                                         .bodySmall
@@ -3280,7 +3344,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         size: 14.0),
                                                     const SizedBox(width: 3.0),
                                                     Text(
-                                                      '${getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r"$.data.bookDetails[0].total_listens") ?? 0} listens',
+                                                      '${getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r"$.data.bookDetails[0].total_listens") ?? 0} ' + FFLocalizations.of(context).getVariableText(enText: 'listens', bnText: 'বার শোনা হয়েছে'),
                                                       style: FlutterFlowTheme.of(
                                                               context)
                                                           .bodySmall
@@ -3438,7 +3502,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               ? 0.45
                                                               : 1,
                                                       child: Text(
-                                                        'eBook',
+                                                          FFLocalizations.of(context).getVariableText(enText: 'eBook', bnText: 'ই-বই'),
                                                         style: FlutterFlowTheme
                                                                 .of(context)
                                                             .bodySmall
@@ -3497,7 +3561,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               ? 0.45
                                                               : 1,
                                                       child: Text(
-                                                        'Audiobook',
+                                                          FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক'),
                                                         style: FlutterFlowTheme
                                                                 .of(context)
                                                             .bodySmall
@@ -3555,7 +3619,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               ? 0.45
                                                               : 1,
                                                       child: Text(
-                                                        'Hardcopy',
+                                                          FFLocalizations.of(context).getVariableText(enText: 'Hardcopy', bnText: 'প্রিন্ট কপি'),
                                                         style: FlutterFlowTheme
                                                                 .of(context)
                                                             .bodySmall
@@ -4775,7 +4839,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                         padding: const EdgeInsetsDirectional
                                             .fromSTEB(16.0, 16.0, 16.0, 12.0),
                                         child: Text(
-                                          'People',
+                                           FFLocalizations.of(context).getVariableText(enText: 'People', bnText: 'সংশ্লিষ্ট ব্যক্তিবর্গ'),
                                           style: FlutterFlowTheme.of(context)
                                               .bodyMedium
                                               .override(
@@ -4791,7 +4855,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                       // Author row
                                       if (aName.isNotEmpty)
                                         _buildPersonRow(
-                                          label: 'Author',
+                                          label: FFLocalizations.of(context).getVariableText(enText: 'Author', bnText: 'লেখক'),
                                           name: aName,
                                           imageUrl: aImage,
                                           subtitle: '',
@@ -4811,7 +4875,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                        // Translator row
                                        if (tName.isNotEmpty)
                                          _buildPersonRow(
-                                           label: 'Translator',
+                                           label: FFLocalizations.of(context).getVariableText(enText: 'Translator', bnText: 'অনুবাদক'),
                                            name: tName,
                                            imageUrl: tImage,
                                            subtitle: '',
@@ -4828,7 +4892,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                        // Narrator row (audiobook only)
                                        for (final narrator in resolvedNarrators)
                                          _buildPersonRow(
-                                           label: 'Narrator',
+                                           label: FFLocalizations.of(context).getVariableText(enText: 'Narrator', bnText: 'কণ্ঠশিল্পী'),
                                            name: narrator['name']?.toString() ?? '',
                                            imageUrl: () {
                                              final img = narrator['image']?.toString() ?? '';
@@ -4863,7 +4927,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
                                       if (publisherName.isNotEmpty)
                                         _buildPersonRow(
-                                          label: 'Publisher',
+                                          label: FFLocalizations.of(context).getVariableText(enText: 'Publisher', bnText: 'প্রকাশক'),
                                           name: publisherName,
                                           imageUrl: publisherImage,
                                           subtitle: '',
@@ -4969,7 +5033,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   const EdgeInsets.symmetric(
                                                       vertical: 8.0),
                                               child: Text(
-                                                'No episodes available.',
+                                                FFLocalizations.of(context).getVariableText(enText: 'No episodes available.', bnText: 'কোনো পর্ব উপলব্ধ নেই।'),
                                                 style:
                                                     FlutterFlowTheme.of(context)
                                                         .bodySmall
@@ -5009,7 +5073,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 ),
                                                 child: ListTile(
                                                   onTap: () async {
-                                                    final audiobookFormat = _pickFormat(
+                                                    if (!FFAppState().isLogin) {
+                                                       context.pushNamed(SignInPageWidget.routeName);
+                                                       return;
+                                                     }
+                                                     final audiobookFormat = _pickFormat(
                                                         formats.cast<Map<String, dynamic>>(), 'audiobook');
                                                     if (audiobookFormat == null) return;
                                                     final audiobookPrice = _formatPrice(audiobookFormat);
@@ -5896,7 +5964,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               Padding(
                                                 padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 0.0, 16.0),
                                                 child: Text(
-                                                  'More from author',
+                                                  FFLocalizations.of(context).getVariableText(enText: 'More from author', bnText: 'লেখকের অন্যান্য বই'),
                                                   textAlign: TextAlign.start,
                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                     fontFamily: 'SF Pro Display',
@@ -7044,7 +7112,7 @@ class _SeeMoreButtonState extends State<_SeeMoreButton> {
               ),
               const SizedBox(width: 6),
               Text(
-                'See All Episodes (+${widget.remaining} more)',
+                '${FFLocalizations.of(context).getVariableText(enText: 'See All Episodes', bnText: 'সব পর্ব দেখুন')} (+${widget.remaining} ${FFLocalizations.of(context).getVariableText(enText: 'more', bnText: 'আরও')})',
                 style: TextStyle(
                   fontFamily: 'SF Pro Display',
                   fontSize: 13,

@@ -226,7 +226,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       // Use DevicePreview's locale and builder in debug mode
-      locale: DevicePreview.locale(context) ?? _locale,
+      locale: _locale,
       builder: (context, child) {
         return Listener(
           onPointerDown: (_) {

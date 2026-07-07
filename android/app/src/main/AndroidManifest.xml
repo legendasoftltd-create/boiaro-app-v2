@@ -73,6 +73,14 @@
                 <data android:host="boiaro.com" />
                 <data android:host="www.boiaro.com" />
             </intent-filter>
+
+            <!-- Custom URL Scheme for boiaro -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="boiaro" />
+            </intent-filter>
         </activity>
 
         <!-- Facebook Login Activity -->
