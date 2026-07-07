@@ -125,6 +125,10 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
             _initialPdfPage = remote.currentPage;
           }
           await ReadingReportService.instance.startSession(bookId: bookId);
+          unawaited(EbookGroup.registerBookReadApiCall.call(
+            bookId: bookId,
+            token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
+          ));
         }
         if (!mounted) return;
         safeSetState(() {
@@ -609,6 +613,8 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       filePath: resolvedPath,
       namePage: widget.name,
       bookId: widget.id,
+      initialPage: _initialPdfPage,
+      onPageChanged: _onPdfPageChanged,
     );
   }
 

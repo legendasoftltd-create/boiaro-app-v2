@@ -19,9 +19,6 @@ import 'pdf_viewer_helpers.dart';
 import 'pdf_viewer_text_operations.dart';
 import 'pdf_viewer_pdf_operations.dart';
 import '/services/reading_report_service.dart';
-import '/services/reading_progress_service.dart';
-import '/services/progress_sync_service.dart';
-import 'package:a_i_ebook_app/backend/api_requests/api_calls.dart';
 
 class FlutterPdfViewWidget extends StatefulWidget {
   const FlutterPdfViewWidget({
@@ -31,6 +28,8 @@ class FlutterPdfViewWidget extends StatefulWidget {
     this.filePath,
     this.namePage,
     this.bookId,
+    this.initialPage,
+    this.onPageChanged,
   });
 
   final double? width;
@@ -38,6 +37,8 @@ class FlutterPdfViewWidget extends StatefulWidget {
   final String? filePath;
   final String? namePage;
   final String? bookId;
+  final int? initialPage;
+  final void Function(int page, int totalPages)? onPageChanged;
 
   @override
   State<FlutterPdfViewWidget> createState() => _FlutterPdfViewWidgetState();
@@ -135,49 +136,23 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
   Future<void> _bootstrapReader() async {
     if (!mounted) return;
     final provider = context.read<PdfViewerProvider>();
-    await _loadInitialProgress(provider);
-    if (!mounted) return;
-
     _currentBookId = PdfViewerTextOperations.generateBookId(_resolvedFilePath);
     provider.setCurrentBookId(_currentBookId);
     provider.loadHighlights(_currentBookId!);
     provider.loadBookmarks(_currentBookId!);
 
     PdfViewerHelpers.determineReaderType(_resolvedFilePath, provider);
-    if (provider.currentPage <= 0) {
-      provider.setCurrentPage(1);
-    }
+    
+    final initialPage = widget.initialPage ?? provider.currentPage;
+    provider.setCurrentPage(initialPage > 0 ? initialPage : 1);
+    
     PdfViewerHelpers.getInitialBrightness(provider);
     ReadingReportService.instance.setDebugListener(_onReadingDebug);
 
-    unawaited(_registerBookRead());
-    unawaited(_startReadingSession());
-    _startProgressHeartbeat();
-
     ScreenProtector.protectDataLeakageOn();
-  }
-
-  Future<void> _loadInitialProgress(PdfViewerProvider provider) async {
-    if (_initialProgressLoaded) {
-      return;
-    }
-    _initialProgressLoaded = true;
-    final bookId = (widget.bookId ?? FFAppState().homePageBookId).trim();
-    if (bookId.isEmpty) {
-      return;
-    }
-    final remote = await ProgressSyncService.fetchReadingProgress(bookId);
-    if (!remote.hasProgress) {
-      return;
-    }
-    final currentPage = remote.currentPage <= 0 ? 1 : remote.currentPage;
-    provider.setCurrentPage(currentPage);
-    FFAppState().homePageCurrentPdfIndex = currentPage;
-    if (remote.totalPages > 0) {
-      FFAppState().homePageTotalPdfPageIndex = remote.totalPages;
-      FFAppState().totalPages = remote.totalPages;
-    }
-    FFAppState().update(() {});
+    
+    // Fire initial page changed callback
+    widget.onPageChanged?.call(provider.currentPage, FFAppState().totalPages);
   }
 
   @override
@@ -207,113 +182,13 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
     return Uri.parse(FFAppConstants.webUrl).resolve(trimmed).toString();
   }
 
-  Future<void> _registerBookRead() async {
-    final bookId = (widget.bookId ?? FFAppState().homePageBookId).trim();
-    if (bookId.isEmpty) return;
-    try {
-      await EbookGroup.registerBookReadApiCall.call(
-        bookId: bookId,
-        token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
-      );
-      debugPrint('BOOK READ REGISTERED: bookId=$bookId');
-    } catch (e) {
-      debugPrint('BOOK READ REGISTER ERROR: $e');
-    }
-  }
-
-  Future<void> _startReadingSession() async {
-    final bookId = (widget.bookId ?? FFAppState().homePageBookId).trim();
-    if (bookId.isEmpty) return;
-    await ReadingReportService.instance.startSession(bookId: bookId);
-    _hasEndedForBackground = false;
-  }
-
-  void _startProgressHeartbeat() {
-    _stopProgressHeartbeat();
-    _progressHeartbeatTimer = Timer.periodic(const Duration(seconds: 45), (_) {
-      if (!mounted) return;
-      final provider = context.read<PdfViewerProvider>();
-      unawaited(_reportProgress(provider, force: true, fromHeartbeat: true));
-    });
-  }
-
-  void _stopProgressHeartbeat() {
-    _progressHeartbeatTimer?.cancel();
-    _progressHeartbeatTimer = null;
-  }
-
-  Future<void> _reportProgress(
-    PdfViewerProvider provider, {
-    bool force = false,
-    bool fromHeartbeat = false,
-  }) async {
-    if (fromHeartbeat && !ReadingReportService.instance.hasActiveSession) {
-      await _startReadingSession();
-    }
-    final percent = _calculateProgressPercent(provider);
-    final bookId = (widget.bookId ?? FFAppState().homePageBookId).trim();
-    if (bookId.isNotEmpty) {
-      final name = (widget.namePage ?? FFAppState().homePageBookName).trim();
-      final imageUrl = FFAppState().homePageLiveReadBook.trim();
-      final totalPages = FFAppState().totalPages <= 0 ? 1 : FFAppState().totalPages;
-      final currentPage = provider.currentPage.clamp(1, totalPages);
-      
-      unawaited(ReadingProgressService.upsertProgress(
-        bookId: bookId,
-        percent: percent.toDouble(),
-        name: name,
-        imageUrl: imageUrl,
-        contentType: 'ebook',
-      ));
-      unawaited(ProgressSyncService.saveReadingProgress(
-        bookId: bookId,
-        currentPage: currentPage,
-        totalPages: totalPages,
-      ));
-    }
-    await ReadingReportService.instance.updateProgress(
-      percentage: percent,
-      force: force,
-    );
-  }
-
-  int _calculateProgressPercent(PdfViewerProvider provider) {
-    final total = FFAppState().totalPages <= 0 ? 1 : FFAppState().totalPages;
-    final current = provider.currentPage.clamp(1, total);
-    return ((current / total) * 100).round().clamp(0, 100);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!mounted) return;
-
-    if (state == AppLifecycleState.resumed) {
-      if (_hasEndedForBackground) {
-        unawaited(_startReadingSession());
-        _startProgressHeartbeat();
-      }
-      return;
-    }
-
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      final provider = context.read<PdfViewerProvider>();
-      unawaited(_reportProgress(provider, force: true));
-      unawaited(ReadingReportService.instance.endSession());
-      _stopProgressHeartbeat();
-      _hasEndedForBackground = true;
-    }
-  }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _stopProgressHeartbeat();
     ReadingReportService.instance.setDebugListener(null);
-    final provider = context.read<PdfViewerProvider>();
-    unawaited(_reportProgress(provider, force: true));
     unawaited(ReadingReportService.instance.endSession());
+    final provider = context.read<PdfViewerProvider>();
     PdfViewerHelpers.restoreOriginalBrightness(provider);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -328,7 +203,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
     if (provider.currentPage != FFAppState().totalPages) {
       provider.incrementPage();
       pdfViewerController.jumpToPage(provider.currentPage);
-      unawaited(_reportProgress(provider, force: true));
+      widget.onPageChanged?.call(provider.currentPage, FFAppState().totalPages);
     }
   }
 
@@ -337,7 +212,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
     if (provider.currentPage > 1) {
       provider.decrementPage();
       pdfViewerController.jumpToPage(provider.currentPage);
-      unawaited(_reportProgress(provider, force: true));
+      widget.onPageChanged?.call(provider.currentPage, FFAppState().totalPages);
     }
   }
 
@@ -550,14 +425,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
                                       SchedulerBinding.instance
                                           .addPostFrameCallback((_) {
                                         provider.setCurrentPage(details.newPageNumber);
-                                        FFAppState().update(() {
-                                          FFAppState().homePageCurrentPdfIndex =
-                                              provider.currentPage;
-                                        });
-                                        unawaited(_reportProgress(
-                                          provider,
-                                          force: true,
-                                        ));
+                                        widget.onPageChanged?.call(details.newPageNumber, FFAppState().totalPages);
                                       });
                                     },
                                     onTextSelectionChanged:
@@ -608,14 +476,7 @@ class _FlutterPdfViewWidgetState extends State<FlutterPdfViewWidget>
                                       SchedulerBinding.instance
                                           .addPostFrameCallback((_) {
                                         provider.setCurrentPage(details.newPageNumber);
-                                        FFAppState().update(() {
-                                          FFAppState().homePageCurrentPdfIndex =
-                                              provider.currentPage;
-                                        });
-                                        unawaited(_reportProgress(
-                                          provider,
-                                          force: true,
-                                        ));
+                                        widget.onPageChanged?.call(details.newPageNumber, FFAppState().totalPages);
                                       });
                                     },
                                     onTextSelectionChanged:
