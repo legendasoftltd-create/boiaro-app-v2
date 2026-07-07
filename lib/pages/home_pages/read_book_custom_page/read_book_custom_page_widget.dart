@@ -3,6 +3,7 @@ import 'package:epubx/epubx.dart' as epubx;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_pdf_viewer.dart';
+import '/custom_code/widgets/pdf_viewer/flutter_pdf_view_widget.dart';
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
 import '/services/progress_sync_service.dart';
@@ -602,51 +603,13 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     if (resolvedPath.isEmpty) {
       return const Center(child: Text('Invalid PDF path'));
     }
-    if (resolvedPath.startsWith('http://') ||
-        resolvedPath.startsWith('https://')) {
-      return FlutterFlowPdfViewer(
-        networkPath: resolvedPath,
-        width: double.infinity,
-        height: double.infinity,
-        horizontalScroll: false,
-        initialPage: _initialPdfPage,
-        onPageChanged: _onPdfPageChanged,
-      );
-    } else if (resolvedPath.startsWith('assets/')) {
-      return FlutterFlowPdfViewer(
-        assetPath: resolvedPath,
-        width: double.infinity,
-        height: double.infinity,
-        horizontalScroll: false,
-        initialPage: _initialPdfPage,
-        onPageChanged: _onPdfPageChanged,
-      );
-    } else {
-      try {
-        final file = File(resolvedPath);
-        if (file.existsSync()) {
-          final bytes = file.readAsBytesSync();
-          return FlutterFlowPdfViewer(
-            fileBytes: bytes,
-            width: double.infinity,
-            height: double.infinity,
-            horizontalScroll: false,
-            initialPage: _initialPdfPage,
-            onPageChanged: _onPdfPageChanged,
-          );
-        }
-      } catch (e) {
-        debugPrint('Error reading local PDF file bytes: $e');
-      }
-      return FlutterFlowPdfViewer(
-        networkPath: resolvedPath,
-        width: double.infinity,
-        height: double.infinity,
-        horizontalScroll: false,
-        initialPage: _initialPdfPage,
-        onPageChanged: _onPdfPageChanged,
-      );
-    }
+    return FlutterPdfViewWidget(
+      width: double.infinity,
+      height: double.infinity,
+      filePath: resolvedPath,
+      namePage: widget.name,
+      bookId: widget.id,
+    );
   }
 
   @override

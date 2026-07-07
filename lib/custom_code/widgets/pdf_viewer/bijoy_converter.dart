@@ -17,12 +17,10 @@ class BijoyConverter {
     'v': 'া', 'w': 'ি', 'x': 'ী', 'y': 'ু', 'z': 'ূ', '"': 'ৃ',
     '†': 'ে', '‡': 'ে', 'ˆ': 'ৈ', '†v': 'ো', '†Š': 'ৌ',
     // Numbers
-    // Numbers
     '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬',
     '7': '৭', '8': '৮', '9': '৯',
     // Conjuncts/Others (simplified)
     '&': 'ক্ষ',
-    // Add many more conjuncts ideally...
   };
 
   static String convert(String text, {bool preProcess = true}) {
@@ -71,7 +69,6 @@ class BijoyConverter {
     if (text.isEmpty) return text;
 
     // Simple character-by-character mapping for common cases
-    // টাকা -> UvKv
     final Map<String, String> unicodeToBijoy = {
       'ট': 'U', 'া': 'v', 'ক': 'K',
       'ল': 'j', 'ে': '†', 'খ': 'L',

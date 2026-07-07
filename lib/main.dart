@@ -22,7 +22,7 @@ import 'flutter_flow/flutter_flow_util.dart';
 import 'flutter_flow/internationalization.dart';
 import 'index.dart';
 import '/providers/cart_provider.dart';
-import '/providers/pdf_viewer_provider.dart';
+import 'custom_code/widgets/pdf_viewer/pdf_viewer_provider.dart';
 import 'package:audio_service/audio_service.dart';
 import 'services/audio_playback_service.dart';
 import 'custom_code/ad_manager.dart';
@@ -84,7 +84,7 @@ void main() async {
         providers: [
           ChangeNotifierProvider(create: (context) => appState),
           ChangeNotifierProvider(create: (context) => CartProvider()),
-          // ChangeNotifierProvider(create: (context) => PdfViewerProvider()),
+          ChangeNotifierProvider(create: (context) => PdfViewerProvider()),
         ],
         child: MyApp(),
       ),

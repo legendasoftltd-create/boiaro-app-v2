@@ -218,6 +218,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
             if (nextIdx != null) {
               _playChapterAt(nextIdx);
             } else {
+              _handler?.pause();
               _maybeShowRateDialog();
             }
           }

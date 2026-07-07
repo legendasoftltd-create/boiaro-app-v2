@@ -84,6 +84,7 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
   AudiobookAudioHandler() {
     _ambientPlayer.setLoopMode(LoopMode.one);
     _ambientPlayer.setVolume(ambientVolume);
+    _player.setLoopMode(LoopMode.off);
 
     _player.playerStateStream.listen((state) {
       _updateAmbientState();
