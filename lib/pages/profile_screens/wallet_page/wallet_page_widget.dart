@@ -1239,7 +1239,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                       gradient: LinearGradient(
                                         colors: [
                                           FlutterFlowTheme.of(context).primary,
-                                          FlutterFlowTheme.of(context).secondary,
+                                          FlutterFlowTheme.of(context).primary.withOpacity(0.4),
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
