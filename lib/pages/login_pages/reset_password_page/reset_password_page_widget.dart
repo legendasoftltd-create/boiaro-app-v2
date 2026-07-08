@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -70,7 +72,7 @@ class _ResetPasswordPageWidgetState extends State<ResetPasswordPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Reset password',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Reset password', bnText: 'পাসওয়ার্ড পুনর্নির্ধারণ'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -92,8 +94,7 @@ class _ResetPasswordPageWidgetState extends State<ResetPasswordPageWidget> {
                       ),
                       scrollDirection: Axis.vertical,
                       children: [
-                        Text(
-                          'Enter your email for the verification process. we will send 4 digits code to your email.',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'Enter your email for the verification process. we will send 4 digits code to your email.', bnText: 'যাচাইকরণের জন্য আপনার ইমেইল লিখুন। আমরা আপনার ইমেইলে একটি ৪ ডিজিটের কোড পাঠাবো।'),
                           textAlign: TextAlign.center,
                           style:
                               FlutterFlowTheme.of(context).bodyMedium.override(
@@ -113,7 +114,7 @@ class _ResetPasswordPageWidgetState extends State<ResetPasswordPageWidget> {
                             textInputAction: TextInputAction.next,
                             obscureText: !_model.passwordVisibility1,
                             decoration: InputDecoration(
-                              labelText: 'New password',
+                              labelText: FFLocalizations.of(context).getVariableText(enText: 'New password', bnText: 'নতুন পাসওয়ার্ড'),
                               labelStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -123,7 +124,7 @@ class _ResetPasswordPageWidgetState extends State<ResetPasswordPageWidget> {
                                     fontSize: 14.0,
                                     letterSpacing: 0.0,
                                   ),
-                              hintText: 'Enter new password',
+                              hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter new password', bnText: 'নতুন পাসওয়ার্ড লিখুন'),
                               hintStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -209,7 +210,7 @@ class _ResetPasswordPageWidgetState extends State<ResetPasswordPageWidget> {
                           textInputAction: TextInputAction.done,
                           obscureText: !_model.passwordVisibility2,
                           decoration: InputDecoration(
-                            labelText: 'Confirm password',
+                            labelText: FFLocalizations.of(context).getVariableText(enText: 'Confirm password', bnText: 'পাসওয়ার্ড নিশ্চিত করুন'),
                             labelStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -219,7 +220,7 @@ class _ResetPasswordPageWidgetState extends State<ResetPasswordPageWidget> {
                                   fontSize: 14.0,
                                   letterSpacing: 0.0,
                                 ),
-                            hintText: 'Enter confirm password',
+                            hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter confirm password', bnText: 'পাসওয়ার্ড পুনরায় নিশ্চিত করুন'),
                             hintStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -383,7 +384,7 @@ class _ResetPasswordPageWidgetState extends State<ResetPasswordPageWidget> {
 
                                 safeSetState(() {});
                               },
-                              text: 'Reset password',
+                              text: FFLocalizations.of(context).getVariableText(enText: 'Reset password', bnText: 'পাসওয়ার্ড পুনর্নির্ধারণ'),
                               options: FFButtonOptions(
                                 width: double.infinity,
                                 height: 56.0,

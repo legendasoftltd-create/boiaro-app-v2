@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'best_narrator_page_model.dart';
 export 'best_narrator_page_model.dart';
 
+import '/flutter_flow/internationalization.dart';
 class BestNarratorPageWidget extends StatefulWidget {
   const BestNarratorPageWidget({super.key});
 
@@ -63,7 +64,7 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                 model: _model.singleAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: SingleAppbarWidget(
-                  title: 'Best narrator',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Best narrator', bnText: 'সেরা ভয়েস আর্টিস্ট'),
                 ),
               ),
               Expanded(

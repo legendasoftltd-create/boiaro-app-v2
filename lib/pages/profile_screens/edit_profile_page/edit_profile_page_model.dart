@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
@@ -28,7 +30,10 @@ class EditProfilePageModel extends FlutterFlowModel<EditProfilePageWidget> {
   String? Function(BuildContext, String?)? textController1Validator;
   String? _textController1Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter a display name';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter a display name',
+        bnText: 'অনুগ্রহ করে একটি প্রদর্শন নাম লিখুন',
+      );
     }
     return null;
   }

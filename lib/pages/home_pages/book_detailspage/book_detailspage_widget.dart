@@ -267,7 +267,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       );
     } catch (e) {
       debugPrint('Open book failed: $e');
-      await actions.showCustomToastBottom('Failed to open book');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to open book', bnText: 'বই খুলতে ব্যর্থ'));
     } finally {
       if (mounted) {
         safeSetState(() => _isOpeningReader = false);
@@ -707,7 +707,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       await actions.showCustomToastBottom(err);
       return false;
     } catch (_) {
-      await actions.showCustomToastBottom('Wallet unlock failed');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Wallet unlock failed', bnText: 'ওয়ালেট আনলক ব্যর্থ হয়েছে'));
       return false;
     }
   }
@@ -724,26 +724,25 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           context: context,
           builder: (ctx) {
             return AlertDialog(
-              title: const Text('Unlock with Coins'),
+              title: Text(FFLocalizations.of(context).getVariableText(enText: 'Unlock with Coins', bnText: 'কয়েন দিয়ে আনলক করুন')),
               content: Text(
                 balance == null
-                    ? 'Unlock "$bookName" for $coinCost coins?'
-                    : 'Unlock "$bookName" for $coinCost coins?\nYour balance: $balance',
+                    ? FFLocalizations.of(context).getVariableText(enText: 'Unlock "$bookName" for $coinCost coins?', bnText: '"$bookName" আনলক করতে $coinCost কয়েন লাগবে?')
+                    : FFLocalizations.of(context).getVariableText(enText: 'Unlock "$bookName" for $coinCost coins?\nYour balance: $balance', bnText: '"$bookName" আনলক করতে $coinCost কয়েন লাগবে?\nআপনার ব্যালেন্স: $balance'),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('Cancel'),
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন')),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text('Unlock'),
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Unlock', bnText: 'আনলক করুন')),
                 ),
               ],
             );
           },
-        ) ??
-        false;
+        ) ?? false;
     if (!confirmed) return false;
     return _unlockWithCoins(bookId: bookId, format: format, coinCost: coinCost);
   }
@@ -760,17 +759,17 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       final uri = Uri.parse('https://boiaro.com/api/v1/books/$bookId');
       final res = await http.get(uri);
       if (res.statusCode != 200) {
-        await actions.showCustomToastBottom('Failed to load preview metadata');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to load preview metadata', bnText: 'প্রিভিউ মেটাডেটা লোড করতে ব্যর্থ'));
         return;
       }
       final decoded = jsonDecode(res.body);
       if (decoded is! Map) {
-        await actions.showCustomToastBottom('Invalid preview response');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Invalid preview response', bnText: 'অবৈধ প্রিভিউ রেসপন্স'));
         return;
       }
       final formats = decoded['formats'];
       if (formats is! List) {
-        await actions.showCustomToastBottom('Formats not found in book data');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Formats not found in book data', bnText: 'বইয়ের তথ্যে ফরম্যাট পাওয়া যায়নি'));
         return;
       }
       Map<String, dynamic>? audiobookFormat;
@@ -781,19 +780,19 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         }
       }
       if (audiobookFormat == null) {
-        await actions.showCustomToastBottom('Audiobook format details not found');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Audiobook format details not found', bnText: 'অডিওবুক ফরম্যাটের বিবরণ পাওয়া যায়নি'));
         return;
       }
       final previewPercent = (audiobookFormat['preview_percentage'] as num?)?.toInt() ?? 15;
       final tracks = audiobookFormat['audiobook_tracks'];
       if (tracks is! List || tracks.isEmpty) {
-        await actions.showCustomToastBottom('No preview tracks available');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'No preview tracks available', bnText: 'কোনো প্রিভিউ ট্র্যাক উপলব্ধ নেই'));
         return;
       }
       final firstTrack = Map<String, dynamic>.from(tracks.first);
       final audioUrl = firstTrack['audio_url']?.toString() ?? '';
       if (audioUrl.isEmpty) {
-        await actions.showCustomToastBottom('Preview audio file not found');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Preview audio file not found', bnText: 'প্রিভিউ অডিও ফাইল পাওয়া যায়নি'));
         return;
       }
 
@@ -843,7 +842,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       );
     } catch (e) {
       debugPrint('Error starting preview playback: $e');
-      await actions.showCustomToastBottom('Failed to load preview');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to load preview', bnText: 'প্রিভিউ লোড করতে ব্যর্থ'));
     }
   }
 
@@ -879,7 +878,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     debugPrint('[Audiobook V2] Fetched ${tracks.length} tracks from chapters API');
     final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
     if (effectiveTracks.isEmpty) {
-      await actions.showCustomToastBottom('No tracks available');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'No tracks available', bnText: 'কোনো ট্র্যাক উপলব্ধ নেই'));
       return false;
     }
 
@@ -917,7 +916,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
 
     if (chapters.isEmpty) {
-      await actions.showCustomToastBottom('Unable to load audiobook tracks');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to load audiobook tracks', bnText: 'অডিওবুক ট্র্যাক লোড করতে ব্যর্থ'));
       return false;
     }
 
@@ -1010,7 +1009,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Unlock Full Book',
+                    FFLocalizations.of(context).getVariableText(enText: 'Unlock Full Book', bnText: 'সম্পূর্ণ বই আনলক করুন'),
                     style: TextStyle(
                       fontFamily: 'SF Pro Display',
                       fontSize: 20,
@@ -1020,7 +1019,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Unlock "$bookName" ($type) using Apple Pay.',
+                    '${FFLocalizations.of(context).getVariableText(enText: 'Unlock', bnText: 'আনলক করুন')} "$bookName" ($type) ${FFLocalizations.of(context).getVariableText(enText: 'using Apple Pay.', bnText: 'অ্যাপল পে ব্যবহার করে।')}',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'SF Pro Display',
@@ -1046,7 +1045,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                           Icon(Icons.apple, color: theme.primaryText, size: 24),
                           const SizedBox(width: 8),
                           Text(
-                            'Pay with Apple IAP',
+                            FFLocalizations.of(context).getVariableText(enText: 'Pay with Apple IAP', bnText: 'অ্যাপল পে দিয়ে পে করুন'),
                             style: TextStyle(
                               fontFamily: 'SF Pro Display',
                               fontSize: 16,
@@ -1062,7 +1061,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(false),
                     child: Text(
-                      'Cancel',
+                      FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন'),
                       style: TextStyle(
                         fontFamily: 'SF Pro Display',
                         fontSize: 14,
@@ -1094,7 +1093,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           );
 
           if (res.statusCode == 200 || res.succeeded) {
-            await actions.showCustomToastBottom('Book unlocked successfully!');
+            await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Book unlocked successfully!', bnText: 'বইটি সফলভাবে আনলক করা হয়েছে!'));
             _purchasedFormatKeys.add('${bookId.toLowerCase()}::${type.toLowerCase().trim()}');
             if (!_model.purchasedBookIds.contains(bookId)) {
               _model.purchasedBookIds.add(bookId);
@@ -1219,7 +1218,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     if (forcePreview) {
       if (tab == BookMasterFormatTab.ebook) {
         if (ebookFormat == null || ebookFormat['is_available'] == false) {
-          await actions.showCustomToastBottom('eBook format is not available');
+          await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'eBook format is not available', bnText: 'ই-বুক ফরম্যাট উপলব্ধ নয়'));
           return;
         }
         final safePercent = _previewPercent(ebookFormat); // 1–50, default 15
@@ -1234,7 +1233,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
         if (url == null || url.trim().isEmpty) {
           await actions
-              .showCustomToastBottom('Unable to load book for preview');
+              .showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to load book for preview', bnText: 'প্রিভিউ করার জন্য বইটি লোড করতে ব্যর্থ'));
           return;
         }
         await _markPreviewSeen(bookId);
@@ -1252,7 +1251,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         if (audiobookFormat == null ||
             audiobookFormat['is_available'] == false) {
           await actions
-              .showCustomToastBottom('Audiobook format is not available');
+              .showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Audiobook format is not available', bnText: 'অডিওবুক ফরম্যাট উপলব্ধ নয়'));
           return;
         }
         final safePercent = _previewPercent(audiobookFormat);
@@ -1330,7 +1329,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
 
       if (_lastEbookAuthError) {
-        await actions.showCustomToastBottom('Please login to read this ebook');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Please login to read this ebook', bnText: 'এই ই-বুকটি পড়তে অনুগ্রহ করে লগইন করুন'));
         context.pushNamed(SignInPageWidget.routeName);
         return;
       }
@@ -1356,7 +1355,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
 
       if (!FFAppState().isLogin) {
-        await actions.showCustomToastBottom('Sign in to buy/read this ebook');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Sign in to buy/read this ebook', bnText: 'এই ই-বুকটি কিনতে/পড়তে সাইন ইন করুন'));
         context.pushNamed(SignInPageWidget.routeName);
         return;
       }
@@ -1486,7 +1485,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   }) async {
     if (_isDownloadingEbook) return;
     if (!FFAppState().isLogin) {
-      await actions.showCustomToastBottom('Sign in to download');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Sign in to download', bnText: 'ডাউনলোড করতে সাইন ইন করুন'));
       context.pushNamed(SignInPageWidget.routeName);
       return;
     }
@@ -1497,7 +1496,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
     if (!hasAccess) {
       await actions
-          .showCustomToastBottom('Buy or unlock ebook before download');
+          .showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Buy or unlock ebook before download', bnText: 'ডাউনলোড করার আগে ই-বুকটি কিনুন বা আনলক করুন'));
       return;
     }
 
@@ -1507,7 +1506,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         String? url = await _fetchEbookSignedUrl(bookId);
         url ??= await _fetchEbookSignedUrlGuestAware(bookId);
         if (url == null || url.trim().isEmpty) {
-          await actions.showCustomToastBottom('Unable to fetch download URL');
+          await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to fetch download URL', bnText: 'ডাউনলোড ইউআরএল পেতে ব্যর্থ'));
           return;
         }
         await LocalDownloadService.downloadBook(
@@ -1517,10 +1516,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           author: authorName,
           remoteUrl: url,
         );
-        await actions.showCustomToastBottom('Book downloaded successfully');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Book downloaded successfully', bnText: 'বইটি সফলভাবে ডাউনলোড করা হয়েছে'));
         await _checkDownloadStatus();
       } catch (_) {
-        await actions.showCustomToastBottom('Download failed');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Download failed', bnText: 'ডাউনলোড ব্যর্থ হয়েছে'));
       } finally {
         if (mounted) safeSetState(() => _isDownloadingEbook = false);
       }
@@ -1772,7 +1771,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         final bdtPrice = (track['chapter_price_bdt'] as num?)?.toDouble() ?? 0.0;
 
         if (trackId.toString().isEmpty) {
-          await actions.showCustomToastBottom('Unable to unlock: invalid chapter ID');
+          await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to unlock: invalid chapter ID', bnText: 'আনলক করতে ব্যর্থ: অবৈধ অধ্যায় আইডি'));
           return;
         }
 
@@ -1910,7 +1909,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Unlock Chapter',
+                              FFLocalizations.of(context).getVariableText(enText: 'Unlock Chapter', bnText: 'অধ্যায় আনলক করুন'),
                               style: TextStyle(
                                 fontFamily: 'SF Pro Display',
                                 fontSize: 18,
@@ -1935,8 +1934,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                               buildUnlockOptionCard(
                                 icon: Icons.apple,
                                 iconColor: theme.primaryText,
-                                label: 'Unlock with Apple Pay',
-                                value: 'Apple IAP',
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Apple Pay', bnText: 'অ্যাপল পে দিয়ে আনলক করুন'),
+                                value: FFLocalizations.of(context).getVariableText(enText: 'Apple IAP', bnText: 'অ্যাপল ইন-অ্যাপ পারচেস'),
                                 onTap: () => Navigator.of(ctx).pop('apple_iap'),
                               ),
                               const SizedBox(height: 12),
@@ -1945,8 +1944,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 buildUnlockOptionCard(
                                   icon: Icons.monetization_on_rounded,
                                   iconColor: const Color(0xFFFFB03A),
-                                  label: 'Use Coins',
-                                  value: '$coinPrice Coins',
+                                  label: FFLocalizations.of(context).getVariableText(enText: 'Use Coins', bnText: 'কয়েন ব্যবহার করুন'),
+                                  value: '$coinPrice ' + FFLocalizations.of(context).getVariableText(enText: 'Coins', bnText: 'কয়েন'),
                                   onTap: () => Navigator.of(ctx).pop('coins'),
                                 ),
                                 const SizedBox(height: 12),
@@ -1955,7 +1954,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 buildUnlockOptionCard(
                                   icon: Icons.account_balance_wallet_rounded,
                                   iconColor: const Color(0xFF2EC4B6),
-                                  label: 'Pay with Cash',
+                                  label: FFLocalizations.of(context).getVariableText(enText: 'Pay with Cash', bnText: 'ক্যাশ পে করুন'),
                                   value: '৳${bdtPrice.toStringAsFixed(0)}',
                                   onTap: () => Navigator.of(ctx).pop('payment'),
                                 ),
@@ -1974,7 +1973,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                   ),
                                 ),
                                 child: Text(
-                                  'Cancel',
+                                  FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন'),
                                   style: TextStyle(
                                     fontFamily: 'SF Pro Display',
                                     fontSize: 14,
@@ -2011,7 +2010,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
             );
 
             if (res.statusCode == 200 || res.succeeded) {
-              await actions.showCustomToastBottom('Chapter unlocked successfully!');
+              await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Chapter unlocked successfully!', bnText: 'অধ্যায় সফলভাবে আনলক করা হয়েছে!'));
               _tracks = null;
               await _checkIfPurchased();
               safeSetState(() {});
@@ -2029,7 +2028,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         } else if (option == 'coins') {
           final balance = await _walletBalance();
           if (balance == null || balance < coinPrice) {
-            await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');
+            await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Insufficient coins. Earn coins by watching ads or buying them!', bnText: 'পর্যাপ্ত কয়েন নেই। বিজ্ঞাপন দেখে বা কিনে কয়েন উপার্জন করুন!'));
             return;
           }
           final res = await EbookGroup.unlockChapterWithCoinsCall.call(
@@ -2037,7 +2036,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
             token: FFAppState().token,
           );
           if (res.statusCode == 200 || res.succeeded) {
-            await actions.showCustomToastBottom('Chapter unlocked successfully!');
+            await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Chapter unlocked successfully!', bnText: 'অধ্যায় সফলভাবে আনলক করা হয়েছে!'));
             _tracks = null;
             safeSetState(() {});
           } else {
@@ -2078,10 +2077,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                 safeSetState(() {});
               }
             } else {
-              await actions.showCustomToastBottom('Failed to get gateway URL');
+              await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to get gateway URL', bnText: 'গেটওয়ে ইউআরএল পেতে ব্যর্থ'));
             }
           } else {
-            await actions.showCustomToastBottom('Failed to initiate payment');
+            await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to initiate payment', bnText: 'পেমেন্ট শুরু করতে ব্যর্থ'));
           }
         }
       }
@@ -2150,8 +2149,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               const SizedBox(width: 8),
               Text(
                 _tracksLoading
-                    ? 'Episodes'
-                    : 'Episodes${trackCount > 0 ? ' ($trackCount)' : ''}',
+                    ? FFLocalizations.of(context).getVariableText(enText: 'Episodes', bnText: 'পর্বসমূহ')
+                    : '${FFLocalizations.of(context).getVariableText(enText: 'Episodes', bnText: 'পর্বসমূহ')}${trackCount > 0 ? ' ($trackCount)' : ''}',
                 style: theme.bodyMedium.override(
                   fontFamily: 'SF Pro Display',
                   fontSize: 16.0,
@@ -2310,7 +2309,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                             final title = track['title']?.toString() ?? 'Episode';
 
                             if (trackId.toString().isEmpty) {
-                              await actions.showCustomToastBottom('Unable to unlock: invalid chapter ID');
+                              await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to unlock: invalid chapter ID', bnText: 'আনলক করতে ব্যর্থ: অবৈধ অধ্যায় আইডি'));
                               return;
                             }
 
@@ -2448,7 +2447,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 ),
                                                 const SizedBox(height: 16),
                                                 Text(
-                                                  'Unlock Chapter',
+                                                  FFLocalizations.of(context).getVariableText(enText: 'Unlock Chapter', bnText: 'অধ্যায় আনলক করুন'),
                                                   style: TextStyle(
                                                     fontFamily: 'SF Pro Display',
                                                     fontSize: 18,
@@ -2473,8 +2472,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   buildUnlockOptionCard(
                                                     icon: Icons.apple,
                                                     iconColor: theme.primaryText,
-                                                    label: 'Unlock with Apple Pay',
-                                                    value: 'Apple IAP',
+                                                    label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Apple Pay', bnText: 'অ্যাপল পে দিয়ে আনলক করুন'),
+                                                    value: FFLocalizations.of(context).getVariableText(enText: 'Apple IAP', bnText: 'অ্যাপল ইন-অ্যাপ পারচেস'),
                                                     onTap: () => Navigator.of(ctx).pop('apple_iap'),
                                                   ),
                                                   const SizedBox(height: 12),
@@ -2483,8 +2482,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     buildUnlockOptionCard(
                                                       icon: Icons.monetization_on_rounded,
                                                       iconColor: const Color(0xFFFFB03A),
-                                                      label: 'Use Coins',
-                                                      value: '$coinPrice Coins',
+                                                      label: FFLocalizations.of(context).getVariableText(enText: 'Use Coins', bnText: 'কয়েন ব্যবহার করুন'),
+                                                      value: '$coinPrice ' + FFLocalizations.of(context).getVariableText(enText: 'Coins', bnText: 'কয়েন'),
                                                       onTap: () => Navigator.of(ctx).pop('coins'),
                                                     ),
                                                     const SizedBox(height: 12),
@@ -2493,7 +2492,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     buildUnlockOptionCard(
                                                       icon: Icons.account_balance_wallet_rounded,
                                                       iconColor: const Color(0xFF2EC4B6),
-                                                      label: 'Pay with Cash',
+                                                      label: FFLocalizations.of(context).getVariableText(enText: 'Pay with Cash', bnText: 'ক্যাশ পে করুন'),
                                                       value: '৳${bdtPrice.toStringAsFixed(0)}',
                                                       onTap: () => Navigator.of(ctx).pop('payment'),
                                                     ),
@@ -2511,11 +2510,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         borderRadius: BorderRadius.circular(12),
                                                       ),
                                                     ),
-                                                    child: Text(
-                                                      'Cancel',
-                                                      style: TextStyle(
-                                                        fontFamily: 'SF Pro Display',
-                                                        fontSize: 14,
+                                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন'), style: TextStyle(fontFamily: 'SF Pro Display', fontSize: 14,
                                                         fontWeight: FontWeight.w600,
                                                         color: theme.secondaryText,
                                                       ),
@@ -2549,7 +2544,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 );
 
                                 if (res.statusCode == 200 || res.succeeded) {
-                                  await actions.showCustomToastBottom('Chapter unlocked successfully!');
+                                  await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Chapter unlocked successfully!', bnText: 'অধ্যায় সফলভাবে আনলক করা হয়েছে!'));
                                   _tracks = null;
                                   await _checkIfPurchased();
                                   safeSetState(() {});
@@ -2567,7 +2562,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                             } else if (option == 'coins') {
                               final balance = await _walletBalance();
                               if (balance == null || balance < coinPrice) {
-                                await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');
+                                await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Insufficient coins. Earn coins by watching ads or buying them!', bnText: 'পর্যাপ্ত কয়েন নেই। বিজ্ঞাপন দেখে বা কিনে কয়েন উপার্জন করুন!'));
                                 return;
                               }
                               final res = await EbookGroup.unlockChapterWithCoinsCall.call(
@@ -2575,7 +2570,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 token: FFAppState().token,
                               );
                               if (res.statusCode == 200 || res.succeeded) {
-                                await actions.showCustomToastBottom('Chapter unlocked successfully!');
+                                await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Chapter unlocked successfully!', bnText: 'অধ্যায় সফলভাবে আনলক করা হয়েছে!'));
                                 _tracks = null;
                                 safeSetState(() {});
                               } else {
@@ -2616,10 +2611,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     safeSetState(() {});
                                   }
                                 } else {
-                                  await actions.showCustomToastBottom('Failed to get gateway URL');
+                                  await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to get gateway URL', bnText: 'গেটওয়ে ইউআরএল পেতে ব্যর্থ'));
                                 }
                               } else {
-                                await actions.showCustomToastBottom('Failed to initiate payment');
+                                await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to initiate payment', bnText: 'পেমেন্ট শুরু করতে ব্যর্থ'));
                               }
                             }
                           }
@@ -3073,11 +3068,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               .withValues(
                                                                   alpha: 0.4),
                                                       size: 120.0,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              if (_model.isPurchased)
+                                                     ),
+                                                   ),
+                                                 ),
+                                               ),
+                                               if (_model.isPurchased)
                                                 Positioned(
                                                   top: 8.0,
                                                   right: 8.0,
@@ -3096,7 +3091,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               12.0),
                                                     ),
                                                     child: Text(
-                                                      'Purchased',
+                                                      FFLocalizations.of(context).getVariableText(enText: 'Purchased', bnText: 'কেনা হয়েছে'),
                                                       style:
                                                           FlutterFlowTheme.of(
                                                                   context)
@@ -3344,7 +3339,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         size: 14.0),
                                                     const SizedBox(width: 3.0),
                                                     Text(
-                                                      '${getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r"$.data.bookDetails[0].total_listens") ?? 0} ' + FFLocalizations.of(context).getVariableText(enText: 'listens', bnText: 'বার শোনা হয়েছে'),
+                                                      '${getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r"$.data.bookDetails[0].total_listens") ?? 0} ' + FFLocalizations.of(context).getVariableText(enText: 'listens', bnText: 'বার'),
                                                       style: FlutterFlowTheme.of(
                                                               context)
                                                           .bodySmall
@@ -3399,8 +3394,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                 ),
                                                       label: Text(
                                                         _model.isFavorite!
-                                                            ? 'Wishlisted'
-                                                            : 'Wishlist',
+                                                            ? FFLocalizations.of(context).getVariableText(enText: 'Wishlisted', bnText: 'প্রিয় তালিকায় যুক্ত')
+                                                            : FFLocalizations.of(context).getVariableText(enText: 'Wishlist', bnText: 'প্রিয় তালিকা'),
                                                         style:
                                                             FlutterFlowTheme.of(
                                                                     context)
@@ -3607,7 +3602,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                   .hardcopy
                                                           ? FlutterFlowTheme.of(
                                                                   context)
-                                                              .primary
+                                                          .primary
                                                           : Colors.transparent,
                                                       borderRadius:
                                                           BorderRadius.circular(
@@ -3709,8 +3704,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         BorderRadius.circular(
                                                             20),
                                                   ),
-                                                  child: Text(
-                                                    'Price: ৳${_formatPrice(selectedFormat).toStringAsFixed(_formatPrice(selectedFormat).truncateToDouble() == _formatPrice(selectedFormat) ? 0 : 2)}',
+                                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Price: ', bnText: 'মূল্য: ') + '৳${_formatPrice(selectedFormat).toStringAsFixed(_formatPrice(selectedFormat).truncateToDouble() == _formatPrice(selectedFormat) ? 0 : 2)}',
                                                     style: FlutterFlowTheme.of(
                                                             context)
                                                         .bodySmall
@@ -3738,8 +3732,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           BorderRadius.circular(
                                                               20),
                                                     ),
-                                                    child: Text(
-                                                      'Pages: ${selectedFormat?['pages']}',
+                                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Pages: ', bnText: 'পৃষ্ঠা: ') + '${selectedFormat?['pages']}',
                                                       style: FlutterFlowTheme
                                                               .of(context)
                                                           .bodySmall
@@ -3766,8 +3759,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           BorderRadius.circular(
                                                               20),
                                                     ),
-                                                    child: Text(
-                                                      'Duration: ${selectedFormat?['duration']}',
+                                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Duration: ', bnText: 'সময়কাল: ') + '${selectedFormat?['duration']}',
                                                       style: FlutterFlowTheme
                                                               .of(context)
                                                           .bodySmall
@@ -3802,7 +3794,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                   'in_stock'] ==
                                                               true
                                                           ? 'In stock (${selectedFormat?['stock_count'] ?? 0})'
-                                                          : 'Out of stock',
+                                                          : FFLocalizations.of(context).getVariableText(enText: 'Out of stock', bnText: 'স্টক শেষ'),
                                                       style: FlutterFlowTheme
                                                               .of(context)
                                                           .bodySmall
@@ -3901,11 +3893,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           forcePreview: true,
                                                         ),
                                                         text:
-                                                            'Preview ($previewPercent%)',
+                                                            '${FFLocalizations.of(context).getVariableText(enText: 'Preview', bnText: 'প্রিভিউ')} ($previewPercent%)',
                                                         icon: Icon(
                                                           Icons
                                                               .menu_book_rounded,
-                                                          color: Colors.white,
+                                                        color: Colors.white,
                                                         ),
                                                         options:
                                                             FFButtonOptions(
@@ -3950,7 +3942,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           hardcopyFormat:
                                                               hardcopyFormat,
                                                         ),
-                                                        text: 'Buy Now',
+                                                        text: FFLocalizations.of(context).getVariableText(enText: 'Buy Now', bnText: 'এখনি কিনুন'),
                                                         icon: Icon(
                                                           Icons
                                                               .shopping_cart_rounded,
@@ -4005,7 +3997,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         bookDetailspageGetbookdetailsApiResponse
                                                             .jsonBody,
                                                   ),
-                                                  text: 'Read Now',
+                                                  text: FFLocalizations.of(context).getVariableText(enText: 'Read Now', bnText: 'এখনি পড়ুন'),
                                                   icon: Icon(
                                                     Icons.menu_book_rounded,
                                                     color: Colors.white,
@@ -4060,7 +4052,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               bookDetailspageGetbookdetailsApiResponse
                                                                   .jsonBody,
                                                         ),
-                                                        text: 'Read Now',
+                                                        text: FFLocalizations.of(context).getVariableText(enText: 'Read Now', bnText: 'এখনি পড়ুন'),
                                                         icon: Icon(
                                                           Icons
                                                               .menu_book_rounded,
@@ -4115,10 +4107,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                   },
                                                         text:
                                                             _isDownloadingEbook
-                                                                ? 'Downloading...'
+                                                                ? FFLocalizations.of(context).getVariableText(enText: 'Downloading...', bnText: 'ডাউনলোড হচ্ছে...')
                                                                 : (_isEbookDownloadStale
-                                                                    ? 'Update'
-                                                                    : 'Download'),
+                                                                    ? FFLocalizations.of(context).getVariableText(enText: 'Update', bnText: 'আপডেট')
+                                                                    : FFLocalizations.of(context).getVariableText(enText: 'Download', bnText: 'ডাউনলোড')),
                                                         icon:_isDownloadingEbook?null: Icon(
                                                           _isEbookDownloadStale
                                                               ? Icons.update_rounded
@@ -4187,7 +4179,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                         bookDetailspageGetbookdetailsApiResponse
                                                             .jsonBody,
                                                   ),
-                                                  text: 'Listen Now',
+                                                  text: FFLocalizations.of(context).getVariableText(enText: 'Listen Now', bnText: 'এখনি শুনুন'),
                                                   icon: Icon(
                                                     Icons.headphones_rounded,
                                                     color: Colors.white,
@@ -4244,7 +4236,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           forcePreview: true,
                                                         ),
                                                         text:
-                                                            'Preview ($previewPercent%)',
+                                                            '${FFLocalizations.of(context).getVariableText(enText: 'Preview', bnText: 'প্রিভিউ')} ($previewPercent%)',
                                                         icon: Icon(
                                                           Icons
                                                               .headphones_rounded,
@@ -4293,7 +4285,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           hardcopyFormat:
                                                               hardcopyFormat,
                                                         ),
-                                                        text: 'Buy Now',
+                                                        text: FFLocalizations.of(context).getVariableText(enText: 'Buy Now', bnText: 'এখনি কিনুন'),
                                                         icon: Icon(
                                                           Icons
                                                               .shopping_cart_rounded,
@@ -4358,8 +4350,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           .jsonBody,
                                                 ),
                                                 text: hasHardcopyAccess
-                                                    ? 'View Orders'
-                                                    : 'Buy Hardcopy',
+                                                     ? FFLocalizations.of(context).getVariableText(enText: 'View Orders', bnText: 'অর্ডার দেখুন')
+                                                     : FFLocalizations.of(context).getVariableText(enText: 'Buy Hardcopy', bnText: 'হার্ডকপি কিনুন'),
                                                 icon: Icon(
                                                   Icons.shopping_bag_rounded,
                                                   color: Colors.white,
@@ -4422,9 +4414,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'About the book',
-                                        textAlign: TextAlign.start,
+                                      Text(FFLocalizations.of(context).getVariableText(enText: 'About the book', bnText: 'বই সম্পর্কে'), textAlign: TextAlign.start,
                                         style: FlutterFlowTheme.of(context)
                                             .bodyMedium
                                             .override(
@@ -4515,9 +4505,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 Padding(
                                   padding: EdgeInsetsDirectional.fromSTEB(
                                       16.0, 8.0, 16.0, 16.0),
-                                  child: Text(
-                                    'Information',
-                                    textAlign: TextAlign.start,
+                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Information', bnText: 'তথ্য'), textAlign: TextAlign.start,
                                     style: FlutterFlowTheme.of(context)
                                         .bodyMedium
                                         .override(
@@ -4564,9 +4552,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                Text(
-                                                  'Language',
-                                                  textAlign: TextAlign.start,
+                                                Text(FFLocalizations.of(context).getVariableText(enText: 'Language', bnText: 'ভাষা'), textAlign: TextAlign.start,
                                                   maxLines: 1,
                                                   style: FlutterFlowTheme.of(
                                                           context)
@@ -4586,14 +4572,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       ),
                                                 ),
                                                 Text(
-                                                  valueOrDefault<String>(
-                                                    EbookGroup
-                                                        .getbookdetailsApiCall
-                                                        .language(
-                                                      bookDetailspageGetbookdetailsApiResponse
-                                                          .jsonBody,
-                                                    ),
-                                                    'Language',
+                                                  valueOrDefault<String>(EbookGroup.getbookdetailsApiCall.language(bookDetailspageGetbookdetailsApiResponse.jsonBody,), FFLocalizations.of(context).getVariableText(enText: 'Language', bnText: 'ভাষা'),
                                                   ),
                                                   textAlign: TextAlign.start,
                                                   maxLines: 1,
@@ -4617,9 +4596,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                Text(
-                                                  'Rating',
-                                                  textAlign: TextAlign.start,
+                                                Text(FFLocalizations.of(context).getVariableText(enText: 'Rating', bnText: 'রেটিং'), textAlign: TextAlign.start,
                                                   maxLines: 1,
                                                   style: FlutterFlowTheme.of(
                                                           context)
@@ -4987,8 +4964,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                             children: [
                                               Text(
                                                 _tracksLoading
-                                                    ? 'Episodes'
-                                                    : 'Episodes ($trackCount)',
+                                                    ? FFLocalizations.of(context).getVariableText(enText: 'Episodes', bnText: 'পর্বসমূহ')
+                                                    : '${FFLocalizations.of(context).getVariableText(enText: 'Episodes', bnText: 'পর্বসমূহ')} ($trackCount)',
                                                 style:
                                                     FlutterFlowTheme.of(context)
                                                         .bodyMedium
@@ -5236,9 +5213,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                     .circular(
                                                                         10),
                                                           ),
-                                                          child: const Text(
-                                                            'Free',
-                                                            style: TextStyle(
+                                                          child: Text(FFLocalizations.of(context).getVariableText(enText: 'Free', bnText: 'ফ্রি'), style: TextStyle(
                                                               color:
                                                                   Colors.white,
                                                               fontSize: 10,
@@ -5328,9 +5303,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             .spaceBetween,
                                                     children: [
                                                       Expanded(
-                                                        child: Text(
-                                                          'Reviews',
-                                                          textAlign:
+                                                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'Reviews', bnText: 'রিভিউসমূহ'), textAlign:
                                                               TextAlign.start,
                                                           maxLines: 1,
                                                           style: FlutterFlowTheme
@@ -5378,9 +5351,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                             }.withoutNulls,
                                                           );
                                                         },
-                                                        child: Text(
-                                                          'View all',
-                                                          textAlign:
+                                                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'View all', bnText: 'সব দেখুন'), textAlign:
                                                               TextAlign.end,
                                                           maxLines: 1,
                                                           style: FlutterFlowTheme
@@ -5663,7 +5634,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       ).then((value) =>
                                                           safeSetState(() {}));
                                                     },
-                                                    text: 'Write a Review',
+                                                    text: FFLocalizations.of(context).getVariableText(enText: 'Write a Review', bnText: 'রিভিউ লিখুন'),
                                                     icon: Icon(
                                                       Icons.rate_review_rounded,
                                                       color: Colors.white,
@@ -5726,11 +5697,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   padding: EdgeInsetsDirectional
                                                       .fromSTEB(16.0, 16.0,
                                                           16.0, 0.0),
-                                                  child: Text(
-                                                    'Reviews',
-                                                    style: FlutterFlowTheme.of(
-                                                            context)
-                                                        .bodyMedium
+                                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Reviews', bnText: 'রিভিউসমূহ'), style: FlutterFlowTheme.of(context).bodyMedium
                                                         .override(
                                                           fontFamily:
                                                               'SF Pro Display',
@@ -5788,7 +5755,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                         0.0,
                                                                         4.0),
                                                             child: Text(
-                                                              'No reviews yet',
+                                                              FFLocalizations.of(context).getVariableText(enText: 'No reviews yet', bnText: 'এখনো কোনো রিভিউ নেই'),
                                                               style: FlutterFlowTheme
                                                                       .of(context)
                                                                   .bodyLarge
@@ -5810,7 +5777,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                         0.0,
                                                                         24.0),
                                                             child: Text(
-                                                              'Be the first to share your thoughts!',
+                                                              FFLocalizations.of(context).getVariableText(enText: 'Be the first to share your thoughts!', bnText: 'আপনার মতামত প্রথম শেয়ার করুন!'),
                                                               style: FlutterFlowTheme
                                                                       .of(context)
                                                                   .labelMedium,
@@ -5851,8 +5818,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                   safeSetState(
                                                                       () {}));
                                                             },
-                                                            text:
-                                                                'Write a Review',
+                                                            text: FFLocalizations.of(context).getVariableText(enText: 'Write a Review', bnText: 'রিভিউ লিখুন'),
                                                             options:
                                                                 FFButtonOptions(
                                                               width: 200.0,
@@ -6128,9 +6094,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                               padding: EdgeInsetsDirectional
                                                   .fromSTEB(
                                                       16.0, 0.0, 0.0, 16.0),
-                                              child: Text(
-                                                'Related books',
-                                                textAlign: TextAlign.start,
+                                              child: Text(FFLocalizations.of(context).getVariableText(enText: 'Related books', bnText: 'একই ধরনের বইসমূহ'), textAlign: TextAlign.start,
                                                 style:
                                                     FlutterFlowTheme.of(context)
                                                         .bodyMedium
@@ -6435,401 +6399,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                             ),
                           ),
                         ),
-                        // FutureBuilder<ApiCallResponse>(
-                        //   future:
-                        //       EbookGroup.usersubscriptionvalidityApiCall.call(
-                        //     userId: FFAppState().userId,
-                        //     token: FFAppState().token,
-                        //   ),
-                        //   builder: (context, snapshot) {
-                        //     // Customize what your widget looks like when it's loading.
-                        //     if (!snapshot.hasData) {
-                        //       return Container(
-                        //         width: double.infinity,
-                        //         height: 88.0,
-                        //         child: ButtonDetailPageShimmerWidget(),
-                        //       );
-                        //     }
-                        //     final _ = snapshot.data!;
-
-                        //     return Container(
-                        //       width: double.infinity,
-                        //       decoration: BoxDecoration(
-                        //         color: FlutterFlowTheme.of(context)
-                        //             .secondaryBackground,
-                        //         boxShadow: [
-                        //           BoxShadow(
-                        //             blurRadius: 16.0,
-                        //             color: FlutterFlowTheme.of(context)
-                        //                 .shadowColor,
-                        //             offset: Offset(
-                        //               0.0,
-                        //               4.0,
-                        //             ),
-                        //           )
-                        //         ],
-                        //       ),
-                        //       child: FutureBuilder<ApiCallResponse>(
-                        //         future: (_model.apiRequestCompleter3 ??=
-                        //                 Completer<ApiCallResponse>()
-                        //                   ..complete(EbookGroup
-                        //                       .downloadhistoryApiCall
-                        //                       .call(
-                        //                     userId: FFAppState().userId,
-                        //                     token: FFAppState().token,
-                        //                   )))
-                        //             .future,
-                        //         builder: (context, snapshot) {
-                        //           // Customize what your widget looks like when it's loading.
-                        //           if (!snapshot.hasData) {
-                        //             return Container(
-                        //               width: double.infinity,
-                        //               height: 88.0,
-                        //               child: ButtonDetailPageShimmerWidget(),
-                        //             );
-                        //           }
-                        //           final _ = snapshot.data!;
-
-                        //           return Container(
-                        //             decoration: BoxDecoration(),
-                        //             child: Padding(
-                        //               padding: EdgeInsets.all(16.0),
-                        //               child: Builder(
-                        //                 builder: (context) {
-                        //                   // Check if book is free or paid
-                        //                   final accessType = EbookGroup.getbookdetailsApiCall.accesstype(
-                        //                     bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                        //                   );
-
-                        //                   if (accessType == 'free') {
-                        //                     // Free book - show "Read Book" button
-                        //                     return FFButtonWidget(
-                        //                       onPressed: () async {
-                        //                         context.pushNamed(
-                        //                           ReadBookCustomPageWidget.routeName,
-                        //                           queryParameters: {
-                        //                             'pdf': serializeParam(
-                        //                               '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.pdf(
-                        //                                 bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                        //                               )}',
-                        //                               ParamType.String,
-                        //                             ),
-                        //                             'id': serializeParam(
-                        //                               widget.id,
-                        //                               ParamType.String,
-                        //                             ),
-                        //                             'name': serializeParam(
-                        //                               widget.name,
-                        //                               ParamType.String,
-                        //                             ),
-                        //                             'image': serializeParam(
-                        //                               widget.image,
-                        //                               ParamType.String,
-                        //                             ),
-                        //                           }.withoutNulls,
-                        //                         );
-
-                        //                         if (widget.id == FFAppState().homePageBookId) {
-                        //                           FFAppState().totalPages = 1;
-                        //                           FFAppState().update(() {});
-                        //                         } else {
-                        //                           FFAppState().totalPages = 1;
-                        //                           FFAppState().homePageCurrentPdfIndex = 1;
-                        //                           FFAppState().update(() {});
-                        //                         }
-                        //                       },
-                        //                       text: 'Read Book',
-                        //                       options: FFButtonOptions(
-                        //                         width: double.infinity,
-                        //                         height: 56.0,
-                        //                         padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
-                        //                         iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                        //                         color: FlutterFlowTheme.of(context).primary,
-                        //                         textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                        //                           fontFamily: 'SF Pro Display',
-                        //                           color: FlutterFlowTheme.of(context).primaryBackground,
-                        //                           fontSize: 16.0,
-                        //                           letterSpacing: 0.0,
-                        //                           fontWeight: FontWeight.bold,
-                        //                           lineHeight: 1.2,
-                        //                         ),
-                        //                         elevation: 0.0,
-                        //                         borderSide: BorderSide(
-                        //                           color: Colors.transparent,
-                        //                           width: 1.0,
-                        //                         ),
-                        //                         borderRadius: BorderRadius.circular(12.0),
-                        //                       ),
-                        //                     );
-                        //                   } else {
-                        //                     // Paid book - show Preview, Add to Cart, and Buy Now buttons
-                        //                     return Column(
-                        //                       mainAxisSize: MainAxisSize.min,
-                        //                       children: [
-                        //                         // Preview button
-                        //                         FFButtonWidget(
-                        //                           onPressed: () async {
-
-                        //                             context.pushNamed(
-                        //                               ReadBookCustomPageWidget.routeName,
-                        //                               queryParameters: {
-                        //                                 'pdf': serializeParam(
-                        //                                   '${FFAppConstants.pdfUrl}${EbookGroup.getbookdetailsApiCall.previewPdf(
-                        //                                     bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                        //                                   )}',
-                        //                                   ParamType.String,
-                        //                                 ),
-                        //                                 'id': serializeParam(
-                        //                                   widget.id,
-                        //                                   ParamType.String,
-                        //                                 ),
-                        //                                 'name': serializeParam(
-                        //                                   bookName,
-                        //                                   ParamType.String,
-                        //                                 ),
-                        //                                 'image': serializeParam(
-                        //                                   bookImage,
-                        //                                   ParamType.String,
-                        //                                 ),
-
-                        //                               }.withoutNulls,
-                        //                             );
-                        //                           },
-                        //                           text: 'Preview',
-                        //                           options: FFButtonOptions(
-                        //                             width: double.infinity,
-                        //                             height: 48.0,
-                        //                             padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
-                        //                             iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                        //                             color: FlutterFlowTheme.of(context).secondaryBackground,
-                        //                             textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-                        //                               fontFamily: 'SF Pro Display',
-                        //                               color: FlutterFlowTheme.of(context).primaryText,
-                        //                               fontSize: 14.0,
-                        //                               letterSpacing: 0.0,
-                        //                               fontWeight: FontWeight.w500,
-                        //                               lineHeight: 1.2,
-                        //                             ),
-                        //                             elevation: 0.0,
-                        //                             borderSide: BorderSide(
-                        //                               color: FlutterFlowTheme.of(context).primary,
-                        //                               width: 1.0,
-                        //                             ),
-                        //                             borderRadius: BorderRadius.circular(12.0),
-                        //                           ),
-                        //                         ),
-                        //                         SizedBox(height: 12.0),
-                        //                         // Add to Cart and Buy Now buttons
-                        //                         Consumer<CartProvider>(
-                        //                           builder: (context, cart, child) {
-                        //                             final isInCart = cart.items.containsKey(widget.id ?? "");
-                        //                             final quantity = isInCart ? cart.items[widget.id ?? ""]?.quantity ?? 0 : 0;
-
-                        //                             return Row(
-                        //                               mainAxisSize: MainAxisSize.max,
-                        //                               children: [
-                        //                                 if (quantity > 0) ...[
-                        //                                   // Quantity controls when item is in cart
-                        //                                   Expanded(
-                        //                                     child: Padding(
-                        //                                       padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 6.0, 0.0),
-                        //                                       child: Container(
-                        //                                         height: 48.0,
-                        //                                         decoration: BoxDecoration(
-                        //                                           color: FlutterFlowTheme.of(context).secondaryBackground,
-                        //                                           border: Border.all(
-                        //                                             color: FlutterFlowTheme.of(context).primary,
-                        //                                             width: 1.0,
-                        //                                           ),
-                        //                                           borderRadius: BorderRadius.circular(12.0),
-                        //                                         ),
-                        //                                         child: Row(
-                        //                                           mainAxisAlignment: MainAxisAlignment.center,
-                        //                                           children: [
-                        //                                             // Decrement button
-                        //                                             InkWell(
-                        //                                               onTap: () async{
-                        //                                                 cart.removeSingleItem(widget.id ?? "");
-                        //                                                await actions.showCustomToastBottom('Quantity decreased!');
-                        //                                               },
-                        //                                               child: Container(
-                        //                                                 width: 36.0,
-                        //                                                 height: 36.0,
-                        //                                                 decoration: BoxDecoration(
-                        //                                                   color: FlutterFlowTheme.of(context).primary,
-                        //                                                   shape: BoxShape.circle,
-                        //                                                 ),
-                        //                                                 child: Icon(
-                        //                                                   Icons.remove,
-                        //                                                   color: FlutterFlowTheme.of(context).primaryBackground,
-                        //                                                   size: 20.0,
-                        //                                                 ),
-                        //                                               ),
-                        //                                             ),
-                        //                                             // Quantity display
-                        //                                             Container(
-                        //                                               padding: EdgeInsets.symmetric(horizontal: 10),
-                        //                                               child: Text(
-                        //                                                 quantity.toString(),
-                        //                                                 textAlign: TextAlign.center,
-                        //                                                 style: FlutterFlowTheme.of(context).bodyMedium.override(
-                        //                                                   fontFamily: 'SF Pro Display',
-                        //                                                   fontSize: 16.0,
-                        //                                                   fontWeight: FontWeight.bold,
-                        //                                                   color: FlutterFlowTheme.of(context).primaryText,
-                        //                                                 ),
-                        //                                               ),
-                        //                                             ),
-                        //                                             // Increment button
-                        //                                             InkWell(
-                        //                                               onTap: ()async {
-                        //                                                 cart.addItem(
-                        //                                                   widget.id!,
-                        //                                                   widget.name!,
-                        //                                                   widget.image!,
-                        //                                                  double.tryParse(widget.price!)??0.0,
-
-                        //                                                 );
-                        //                                                 await actions.showCustomToastBottom('Quantity increased!');
-                        //                                               },
-                        //                                               child: Container(
-                        //                                                 width: 36.0,
-                        //                                                 height: 36.0,
-                        //                                                 decoration: BoxDecoration(
-                        //                                                   color: FlutterFlowTheme.of(context).primary,
-                        //                                                   shape: BoxShape.circle,
-                        //                                                 ),
-                        //                                                 child: Icon(
-                        //                                                   Icons.add,
-                        //                                                   color: FlutterFlowTheme.of(context).primaryBackground,
-                        //                                                   size: 20.0,
-                        //                                                 ),
-                        //                                               ),
-                        //                                             ),
-                        //                                           ],
-                        //                                         ),
-                        //                                       ),
-                        //                                     ),
-                        //                                   ),
-                        //                                 ] else ...[
-                        //                                   // Add to Cart button when item is not in cart
-                        //                                   Expanded(
-                        //                                     child: Padding(
-                        //                                       padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 6.0, 0.0),
-                        //                                       child: FFButtonWidget(
-                        //                                         onPressed: () async {
-                        //                                           cart.addItem(
-                        //                                             widget.id!,
-                        //                                             widget.name!,
-                        //                                             widget.image!,
-                        //                                             double.tryParse(widget.price!)??0.0,
-                        //                                           );
-                        //                                           ScaffoldMessenger.of(context).showSnackBar(
-                        //                                             SnackBar(
-                        //                                               content: Text(
-                        //                                                 'Book added to cart!',
-                        //                                                 style: TextStyle(
-                        //                                                   color: FlutterFlowTheme.of(context).primaryText,
-                        //                                                 ),
-                        //                                               ),
-                        //                                               duration: Duration(milliseconds: 2000),
-                        //                                               backgroundColor: FlutterFlowTheme.of(context).secondary,
-                        //                                             ),
-                        //                                           );
-                        //                                         },
-                        //                                         text: 'Add to Cart',
-                        //                                         options: FFButtonOptions(
-                        //                                           width: double.infinity,
-                        //                                           height: 48.0,
-                        //                                           padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                        //                                           iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                        //                                           color: FlutterFlowTheme.of(context).secondaryBackground,
-                        //                                           textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-                        //                                             fontFamily: 'SF Pro Display',
-                        //                                             color: FlutterFlowTheme.of(context).primaryText,
-                        //                                             fontSize: 14.0,
-                        //                                             letterSpacing: 0.0,
-                        //                                             fontWeight: FontWeight.w600,
-                        //                                             lineHeight: 1.2,
-                        //                                           ),
-                        //                                           elevation: 0.0,
-                        //                                           borderSide: BorderSide(
-                        //                                             color: FlutterFlowTheme.of(context).primary,
-                        //                                             width: 1.0,
-                        //                                           ),
-                        //                                           borderRadius: BorderRadius.circular(12.0),
-                        //                                         ),
-                        //                                       ),
-                        //                                     ),
-                        //                                   ),
-                        //                                 ],
-                        //                             Expanded(
-                        //                               child: Padding(
-                        //                                 padding: EdgeInsetsDirectional.fromSTEB(6.0, 0.0, 0.0, 0.0),
-                        //                                 child: FFButtonWidget(
-                        //                                   onPressed: () async {
-                        //                                     if(FFAppState()
-                        //                                         .isLogin ==
-                        //                                     true){
-                        //                                        final cart = Provider.of<CartProvider>(context, listen: false);
-                        //                                     cart.addItem(
-                        //                                       widget.id!,
-                        //                                       widget.name!,
-                        //                                       widget.image!,
-                        //                                      double.tryParse(widget.price!)??0.0,
-                        //                                     );
-                        //                                  Navigator.push<void>(
-                        //                                    context,
-                        //                                    MaterialPageRoute<void>(
-                        //                                      builder: (BuildContext context) =>  CheckoutPageWidget(),
-                        //                                    ),
-                        //                                  );
-                        //                                     }else{
-                        //                                                                                                 context.pushNamed(
-                        //                                       SignInPageWidget
-                        //                                           .routeName);
-                        //                                     }
-
-                        //                                   },
-                        //                                   text: 'Buy Now',
-                        //                                   options: FFButtonOptions(
-                        //                                     width: double.infinity,
-                        //                                     height: 48.0,
-                        //                                     padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                        //                                     iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                        //                                     color: FlutterFlowTheme.of(context).primary,
-                        //                                     textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-                        //                                       fontFamily: 'SF Pro Display',
-                        //                                       color: FlutterFlowTheme.of(context).primaryBackground,
-                        //                                       fontSize: 14.0,
-                        //                                       letterSpacing: 0.0,
-                        //                                       fontWeight: FontWeight.w600,
-                        //                                       lineHeight: 1.2,
-                        //                                     ),
-                        //                                     elevation: 0.0,
-                        //                                     borderSide: BorderSide(
-                        //                                       color: Colors.transparent,
-                        //                                       width: 1.0,
-                        //                                     ),
-                        //                                     borderRadius: BorderRadius.circular(12.0),
-                        //                                   ),
-                        //                                 ),
-                        //                               ),
-                        //                             ),
-                        //                           ],
-                        //                         );})
-                        //                       ],
-                        //                     );
-                        //                   }
-                        //                 },
-                        //               ),
-                        //             ),
-                        //           );
-                        //         },
-                        //       ),
-                        //     );
-        //   },
-                        // ),
                       ],
                     );
                   },
@@ -6911,9 +6480,9 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
 
     final coinCost = (widget.track['chapter_price_coins'] as num?)?.toInt() ?? 0;
     final bdtCost = (widget.track['chapter_price_bdt'] as num?)?.toDouble() ?? 0.0;
-    String lockedText = 'Locked';
+    String lockedText = FFLocalizations.of(context).getVariableText(enText: 'Locked', bnText: 'লকড');
     if (coinCost > 0) {
-      lockedText = '$coinCost Coins';
+       lockedText = '$coinCost ' + FFLocalizations.of(context).getVariableText(enText: 'Coins', bnText: 'কয়েন');
     } else if (bdtCost > 0) {
       lockedText = '৳${bdtCost.toStringAsFixed(0)}';
     }
@@ -7017,7 +6586,7 @@ class _AnimatedEpisodeCardState extends State<_AnimatedEpisodeCard>
                         ),
                       ),
                       child: Text(
-                        isLocked ? lockedText : (isFree ? 'Free' : 'Unlocked'),
+                        isLocked ? lockedText : (isFree ? FFLocalizations.of(context).getVariableText(enText: 'Free', bnText: 'ফ্রি') : FFLocalizations.of(context).getVariableText(enText: 'Unlocked', bnText: 'আনলকড')),
                         style: TextStyle(
                           fontFamily: 'SF Pro Display',
                           fontSize: 9,
@@ -7216,8 +6785,7 @@ class _EpisodesListPage extends StatelessWidget {
                         border: Border.all(
                             color: Colors.white.withOpacity(0.3), width: 1),
                       ),
-                      child: Text(
-                        '${tracks.length} Episodes',
+                      child: Text('${tracks.length} ' + FFLocalizations.of(context).getVariableText(enText: 'Episodes', bnText: 'পর্বসমূহ'),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -7243,7 +6811,7 @@ class _EpisodesListPage extends StatelessWidget {
                             size: 56,
                             color: theme.secondaryText.withOpacity(0.4)),
                         const SizedBox(height: 12),
-                        Text('No episodes available',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'No episodes available', bnText: 'কোনো এপিসোড পাওয়া যায়নি'),
                             style: theme.bodyMedium.override(
                               fontFamily: 'SF Pro Display',
                               color: theme.secondaryText,

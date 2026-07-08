@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'best_author_page_model.dart';
 export 'best_author_page_model.dart';
 
+import '/flutter_flow/internationalization.dart';
 class BestAuthorPageWidget extends StatefulWidget {
   const BestAuthorPageWidget({super.key});
 
@@ -63,7 +64,7 @@ class _BestAuthorPageWidgetState extends State<BestAuthorPageWidget> {
                 model: _model.singleAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: SingleAppbarWidget(
-                  title: 'Best author',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Best author', bnText: 'সেরা লেখক'),
                 ),
               ),
               Expanded(

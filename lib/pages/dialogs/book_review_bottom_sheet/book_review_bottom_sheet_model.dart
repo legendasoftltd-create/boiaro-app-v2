@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'book_review_bottom_sheet_widget.dart' show BookReviewBottomSheetWidget;
@@ -16,7 +18,10 @@ class BookReviewBottomSheetModel
   String? Function(BuildContext, String?)? textControllerValidator;
   String? _textControllerValidator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Review Field is required';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Review Field is required',
+        bnText: 'রিভিউ লেখা আবশ্যক',
+      );
     }
 
     return null;

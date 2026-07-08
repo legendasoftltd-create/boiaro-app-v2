@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'best_publisher_page_model.dart';
 export 'best_publisher_page_model.dart';
 
+import '/flutter_flow/internationalization.dart';
 class BestPublisherPageWidget extends StatefulWidget {
   const BestPublisherPageWidget({super.key});
 
@@ -66,7 +67,7 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                 model: _model.singleAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: SingleAppbarWidget(
-                  title: 'Best publisher',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Best publisher', bnText: 'সেরা প্রকাশক'),
                 ),
               ),
               Expanded(

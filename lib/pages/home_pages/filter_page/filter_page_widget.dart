@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -64,7 +66,7 @@ class _FilterPageWidgetState extends State<FilterPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Filter',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Filter', bnText: 'ফিল্টার'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -231,8 +233,7 @@ class _FilterPageWidgetState extends State<FilterPageWidget> {
                                                                           13.0,
                                                                           0.0,
                                                                           13.0),
-                                                                  child: Text(
-                                                                    'Author',
+                                                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Author', bnText: 'লেখক'),
                                                                     style: FlutterFlowTheme.of(
                                                                             context)
                                                                         .bodyMedium
@@ -294,8 +295,7 @@ class _FilterPageWidgetState extends State<FilterPageWidget> {
                                                                           13.0,
                                                                           0.0,
                                                                           13.0),
-                                                                  child: Text(
-                                                                    'Categories',
+                                                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Categories', bnText: 'ক্যাটাগরি সমূহ'),
                                                                     style: FlutterFlowTheme.of(
                                                                             context)
                                                                         .bodyMedium
@@ -686,7 +686,7 @@ class _FilterPageWidgetState extends State<FilterPageWidget> {
                                             FFAppState().filterVariable = false;
                                             FFAppState().update(() {});
                                           },
-                                          text: 'Clear filter',
+                                          text: FFLocalizations.of(context).getVariableText(enText: 'Clear filter', bnText: 'ফিল্টার মুছুন'),
                                           options: FFButtonOptions(
                                             width: double.infinity,
                                             height: 56.0,
@@ -745,7 +745,7 @@ class _FilterPageWidgetState extends State<FilterPageWidget> {
                                               );
                                             }
                                           },
-                                          text: 'Apply',
+                                          text: FFLocalizations.of(context).getVariableText(enText: 'Apply', bnText: 'প্রয়োগ করুন'),
                                           options: FFButtonOptions(
                                             width: double.infinity,
                                             height: 56.0,

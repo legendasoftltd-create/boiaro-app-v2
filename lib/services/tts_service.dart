@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '/app_constants.dart';
 import '/app_state.dart';
 
@@ -249,14 +250,18 @@ class TtsService extends ChangeNotifier {
         body: jsonEncode({'book_id': bookId}),
       );
       final body = jsonDecode(res.body);
+      final prefs = await SharedPreferences.getInstance();
+      final lang = prefs.getString('ff_language') ?? 'en';
       if (res.statusCode == 200 && body['success'] == true) {
         // Refresh access info
         await checkAccess(bookId);
         return null;
       }
-      return body['error']?.toString() ?? 'Unlock failed';
+      return body['error']?.toString() ?? (lang == 'bn' ? 'আনলক করতে ব্যর্থ হয়েছে' : 'Unlock failed');
     } catch (e) {
-      return 'Error: $e';
+      final prefs = await SharedPreferences.getInstance();
+      final lang = prefs.getString('ff_language') ?? 'en';
+      return lang == 'bn' ? 'ত্রুটি: $e' : 'Error: $e';
     }
   }
 

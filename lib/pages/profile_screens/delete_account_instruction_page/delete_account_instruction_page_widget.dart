@@ -4,6 +4,7 @@ import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/custom_code/widgets/index.dart' as custom_widgets;
@@ -88,7 +89,7 @@ class _DeleteAccountInstructionPageWidgetState
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Delete account',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Delete account', bnText: 'অ্যাকাউন্ট মুছুন'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -217,7 +218,7 @@ class _DeleteAccountInstructionPageWidgetState
 
                                           safeSetState(() {});
                                         },
-                                        text: 'Yes',
+                                        text: FFLocalizations.of(context).getVariableText(enText: 'Yes', bnText: 'হ্যাঁ'),
                                         options: FFButtonOptions(
                                           width: double.infinity,
                                           height: 56.0,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/index.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
@@ -346,7 +347,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                               "৳ ${widget.price}",
                                               '\$0.00',
                                             )}"
-                                          : "Free",
+                                          : FFLocalizations.of(context).getVariableText(enText: 'Free', bnText: 'ফ্রি'),
                                       textAlign: TextAlign.start,
                                       maxLines: 1,
                                       style: FlutterFlowTheme.of(context)
@@ -408,7 +409,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                   //             highlightColor: Colors.transparent,
                                   //             onTap: () async {
                                   //               cart.removeSingleItem(widget.id ?? "");
-                                  //               await actions.showCustomToastBottom('Quantity decreased!');
+                                  //               await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Quantity decreased!', bnText: 'পরিমাণ কমানো হয়েছে!'));
                                   //             },
                                   //             child: Container(
                                   //               width: 18.0,
@@ -454,7 +455,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                   //                 discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
                                   //                 type: widget.bookType,
                                   //               );
-                                  //               await actions.showCustomToastBottom('Quantity increased!');
+                                  //               await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Quantity increased!', bnText: 'পরিমাণ বাড়ানো হয়েছে!'));
                                   //             },
                                   //             child: Container(
                                   //               width: 18.0,
@@ -489,7 +490,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                                   //             discountPercentage: double.tryParse(widget.discountPercentage ?? '0'),
                                   //             type: widget.bookType,
                                   //           );
-                                  //           await actions.showCustomToastBottom('Added to cart!');
+                                  //           await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Added to cart!', bnText: 'কার্টে যোগ করা হয়েছে!'));
                                   //         },
                                   //         child: Container(
                                   //           width: 26.0,
@@ -545,8 +546,8 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                           (double.tryParse(widget.discountPercentage ?? '0') ??
                                       0) >
                                   0
-                              ? '${widget.discountPercentage}% OFF'
-                              : '৳${widget.discountAmount} OFF',
+                              ? '${widget.discountPercentage}% ${FFLocalizations.of(context).getVariableText(enText: 'OFF', bnText: 'ছাড়')}'
+                              : '৳${widget.discountAmount} ${FFLocalizations.of(context).getVariableText(enText: 'OFF', bnText: 'ছাড়')}',
                           style:
                               FlutterFlowTheme.of(context).bodySmall.override(
                                     fontFamily: 'SF Pro Display',
@@ -635,7 +636,7 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                     borderRadius: BorderRadius.circular(12.0),
                   ),
                   child: Text(
-                    'Purchased',
+                    FFLocalizations.of(context).getVariableText(enText: 'Purchased', bnText: 'ক্রয়কৃত'),
                     style: FlutterFlowTheme.of(context).bodySmall.override(
                           fontFamily: 'SF Pro Display',
                           fontSize: 10.0,

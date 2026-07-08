@@ -1,6 +1,7 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/shimmers/about_author_sec_shimmer/about_author_sec_shimmer_widget.dart';
@@ -136,7 +137,7 @@ class _AboutTranslatorPageWidgetState extends State<AboutTranslatorPageWidget> {
       );
       await _reloadFollowStateFromTranslatorList();
     } else {
-      await actions.showCustomToastBottom('Unable to update follow status');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to update follow status', bnText: 'অনুসরণ অবস্থা আপডেট করতে ব্যর্থ'));
     }
     if (mounted) safeSetState(() => _isFollowLoading = false);
   }
@@ -192,7 +193,7 @@ class _AboutTranslatorPageWidgetState extends State<AboutTranslatorPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'About translator',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'About translator', bnText: 'অনুবাদক সম্পর্কে'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -393,8 +394,7 @@ class _AboutTranslatorPageWidgetState extends State<AboutTranslatorPageWidget> {
                                                                 color: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
                                                                 borderRadius: BorderRadius.circular(6.0),
                                                               ),
-                                                              child: Text(
-                                                                'Author',
+                                                              child: Text(FFLocalizations.of(context).getVariableText(enText: 'Translator', bnText: 'অনুবাদক'),
                                                                 style: FlutterFlowTheme.of(context).bodySmall.override(
                                                                       fontFamily: 'SF Pro Display',
                                                                       color: FlutterFlowTheme.of(context).primary,
@@ -422,13 +422,13 @@ class _AboutTranslatorPageWidgetState extends State<AboutTranslatorPageWidget> {
                                                         children: [
                                                           _buildStatItem(
                                                             context,
-                                                            label: 'Followers',
+                                                            label: FFLocalizations.of(context).getVariableText(enText: 'Followers', bnText: 'অনুসারী'),
                                                             value: _followersCount != null ? '$_followersCount' : '${translatorMap?['followers_count'] ?? 0}',
                                                           ),
                                                           const SizedBox(width: 24.0),
                                                           _buildStatItem(
                                                             context,
-                                                            label: 'Books',
+                                                            label: FFLocalizations.of(context).getVariableText(enText: 'Books', bnText: 'বই'),
                                                             value: '${translatorMap?['books_count'] ?? 0}',
                                                           ),
                                                         ],
@@ -505,8 +505,7 @@ class _AboutTranslatorPageWidgetState extends State<AboutTranslatorPageWidget> {
                                             padding:
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 16.0, 16.0, 8.0),
-                                            child: Text(
-                                              'Description',
+                                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Description', bnText: 'বিবরণ'),
                                               textAlign: TextAlign.start,
                                               style:
                                                   FlutterFlowTheme.of(context)
@@ -581,8 +580,7 @@ class _AboutTranslatorPageWidgetState extends State<AboutTranslatorPageWidget> {
                                             padding:
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 16.0, 16.0, 8.0),
-                                            child: Text(
-                                              'Personal information',
+                                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Personal information', bnText: 'ব্যক্তিগত তথ্য'),
                                               textAlign: TextAlign.start,
                                               maxLines: 1,
                                               style:
@@ -880,8 +878,7 @@ class _AboutTranslatorPageWidgetState extends State<AboutTranslatorPageWidget> {
                                                                         0.0,
                                                                         16.0,
                                                                         16.0),
-                                                            child: Text(
-                                                              'Popular books',
+                                                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Popular books', bnText: 'জনপ্রিয় বইসমূহ'),
                                                               textAlign:
                                                                   TextAlign
                                                                       .start,

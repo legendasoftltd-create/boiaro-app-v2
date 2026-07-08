@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -94,8 +96,7 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                     child: Padding(
                                       padding: EdgeInsetsDirectional.fromSTEB(
                                           16.0, 0.0, 16.0, 0.0),
-                                      child: Text(
-                                        'Unleash your inner reader dive into a world of books',
+                                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'Unleash your inner reader dive into a world of books', bnText: 'আপনার ভেতরের পাঠককে জাগ্রত করুন, বইয়ের জগতে ডুব দিন'),
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
                                         style: ffTheme.bodyMedium.override(
@@ -113,8 +114,7 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                     child: Padding(
                                       padding: EdgeInsetsDirectional.fromSTEB(
                                           16.0, 0.0, 16.0, 0.0),
-                                      child: Text(
-                                        'the app that helps you reach your reading goals with read more, achieve more ',
+                                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'the app that helps you reach your reading goals with read more, achieve more ', bnText: 'পড়া এবং লক্ষ্য অর্জনে সহায়তাকারী অ্যাপ'),
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
                                         style: ffTheme.bodyMedium.override(
@@ -156,8 +156,7 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                     child: Padding(
                                       padding: EdgeInsetsDirectional.fromSTEB(
                                           16.0, 0.0, 16.0, 0.0),
-                                      child: Text(
-                                        'Boost your brain power with read book smarter',
+                                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'Boost your brain power with read book smarter', bnText: 'স্মার্টলি বই পড়ে আপনার মেধা বিকাশ করুন'),
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
                                         style: ffTheme.bodyMedium.override(
@@ -176,7 +175,10 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                       padding: EdgeInsetsDirectional.fromSTEB(
                                           16.0, 0.0, 16.0, 0.0),
                                       child: Text(
-                                        'Boost your brain power with read book smarter\nand enhance your knowledge.',
+                                        FFLocalizations.of(context).getVariableText(
+                                          enText: 'Boost your brain power with read book smarter\nand enhance your knowledge.',
+                                          bnText: 'স্মার্টলি বই পড়ে আপনার মেধা বিকাশ করুন এবং জ্ঞান অর্জন করুন',
+                                        ),
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
                                         style: ffTheme.bodyMedium.override(
@@ -218,8 +220,7 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                     child: Padding(
                                       padding: EdgeInsetsDirectional.fromSTEB(
                                           16.0, 0.0, 16.0, 0.0),
-                                      child: Text(
-                                        'Knowledge is a making master key of your mind empower',
+                                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'Knowledge is a making master key of your mind empower', bnText: 'জ্ঞান হলো মনের ক্ষমতার মূল চাবিকাঠি'),
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
                                         style: ffTheme.bodyMedium.override(
@@ -237,8 +238,7 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                                     child: Padding(
                                       padding: EdgeInsetsDirectional.fromSTEB(
                                           16.0, 0.0, 16.0, 0.0),
-                                      child: Text(
-                                        'Write the book you\'ve always dreamed of start your story today!',
+                                      child: Text(FFLocalizations.of(context).getVariableText(enText: "Write the book you've always dreamed of start your story today!", bnText: "আপনার স্বপ্নের বইটি লিখুন, আজই আপনার গল্প শুরু করুন!"),
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
                                         style: ffTheme.bodyMedium.override(
@@ -347,8 +347,7 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
 
                       context.goNamed(HomePageWidget.routeName);
                     },
-                    child: Text(
-                      'Skip',
+                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Skip', bnText: 'এড়িয়ে যান'),
                       style: ffTheme.bodyMedium.override(
                         fontFamily: 'SF Pro Display',
                         fontSize: 17.0,

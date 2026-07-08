@@ -1,5 +1,6 @@
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -236,7 +237,7 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
                       ),
                       Expanded(
                         child: Text(
-                          'My profile',
+                          FFLocalizations.of(context).getVariableText(enText: 'My profile', bnText: 'আমার প্রোফাইল'),
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           style:
@@ -326,29 +327,29 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
                     ),
                     _infoCard(
                       context: context,
-                      label: 'Display name',
+                      label: FFLocalizations.of(context).getVariableText(enText: 'Display name', bnText: 'নাম'),
                       child: _valueText(context, displayName, maxLines: 1),
                     ),
                     _infoCard(
                       context: context,
-                      label: 'Email',
+                      label: FFLocalizations.of(context).getVariableText(enText: 'Email', bnText: 'ইমেইল'),
                       child: _valueText(context, email, maxLines: 2),
                     ),
                     if (_profileValue('phone').isNotEmpty)
                       _infoCard(
                         context: context,
-                        label: 'Phone number',
+                        label: FFLocalizations.of(context).getVariableText(enText: 'Phone number', bnText: 'ফোন নম্বর'),
                         child: _valueText(
                             context, _profileValue('phone'), maxLines: 1),
                       ),
                     _infoCard(
                       context: context,
-                      label: 'Bio',
+                      label: FFLocalizations.of(context).getVariableText(enText: 'Bio', bnText: 'পরিচিতি'),
                       child: _valueText(context, bio),
                     ),
                     _infoCard(
                       context: context,
-                      label: 'Preferred language',
+                      label: FFLocalizations.of(context).getVariableText(enText: 'Preferred language', bnText: 'পছন্দের ভাষা'),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,

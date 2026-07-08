@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '/flutter_flow/internationalization.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'pdf_viewer_provider.dart';
@@ -105,8 +106,8 @@ class SearchDrawer extends StatelessWidget {
                           TextField(
                             controller: searchController,
                             decoration: InputDecoration(
-                              labelText: "Search text",
-                              hintText: "Enter text to search",
+                              labelText: FFLocalizations.of(context).getVariableText(enText: 'Search text', bnText: 'অনুসন্ধানের টেক্সট'),
+                              hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter text to search', bnText: 'অনুসন্ধানের টেক্সট লিখুন'),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -214,7 +215,7 @@ class SearchDrawer extends StatelessWidget {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Text('Search'),
+                                : Text(FFLocalizations.of(context).getVariableText(enText: 'Search', bnText: 'অনুসন্ধান করুন')),
                           ),
                           if (provider.searchResult.hasResult)
                             ..._buildPdfSearchResultsList(

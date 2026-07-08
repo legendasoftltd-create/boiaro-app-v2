@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'trending_books_page_model.dart';
 export 'trending_books_page_model.dart';
 
+import '/flutter_flow/internationalization.dart';
 class TrendingBooksPageWidget extends StatefulWidget {
   const TrendingBooksPageWidget({
     super.key,
@@ -214,7 +215,7 @@ class _TrendingBooksPageWidgetState extends State<TrendingBooksPageWidget> {
                       Text(
                         valueOrDefault<String>(
                           widget.title,
-                          'Trending books',
+                          FFLocalizations.of(context).getVariableText(enText: 'Trending books', bnText: 'ট্রেন্ডিং বই'),
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 1,

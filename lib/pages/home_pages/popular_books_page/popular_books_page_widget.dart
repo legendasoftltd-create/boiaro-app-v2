@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'popular_books_page_model.dart';
 export 'popular_books_page_model.dart';
 
+import '/flutter_flow/internationalization.dart';
 class PopularBooksPageWidget extends StatefulWidget {
   const PopularBooksPageWidget({
     super.key,
@@ -176,7 +177,7 @@ class _PopularBooksPageWidgetState extends State<PopularBooksPageWidget> {
                 child: CustomCenterAppbarWidget(
                   title: valueOrDefault<String>(
                     widget.title,
-                    'Popular books',
+                    FFLocalizations.of(context).getVariableText(enText: 'Popular books', bnText: 'জনপ্রিয় বইসমূহ'),
                   ),
                   backIcon: false,
                   addIcon: false,

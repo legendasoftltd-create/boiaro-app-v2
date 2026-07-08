@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'filter_result_page_model.dart';
 export 'filter_result_page_model.dart';
 
+import '/flutter_flow/internationalization.dart';
 class FilterResultPageWidget extends StatefulWidget {
   const FilterResultPageWidget({super.key});
 
@@ -157,7 +158,7 @@ class _FilterResultPageWidgetState extends State<FilterResultPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Filter',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Filter', bnText: 'ফিল্টার'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},

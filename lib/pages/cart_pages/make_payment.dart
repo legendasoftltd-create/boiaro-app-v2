@@ -2,10 +2,12 @@ import 'dart:developer';
 
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_theme.dart';
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_util.dart';
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
 import 'package:a_i_ebook_app/pages/cart_pages/payment_screen.dart';
 import 'package:a_i_ebook_app/providers/cart_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MakeCheckOutScreen extends StatefulWidget {
   /// Line items with per-format `type` (ebook / audiobook / hardcopy).
@@ -58,10 +60,16 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
     print("User ID: ${widget.userId}, JWT Token: ${widget.jwtToken}");
     print(
         "bookIds: ${widget.bookIds}, couponCode: ${widget.couponCode}, shippingAddress: ${widget.shippingAddress}, selectedPaymentMethod: ${widget.selectedPaymentMethod}");
+    _init();
+  }
 
+  Future<void> _init() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lang = prefs.getString('ff_language') ?? 'en';
     _checkoutController = CheckoutController(
       jwtToken: widget.jwtToken,
       userId: widget.userId,
+      isBangla: lang == 'bn',
     );
     _initiatePayment();
   }
@@ -127,8 +135,7 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
                       ),
                     ),
                     SizedBox(height: 16),
-                    Text(
-                      'Order Successful!',
+                    Text(FFLocalizations.of(context).getVariableText(enText: 'Order Successful!', bnText: 'অর্ডার সফল হয়েছে!'),
                       style: FlutterFlowTheme.of(dialogContext).headlineSmall.override(
                             fontFamily: 'SF Pro Display',
                             fontWeight: FontWeight.bold,
@@ -159,7 +166,7 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
                         elevation: 0,
                       ),
                       child: Text(
-                        'OK',
+                        FFLocalizations.of(context).getVariableText(enText: 'OK', bnText: 'ঠিক আছে'),
                         style: TextStyle(
                           fontFamily: 'SF Pro Display',
                           color: Colors.white,
@@ -192,8 +199,7 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
     return Scaffold(
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        title: Text(
-          'Processing Payment',
+        title: Text(FFLocalizations.of(context).getVariableText(enText: 'Processing Payment', bnText: 'পেমেন্ট প্রসেস হচ্ছে'),
           style: FlutterFlowTheme.of(context).bodyLarge.override(
                 fontFamily: 'SF Pro Display',
                 fontWeight: FontWeight.bold,
@@ -231,15 +237,15 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Done'),
+                          child: Text(FFLocalizations.of(context).getVariableText(enText: 'Done', bnText: 'সম্পন্ন')),
                         ),
                       ],
                     ),
                   ),
                 )
               : _error != null
-                  ? Center(child: Text('Error: $_error'))
-                  : const Center(child: Text('Redirecting to payment...')),
+                  ? Center(child: Text('${FFLocalizations.of(context).getVariableText(enText: 'Error', bnText: 'ত্রুটি')}: $_error'))
+                  : Center(child: Text(FFLocalizations.of(context).getVariableText(enText: 'Redirecting to payment...', bnText: 'পেমেন্ট পেজে পাঠানো হচ্ছে...'))),
     );
   }
 }
@@ -252,11 +258,15 @@ class CheckoutController {
   final String baseUrl = FFAppConstants.baseApiUrl;
   final String jwtToken;
   final String userId;
+  final bool isBangla;
 
   CheckoutController({
     required this.jwtToken,
     required this.userId,
+    this.isBangla = false,
   });
+
+  String _t(String en, String bn) => isBangla ? bn : en;
 
   Map<String, String> get _headers => {
         'apikey': FFAppConstants.supabaseAnonApiKey,
@@ -349,15 +359,17 @@ class CheckoutController {
   }) async {
     try {
       if (cartLines.isEmpty) {
-        return {'success': 0, 'message': 'Cart is empty'};
+        return {'success': 0, 'message': _t('Cart is empty', 'কার্ট খালি আছে')};
       }
 
       final hasInvalidBookId = cartLines.any((c) => !_isValidBookId(c.id));
       if (hasInvalidBookId) {
         return {
           'success': 0,
-          'message':
-              'Cart contains invalid book id. Please remove and add the item again.',
+          'message': _t(
+            'Cart contains invalid book id. Please remove and add the item again.',
+            'কার্টে অবৈধ বইয়ের আইডি আছে। অনুগ্রহ করে সরিয়ে আবার যোগ করুন।',
+          ),
         };
       }
 
@@ -380,7 +392,7 @@ class CheckoutController {
         if (cartLines.any((c) => _formatForApi(c.type) == 'hardcopy')) {
           return {
             'success': 0,
-            'message': 'Wallet unlock supports ebook/audiobook only.',
+            'message': _t('Wallet unlock supports ebook/audiobook only.', 'ওয়ালেট দিয়ে শুধু ইবুক/অডিওবুক আনলক করা যায়।'),
           };
         }
         for (final line in cartLines) {
@@ -389,8 +401,10 @@ class CheckoutController {
           if (coinCost <= 0) {
             return {
               'success': 0,
-              'message':
-                  'Coin price missing for ${line.name}. Please add the item again.',
+              'message': _t(
+                'Coin price missing for ${line.name}. Please add the item again.',
+                '"${line.name}" বইয়ের কয়েন মূল্য পাওয়া যাচ্ছে না। অনুগ্রহ করে সরিয়ে আবার যোগ করুন।',
+              ),
             };
           }
           final unlockRes = await http.post(
@@ -407,14 +421,13 @@ class CheckoutController {
             final err = decoded is Map ? decoded['error']?.toString() : null;
             return {
               'success': 0,
-              'message':
-                  err ?? 'Wallet unlock failed (${unlockRes.statusCode})',
+              'message': err ?? _t('Wallet unlock failed (${unlockRes.statusCode})', 'ওয়ালেট আনলক ব্যর্থ হয়েছে (${unlockRes.statusCode})'),
             };
           }
         }
         return {
           'success': 1,
-          'message': 'Wallet unlock completed successfully.',
+          'message': _t('Wallet unlock completed successfully.', 'ওয়ালেট দিয়ে সফলভাবে আনলক হয়েছে।'),
           'payment_method': 'wallet',
         };
       }
@@ -461,12 +474,12 @@ class CheckoutController {
               orderDecoded is Map ? orderDecoded['error']?.toString() : null;
           return {
             'success': 0,
-            'message': err ?? 'Failed to create order (${orderRes.statusCode})',
+            'message': err ?? _t('Failed to create order (${orderRes.statusCode})', 'অর্ডার তৈরি ব্যর্থ হয়েছে (${orderRes.statusCode})'),
           };
         }
         return {
           'success': 1,
-          'message': 'Order placed successfully using Cash on Delivery.',
+          'message': _t('Order placed successfully using Cash on Delivery.', 'ক্যাশ অন ডেলিভারিতে অর্ডার সফলভাবে দেওয়া হয়েছে।'),
           'payment_method': 'cod',
           'order_id': _extractOrderId(orderDecoded),
         };
@@ -513,19 +526,19 @@ class CheckoutController {
             orderDecoded is Map ? orderDecoded['error']?.toString() : null;
         return {
           'success': 0,
-          'message': err ?? 'Failed to create order (${orderRes.statusCode})',
+          'message': err ?? _t('Failed to create order (${orderRes.statusCode})', 'অর্ডার তৈরি ব্যর্থ হয়েছে (${orderRes.statusCode})'),
         };
       }
 
       if (orderDecoded is! Map<String, dynamic>) {
-        return {'success': 0, 'message': 'Invalid order response'};
+        return {'success': 0, 'message': _t('Invalid order response', 'অর্ডার রেসপন্স অবৈধ')};
       }
 
       final orderId = _extractOrderId(orderDecoded);
       if (orderId == null || orderId.isEmpty) {
         return {
           'success': 0,
-          'message': 'Order id missing from response',
+          'message': _t('Order id missing from response', 'রেসপন্সে অর্ডার আইডি পাওয়া যায়নি'),
         };
       }
 
@@ -541,12 +554,12 @@ class CheckoutController {
         final err = payDecoded is Map ? payDecoded['error']?.toString() : null;
         return {
           'success': 0,
-          'message': err ?? 'Payment initiation failed (${payRes.statusCode})',
+          'message': err ?? _t('Payment initiation failed (${payRes.statusCode})', 'পেমেন্ট শুরু ব্যর্থ হয়েছে (${payRes.statusCode})'),
         };
       }
 
       if (payDecoded is! Map<String, dynamic>) {
-        return {'success': 0, 'message': 'Invalid payment response'};
+        return {'success': 0, 'message': _t('Invalid payment response', 'পেমেন্ট রেসপন্স অবৈধ')};
       }
 
       final ok = payDecoded['success'] == true || payDecoded['success'] == 1;
@@ -558,7 +571,7 @@ class CheckoutController {
             payDecoded['message']?.toString();
         return {
           'success': 0,
-          'message': err ?? 'Gateway URL not returned',
+          'message': err ?? _t('Gateway URL not returned', 'পেমেন্ট গেটওয়ে URL পাওয়া যায়নি'),
         };
       }
 

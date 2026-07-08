@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/services/local_download_service.dart';
 import '/services/reading_progress_service.dart';
 import 'package:flutter/material.dart';
@@ -88,11 +89,11 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
   String _typeLabel(String contentType) {
     switch (_normalizeContentType(contentType)) {
       case 'audiobook':
-        return 'Audiobook';
+        return FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক');
       case 'hardcopy':
-        return 'Hardcopy';
+        return FFLocalizations.of(context).getVariableText(enText: 'Hardcopy', bnText: 'হার্ডকপি');
       default:
-        return 'Ebook';
+        return FFLocalizations.of(context).getVariableText(enText: 'Ebook', bnText: 'ই-বই');
     }
   }
 
@@ -431,11 +432,11 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
 
                   if (isEbookTab) {
                     continueItems = data.continueReading;
-                    sectionLabel = 'Continue Reading';
+                    sectionLabel = FFLocalizations.of(context).getVariableText(enText: 'Continue Reading', bnText: 'পড়া চালিয়ে যান');
                     isAudio = false;
                   } else if (isAudioTab) {
                     continueItems = data.continueListening;
-                    sectionLabel = 'Continue Listening';
+                    sectionLabel = FFLocalizations.of(context).getVariableText(enText: 'Continue Listening', bnText: 'শোনা চালিয়ে যান');
                     isAudio = true;
                   } else if (isFavTab) {
                     // For favorites tab, show favorite books with any progress
@@ -450,8 +451,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                                 size: 52,
                                 color: FlutterFlowTheme.of(context).secondaryText),
                             const SizedBox(height: 12),
-                            Text(
-                              'No favourites in progress',
+                            Text(FFLocalizations.of(context).getVariableText(enText: 'No favourites in progress', bnText: 'চলমান কোনো প্রিয় বই নেই'),
                               style: FlutterFlowTheme.of(context).bodyMedium,
                             ),
                           ],
@@ -483,16 +483,12 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              isAudio
-                                  ? 'No audiobooks in progress'
-                                  : 'No ebooks in progress',
+                              FFLocalizations.of(context).getVariableText(enText: isAudio ? 'No audiobooks in progress' : 'No ebooks in progress', bnText: isAudio ? 'চলমান কোনো অডিওবুক নেই' : 'চলমান কোনো ই-বই নেই'),
                               style: FlutterFlowTheme.of(context).bodyMedium,
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              isAudio
-                                  ? 'Start listening to see your progress here'
-                                  : 'Start reading to see your progress here',
+                              FFLocalizations.of(context).getVariableText(enText: isAudio ? 'Start listening to see your progress here' : 'Start reading to see your progress here', bnText: isAudio ? 'আপনার অগ্রগতি দেখতে এখানে শুনতে শুরু করুন' : 'আপনার অগ্রগতি দেখতে এখানে পড়তে শুরু করুন'),
                               style: FlutterFlowTheme.of(context)
                                   .bodySmall
                                   .override(
@@ -614,8 +610,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
 
                   if (filteredItems.isEmpty) {
                     bodyContent = Center(
-                      child: Text(
-                        'No books found',
+                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'No books found', bnText: 'কোনো বই পাওয়া যায়নি'),
                         style: FlutterFlowTheme.of(context).bodyMedium,
                       ),
                     );
@@ -635,7 +630,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
               return Column(
                 children: [
                   CustomCenterAppbarWidget(
-                    title: 'Library',
+                    title: FFLocalizations.of(context).getVariableText(enText: 'Library', bnText: 'লাইব্রেরি'),
                     backIcon: false,
                     addIcon: false,
                     onTapAdd: () async {},
@@ -653,10 +648,10 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                             unselectedLabelColor:
                                 FlutterFlowTheme.of(context).secondaryText,
                             indicatorColor: FlutterFlowTheme.of(context).primary,
-                            tabs: const [
-                              Tab(text: 'Ebook'),
-                              Tab(text: 'Audiobook'),
-                              Tab(text: 'Favorites'),
+                            tabs: [
+                              Tab(text: FFLocalizations.of(context).getVariableText(enText: 'Ebook', bnText: 'ই-বই')),
+                              Tab(text: FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক')),
+                              Tab(text: FFLocalizations.of(context).getVariableText(enText: 'Favorites', bnText: 'পছন্দ')),
                             ],
                           ),
                         ),
@@ -667,7 +662,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                             child: Row(
                               children: [
                                 ChoiceChip(
-                                  label: const Text('Read'),
+                                  label: Text(FFLocalizations.of(context).getVariableText(enText: 'Read', bnText: 'চলমান')),
                                   selected: _selectedChipIndex == 1,
                                   onSelected: (_) => setState(() => _selectedChipIndex = 1),
                                   showCheckmark: false,
@@ -690,7 +685,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                                 ),
                                 const SizedBox(width: 8.0),
                                 ChoiceChip(
-                                  label: const Text('Downloaded'),
+                                  label: Text(FFLocalizations.of(context).getVariableText(enText: 'Downloaded', bnText: 'ডাউনলোড')),
                                   selected: _selectedChipIndex == 2,
                                   onSelected: (_) => setState(() => _selectedChipIndex = 2),
                                   showCheckmark: false,
@@ -713,7 +708,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                                 ),
                                 const SizedBox(width: 8.0),
                                 ChoiceChip(
-                                  label: const Text('Purchased'),
+                                  label: Text(FFLocalizations.of(context).getVariableText(enText: 'Purchased', bnText: 'ক্রয়কৃত')),
                                   selected: _selectedChipIndex == 3,
                                   onSelected: (_) => setState(() => _selectedChipIndex = 3),
                                   showCheckmark: false,

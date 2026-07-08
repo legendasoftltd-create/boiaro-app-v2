@@ -54,6 +54,7 @@ Future getDeviceId() async {
   } catch (e) {
     // Handle any exceptions or platform-specific errors
     print('Error getting device ID: $e');
-    return "Error getting device ID";
+    final lang = prefs.getString('ff_language') ?? 'en';
+    return lang == 'bn' ? 'ডিভাইস আইডি পাওয়া যায়নি' : "Error getting device ID";
   }
 }

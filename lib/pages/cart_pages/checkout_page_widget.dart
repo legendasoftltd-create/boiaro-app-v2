@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/app_constants.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/providers/cart_provider.dart';
@@ -114,7 +115,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
             _isApplyingCoupon = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Coupon applied successfully!')),
+            SnackBar(content: Text(FFLocalizations.of(context).getVariableText(enText: 'Coupon applied successfully!', bnText: 'কুপন সফলভাবে প্রয়োগ হয়েছে!'))),
           );
         } else {
           setState(() {
@@ -165,11 +166,11 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   String _formatCartType(String? type) {
     switch ((type ?? '').toLowerCase()) {
       case 'audiobook':
-        return 'Audiobook';
+        return FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক');
       case 'hardcopy':
-        return 'Hardcopy';
+        return FFLocalizations.of(context).getVariableText(enText: 'Hardcopy', bnText: 'প্রিন্ট কপি');
       default:
-        return 'Ebook';
+        return FFLocalizations.of(context).getVariableText(enText: 'Ebook', bnText: 'ই-বুক');
     }
   }
 
@@ -395,8 +396,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Select Area',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'Select Area', bnText: 'এলাকা নির্বাচন করুন'),
                           style: FlutterFlowTheme.of(context).headlineSmall.override(
                                 fontFamily: 'SF Pro Display',
                                 fontWeight: FontWeight.bold,
@@ -413,8 +413,8 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                     padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: TextField(
                       decoration: InputDecoration(
-                        labelText: 'Search Area',
-                        hintText: 'Type area name...',
+                        labelText: FFLocalizations.of(context).getVariableText(enText: 'Search Area', bnText: 'এলাকা খুঁজুন'),
+                        hintText: FFLocalizations.of(context).getVariableText(enText: 'Type area name...', bnText: 'এলাকার নাম লিখুন...'),
                         prefixIcon: Icon(Icons.search_rounded),
                         filled: true,
                         fillColor: FlutterFlowTheme.of(context).primaryBackground,
@@ -434,8 +434,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                   Expanded(
                     child: filtered.isEmpty
                         ? Center(
-                            child: Text(
-                              'No areas found',
+                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'No areas found', bnText: 'কোনো এলাকা পাওয়া যায়নি'),
                               style: FlutterFlowTheme.of(context).bodyMedium,
                             ),
                           )
@@ -517,8 +516,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Shipping Information',
+        Text(FFLocalizations.of(context).getVariableText(enText: 'Shipping Information', bnText: 'শিপিং সংক্রান্ত তথ্য'),
           style: FlutterFlowTheme.of(context).headlineMedium.override(
             fontSize: 18.0,
             fontWeight: FontWeight.w600,
@@ -566,8 +564,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                   ),
                 ),
                 SizedBox(width: 8.0),
-                Text(
-                  'Calculating shipping...',
+                Text(FFLocalizations.of(context).getVariableText(enText: 'Calculating shipping...', bnText: 'শিপিং খরচ হিসাব করা হচ্ছে...'),
                   style: FlutterFlowTheme.of(context).bodySmall.override(
                         color: FlutterFlowTheme.of(context).secondaryText,
                       ),
@@ -592,8 +589,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Shipping Address',
+          Text(FFLocalizations.of(context).getVariableText(enText: 'Shipping Address', bnText: 'শিপিং ঠিকানা'),
             style: FlutterFlowTheme.of(context).headlineMedium.override(
               fontSize: 16.0,
               fontWeight: FontWeight.w600,
@@ -613,13 +609,13 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
         _buildAddressField(
           controller: _fullNameController,
           label: 'Name',
-          hintText: 'e.g. Md Rahim Uddin',
+          hintText: FFLocalizations.of(context).getVariableText(enText: 'e.g. Md Rahim Uddin', bnText: 'যেমন: মোঃ রহিম উদ্দিন'),
         ),
         SizedBox(height: 8.0),
         _buildAddressField(
           controller: _phoneController,
           label: 'Phone',
-          hintText: 'e.g. 01712-345678',
+          hintText: FFLocalizations.of(context).getVariableText(enText: 'e.g. 01712-345678', bnText: 'যেমন: ০১৭১২-৩৪৫৬৭৮'),
           keyboardType: TextInputType.phone,
         ),
         SizedBox(height: 8.0),
@@ -627,8 +623,8 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
           DropdownButtonFormField<String>(
             value: _selectedDistrictName,
             decoration: InputDecoration(
-              labelText: 'District',
-              hintText: 'Select district (e.g. Dhaka)',
+              labelText: FFLocalizations.of(context).getVariableText(enText: 'District', bnText: 'জেলা'),
+              hintText: FFLocalizations.of(context).getVariableText(enText: 'Select district (e.g. Dhaka)', bnText: 'জেলা নির্বাচন করুন (যেমন ঢাকা)'),
               filled: true,
               fillColor: FlutterFlowTheme.of(context).secondaryBackground,
               border: OutlineInputBorder(
@@ -666,7 +662,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                  children: [
                    SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                    SizedBox(width: 8),
-                   Text('Loading areas...', style: FlutterFlowTheme.of(context).bodySmall),
+                   Text(FFLocalizations.of(context).getVariableText(enText: 'Loading areas...', bnText: 'এলাকা লোড হচ্ছে...'), style: FlutterFlowTheme.of(context).bodySmall),
                  ],
                ),
              ),
@@ -720,13 +716,13 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
         _buildAddressField(
           controller: _addressLine1Controller,
           label: 'Address',
-          hintText: 'Road no, house, village, area',
+          hintText: FFLocalizations.of(context).getVariableText(enText: 'Road no, house, village, area', bnText: 'রাস্তা নম্বর, বাড়ি, গ্রাম, এলাকা'),
         ),
         SizedBox(height: 8.0),
         _buildAddressField(
           controller: _postalCodeController,
           label: 'Postcode (Optional)',
-          hintText: 'e.g. 1209',
+          hintText: FFLocalizations.of(context).getVariableText(enText: 'e.g. 1209', bnText: 'যেমন: ১২০৯'),
           keyboardType: TextInputType.number,
         ),
       ],
@@ -767,8 +763,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Shipping Method',
+          Text(FFLocalizations.of(context).getVariableText(enText: 'Shipping Method', bnText: 'শিপিং পদ্ধতি'),
             style: FlutterFlowTheme.of(context).headlineMedium.override(
               fontSize: 16.0,
               fontWeight: FontWeight.w600,
@@ -776,8 +771,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
           ),
           SizedBox(height: 12.0),
           if (_shippingMethods.isEmpty)
-            Text(
-              'No shipping methods available.',
+            Text(FFLocalizations.of(context).getVariableText(enText: 'No shipping methods available.', bnText: 'কোনো শিপিং পদ্ধতি উপলব্ধ নেই।'),
               style: FlutterFlowTheme.of(context).bodySmall.override(
                     color: FlutterFlowTheme.of(context).secondaryText,
                   ),
@@ -929,7 +923,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
         child: Column(
           children: [
             CustomCenterAppbarWidget(
-                  title: 'Checkout',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Checkout', bnText: 'চেকআউট'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -953,8 +947,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Order Summary',
+                            Text(FFLocalizations.of(context).getVariableText(enText: 'Order Summary', bnText: 'অর্ডার বিবরণী'),
                               style: FlutterFlowTheme.of(context).headlineMedium.override(
                                 fontSize: 20.0,
                                 fontWeight: FontWeight.w600,
@@ -980,8 +973,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                                                     fontWeight: FontWeight.w500,
                                                   ),
                                                 ),
-                                                Text(
-                                                  '${_formatCartType(cartItem.type)} • Qty: ${cartItem.quantity}',
+                                                Text('${_formatCartType(cartItem.type)} • ' + FFLocalizations.of(context).getVariableText(enText: 'Qty: ', bnText: 'পরিমাণ: ') + '${cartItem.quantity}',
                                                   style: FlutterFlowTheme.of(context).bodySmall.override(
                                                     color: FlutterFlowTheme.of(context).secondaryText,
                                                   ),
@@ -1050,8 +1042,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Subtotal:',
+                                Text(FFLocalizations.of(context).getVariableText(enText: 'Subtotal:', bnText: 'উপ-মোট:'),
                                   style: FlutterFlowTheme.of(context).bodyLarge,
                                 ),
                                 Text(
@@ -1065,8 +1056,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'Book Discount:',
+                                  Text(FFLocalizations.of(context).getVariableText(enText: 'Book Discount:', bnText: 'বইয়ের ছাড়:'),
                                     style: FlutterFlowTheme.of(context).bodyLarge.override(
                                       color: FlutterFlowTheme.of(context).secondaryText,
                                     ),
@@ -1086,8 +1076,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'Subtotal after discounts:',
+                                  Text(FFLocalizations.of(context).getVariableText(enText: 'Subtotal after discounts:', bnText: 'ছাড় পরবর্তী উপ-মোট:'),
                                     style: FlutterFlowTheme.of(context).bodyLarge.override(
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -1107,7 +1096,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Coupon Discount${_appliedCouponCode != null ? ' (${_appliedCouponCode!.toUpperCase()})' : ''}:',
+                                    FFLocalizations.of(context).getVariableText(enText: 'Coupon Discount', bnText: 'কুপন ছাড়') + '${_appliedCouponCode != null ? ' (${_appliedCouponCode!.toUpperCase()})' : ''}:',
                                     style: FlutterFlowTheme.of(context).bodyLarge.override(
                                       color: FlutterFlowTheme.of(context).secondaryText,
                                     ),
@@ -1127,8 +1116,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'Shipping:',
+                                  Text(FFLocalizations.of(context).getVariableText(enText: 'Shipping:', bnText: 'শিপিং খরচ:'),
                                     style: FlutterFlowTheme.of(context).bodyLarge.override(
                                       color: FlutterFlowTheme.of(context).secondaryText,
                                     ),
@@ -1146,8 +1134,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Total Amount:',
+                                Text(FFLocalizations.of(context).getVariableText(enText: 'Total Amount:', bnText: 'সর্বমোট পরিমাণ:'),
                                   style: FlutterFlowTheme.of(context).headlineSmall.override(
                                     fontSize: 18.0,
                                     fontWeight: FontWeight.w600,
@@ -1180,8 +1167,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Have a coupon?',
+                            Text(FFLocalizations.of(context).getVariableText(enText: 'Have a coupon?', bnText: 'কুপন আছে?'),
                               style: FlutterFlowTheme.of(context).headlineMedium.override(
                                 fontSize: 16.0,
                                 fontWeight: FontWeight.w600,
@@ -1195,7 +1181,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                                     controller: _couponController,
                                     enabled: _appliedCouponCode == null,
                                     decoration: InputDecoration(
-                                      hintText: 'Enter coupon code',
+                                      hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter coupon code', bnText: 'কুপন কোড লিখুন'),
                                       filled: true,
                                       fillColor: FlutterFlowTheme.of(context).secondaryBackground,
                                       border: OutlineInputBorder(
@@ -1225,8 +1211,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                             ),
                                           )
-                                        : Text(
-                                            'Apply',
+                                        : Text(FFLocalizations.of(context).getVariableText(enText: 'Apply', bnText: 'প্রয়োগ করুন'),
                                             style: FlutterFlowTheme.of(context).titleMedium.override(
                                               fontFamily: 'SF Pro Display',
                                               color: Colors.white,
@@ -1244,8 +1229,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                                         borderRadius: BorderRadius.circular(12.0),
                                       ),
                                     ),
-                                    child: Text(
-                                      'Remove',
+                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Remove', bnText: 'মুছে ফেলুন'),
                                       style: FlutterFlowTheme.of(context).titleMedium.override(
                                         fontFamily: 'SF Pro Display',
                                         color: FlutterFlowTheme.of(context).primary,
@@ -1266,8 +1250,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                             ],
                             if (_appliedCouponCode != null && _couponErrorMessage == null) ...[
                               SizedBox(height: 8.0),
-                              Text(
-                                'Applied: ${_appliedCouponCode!.toUpperCase()} (−৳${_discountAmount.toStringAsFixed(2)})',
+                              Text('${FFLocalizations.of(context).getVariableText(enText: 'Applied', bnText: 'প্রয়োগকৃত')}: ${_appliedCouponCode!.toUpperCase()} (−৳${_discountAmount.toStringAsFixed(2)})',
                                 style: FlutterFlowTheme.of(context).bodySmall,
                               ),
                             ]
@@ -1318,8 +1301,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                       ],
 
                       // Payment Method Section
-                      Text(
-                        'Choose Payment Method',
+                      Text(FFLocalizations.of(context).getVariableText(enText: 'Choose Payment Method', bnText: 'পেমেন্ট পদ্ধতি নির্বাচন করুন'),
                         style: FlutterFlowTheme.of(context).headlineMedium.override(
                           fontSize: 18.0,
                           fontWeight: FontWeight.w600,
@@ -1433,8 +1415,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                   if (hasHardcopy && shippingAddress == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                          'Please provide complete shipping details for hardcopy orders.',
+                        content: Text(FFLocalizations.of(context).getVariableText(enText: 'Please provide complete shipping details for hardcopy orders.', bnText: 'প্রিন্ট কপির জন্য অনুগ্রহ করে সম্পূর্ণ শিপিং ঠিকানা প্রদান করুন।'),
                         ),
                         backgroundColor: Colors.red,
                       ),
@@ -1569,8 +1550,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                       size: 25.0,
                     ),
                     SizedBox(width: 12.0),
-                    Text(
-                      'Pay ৳${finalTotal.toStringAsFixed(2)}',
+                    Text('${FFLocalizations.of(context).getVariableText(enText: 'Pay', bnText: 'পরিশোধ করুন')} ৳${finalTotal.toStringAsFixed(2)}',
                       style: FlutterFlowTheme.of(context).titleMedium.override(
                         fontFamily: 'SF Pro Display',
                         color: Colors.white,

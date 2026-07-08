@@ -46,7 +46,7 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget> {
         scrolledUnderElevation: 0,
         centerTitle: false,
         title: Text(
-          'Audiobook',
+          FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক'),
           style: FlutterFlowTheme.of(context).headlineSmall.override(
                 fontFamily: 'SF Pro Display',
                 fontWeight: FontWeight.bold,

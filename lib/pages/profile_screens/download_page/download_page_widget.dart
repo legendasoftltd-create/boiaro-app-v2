@@ -1,5 +1,6 @@
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/empty_components/no_download_yet/no_download_yet_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
@@ -49,7 +50,7 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
 
   Future<void> _openDownloadedBook(LocalDownloadedBook item) async {
     if (!item.existsOnDisk) {
-      await actions.showCustomToastBottom('File not found on device');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'File not found on device', bnText: 'ডিভাইসে ফাইলটি পাওয়া যায়নি'));
       await _loadDownloads();
       return;
     }
@@ -70,17 +71,17 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
     final shouldDelete = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('Delete download'),
-            content: Text('Remove "${item.name}" from this device?'),
+            title: Text(FFLocalizations.of(context).getVariableText(enText: 'Delete download', bnText: 'ডাউনলোড মুছুন')),
+            content: Text(FFLocalizations.of(context).getVariableText(enText: 'Remove "${item.name}" from this device?', bnText: '"${item.name}" এই ডিভাইস থেকে মুছে দেবেন?')),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancel'),
+                child: Text(FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন')),
               ),
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(true),
                 child: Text(
-                  'Delete',
+                  FFLocalizations.of(context).getVariableText(enText: 'Delete', bnText: 'মুছুন'),
                   style: TextStyle(
                     color: FlutterFlowTheme.of(dialogContext).error,
                   ),
@@ -99,10 +100,10 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
 
     try {
       await LocalDownloadService.deleteDownloadByBookId(item.bookId);
-      await actions.showCustomToastBottom('Download deleted');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Download deleted', bnText: 'ডাউনলোড মুছে ফেলা হয়েছে'));
       await _loadDownloads();
     } catch (_) {
-      await actions.showCustomToastBottom('Failed to delete download');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to delete download', bnText: 'ডাউনলোড মুছতে ব্যর্থ হয়েছে'));
       if (!mounted) return;
       safeSetState(() {
         _deletingBookIds.remove(item.bookId);
@@ -143,7 +144,7 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Download',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Download', bnText: 'ডাউনলোড'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -241,7 +242,7 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                               const SizedBox(height: 4),
                                               Text(
                                                 item.author.isEmpty
-                                                    ? 'Unknown author'
+                                                    ? FFLocalizations.of(context).getVariableText(enText: 'Unknown author', bnText: 'অজ্ঞাত লেখক')
                                                     : item.author,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -269,7 +270,7 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                                   ),
                                                   const SizedBox(width: 6),
                                                   Text(
-                                                    'Downloaded',
+                                                    FFLocalizations.of(context).getVariableText(enText: 'Downloaded', bnText: 'ডাউনলোড হয়েছে'),
                                                     style: FlutterFlowTheme.of(
                                                             context)
                                                         .bodyMedium
@@ -320,7 +321,7 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                                   }
                                                 },
                                                 itemBuilder: (context) => [
-                                                  const PopupMenuItem<String>(
+                                                  PopupMenuItem<String>(
                                                     value: 'delete',
                                                     child: Row(
                                                       children: [
@@ -329,7 +330,7 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                                           size: 18,
                                                         ),
                                                         SizedBox(width: 8),
-                                                        Text('Delete'),
+                                                        Text(FFLocalizations.of(context).getVariableText(enText: 'Delete', bnText: 'মুছুন')),
                                                       ],
                                                     ),
                                                   ),

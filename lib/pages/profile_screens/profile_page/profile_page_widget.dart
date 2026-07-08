@@ -295,25 +295,6 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                   ).animateOnPageLoad(animationsMap[
                                       'textOnPageLoadAnimation1']!),
                                   
-                                  // Text(
-                                  //   getJsonField(
-                                  //     FFAppState().userDetail,
-                                  //     r'''$.email''',
-                                  //   ).toString(),
-                                  //   textAlign: TextAlign.center,
-                                  //   style: FlutterFlowTheme.of(context)
-                                  //       .bodyMedium
-                                  //       .override(
-                                  //         fontFamily: 'SF Pro Display',
-                                  //         color: FlutterFlowTheme.of(context)
-                                  //             .black40,
-                                  //         fontSize: 17.0,
-                                  //         letterSpacing: 0.0,
-                                  //         lineHeight: 1.5,
-                                  //       ),
-                                  // ).animateOnPageLoad(animationsMap[
-                                  //     'textOnPageLoadAnimation2']!),
-                                  
                                   if (getJsonField(
                                             FFAppState().userDetail,
                                             r'''$.referral_code''',
@@ -335,7 +316,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                         await Clipboard.setData(
                                             ClipboardData(text: code));
                                         await actions.showCustomToastBottom(
-                                            'Referral code copied');
+                                            FFLocalizations.of(context).getVariableText(enText: 'Referral code copied', bnText: 'রেফারেল কোড কপি হয়েছে'));
                                       },
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
@@ -347,7 +328,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                               BorderRadius.circular(10),
                                         ),
                                         child: Text(
-                                          'Referral code: ${getJsonField(
+                                          '${FFLocalizations.of(context).getVariableText(enText: 'Referral code', bnText: 'রেফারেল কোড')}: ${getJsonField(
                                             FFAppState().userDetail,
                                             r'''$.referral_code''',
                                           ).toString()}',
@@ -537,7 +518,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'Wishlist',
+                                              FFLocalizations.of(context).getVariableText(enText: 'Wishlist', bnText: 'উইশলিস্ট'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -629,7 +610,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                               EdgeInsetsDirectional.fromSTEB(
                                                   16.0, 0.0, 0.0, 0.0),
                                           child: Text(
-                                            'Author List',
+                                            FFLocalizations.of(context).getVariableText(enText: 'Author List', bnText: 'লেখক তালিকা'),
                                             style:
                                                 FlutterFlowTheme.of(context)
                                                     .bodyMedium
@@ -724,7 +705,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                               EdgeInsetsDirectional.fromSTEB(
                                                   16.0, 0.0, 0.0, 0.0),
                                           child: Text(
-                                            'Narrator List',
+                                            FFLocalizations.of(context).getVariableText(enText: 'Narrator List', bnText: 'ভয়েস আর্টিস্ট তালিকা'),
                                             style:
                                                 FlutterFlowTheme.of(context)
                                                     .bodyMedium
@@ -819,7 +800,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                               EdgeInsetsDirectional.fromSTEB(
                                                   16.0, 0.0, 0.0, 0.0),
                                           child: Text(
-                                            'Publisher List',
+                                            FFLocalizations.of(context).getVariableText(enText: 'Publisher List', bnText: 'প্রকাশক তালিকা'),
                                             style:
                                                 FlutterFlowTheme.of(context)
                                                     .bodyMedium
@@ -1006,7 +987,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'My Orders',
+                                              FFLocalizations.of(context).getVariableText(enText: 'My Orders', bnText: 'আমার অর্ডার'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -1317,7 +1298,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'Coins & Rewards',
+                                              FFLocalizations.of(context).getVariableText(enText: 'Coins & Rewards', bnText: 'কয়েন ও পুরস্কার'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -1413,7 +1394,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                                 const EdgeInsetsDirectional.fromSTEB(
                                                     16.0, 0.0, 0.0, 0.0),
                                             child: Text(
-                                              'Refer & Earn',
+                                              FFLocalizations.of(context).getVariableText(enText: 'Refer & Earn', bnText: 'রেফার করুন ও আয় করুন'),
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
@@ -1707,7 +1688,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                               EdgeInsetsDirectional.fromSTEB(
                                                   16.0, 0.0, 0.0, 0.0),
                                           child: Text(
-                                            'Help & Support',
+                                            FFLocalizations.of(context).getVariableText(enText: 'Help & Support', bnText: 'হেল্প এন্ড সাপোর্ট'),
                                             style:
                                                 FlutterFlowTheme.of(context)
                                                     .bodyMedium
@@ -2010,7 +1991,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                             padding: EdgeInsetsDirectional.fromSTEB(
                                 20.0, 16.0, 20.0, 12.0),
                             child: Text(
-                              'We\'re on social media',
+                              FFLocalizations.of(context).getVariableText(enText: 'We\'re on social media', bnText: 'আমরা সোশ্যাল মিডিয়ায় আছি'),
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
@@ -2024,7 +2005,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                           ),
                           _buildSocialItem(
                             context,
-                            'Like Facebook Page',
+                            FFLocalizations.of(context).getVariableText(enText: 'Like Facebook Page', bnText: 'ফেসবুক পেজ লাইক দিন'),
                             'assets/images/facebook_ic.png',
                             'https://www.facebook.com/boiarobd',
                             isImage: true,
@@ -2032,7 +2013,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                               'containerOnPageLoadAnimation5']!),
                           _buildSocialItem(
                             context,
-                            'Join Facebook Community',
+                            FFLocalizations.of(context).getVariableText(enText: 'Join Facebook Community', bnText: 'ফেসবুক কমিউনিটিতে যোগ দিন'),
                             Icons.groups_rounded,
                             'https://www.facebook.com/groups/boiaro.pathok.adda',
                             iconColor: Color(0xFF1877F2),
@@ -2040,7 +2021,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                               'containerOnPageLoadAnimation5']!),
                           _buildSocialItem(
                             context,
-                            'Subscribe Youtube Channel',
+                            FFLocalizations.of(context).getVariableText(enText: 'Subscribe Youtube Channel', bnText: 'ইউটিউব চ্যানেল সাবস্ক্রাইব করুন'),
                             'assets/images/youtube.svg',
                             'https://www.youtube.com/@boiaro',
                           ).animateOnPageLoad(animationsMap[
@@ -2186,7 +2167,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                           ),
                         ),
                         Text(
-                          'Refer & Earn',
+                          FFLocalizations.of(context).getVariableText(enText: 'Refer & Earn', bnText: 'রেফার করুন ও আয় করুন'),
                           style: FlutterFlowTheme.of(context).bodyMedium.override(
                                 fontFamily: 'SF Pro Display',
                                 fontSize: 20.0,
@@ -2223,7 +2204,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Failed to load referral details',
+                                        FFLocalizations.of(context).getVariableText(enText: 'Failed to load referral details', bnText: 'রেফারেল তথ্য লোড করতে ব্যর্থ হয়েছে'),
                                         style: FlutterFlowTheme.of(context).bodyMedium,
                                       ),
                                     ],
@@ -2259,7 +2240,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                   const SizedBox(height: 16),
                                   Center(
                                     child: Text(
-                                      'Invite your friends & earn coins!',
+                                      FFLocalizations.of(context).getVariableText(enText: 'Invite your friends & earn coins!', bnText: 'বন্ধুদের আমন্ত্রণ দিন এবং কয়েন আয় করুন!'),
                                       textAlign: TextAlign.center,
                                       style: FlutterFlowTheme.of(context).bodyLarge.override(
                                             fontFamily: 'SF Pro Display',
@@ -2274,7 +2255,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                       Expanded(
                                         child: _buildRefStatCard(
                                           context,
-                                          'Total Referrals',
+                                          FFLocalizations.of(context).getVariableText(enText: 'Total Referrals', bnText: 'মোট রেফারেল'),
                                           totalReferrals.toString(),
                                           Icons.people_alt_rounded,
                                         ),
@@ -2283,8 +2264,8 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                       Expanded(
                                         child: _buildRefStatCard(
                                           context,
-                                          'Coins Earned',
-                                          '$totalEarned Coins',
+                                          FFLocalizations.of(context).getVariableText(enText: 'Coins Earned', bnText: 'অর্জিত কয়েন'),
+                                          '$totalEarned ${FFLocalizations.of(context).getVariableText(enText: 'Coins', bnText: 'কয়েন')}',
                                           Icons.monetization_on_rounded,
                                         ),
                                       ),
@@ -2305,7 +2286,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                     child: Column(
                                       children: [
                                         Text(
-                                          'YOUR REFERRAL CODE',
+                                          FFLocalizations.of(context).getVariableText(enText: 'YOUR REFERRAL CODE', bnText: 'আপনার রেফারেল কোড'),
                                           style: FlutterFlowTheme.of(context).bodySmall.override(
                                                 fontFamily: 'SF Pro Display',
                                                 color: FlutterFlowTheme.of(context).secondaryText,
@@ -2339,10 +2320,10 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                         ElevatedButton.icon(
                                           onPressed: () async {
                                             await Clipboard.setData(ClipboardData(text: refCode));
-                                            await actions.showCustomToastBottom('Referral code copied!');
+                                            await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Referral code copied!', bnText: 'রেফারেল কোড কপি হয়েছে!'));
                                           },
                                           icon: const Icon(Icons.copy_rounded, size: 18),
-                                          label: const Text('Copy Code'),
+                                          label: Text(FFLocalizations.of(context).getVariableText(enText: 'Copy Code', bnText: 'কোড কপি করুন')),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: FlutterFlowTheme.of(context).primary,
                                             foregroundColor: FlutterFlowTheme.of(context).primaryBackground,
@@ -2361,7 +2342,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                   ),
                                   const SizedBox(height: 24),
                                   Text(
-                                    'How it works',
+                                    FFLocalizations.of(context).getVariableText(enText: 'How it works', bnText: 'এটি কীভাবে কাজ করে'),
                                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                                           fontFamily: 'SF Pro Display',
                                           fontWeight: FontWeight.bold,
@@ -2372,22 +2353,22 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                   _buildInstructionStep(
                                     context,
                                     '1',
-                                    'Share your code with friends',
-                                    'Send them your unique referral code.',
+                                    FFLocalizations.of(context).getVariableText(enText: 'Share your code with friends', bnText: 'বন্ধুদের সাথে কোড শেয়ার করুন'),
+                                    FFLocalizations.of(context).getVariableText(enText: 'Send them your unique referral code.', bnText: 'তাদের আপনার অনন্য রেফারেল কোড পাঠান।'),
                                   ),
                                   const SizedBox(height: 12),
                                   _buildInstructionStep(
                                     context,
                                     '2',
-                                    'They sign up & get coins',
-                                    'Your friend receives $signupReward coins immediately upon signup.',
+                                    FFLocalizations.of(context).getVariableText(enText: 'They sign up & get coins', bnText: 'তারা সাইন আপ করে কয়েন পান'),
+                                    FFLocalizations.of(context).getVariableText(enText: 'Your friend receives $referredBonus coins immediately upon signup.', bnText: 'আপনার বন্ধু সাইন আপ করার সাথে সাথে $referredBonus কয়েন পাবেন।'),
                                   ),
                                   const SizedBox(height: 12),
                                   _buildInstructionStep(
                                     context,
                                     '3',
-                                    'You earn rewards',
-                                    'You receive $referredBonus coins once they register using your code.',
+                                    FFLocalizations.of(context).getVariableText(enText: 'You earn rewards', bnText: 'আপনি পুরস্কার আয় করুন'),
+                                    FFLocalizations.of(context).getVariableText(enText: 'You receive $signupReward coins once they register using your code.', bnText: 'তারা আপনার কোড দিয়ে নিবন্ধন করলে আপনি $signupReward কয়েন পাবেন।'),
                                   ),
                                   const SizedBox(height: 16),
                                 ],

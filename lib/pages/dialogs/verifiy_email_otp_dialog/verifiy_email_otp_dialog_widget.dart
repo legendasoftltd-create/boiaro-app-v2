@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -92,8 +94,7 @@ class _VerifiyEmailOtpDialogWidgetState
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 28.0, 0.0, 16.0),
-                  child: Text(
-                    'Please enter the email address you\'d like your password reset information sent to',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: "Please enter the email address you'd like your password reset information sent to", bnText: "অনুগ্রহ করে আপনার ইমেইল ঠিকানাটি লিখুন যেখানে পাসওয়ার্ড রিসেটের তথ্য পাঠানো হবে"),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -110,7 +111,7 @@ class _VerifiyEmailOtpDialogWidgetState
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: 'Code Sent To ',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Code Sent To ', bnText: 'কোড পাঠানো হয়েছে '),
                           style: FlutterFlowTheme.of(context)
                               .bodyMedium
                               .override(
@@ -235,7 +236,7 @@ class _VerifiyEmailOtpDialogWidgetState
 
                     safeSetState(() {});
                   },
-                  text: 'Verified',
+                  text: FFLocalizations.of(context).getVariableText(enText: 'Verified', bnText: 'যাচাই করা হয়েছে'),
                   options: FFButtonOptions(
                     width: 250.0,
                     height: 56.0,

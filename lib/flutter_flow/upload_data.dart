@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime_type/mime_type.dart';
 import 'package:video_player/video_player.dart';
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
 
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow_util.dart';
@@ -231,7 +232,10 @@ bool validateFileFormat(String filePath, BuildContext context) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
-      content: Text('Invalid file format: ${mime(filePath)}'),
+      content: Text(FFLocalizations.of(context).getVariableText(
+        enText: 'Invalid file format: ${mime(filePath)}',
+        bnText: 'অবৈধ ফাইল ফরম্যাট: ${mime(filePath)}',
+      )),
     ));
   return false;
 }

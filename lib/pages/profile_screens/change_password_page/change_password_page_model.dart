@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
@@ -18,9 +20,11 @@ class ChangePasswordPageModel
   String? Function(BuildContext, String?)? textController1Validator;
   String? _textController1Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter valid new password';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter valid new password',
+        bnText: 'অনুগ্রহ করে সঠিক নতুন পাসওয়ার্ড লিখুন',
+      );
     }
-
     return null;
   }
 
@@ -31,9 +35,11 @@ class ChangePasswordPageModel
   String? Function(BuildContext, String?)? textController2Validator;
   String? _textController2Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter valid confirm password';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter valid confirm password',
+        bnText: 'অনুগ্রহ করে সঠিক নিশ্চিত পাসওয়ার্ড লিখুন',
+      );
     }
-
     return null;
   }
 

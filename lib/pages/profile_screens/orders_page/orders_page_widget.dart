@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/app_state.dart';
 import 'package:intl/intl.dart';
 
@@ -74,7 +75,7 @@ class _OrdersPageWidgetState extends State<OrdersPageWidget> {
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: PreferredSize(
         preferredSize: Size(double.infinity, 80),
-        child: SingleAppbarWidget(title: 'My Orders'),
+        child: SingleAppbarWidget(title: FFLocalizations.of(context).getVariableText(enText: 'My Orders', bnText: 'আমার অর্ডার')),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -87,7 +88,7 @@ class _OrdersPageWidgetState extends State<OrdersPageWidget> {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadOrders,
-                        child: const Text('Retry'),
+                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'Retry', bnText: 'আবার চেষ্টা করুন')),
                       ),
                     ],
                   ),
@@ -104,7 +105,7 @@ class _OrdersPageWidgetState extends State<OrdersPageWidget> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No orders yet',
+                             FFLocalizations.of(context).getVariableText(enText: 'No orders yet', bnText: 'এখনও কোনো অর্ডার নেই'),
                             style: FlutterFlowTheme.of(context).bodyLarge,
                           ),
                         ],
@@ -229,7 +230,7 @@ class _OrdersPageWidgetState extends State<OrdersPageWidget> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${items.length} ${items.length == 1 ? 'Item' : 'Items'}',
+                              '${items.length} ${items.length == 1 ? FFLocalizations.of(context).getVariableText(enText: 'Item', bnText: 'টি আইটেম') : FFLocalizations.of(context).getVariableText(enText: 'Items', bnText: 'টি আইটেম')}',
                             style: FlutterFlowTheme.of(context).bodySmall.override(
                                   fontFamily: 'SF Pro Display',
                                   color: FlutterFlowTheme.of(context).secondaryText,
@@ -264,7 +265,7 @@ class _OrdersPageWidgetState extends State<OrdersPageWidget> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    'View Details',
+                                    FFLocalizations.of(context).getVariableText(enText: 'View Details', bnText: 'বিবরণ দেখুন'),
                                     style: FlutterFlowTheme.of(context).bodySmall.override(
                                           fontFamily: 'SF Pro Display',
                                           color: FlutterFlowTheme.of(context).primary,
@@ -327,7 +328,7 @@ class _OrdersPageWidgetState extends State<OrdersPageWidget> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Order Items',
+                FFLocalizations.of(context).getVariableText(enText: 'Order Items', bnText: 'অর্ডারের আইটেমসমূহ'),
                 style: FlutterFlowTheme.of(context).headlineSmall.override(
                       fontFamily: 'SF Pro Display',
                       fontWeight: FontWeight.bold,
@@ -419,7 +420,7 @@ class _OrdersPageWidgetState extends State<OrdersPageWidget> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Qty: $qty',
+                                    FFLocalizations.of(context).getVariableText(enText: 'Qty: $qty', bnText: 'পরিমাণ: $qty'),
                                     style: FlutterFlowTheme.of(context)
                                         .bodySmall
                                         .override(
@@ -454,13 +455,13 @@ class _OrdersPageWidgetState extends State<OrdersPageWidget> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: Text(
+                   FFLocalizations.of(context).getVariableText(enText: 'Close', bnText: 'বন্ধ করুন'),
+                   style: const TextStyle(
+                     color: Colors.white,
+                     fontWeight: FontWeight.bold,
+                   ),
+                 ),
               ),
               const SizedBox(height: 24),
             ],

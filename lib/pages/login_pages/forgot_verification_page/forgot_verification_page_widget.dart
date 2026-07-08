@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_timer.dart';
@@ -78,7 +80,7 @@ class _ForgotVerificationPageWidgetState
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Verification',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Verification', bnText: 'যাচাইকরণ'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -96,8 +98,7 @@ class _ForgotVerificationPageWidgetState
                     ),
                     scrollDirection: Axis.vertical,
                     children: [
-                      Text(
-                        'Enter your email for the verification process. we will send 4 digits code to your email.',
+                      Text(FFLocalizations.of(context).getVariableText(enText: 'Enter your email for the verification process. we will send 4 digits code to your email.', bnText: 'যাচাইকরণের জন্য আপনার ইমেইল লিখুন। আমরা আপনার ইমেইলে একটি ৪ ডিজিটের কোড পাঠাবো।'),
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -234,7 +235,7 @@ class _ForgotVerificationPageWidgetState
 
                           safeSetState(() {});
                         },
-                        text: 'Verify',
+                        text: FFLocalizations.of(context).getVariableText(enText: 'Verify', bnText: 'যাচাই করুন'),
                         options: FFButtonOptions(
                           width: double.infinity,
                           height: 56.0,
@@ -310,7 +311,7 @@ class _ForgotVerificationPageWidgetState
                               text: TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: 'Don’t receive an code? ',
+                                    text: FFLocalizations.of(context).getVariableText(enText: 'Don’t receive an code? ', bnText: 'কোড পাননি? '),
                                     style: FlutterFlowTheme.of(context)
                                         .bodyMedium
                                         .override(
@@ -324,7 +325,7 @@ class _ForgotVerificationPageWidgetState
                                         ),
                                   ),
                                   TextSpan(
-                                    text: 'Resend now',
+                                    text: FFLocalizations.of(context).getVariableText(enText: 'Resend now', bnText: 'আবার পাঠান'),
                                     style: TextStyle(
                                       color: _model.isShow == true
                                           ? FlutterFlowTheme.of(context)

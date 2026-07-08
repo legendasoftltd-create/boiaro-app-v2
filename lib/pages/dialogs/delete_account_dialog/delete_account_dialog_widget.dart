@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -105,8 +107,7 @@ class _DeleteAccountDialogWidgetState extends State<DeleteAccountDialogWidget>
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 28.0, 0.0, 28.0),
-                  child: Text(
-                    'Are you sure you want to delete account ?',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Are you sure you want to delete account ?', bnText: 'আপনি কি নিশ্চিত যে অ্যাকাউন্টটি মুছে ফেলতে চান?'),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -125,7 +126,7 @@ class _DeleteAccountDialogWidgetState extends State<DeleteAccountDialogWidget>
                         onPressed: () async {
                           Navigator.pop(context);
                         },
-                        text: 'No',
+                        text: FFLocalizations.of(context).getVariableText(enText: 'No', bnText: 'না'),
                         options: FFButtonOptions(
                           width: double.infinity,
                           height: 56.0,
@@ -157,7 +158,7 @@ class _DeleteAccountDialogWidgetState extends State<DeleteAccountDialogWidget>
                         onPressed: () async {
                           await widget.onTapYes?.call();
                         },
-                        text: 'Yes',
+                        text: FFLocalizations.of(context).getVariableText(enText: 'Yes', bnText: 'হ্যাঁ'),
                         options: FFButtonOptions(
                           width: double.infinity,
                           height: 56.0,

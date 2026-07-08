@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_epub_viewer/flutter_epub_viewer.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/internationalization.dart';
 import '/services/progress_sync_service.dart';
 import '/services/reading_report_service.dart';
 
@@ -57,26 +58,26 @@ class _IosEpubReaderScreenState extends State<IosEpubReaderScreen> {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(color: FlutterFlowTheme.of(context).primary),
-              child: const SizedBox(
+              child:  SizedBox(
                 width: double.infinity,
                 child: Align(
                   alignment: Alignment.bottomLeft,
                   child: Text(
-                    'Chapters',
-                    style: TextStyle(color: Colors.white, fontSize: 24),
+                    FFLocalizations.of(context).getVariableText(enText: 'Chapters', bnText: 'অধ্যায়সমূহ'),
+                    style: const TextStyle(color: Colors.white, fontSize: 24),
                   ),
                 ),
               ),
             ),
             Expanded(
               child: _chapters.isEmpty
-                  ? const Center(child: Text('No chapters available'))
+                  ? Center(child: Text(FFLocalizations.of(context).getVariableText(enText: 'No chapters available', bnText: 'কোনো অধ্যায় পাওয়া যায়নি')))
                   : ListView.builder(
                       itemCount: _chapters.length,
                       itemBuilder: (context, index) {
                         final chapter = _chapters[index];
                         return ListTile(
-                          title: Text(chapter.title ?? 'Chapter ${index + 1}'),
+                          title: Text(chapter.title ?? FFLocalizations.of(context).getVariableText(enText: 'Chapter ${index + 1}', bnText: 'অধ্যায় ${index + 1}')),
                           onTap: () {
                             if (chapter.href != null) {
                               epubController.display(cfi: chapter.href!);
@@ -116,15 +117,15 @@ class _IosEpubReaderScreenState extends State<IosEpubReaderScreen> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Search in Book'),
+                  title: Text(FFLocalizations.of(context).getVariableText(enText: 'Search in Book', bnText: 'বইয়ে খুঁজুন')),
                   content: TextField(
                     onChanged: (val) => query = val,
-                    decoration: const InputDecoration(hintText: 'Enter text to search'),
+                    decoration: InputDecoration(hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter text to search', bnText: 'অনুসন্ধানের জন্য লিখুন')),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন')),
                     ),
                     TextButton(
                       onPressed: () {
@@ -133,7 +134,7 @@ class _IosEpubReaderScreenState extends State<IosEpubReaderScreen> {
                           epubController.search(query: query);
                         }
                       },
-                      child: const Text('Search'),
+                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'Search', bnText: 'খুঁজুন')),
                     ),
                   ],
                 ),
@@ -155,10 +156,10 @@ class _IosEpubReaderScreenState extends State<IosEpubReaderScreen> {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Settings', style: Theme.of(context).textTheme.titleLarge),
+                              Text(FFLocalizations.of(context).getVariableText(enText: 'Settings', bnText: 'সেটিংস'), style: Theme.of(context).textTheme.titleLarge),
                               const SizedBox(height: 16),
                               SwitchListTile(
-                                title: const Text('Dark Mode'),
+                                title: Text(FFLocalizations.of(context).getVariableText(enText: 'Dark Mode', bnText: 'ডার্ক মোড')),
                                 value: isDarkMode,
                                 onChanged: (val) {
                                   setModalState(() => isDarkMode = val);
@@ -169,7 +170,7 @@ class _IosEpubReaderScreenState extends State<IosEpubReaderScreen> {
                                 },
                               ),
                               ListTile(
-                                title: const Text('Font Size'),
+                                title: Text(FFLocalizations.of(context).getVariableText(enText: 'Font Size', bnText: 'ফন্ট সাইজ')),
                                 subtitle: Slider(
                                   value: fontSize,
                                   min: 12.0,

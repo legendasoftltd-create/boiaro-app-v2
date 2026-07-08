@@ -2,6 +2,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/backend/boiaro_legacy_adapter.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/flutter_flow/upload_data.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
@@ -228,8 +229,8 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
 
     final hasEmail = _userDetailStr(['email']).isNotEmpty;
     final hasPhone = _userDetailStr(['phone']).isNotEmpty;
-    final isEmailReadOnly = hasEmail && !hasPhone;
-    final isPhoneReadOnly = hasPhone && !hasEmail;
+    final isEmailReadOnly = false;
+    final isPhoneReadOnly = false;
 
     return GestureDetector(
       onTap: () {
@@ -248,7 +249,7 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Edit profile',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Edit profile', bnText: 'প্রোফাইল সম্পাদনা'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -544,8 +545,8 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 obscureText: false,
                                 decoration: _editFieldDecoration(
                                   context,
-                                  labelText: 'Display name',
-                                  hintText: 'How your name appears',
+                                  labelText: FFLocalizations.of(context).getVariableText(enText: 'Display name', bnText: 'নাম'),
+                                  hintText: FFLocalizations.of(context).getVariableText(enText: 'How your name appears', bnText: 'আপনার নামটি যেভাবে প্রদর্শিত হবে'),
                                 ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
@@ -568,8 +569,8 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                               //   obscureText: false,
                               //   decoration: _editFieldDecoration(
                               //     context,
-                              //     labelText: 'Full name',
-                              //     hintText: 'Legal or full name',
+                              //     labelText: FFLocalizations.of(context).getVariableText(enText: 'Full name', bnText: 'পূর্ণ নাম'),
+                              //     hintText: FFLocalizations.of(context).getVariableText(enText: 'Legal or full name', bnText: 'পূর্ণ বা আসল নাম'),
                               //   ),
                               //   style: FlutterFlowTheme.of(context)
                               //       .bodyMedium
@@ -593,13 +594,13 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 decoration: isEmailReadOnly
                                     ? _readOnlyFieldDecoration(
                                         context,
-                                        labelText: 'Email',
-                                        hintText: 'Email address',
+                                        labelText: FFLocalizations.of(context).getVariableText(enText: 'Email', bnText: 'ইমেইল'),
+                                        hintText: FFLocalizations.of(context).getVariableText(enText: 'Email address', bnText: 'ইমেইল ঠিকানা'),
                                       )
                                     : _editFieldDecoration(
                                         context,
-                                        labelText: 'Email',
-                                        hintText: 'Email address',
+                                        labelText: FFLocalizations.of(context).getVariableText(enText: 'Email', bnText: 'ইমেইল'),
+                                        hintText: FFLocalizations.of(context).getVariableText(enText: 'Email address', bnText: 'ইমেইল ঠিকানা'),
                                       ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
@@ -625,8 +626,8 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 minLines: 2,
                                 decoration: _editFieldDecoration(
                                   context,
-                                  labelText: 'Bio',
-                                  hintText: 'Tell readers about you',
+                                  labelText: FFLocalizations.of(context).getVariableText(enText: 'Bio', bnText: 'পরিচিতি'),
+                                  hintText: FFLocalizations.of(context).getVariableText(enText: 'Tell readers about you', bnText: 'পাঠকদের আপনার সম্পর্কে বলুন'),
                                 ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
@@ -649,8 +650,8 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 obscureText: false,
                                 decoration: _editFieldDecoration(
                                   context,
-                                  labelText: 'Preferred language',
-                                  hintText: 'e.g. en, bn',
+                                  labelText: FFLocalizations.of(context).getVariableText(enText: 'Preferred language', bnText: 'পছন্দের ভাষা'),
+                                  hintText: FFLocalizations.of(context).getVariableText(enText: 'e.g. en, bn', bnText: 'যেমন: en, bn'),
                                 ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
@@ -676,13 +677,13 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
                                 decoration: isPhoneReadOnly
                                     ? _readOnlyFieldDecoration(
                                         context,
-                                        labelText: 'Phone number',
-                                        hintText: '01XXXXXXXXX',
+                                        labelText: FFLocalizations.of(context).getVariableText(enText: 'Phone number', bnText: 'ফোন নম্বর'),
+                                        hintText: FFLocalizations.of(context).getVariableText(enText: '01XXXXXXXXX', bnText: '০১XXXXXXXXX'),
                                       )
                                     : _editFieldDecoration(
                                         context,
-                                        labelText: 'Phone number (optional)',
-                                        hintText: '01XXXXXXXXX',
+                                        labelText: FFLocalizations.of(context).getVariableText(enText: 'Phone number (optional)', bnText: 'ফোন নম্বর (ঐচ্ছিক)'),
+                                        hintText: FFLocalizations.of(context).getVariableText(enText: '01XXXXXXXXX', bnText: '০১XXXXXXXXX'),
                                       ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
@@ -822,7 +823,7 @@ class _EditProfilePageWidgetState extends State<EditProfilePageWidget> {
 
                           safeSetState(() {});
                         },
-                  text: 'Save',
+                  text: FFLocalizations.of(context).getVariableText(enText: 'Save', bnText: 'সংরক্ষণ করুন'),
                   options: FFButtonOptions(
                     width: double.infinity,
                     height: 56.0,

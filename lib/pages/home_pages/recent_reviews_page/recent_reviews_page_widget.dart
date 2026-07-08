@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -74,7 +76,7 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Reviews',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Reviews', bnText: 'রিভিউসমূহ'),
                   backIcon: false,
                   addIcon: true,
                   onTapAdd: () async {
@@ -480,8 +482,7 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                                         const EdgeInsets.fromLTRB(
                                                             16, 0, 16, 0),
                                                     child: Center(
-                                                      child: Text(
-                                                        'No Reviews yet',
+                                                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'No Reviews yet', bnText: 'এখনো কোনো রিভিউ নেই'),
                                                         style:
                                                             FlutterFlowTheme.of(
                                                                     context)

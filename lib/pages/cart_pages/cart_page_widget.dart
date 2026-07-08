@@ -1,3 +1,4 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
 import 'package:a_i_ebook_app/pages/login_pages/sign_in_page/sign_in_page_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -42,7 +43,7 @@ class _CartPageWidgetState extends State<CartPageWidget> {
         child: Column(
           children: [
             CustomCenterAppbarWidget(
-                  title: 'My Cart',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'My Cart', bnText: 'আমার কার্ট'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -50,8 +51,7 @@ class _CartPageWidgetState extends State<CartPageWidget> {
             Expanded(
               child: cart.itemCount == 0
                   ? Center(
-                      child: Text(
-                        'Your cart is empty!',
+                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'Your cart is empty!', bnText: 'আপনার কার্ট খালি!'),
                         style: FlutterFlowTheme.of(context).headlineSmall,
                       ),
                     )
@@ -88,7 +88,7 @@ class _CartPageWidgetState extends State<CartPageWidget> {
                               ),
                               title: Text(cartItem.name),
                               subtitle: Text(
-                                  '${_formatCartType(cartItem.type)} • Total: \৳${(cartItem.price * cartItem.quantity).toStringAsFixed(2)}'),
+                                  '${_formatCartType(cartItem.type)} • ' + FFLocalizations.of(context).getVariableText(enText: 'Total: ', bnText: 'মোট: ') + '৳${(cartItem.price * cartItem.quantity).toStringAsFixed(2)}'),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -129,8 +129,7 @@ class _CartPageWidgetState extends State<CartPageWidget> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Total:',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'Total:', bnText: 'মোট:'),
                           style: FlutterFlowTheme.of(context).headlineSmall,
                         ),
                         Text(
@@ -163,8 +162,7 @@ class _CartPageWidgetState extends State<CartPageWidget> {
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                         ),
-                        child: Text(
-                          'Proceed to Checkout',
+                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'Proceed to Checkout', bnText: 'চেকআউট করুন'),
                           style:
                               FlutterFlowTheme.of(context).titleMedium.override(
                                     fontFamily: 'SF Pro Display',
@@ -185,11 +183,11 @@ class _CartPageWidgetState extends State<CartPageWidget> {
   String _formatCartType(String? type) {
     switch ((type ?? '').toLowerCase()) {
       case 'audiobook':
-        return 'Audiobook';
+        return FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক');
       case 'hardcopy':
-        return 'Hardcopy';
+        return FFLocalizations.of(context).getVariableText(enText: 'Hardcopy', bnText: 'প্রিন্ট কপি');
       default:
-        return 'Ebook';
+        return FFLocalizations.of(context).getVariableText(enText: 'Ebook', bnText: 'ই-বুক');
     }
   }
 }

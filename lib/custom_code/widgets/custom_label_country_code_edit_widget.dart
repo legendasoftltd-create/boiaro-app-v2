@@ -7,6 +7,7 @@ import 'index.dart'; // Imports other custom widgets
 import '/custom_code/actions/index.dart'; // Imports custom actions
 import '/flutter_flow/custom_functions.dart'; // Imports custom functions
 import 'package:flutter/material.dart';
+import '/flutter_flow/internationalization.dart';
 // Begin custom widget code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
@@ -67,7 +68,7 @@ class _CustomLabelCountryCodeEditWidgetState
       decoration: InputDecoration(
         alignLabelWithHint: false,
 
-        hintText: 'Phone number',
+        hintText: FFLocalizations.of(context).getVariableText(enText: 'Phone number', bnText: 'ফোন নম্বর'),
         hintStyle: FlutterFlowTheme.of(context).labelMedium.override(
               fontFamily: 'SF Pro Display',
               fontSize: 17,
@@ -129,9 +130,15 @@ class _CustomLabelCountryCodeEditWidgetState
       ),
       initialCountryCode: widget.code!,
       validator: (num) {
-        return "Please enter valid number.";
+        return FFLocalizations.of(context).getVariableText(
+          enText: "Please enter valid number.",
+          bnText: "অনুগ্রহ করে সঠিক নম্বর লিখুন।",
+        );
       },
-      invalidNumberMessage: "Please enter valid phone number.",
+      invalidNumberMessage: FFLocalizations.of(context).getVariableText(
+        enText: "Please enter valid phone number.",
+        bnText: "অনুগ্রহ করে সঠিক ফোন নম্বর লিখুন।",
+      ),
       onChanged: (value) {
         FFAppState().countryCodeEdit = value.countryCode.replaceAll("+", '');
         FFAppState().update(() {

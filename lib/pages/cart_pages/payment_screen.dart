@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:a_i_ebook_app/index.dart';
 import 'package:a_i_ebook_app/flutter_flow/nav/nav.dart';
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
 
 class PaymentWebView extends StatefulWidget {
   final String url;
@@ -45,12 +46,12 @@ class _PaymentWebViewState extends State<PaymentWebView> {
     if (formats.contains('hardcopy') ||
         formats.contains('hard') ||
         formats.contains('print')) {
-      return 'View Orders';
+      return FFLocalizations.of(context).getVariableText(enText: 'View Orders', bnText: 'অর্ডার দেখুন');
     }
     if (formats.contains('audiobook') || formats.contains('audio')) {
-      return 'Start Listening';
+      return FFLocalizations.of(context).getVariableText(enText: 'Start Listening', bnText: 'শোনা শুরু করুন');
     }
-    return 'Start Reading';
+    return FFLocalizations.of(context).getVariableText(enText: 'Start Reading', bnText: 'পড়া শুরু করুন');
   }
 
   bool _isPaymentCallbackUrl(String url) {
@@ -107,7 +108,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CustomCenterAppbarWidget(
-                  title: "Payment",
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Payment', bnText: 'পেমেন্ট'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -244,7 +245,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         isPaymentSuccess = true; // 🚫 disable back
         isLoading = false;
       });
-      _showSuccessDialog("Payment successful");
+      _showSuccessDialog(FFLocalizations.of(context).getVariableText(enText: "Payment successful", bnText: "পেমেন্ট সফল হয়েছে"));
       log('✅ Success URL: $url');
       return;
     }
@@ -258,7 +259,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         );
       }
       setState(() => isLoading = false);
-      _showErrorDialog('Payment failed');
+      _showErrorDialog(FFLocalizations.of(context).getVariableText(enText: 'Payment failed', bnText: 'পেমেন্ট ব্যর্থ হয়েছে'));
       return;
     }
 
@@ -271,7 +272,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         );
       }
       setState(() => isLoading = false);
-      _showCancellationDialog('Payment cancelled');
+      _showCancellationDialog(FFLocalizations.of(context).getVariableText(enText: 'Payment cancelled', bnText: 'পেমেন্ট বাতিল হয়েছে'));
       log('❎ Cancel URL: $url');
       return;
     }
@@ -285,7 +286,7 @@ void _showSuccessDialog(String message) {
         canPop: false, // 🚫 prevent back press
         child: OrderPlaceDialogWidget(
           icon: Icons.check_circle_rounded,
-          title: "Payment Successful",
+          title: FFLocalizations.of(context).getVariableText(enText: "Payment Successful", bnText: "পেমেন্ট সফল হয়েছে"),
           description: message,
           isSuccess: true,
           successButtonText: _postSuccessActionLabel,
@@ -327,7 +328,7 @@ void _showSuccessDialog(String message) {
       context,
       OrderPlaceDialogWidget(
         icon: Icons.cancel,
-        title: "Payment Failed",
+        title: FFLocalizations.of(context).getVariableText(enText: "Payment Failed", bnText: "পেমেন্ট ব্যর্থ হয়েছে"),
         description: message,
         isFailed: true,
       ),
@@ -343,7 +344,7 @@ void _showSuccessDialog(String message) {
       context,
       OrderPlaceDialogWidget(
         icon: Icons.cancel,
-        title: "Payment Cancelled",
+        title: FFLocalizations.of(context).getVariableText(enText: "Payment Cancelled", bnText: "পেমেন্ট বাতিল হয়েছে"),
         description: message,
         isFailed: true,
       ),

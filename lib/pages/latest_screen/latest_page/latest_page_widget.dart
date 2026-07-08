@@ -2,6 +2,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/components/single_appbar/single_appbar_widget.dart';
 import '/pages/empty_components/no_latest_book/no_latest_book_widget.dart';
@@ -111,7 +112,7 @@ class _LatestPageWidgetState extends State<LatestPageWidget>
                 model: _model.singleAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: SingleAppbarWidget(
-                  title: 'Latest',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Latest', bnText: 'সর্বশেষ'),
                 ),
               ),
               Expanded(

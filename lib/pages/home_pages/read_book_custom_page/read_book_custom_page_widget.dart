@@ -3,6 +3,7 @@ import 'package:epubx/epubx.dart' as epubx;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_pdf_viewer.dart';
+import '/flutter_flow/internationalization.dart';
 import '/custom_code/widgets/pdf_viewer/flutter_pdf_view_widget.dart';
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
@@ -364,22 +365,39 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       // Specific diagnosis for the most common structural epub errors.
       final userMsg = () {
         if (msg.contains('TOC') || msg.contains('manifest')) {
-          return 'This book has a broken Table of Contents — '
-              'a TOC entry references a file that does not exist '
-              'inside the EPUB package.\n'
-              'Technical detail: $msg\n'
-              'Please ask support to re-upload a correctly '
-              'formatted EPUB file.';
+          return FFLocalizations.of(context).getVariableText(
+            enText: 'This book has a broken Table of Contents — '
+                'a TOC entry references a file that does not exist '
+                'inside the EPUB package.\n'
+                'Technical detail: $msg\n'
+                'Please ask support to re-upload a correctly '
+                'formatted EPUB file.',
+            bnText: 'এই বইটির সূচিপত্র (TOC) ত্রুটিযুক্ত — '
+                'সূচিপত্রের একটি ফাইল EPUB প্যাকেজে খুঁজে পাওয়া যায়নি।\n'
+                'প্রযুক্তিগত বিবরণ: $msg\n'
+                'অনুগ্রহ করে সঠিকভাবে ফরম্যাট করা EPUB ফাইল পুনরায় আপলোড করার জন্য সহায়তায় যোগাযোগ করুন।',
+          );
         }
         if (msg.contains('OPF') || msg.contains('container')) {
-          return 'This book is missing its package descriptor (OPF/container).\n'
-              'The file may not be a real EPUB (e.g. a PDF renamed to .epub).\n'
-              'Technical detail: $msg\n'
-              'Please ask support to re-upload a valid EPUB.';
+          return FFLocalizations.of(context).getVariableText(
+            enText: 'This book is missing its package descriptor (OPF/container).\n'
+                'The file may not be a real EPUB (e.g. a PDF renamed to .epub).\n'
+                'Technical detail: $msg\n'
+                'Please ask support to re-upload a valid EPUB.',
+            bnText: 'বইটির প্যাকেজ ডেসক্রিপ্টর (OPF/container) পাওয়া যায়নি।\n'
+                'ফাইলটি প্রকৃত EPUB নাও হতে পারে (যেমন: .epub নামে পিডিএফ)।\n'
+                'প্রযুক্তিগত বিবরণ: $msg\n'
+                'অনুগ্রহ করে সঠিক EPUB ফাইল পুনরায় আপলোডের জন্য সহায়তায় যোগাযোগ করুন।',
+          );
         }
-        return 'This book file is not a valid EPUB.\n'
-            'Technical detail: $msg\n'
-            'Please ask support to re-upload the book.';
+        return FFLocalizations.of(context).getVariableText(
+          enText: 'This book file is not a valid EPUB.\n'
+              'Technical detail: $msg\n'
+              'Please ask support to re-upload the book.',
+          bnText: 'বইটির ফাইলটি সঠিক EPUB ফাইল নয়।\n'
+              'প্রযুক্তিগত বিবরণ: $msg\n'
+              'অনুগ্রহ করে বইটি পুনরায় আপলোডের জন্য সহায়তায় যোগাযোগ করুন।',
+        );
       }();
 
       await cachedFile.delete();
@@ -395,11 +413,12 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Preview Ended'),
+        title: Text(FFLocalizations.of(context).getVariableText(enText: 'Preview Ended', bnText: 'প্রিভিউ শেষ')),
         content: Text(
-          'You\'ve reached the ${widget.previewPercent}% preview limit for '
-          '"${widget.name ?? 'this book'}". '
-          'Purchase the full book to continue reading.',
+          FFLocalizations.of(context).getVariableText(
+            enText: 'You\'ve reached the ${widget.previewPercent}% preview limit for "${widget.name ?? 'this book'}". Purchase the full book to continue reading.',
+            bnText: 'â\u0080\u009c${widget.name ?? 'এই বই'}â\u0080\u009d-এর ${widget.previewPercent}% প্রিভিউ শেষ হয়েছে। সম্পূর্ণ বই পড়তে কিনুন।',
+          ),
         ),
         actions: [
           TextButton(
@@ -407,11 +426,11 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
               Navigator.of(ctx).pop();
               Navigator.of(context).maybePop();
             },
-            child: const Text('Buy Now'),
+            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Buy Now', bnText: 'এখনি কিনুন')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Close', bnText: 'বন্ধ করুন')),
           ),
         ],
       ),
@@ -605,7 +624,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   Widget _buildPdfViewer() {
     final resolvedPath = _resolveBookPath(widget.pdf ?? '');
     if (resolvedPath.isEmpty) {
-      return const Center(child: Text('Invalid PDF path'));
+      return Center(child: Text(FFLocalizations.of(context).getVariableText(enText: 'Invalid PDF path', bnText: 'অবৈধ PDF ঠিকানা')));
     }
     return FlutterPdfViewWidget(
       width: double.infinity,
@@ -660,7 +679,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
                                       _openEpubWithPlugin();
                                     }
                                   },
-                                  child: const Text('Retry'),
+                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Retry', bnText: 'আবার চেষ্টা করুন')),
                                 ),
                               ],
                             ),
@@ -681,8 +700,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
                         color: FlutterFlowTheme.of(context).primary,
                       ),
                       const SizedBox(height: 14),
-                      Text(
-                        'Opening reader...',
+                      Text(FFLocalizations.of(context).getVariableText(enText: 'Opening reader...', bnText: 'রিডার খোলা হচ্ছে...'),
                         style: FlutterFlowTheme.of(context).bodyMedium,
                       ),
                     ],

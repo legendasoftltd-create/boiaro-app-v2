@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -82,7 +84,7 @@ class _TermsConditionsPageWidgetState extends State<TermsConditionsPageWidget>
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Terms & condition',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Terms & condition', bnText: 'শর্তাবলী'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},

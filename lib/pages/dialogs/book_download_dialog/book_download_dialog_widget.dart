@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -105,8 +107,7 @@ class _BookDownloadDialogWidgetState extends State<BookDownloadDialogWidget>
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 28.0, 0.0, 16.0),
-                  child: Text(
-                    'Book download start',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Book download start', bnText: 'বই ডাউনলোড শুরু হচ্ছে'),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -119,8 +120,7 @@ class _BookDownloadDialogWidgetState extends State<BookDownloadDialogWidget>
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 28.0),
-                  child: Text(
-                    'thank you for download book. go to home to continue your journey',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'thank you for download book. go to home to continue your journey', bnText: 'বই ডাউনলোড করার জন্য ধন্যবাদ। হোমে ফিরে আপনার যাত্রা অব্যাহত রাখুন'),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -134,7 +134,7 @@ class _BookDownloadDialogWidgetState extends State<BookDownloadDialogWidget>
                   onPressed: () async {
                     await widget.onTapHome?.call();
                   },
-                  text: 'Go to home',
+                  text: FFLocalizations.of(context).getVariableText(enText: 'Go to home', bnText: 'হোমে যান'),
                   options: FFButtonOptions(
                     width: 250.0,
                     height: 56.0,

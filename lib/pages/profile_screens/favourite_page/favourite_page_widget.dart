@@ -1,6 +1,7 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/empty_components/no_favorites_yet/no_favorites_yet_widget.dart';
@@ -92,7 +93,7 @@ class _FavouritePageWidgetState extends State<FavouritePageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Favourite',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Favourite', bnText: 'প্রিয় বই'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},

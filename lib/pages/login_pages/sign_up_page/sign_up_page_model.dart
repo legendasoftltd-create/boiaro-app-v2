@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
@@ -14,9 +16,11 @@ class SignUpPageModel extends FlutterFlowModel<SignUpPageWidget> {
   String? Function(BuildContext, String?)? textController1Validator;
   String? _textController1Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter valid first name';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter valid first name',
+        bnText: 'অনুগ্রহ করে সঠিক প্রথম নাম লিখুন',
+      );
     }
-
     return null;
   }
 
@@ -26,9 +30,11 @@ class SignUpPageModel extends FlutterFlowModel<SignUpPageWidget> {
   String? Function(BuildContext, String?)? textController2Validator;
   String? _textController2Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter valid last name';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter valid last name',
+        bnText: 'অনুগ্রহ করে সঠিক শেষ নাম লিখুন',
+      );
     }
-
     return null;
   }
 
@@ -38,9 +44,11 @@ class SignUpPageModel extends FlutterFlowModel<SignUpPageWidget> {
   String? Function(BuildContext, String?)? textController3Validator;
   String? _textController3Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter valid username';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter valid username',
+        bnText: 'অনুগ্রহ করে সঠিক ইউজারনাম লিখুন',
+      );
     }
-
     return null;
   }
 
@@ -50,11 +58,17 @@ class SignUpPageModel extends FlutterFlowModel<SignUpPageWidget> {
   String? Function(BuildContext, String?)? textController4Validator;
   String? _textController4Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter valid email address';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter valid email address',
+        bnText: 'অনুগ্রহ করে সঠিক ইমেইল ঠিকানা লিখুন',
+      );
     }
 
     if (!RegExp(kTextValidatorEmailRegex).hasMatch(val)) {
-      return 'Please enter valid email address';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter valid email address',
+        bnText: 'অনুগ্রহ করে সঠিক ইমেইল ঠিকানা লিখুন',
+      );
     }
     return null;
   }
@@ -66,9 +80,11 @@ class SignUpPageModel extends FlutterFlowModel<SignUpPageWidget> {
   String? Function(BuildContext, String?)? textController5Validator;
   String? _textController5Validator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter valid password';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter valid password',
+        bnText: 'অনুগ্রহ করে সঠিক পাসওয়ার্ড লিখুন',
+      );
     }
-
     return null;
   }
 

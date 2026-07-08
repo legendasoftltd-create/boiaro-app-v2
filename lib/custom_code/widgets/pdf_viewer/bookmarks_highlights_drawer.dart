@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '/flutter_flow/internationalization.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'pdf_viewer_provider.dart';
@@ -48,9 +49,9 @@ class _BookmarksHighlightsDrawerState extends State<BookmarksHighlightsDrawer>
               labelColor: theme.primary,
               unselectedLabelColor: theme.secondaryText,
               indicatorColor: theme.primary,
-              tabs: const [
-                Tab(text: 'Bookmarks'),
-                Tab(text: 'Highlights'),
+              tabs: [
+                Tab(text: FFLocalizations.of(context).getVariableText(enText: 'Bookmarks', bnText: 'বুকমার্ক')),
+                Tab(text: FFLocalizations.of(context).getVariableText(enText: 'Highlights', bnText: 'হাইলাইট')),
               ],
             ),
           ),

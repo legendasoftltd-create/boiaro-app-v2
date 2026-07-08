@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -98,7 +100,10 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
   Future<void> _sendOtp() async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) {
-      safeSetState(() => _errorMessage = 'Please enter your phone number');
+      safeSetState(() => _errorMessage = FFLocalizations.of(context).getVariableText(
+            enText: 'Please enter your phone number',
+            bnText: 'অনুগ্রহ করে আপনার ফোন নম্বরটি লিখুন',
+          ));
       return;
     }
 
@@ -123,7 +128,10 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
         _otpFocusNodes[0].requestFocus();
       } else {
         final msg = EbookGroup.phoneSendOtpApiCall.errorMessage(response.jsonBody) ??
-            'Failed to send OTP. Please try again.';
+            FFLocalizations.of(context).getVariableText(
+              enText: 'Failed to send OTP. Please try again.',
+              bnText: 'ওটিপি পাঠাতে ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
+            );
         safeSetState(() {
           _isSendingOtp = false;
           _errorMessage = msg;
@@ -133,7 +141,10 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
       if (!mounted) return;
       safeSetState(() {
         _isSendingOtp = false;
-        _errorMessage = 'Network error. Please check your connection.';
+        _errorMessage = FFLocalizations.of(context).getVariableText(
+          enText: 'Network error. Please check your connection.',
+          bnText: 'নেটওয়ার্ক সমস্যা। আপনার ইন্টারনেট সংযোগ পরীক্ষা করুন।',
+        );
       });
     }
   }
@@ -141,7 +152,10 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
   Future<void> _verifyOtp() async {
     final otp = _fullOtp;
     if (otp.length != 6) {
-      safeSetState(() => _errorMessage = 'Please enter the complete 6-digit code');
+      safeSetState(() => _errorMessage = FFLocalizations.of(context).getVariableText(
+            enText: 'Please enter the complete 6-digit code',
+            bnText: 'অনুগ্রহ করে সম্পূর্ণ ৬ ডিজিটের কোডটি লিখুন',
+          ));
       return;
     }
 
@@ -175,7 +189,10 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
         }
       } else {
         final msg = EbookGroup.phoneVerifyOtpApiCall.message(response.jsonBody) ??
-            'Verification failed. Please try again.';
+            FFLocalizations.of(context).getVariableText(
+              enText: 'Verification failed. Please try again.',
+              bnText: 'যাচাইকরণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
+            );
         safeSetState(() {
           _isVerifyingOtp = false;
           _errorMessage = msg;
@@ -185,7 +202,10 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
       if (!mounted) return;
       safeSetState(() {
         _isVerifyingOtp = false;
-        _errorMessage = 'Network error. Please check your connection.';
+        _errorMessage = FFLocalizations.of(context).getVariableText(
+          enText: 'Network error. Please check your connection.',
+          bnText: 'নেটওয়ার্ক সমস্যা। আপনার ইন্টারনেট সংযোগ পরীক্ষা করুন।',
+        );
       });
     }
   }
@@ -352,7 +372,15 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                             ),
                           ),
                           Text(
-                            _isOtpSent ? 'Enter OTP' : 'Phone Login',
+                            _isOtpSent
+                                ? FFLocalizations.of(context).getVariableText(
+                                    enText: 'Enter OTP',
+                                    bnText: 'ওটিপি লিখুন',
+                                  )
+                                : FFLocalizations.of(context).getVariableText(
+                                    enText: 'Phone Login',
+                                    bnText: 'মোবাইল লগইন',
+                                  ),
                             style: FlutterFlowTheme.of(context)
                                 .bodyMedium
                                 .override(
@@ -373,8 +401,16 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                             0.0, 8.0, 0.0, 24.0),
                         child: Text(
                           _isOtpSent
-                              ? 'We sent a 6-digit verification code to $_phoneForVerify'
-                              : 'Enter your phone number to receive a one-time verification code',
+                              ? FFLocalizations.of(context).getVariableText(
+                                  enText: 'We sent a 6-digit verification code to $_phoneForVerify',
+                                  bnText: 'আমরা $_phoneForVerify নাম্বারে ৬-ডিজিটের ভেরিফিকেশন কোড পাঠিয়েছি',
+                                )
+                              : FFLocalizations.of(context).getVariableText(
+                                  enText:
+                                      'Enter your phone number to receive a one-time verification code',
+                                  bnText:
+                                      'ওয়ান-টাইম ওটিপি পেতে আপনার ফোন নম্বরটি লিখুন',
+                                ),
                           style: FlutterFlowTheme.of(context)
                               .bodyMedium
                               .override(
@@ -400,7 +436,7 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                           ],
                           onFieldSubmitted: (_) => _sendOtp(),
                           decoration: InputDecoration(
-                            labelText: 'Phone number',
+                            labelText: FFLocalizations.of(context).getVariableText(enText: 'Phone number', bnText: 'ফোন নম্বর'),
                             labelStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -410,7 +446,7 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                                   fontSize: 14.0,
                                   letterSpacing: 0.0,
                                 ),
-                            hintText: '01XXXXXXXXX',
+                            hintText: FFLocalizations.of(context).getVariableText(enText: '01XXXXXXXXX', bnText: '০১XXXXXXXXX'),
                             hintStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -492,7 +528,15 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                         // Send OTP button
                         FFButtonWidget(
                           onPressed: _isSendingOtp ? null : () => _sendOtp(),
-                          text: _isSendingOtp ? 'Sending...' : 'Send OTP',
+                          text: _isSendingOtp
+                              ? FFLocalizations.of(context).getVariableText(
+                                  enText: 'Sending...',
+                                  bnText: 'পাঠানো হচ্ছে...',
+                                )
+                              : FFLocalizations.of(context).getVariableText(
+                                  enText: 'Send OTP',
+                                  bnText: 'ওটিপি পাঠান',
+                                ),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,
@@ -546,7 +590,15 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                         FFButtonWidget(
                           onPressed:
                               _isVerifyingOtp ? null : () => _verifyOtp(),
-                          text: _isVerifyingOtp ? 'Verifying...' : 'Verify & Login',
+                          text: _isVerifyingOtp
+                              ? FFLocalizations.of(context).getVariableText(
+                                  enText: 'Verifying...',
+                                  bnText: 'যাচাই করা হচ্ছে...',
+                                )
+                              : FFLocalizations.of(context).getVariableText(
+                                  enText: 'Verify & Login',
+                                  bnText: 'ওটিপি ভেরিফাই ও লগইন',
+                                ),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,
@@ -584,7 +636,7 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                         Center(
                           child: _cooldownSeconds > 0
                               ? Text(
-                                  'Resend OTP in ${_cooldownSeconds}s',
+                                  '${FFLocalizations.of(context).getVariableText(enText: 'Resend OTP in ', bnText: 'ওটিপি আবার পাঠান ')}${_cooldownSeconds}s',
                                   style: FlutterFlowTheme.of(context)
                                       .bodyMedium
                                       .override(
@@ -598,8 +650,7 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                               : InkWell(
                                   splashColor: Colors.transparent,
                                   onTap: _isSendingOtp ? null : () => _sendOtp(),
-                                  child: Text(
-                                    'Resend OTP',
+                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Resend OTP', bnText: 'ওটিপি আবার পাঠান'),
                                     style: FlutterFlowTheme.of(context)
                                         .bodyMedium
                                         .override(
@@ -619,8 +670,7 @@ class _PhoneLoginPageWidgetState extends State<PhoneLoginPageWidget>
                           child: InkWell(
                             splashColor: Colors.transparent,
                             onTap: _goBackToPhone,
-                            child: Text(
-                              'Change phone number',
+                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Change phone number', bnText: 'ফোন নম্বর পরিবর্তন করুন'),
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(

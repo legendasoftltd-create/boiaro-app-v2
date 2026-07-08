@@ -1,6 +1,7 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import 'package:flutter/material.dart';
@@ -90,10 +91,10 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
     }
 
     if (!AdManager.isAdLoaded) {
-      await actions.showCustomToastBottom('Loading Ad... Please wait a second.');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Loading Ad... Please wait a second.', bnText: 'বিজ্ঞাপন লোড হচ্ছে... অনুগ্রহ করে একটু অপেক্ষা করুন।'));
       final loaded = await AdManager.ensureAdLoaded();
       if (!loaded) {
-        await actions.showCustomToastBottom('Failed to load ad. Please try again.');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to load ad. Please try again.', bnText: 'বিজ্ঞাপন লোড করতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।'));
         return;
       }
     }
@@ -105,7 +106,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
         await _loadAdStatus();
       },
       onAdFailed: () async {
-        await actions.showCustomToastBottom('Failed to show ad. Please try again.');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to show ad. Please try again.', bnText: 'বিজ্ঞাপন দেখাতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।'));
       },
     );
   }
@@ -119,10 +120,10 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
     }
 
     if (!AdManager.isAdLoaded) {
-      await actions.showCustomToastBottom('Loading Ad... Please wait a second.');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Loading Ad... Please wait a second.', bnText: 'বিজ্ঞাপন লোড হচ্ছে... অনুগ্রহ করে একটু অপেক্ষা করুন।'));
       final loaded = await AdManager.ensureAdLoaded();
       if (!loaded) {
-        await actions.showCustomToastBottom('Failed to load ad. Please try again.');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to load ad. Please try again.', bnText: 'বিজ্ঞাপন লোড করতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।'));
         return;
       }
     }
@@ -134,7 +135,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
         await _loadAdStatus();
       },
       onAdFailed: () async {
-        await actions.showCustomToastBottom('Failed to show ad. Please try again.');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to show ad. Please try again.', bnText: 'বিজ্ঞাপন দেখাতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।'));
       },
     );
   }
@@ -241,7 +242,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
     try {
       final res = await EbookGroup.claimDailyRewardCall.call(token: FFAppState().token);
       if (res.statusCode == 200) {
-        await actions.showCustomToastBottom('Daily reward claimed successfully!');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Daily reward claimed successfully!', bnText: 'দৈনিক পুরস্কার সফলভাবে দাবি করা হয়েছে!'));
         setState(() {
           _dailyClaimedToday = true;
         });
@@ -250,7 +251,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
       } else if (res.statusCode == 400) {
         final reason = getJsonField(res.jsonBody, r'''$.reason''');
         if (reason == 'already_claimed') {
-          await actions.showCustomToastBottom('Already claimed today!');
+          await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Already claimed today!', bnText: 'আজ ইতিমধ্যে দাবি করা হয়েছে!'));
           setState(() {
             _dailyClaimedToday = true;
           });
@@ -259,10 +260,10 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
               getJsonField(res.jsonBody, r'''$.message''') ?? 'Could not claim daily reward');
         }
       } else {
-        await actions.showCustomToastBottom('Failed to claim daily reward');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to claim daily reward', bnText: 'দৈনিক পুরস্কার দাবি করতে ব্যর্থ'));
       }
     } catch (e) {
-      await actions.showCustomToastBottom('Error: $e');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Error: ', bnText: 'ত্রুটি: ') + '$e');
     }
   }
 
@@ -280,7 +281,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
               backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: Text(
-                'Set New Goal',
+                FFLocalizations.of(context).getVariableText(enText: 'Set New Goal', bnText: 'নতুন লক্ষ্য নির্ধারণ করুন'),
                 style: FlutterFlowTheme.of(context).titleMedium.override(
                       fontFamily: 'SF Pro Display',
                       fontWeight: FontWeight.bold,
@@ -291,7 +292,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Goal Type',
+                    FFLocalizations.of(context).getVariableText(enText: 'Goal Type', bnText: 'লক্ষ্যের ধরন'),
                     style: FlutterFlowTheme.of(context).bodySmall.override(
                           fontFamily: 'SF Pro Display',
                           fontWeight: FontWeight.w600,
@@ -303,7 +304,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                     children: [
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('Reading')),
+                          label: Center(child: Text(FFLocalizations.of(context).getVariableText(enText: 'Reading', bnText: 'পড়া'))),
                           selected: selectedType == 'reading',
                           selectedColor: FlutterFlowTheme.of(context).primary,
                           labelStyle: TextStyle(
@@ -318,7 +319,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('Listening')),
+                          label: Center(child: Text(FFLocalizations.of(context).getVariableText(enText: 'Listening', bnText: 'শোনা'))),
                           selected: selectedType == 'listening',
                           selectedColor: FlutterFlowTheme.of(context).primary,
                           labelStyle: TextStyle(
@@ -334,7 +335,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Period',
+                    FFLocalizations.of(context).getVariableText(enText: 'Period', bnText: 'সময়কাল'),
                     style: FlutterFlowTheme.of(context).bodySmall.override(
                           fontFamily: 'SF Pro Display',
                           fontWeight: FontWeight.w600,
@@ -346,7 +347,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                     children: [
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('Daily')),
+                          label: Center(child: Text(FFLocalizations.of(context).getVariableText(enText: 'Daily', bnText: 'দৈনিক'))),
                           selected: selectedPeriod == 'daily',
                           selectedColor: FlutterFlowTheme.of(context).primary,
                           labelStyle: TextStyle(
@@ -361,7 +362,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('Weekly')),
+                          label: Center(child: Text(FFLocalizations.of(context).getVariableText(enText: 'Weekly', bnText: 'সাপ্তাহিক'))),
                           selected: selectedPeriod == 'weekly',
                           selectedColor: FlutterFlowTheme.of(context).primary,
                           labelStyle: TextStyle(
@@ -380,7 +381,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Target Value',
+                        FFLocalizations.of(context).getVariableText(enText: 'Target Value', bnText: 'লক্ষ্যমাত্রা'),
                         style: FlutterFlowTheme.of(context).bodySmall.override(
                               fontFamily: 'SF Pro Display',
                               fontWeight: FontWeight.w600,
@@ -388,7 +389,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                             ),
                       ),
                       Text(
-                        '$targetValue mins',
+                        '${FFLocalizations.of(context).getVariableText(enText: '$targetValue mins', bnText: '$targetValue মিনিট')}',
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
                               fontFamily: 'SF Pro Display',
                               fontWeight: FontWeight.bold,
@@ -413,7 +414,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
-                    'Cancel',
+                    FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন'),
                     style: TextStyle(color: FlutterFlowTheme.of(context).secondaryText),
                   ),
                 ),
@@ -426,7 +427,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                     Navigator.of(context).pop();
                     await _addGoal(selectedType, targetValue, selectedPeriod);
                   },
-                  child: const Text('Add Goal', style: TextStyle(color: Colors.white)),
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Add Goal', bnText: 'লক্ষ্য যোগ করুন'), style: const TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -446,13 +447,13 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
         token: FFAppState().token,
       );
       if (res.statusCode == 200) {
-        await actions.showCustomToastBottom('Goal set successfully!');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Goal set successfully!', bnText: 'লক্ষ্য সফলভাবে সেট করা হয়েছে!'));
         _fetchGoals();
       } else {
-        await actions.showCustomToastBottom('Failed to set goal');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to set goal', bnText: 'লক্ষ্য সেট করতে ব্যর্থ'));
       }
     } catch (e) {
-      await actions.showCustomToastBottom('Error: $e');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Error: ', bnText: 'ত্রুটি: ') + '$e');
     }
   }
 
@@ -552,16 +553,14 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Daily Login Reward',
+                Text(FFLocalizations.of(context).getVariableText(enText: 'Daily Login Reward', bnText: 'দৈনিক লগইন পুরস্কার'),
                   style: FlutterFlowTheme.of(context).bodyMedium.override(
                         fontFamily: 'SF Pro Display',
                         fontWeight: FontWeight.bold,
                       ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  'Claim points and coins for logging in today!',
+                Text(FFLocalizations.of(context).getVariableText(enText: 'Claim points and coins for logging in today!', bnText: 'আজকের লগইনের জন্য পয়েন্ট এবং কয়েন সংগ্রহ করুন!'),
                   style: FlutterFlowTheme.of(context).bodySmall.override(
                         fontFamily: 'SF Pro Display',
                         color: FlutterFlowTheme.of(context).secondaryText,
@@ -612,8 +611,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
           children: [
             const SizedBox(height: 40),
             Center(
-              child: Text(
-                'No leaderboard entries found.',
+              child: Text(FFLocalizations.of(context).getVariableText(enText: 'No leaderboard entries found.', bnText: 'কোনো লিডারবোর্ড তথ্য পাওয়া যায়নি।'),
                 style: TextStyle(color: FlutterFlowTheme.of(context).secondaryText),
               ),
             ),
@@ -735,8 +733,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
           children: [
             const SizedBox(height: 40),
             Center(
-              child: Text(
-                'No badge definitions found.',
+              child: Text(FFLocalizations.of(context).getVariableText(enText: 'No badge definitions found.', bnText: 'কোনো ব্যাজ পাওয়া যায়নি।'),
                 style: TextStyle(color: FlutterFlowTheme.of(context).secondaryText),
               ),
             ),
@@ -923,11 +920,10 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Icon(Icons.add_task_rounded, color: Colors.white, size: 18),
                   SizedBox(width: 8),
-                  Text(
-                    'Set Reading/Listening Goal',
+                  Text(FFLocalizations.of(context).getVariableText(enText: 'Set Reading/Listening Goal', bnText: 'পড়া বা শোনার লক্ষ্য নির্ধারণ করুন'),
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -944,8 +940,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),
               child: Center(
-                child: Text(
-                  'No active goals. Set a goal above to start tracking!',
+                child: Text(FFLocalizations.of(context).getVariableText(enText: 'No active goals. Set a goal above to start tracking!', bnText: 'কোনো সক্রিয় লক্ষ্য নেই। ট্র্যাকিং শুরু করতে উপরে লক্ষ্য নির্ধারণ করুন!'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: FlutterFlowTheme.of(context).secondaryText),
                 ),
@@ -1003,8 +998,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                               color: Colors.green.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Text(
-                              'Completed',
+                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Completed', bnText: 'সম্পন্ন'),
                               style: TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
@@ -1074,8 +1068,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
           children: [
             const SizedBox(height: 40),
             Center(
-              child: Text(
-                'No points history found.',
+              child: Text(FFLocalizations.of(context).getVariableText(enText: 'No points history found.', bnText: 'পয়েন্টের কোনো ইতিহাস পাওয়া যায়নি।'),
                 style: TextStyle(color: FlutterFlowTheme.of(context).secondaryText),
               ),
             ),
@@ -1187,7 +1180,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
           child: Column(
             children: [
               CustomCenterAppbarWidget(
-                title: 'Coins & Rewards',
+                title: FFLocalizations.of(context).getVariableText(enText: 'Coins & Rewards', bnText: 'কয়েন ও পুরস্কার'),
                 backIcon: false,
                 addIcon: false,
                 onTapAdd: () async {},
@@ -1280,8 +1273,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Text(
-                                                'Available Coins',
+                                              Text(FFLocalizations.of(context).getVariableText(enText: 'Available Coins', bnText: 'উপলব্ধ কয়েন'),
                                                 style: FlutterFlowTheme.of(context).bodySmall.override(
                                                       fontFamily: 'SF Pro Display',
                                                       color: Colors.white.withOpacity(0.8),
@@ -1312,8 +1304,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                               children: [
                                                 const Icon(Icons.arrow_upward_rounded, color: Colors.greenAccent, size: 12),
                                                 const SizedBox(width: 4),
-                                                Text(
-                                                  'Earned: $totalEarned',
+                                                Text(FFLocalizations.of(context).getVariableText(enText: 'Earned: ', bnText: 'অর্জিত: ') + '$totalEarned',
                                                   style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
                                                 ),
                                               ],
@@ -1323,8 +1314,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                               children: [
                                                 const Icon(Icons.arrow_downward_rounded, color: Colors.redAccent, size: 12),
                                                 const SizedBox(width: 4),
-                                                Text(
-                                                  'Spent: $totalSpent',
+                                                Text(FFLocalizations.of(context).getVariableText(enText: 'Spent: ', bnText: 'ব্যয়িত: ') + '$totalSpent',
                                                   style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
                                                 ),
                                               ],
@@ -1357,8 +1347,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                                 children: [
                                                   const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 22),
                                                   const SizedBox(width: 4),
-                                                  Text(
-                                                    '$streakCurrent Days',
+                                                  Text('$streakCurrent ' + FFLocalizations.of(context).getVariableText(enText: 'Days', bnText: 'দিন'),
                                                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                           fontFamily: 'SF Pro Display',
                                                           fontWeight: FontWeight.bold,
@@ -1367,8 +1356,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                                 ],
                                               ),
                                               const SizedBox(height: 4),
-                                              Text(
-                                                'Current Streak (Best: $streakBest)',
+                                              Text(FFLocalizations.of(context).getVariableText(enText: 'Current Streak', bnText: 'বর্তমান স্ট্রিক') + ' (Best: $streakBest)',
                                                 textAlign: TextAlign.center,
                                                 style: FlutterFlowTheme.of(context).bodySmall.override(
                                                       fontFamily: 'SF Pro Display',
@@ -1393,8 +1381,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                                 children: [
                                                   const Icon(Icons.stars_rounded, color: Colors.purple, size: 22),
                                                   const SizedBox(width: 4),
-                                                  Text(
-                                                    '$totalPoints Pts',
+                                                  Text('$totalPoints ' + FFLocalizations.of(context).getVariableText(enText: 'Pts', bnText: 'পয়েন্ট'),
                                                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                           fontFamily: 'SF Pro Display',
                                                           fontWeight: FontWeight.bold,
@@ -1403,8 +1390,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                                 ],
                                               ),
                                               const SizedBox(height: 4),
-                                              Text(
-                                                'Gamification Points',
+                                              Text(FFLocalizations.of(context).getVariableText(enText: 'Gamification Points', bnText: 'গেমিফিকেশন পয়েন্ট'),
                                                 textAlign: TextAlign.center,
                                                 style: FlutterFlowTheme.of(context).bodySmall.override(
                                                       fontFamily: 'SF Pro Display',
@@ -1460,8 +1446,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                                     children: [
                                                       Icon(Icons.task_alt, color: FlutterFlowTheme.of(context).primary, size: 16),
                                                       const SizedBox(width: 6),
-                                                      Text(
-                                                        'Daily Reward',
+                                                      Text(FFLocalizations.of(context).getVariableText(enText: 'Daily Reward', bnText: 'দৈনিক পুরস্কার'),
                                                         style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                               fontFamily: 'SF Pro Display',
                                                               fontWeight: FontWeight.bold,
@@ -1495,8 +1480,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                                         children: [
                                                           const Icon(Icons.play_circle_fill_rounded, color: Colors.orangeAccent, size: 18),
                                                           const SizedBox(width: 6),
-                                                          Text(
-                                                            'Watch Ad (+$_coinsPerAd)',
+                                                          Text(FFLocalizations.of(context).getVariableText(enText: 'Watch Ad', bnText: 'বিজ্ঞাপন দেখুন') + ' (+$_coinsPerAd)',
                                                             style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                                   fontFamily: 'SF Pro Display',
                                                                   fontWeight: FontWeight.bold,
@@ -1508,8 +1492,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                                   ),
                                                   if (FFAppState().isLogin) ...[
                                                     const SizedBox(height: 4),
-                                                    Text(
-                                                      '$_remainingAds left today',
+                                                    Text('$_remainingAds ' + FFLocalizations.of(context).getVariableText(enText: 'left today', bnText: 'আজ বাকি আছে'),
                                                       style: FlutterFlowTheme.of(context).bodySmall.override(
                                                             fontFamily: 'SF Pro Display',
                                                             color: FlutterFlowTheme.of(context).secondaryText,
@@ -1527,8 +1510,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                           placementKey: 'wallet_page',
                                         ),
                                         const SizedBox(height: 18),
-                                        Text(
-                                          'Transaction History',
+                                        Text(FFLocalizations.of(context).getVariableText(enText: 'Transaction History', bnText: 'লেনদেনের ইতিহাস'),
                                           style: FlutterFlowTheme.of(context).titleMedium.override(
                                                 fontFamily: 'SF Pro Display',
                                                 fontWeight: FontWeight.bold,
@@ -1543,8 +1525,7 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                               borderRadius: BorderRadius.circular(12),
                                             ),
                                             child: Center(
-                                              child: Text(
-                                                'No transactions yet',
+                                              child: Text(FFLocalizations.of(context).getVariableText(enText: 'No transactions yet', bnText: 'এখনো কোনো লেনদেন নেই'),
                                                 style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                       fontFamily: 'SF Pro Display',
                                                       color: FlutterFlowTheme.of(context).secondaryText,

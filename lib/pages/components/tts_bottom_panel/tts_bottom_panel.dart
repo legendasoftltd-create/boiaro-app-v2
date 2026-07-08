@@ -279,7 +279,7 @@
 //       child: Column(
 //         crossAxisAlignment: CrossAxisAlignment.start,
 //         children: [
-//           Text('Voice',
+//           Text(FFLocalizations.of(context).getVariableText(enText: 'Voice', bnText: 'কণ্ঠ'),
 //               style: FlutterFlowTheme.of(context)
 //                   .bodySmall
 //                   .override(fontWeight: FontWeight.w600)),
@@ -338,7 +338,7 @@
 //       child: Column(
 //         crossAxisAlignment: CrossAxisAlignment.start,
 //         children: [
-//           Text('Background Sound',
+//           Text(FFLocalizations.of(context).getVariableText(enText: 'Background Sound', bnText: 'পারিপার্শ্বিক শব্দ'),
 //               style: FlutterFlowTheme.of(context)
 //                   .bodySmall
 //                   .override(fontWeight: FontWeight.w600)),
@@ -380,7 +380,7 @@
 //         padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
 //         child: Row(
 //           children: [
-//             Text('Speed',
+//             Text(FFLocalizations.of(context).getVariableText(enText: 'Speed', bnText: 'গতি'),
 //                 style: FlutterFlowTheme.of(context)
 //                     .bodySmall
 //                     .override(fontWeight: FontWeight.w600)),

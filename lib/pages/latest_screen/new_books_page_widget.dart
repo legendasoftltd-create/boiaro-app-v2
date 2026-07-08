@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'new_books_page_model.dart';
 export 'new_books_page_model.dart';
 
+import '/flutter_flow/internationalization.dart';
 class NewBooksPageWidget extends StatefulWidget {
   const NewBooksPageWidget({
     super.key,
@@ -214,7 +215,7 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                       Text(
                         valueOrDefault<String>(
                           widget.title,
-                          'New books',
+                          FFLocalizations.of(context).getVariableText(enText: 'New books', bnText: 'নতুন বই'),
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 1,

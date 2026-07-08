@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -86,8 +88,7 @@ class _VerifiyEmailDialogWidgetState extends State<VerifiyEmailDialogWidget> {
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 28.0, 0.0, 16.0),
-                  child: Text(
-                    'Verify your email',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Verify your email', bnText: 'আপনার ইমেইল যাচাই করুন'),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -105,7 +106,7 @@ class _VerifiyEmailDialogWidgetState extends State<VerifiyEmailDialogWidget> {
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: 'Code Sent To ',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Code Sent To ', bnText: 'কোড পাঠানো হয়েছে '),
                           style: FlutterFlowTheme.of(context)
                               .bodyMedium
                               .override(
@@ -129,7 +130,7 @@ class _VerifiyEmailDialogWidgetState extends State<VerifiyEmailDialogWidget> {
                           ),
                         ),
                         TextSpan(
-                          text: ' please enter 4 digit code check inbox',
+                          text: FFLocalizations.of(context).getVariableText(enText: ' please enter 4 digit code check inbox', bnText: ' অনুগ্রহ করে ইনবক্স চেক করে ৪ ডিজিটের কোডটি লিখুন'),
                           style: TextStyle(),
                         )
                       ],
@@ -186,7 +187,7 @@ class _VerifiyEmailDialogWidgetState extends State<VerifiyEmailDialogWidget> {
 
                       safeSetState(() {});
                     },
-                    text: 'Send OTP',
+                    text: FFLocalizations.of(context).getVariableText(enText: 'Send OTP', bnText: 'ওটিপি পাঠান'),
                     options: FFButtonOptions(
                       width: 250.0,
                       height: 56.0,

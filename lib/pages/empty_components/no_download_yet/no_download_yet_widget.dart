@@ -2,6 +2,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import 'package:flutter/material.dart';
+import '/flutter_flow/internationalization.dart';
 import 'no_download_yet_model.dart';
 export 'no_download_yet_model.dart';
 
@@ -90,7 +91,7 @@ class _NoDownloadYetWidgetState extends State<NoDownloadYetWidget> {
               onPressed: () async {
                 context.safePop();
               },
-              text: 'Go to back',
+              text: FFLocalizations.of(context).getVariableText(enText: 'Go to back', bnText: 'ফিরে যান'),
               options: FFButtonOptions(
                 width: 250.0,
                 height: 56.0,

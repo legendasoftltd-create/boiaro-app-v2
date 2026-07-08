@@ -1,3 +1,4 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
 import 'package:flutter/material.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 
@@ -94,8 +95,7 @@ class EpisodesListPageWidget extends StatelessWidget {
                         border: Border.all(
                             color: Colors.white.withOpacity(0.3), width: 1),
                       ),
-                      child: Text(
-                        '${tracks.length} Episodes',
+                      child: Text('${tracks.length} ' + FFLocalizations.of(context).getVariableText(enText: 'Episodes', bnText: 'পর্বসমূহ'),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -121,8 +121,7 @@ class EpisodesListPageWidget extends StatelessWidget {
                             size: 56,
                             color: theme.secondaryText.withOpacity(0.4)),
                         const SizedBox(height: 12),
-                        Text(
-                          'No episodes available',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'No episodes available', bnText: 'কোনো পর্ব উপলব্ধ নেই'),
                           style: theme.bodyMedium.override(
                             fontFamily: 'SF Pro Display',
                             color: theme.secondaryText,

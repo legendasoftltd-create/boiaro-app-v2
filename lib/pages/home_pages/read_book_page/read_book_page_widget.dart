@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/flutter_flow/flutter_flow_pdf_viewer.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -162,8 +164,7 @@ class _ReadBookPageWidgetState extends State<ReadBookPageWidget> {
                                 Padding(
                                   padding: EdgeInsetsDirectional.fromSTEB(
                                       12.0, 0.0, 0.0, 0.0),
-                                  child: Text(
-                                    'Previous',
+                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Previous', bnText: 'পূর্ববর্তী'),
                                     style: FlutterFlowTheme.of(context)
                                         .bodyMedium
                                         .override(
@@ -183,8 +184,7 @@ class _ReadBookPageWidgetState extends State<ReadBookPageWidget> {
                                 Padding(
                                   padding: EdgeInsetsDirectional.fromSTEB(
                                       0.0, 0.0, 12.0, 0.0),
-                                  child: Text(
-                                    'Next',
+                                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Next', bnText: 'পরবর্তী'),
                                     style: FlutterFlowTheme.of(context)
                                         .bodyMedium
                                         .override(
@@ -239,8 +239,7 @@ class _ReadBookPageWidgetState extends State<ReadBookPageWidget> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
-                              child: Text(
-                                'Chapter 1',
+                              child: Text(FFLocalizations.of(context).getVariableText(enText: 'Chapter 1', bnText: 'অধ্যায় ১'),
                                 maxLines: 1,
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
@@ -258,7 +257,7 @@ class _ReadBookPageWidgetState extends State<ReadBookPageWidget> {
                               text: TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: 'Page ',
+                                    text: FFLocalizations.of(context).getVariableText(enText: 'Page ', bnText: 'পৃষ্ঠা '),
                                     style: FlutterFlowTheme.of(context)
                                         .bodyMedium
                                         .override(

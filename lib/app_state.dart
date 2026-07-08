@@ -562,14 +562,26 @@ class FFAppState extends ChangeNotifier {
   }
 
   String _favText = '     Book added to favorite     ';
-  String get favText => _favText;
+  String get favText {
+    final lang = prefs.getString('ff_language') ?? 'en';
+    if (lang == 'bn') {
+      return '     বইটি পছন্দের তালিকায় যুক্ত করা হয়েছে     ';
+    }
+    return _favText;
+  }
   set favText(String value) {
     _favText = value;
     prefs.setString('ff_favText', value);
   }
 
   String _unFavText = '     Book removed from favorite     ';
-  String get unFavText => _unFavText;
+  String get unFavText {
+    final lang = prefs.getString('ff_language') ?? 'en';
+    if (lang == 'bn') {
+      return '     বইটি পছন্দের তালিকা থেকে বাদ দেওয়া হয়েছে     ';
+    }
+    return _unFavText;
+  }
   set unFavText(String value) {
     _unFavText = value;
     prefs.setString('ff_unFavText', value);

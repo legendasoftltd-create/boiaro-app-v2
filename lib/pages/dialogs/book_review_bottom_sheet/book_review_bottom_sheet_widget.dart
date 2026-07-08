@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -103,8 +105,7 @@ class _BookReviewBottomSheetWidgetState
                           Padding(
                             padding: EdgeInsetsDirectional.fromSTEB(
                                 0.0, 0.0, 0.0, 23.0),
-                            child: Text(
-                              'Book review',
+                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Book review', bnText: 'বইয়ের রিভিউ'),
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
@@ -138,8 +139,7 @@ class _BookReviewBottomSheetWidgetState
                       Padding(
                         padding: EdgeInsetsDirectional.fromSTEB(
                             24.0, 16.0, 24.0, 16.0),
-                        child: Text(
-                          'How likely are you to recommend moving it to friend? (1-low,5-high)',
+                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'How likely are you to recommend moving it to friend? (1-low,5-high)', bnText: 'বন্ধুদের কাছে এটি রেকমেন্ড করার সম্ভাবনা কতটা? (১-কম, ৫-বেশি)'),
                           textAlign: TextAlign.center,
                           style:
                               FlutterFlowTheme.of(context).bodyMedium.override(
@@ -179,7 +179,7 @@ class _BookReviewBottomSheetWidgetState
                             autofocus: false,
                             obscureText: false,
                             decoration: InputDecoration(
-                              hintText: 'Your review here...',
+                              hintText: FFLocalizations.of(context).getVariableText(enText: 'Your review here...', bnText: 'আপনার মতামত এখানে লিখুন...'),
                               hintStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -315,7 +315,7 @@ class _BookReviewBottomSheetWidgetState
 
                             safeSetState(() {});
                           },
-                          text: 'Submit',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Submit', bnText: 'জমা দিন'),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,

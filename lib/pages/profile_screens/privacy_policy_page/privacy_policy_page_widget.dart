@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -82,7 +84,7 @@ class _PrivacyPolicyPageWidgetState extends State<PrivacyPolicyPageWidget>
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Privacy policy',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Privacy policy', bnText: 'গোপনীয়তা নীতি'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},

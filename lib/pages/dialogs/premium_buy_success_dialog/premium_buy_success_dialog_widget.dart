@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -86,8 +88,7 @@ class _PremiumBuySuccessDialogWidgetState
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 28.0, 0.0, 16.0),
-                  child: Text(
-                    'Premium buy success',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Premium buy success', bnText: 'প্রিমিয়াম কেনা সফল হয়েছে'),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -100,8 +101,7 @@ class _PremiumBuySuccessDialogWidgetState
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 28.0),
-                  child: Text(
-                    'thank you for buy premium package. go to home to continue your journey',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'thank you for buy premium package. go to home to continue your journey', bnText: 'প্রিমিয়াম প্যাকেজ কেনার জন্য ধন্যবাদ। আপনার বইয়ের যাত্রা অব্যাহত রাখতে হোমে ফিরে যান'),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -115,7 +115,7 @@ class _PremiumBuySuccessDialogWidgetState
                   onPressed: () async {
                     await widget.onTapHome?.call();
                   },
-                  text: 'Go to home',
+                  text: FFLocalizations.of(context).getVariableText(enText: 'Go to home', bnText: 'হোমে ফিরে যান'),
                   options: FFButtonOptions(
                     width: 250.0,
                     height: 56.0,

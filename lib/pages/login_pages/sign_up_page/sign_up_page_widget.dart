@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -109,8 +111,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                       Padding(
                         padding: EdgeInsetsDirectional.fromSTEB(
                             16.0, 0.0, 16.0, 0.0),
-                        child: Text(
-                          'Sign up',
+                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'Sign up', bnText: 'সাইন আপ করুন'),
                           style:
                               FlutterFlowTheme.of(context).bodyMedium.override(
                                     fontFamily: 'SF Pro Display',
@@ -132,8 +133,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                               child: Padding(
                                 padding: EdgeInsetsDirectional.fromSTEB(
                                     0.0, 8.0, 0.0, 0.0),
-                                child: Text(
-                                  'Welcome back, please log in to continue your journey',
+                                child: Text(FFLocalizations.of(context).getVariableText(enText: 'Welcome back, please log in to continue your journey', bnText: 'স্বাগতম, আপনার বই পড়া চালিয়ে যেতে সাইন আপ করুন'),
                                   maxLines: 2,
                                   style: FlutterFlowTheme.of(context)
                                       .bodyMedium
@@ -163,7 +163,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                               textInputAction: TextInputAction.next,
                               obscureText: false,
                               decoration: InputDecoration(
-                                labelText: 'Display Name',
+                                labelText: FFLocalizations.of(context).getVariableText(enText: 'Display Name', bnText: 'নাম'),
                                 labelStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -173,7 +173,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                       fontSize: 14.0,
                                       letterSpacing: 0.0,
                                     ),
-                                hintText: 'Enter your display name',
+                                hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter your display name', bnText: 'আপনার নাম লিখুন'),
                                 hintStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -246,7 +246,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                               textInputAction: TextInputAction.next,
                               obscureText: false,
                               decoration: InputDecoration(
-                                labelText: 'Email address',
+                                labelText: FFLocalizations.of(context).getVariableText(enText: 'Email address', bnText: 'ই-মেইল'),
                                 labelStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -256,7 +256,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                       fontSize: 14.0,
                                       letterSpacing: 0.0,
                                     ),
-                                hintText: 'Enter your email address',
+                                hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter your email address', bnText: 'আপনার ইমেইল ঠিকানা লিখুন'),
                                 hintStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -329,7 +329,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                               autofocus: false,
                               obscureText: !_model.passwordVisibility,
                               decoration: InputDecoration(
-                                labelText: 'Password',
+                                labelText: FFLocalizations.of(context).getVariableText(enText: 'Password', bnText: 'পাসওয়ার্ড'),
                                 labelStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -339,7 +339,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                       fontSize: 14.0,
                                       letterSpacing: 0.0,
                                     ),
-                                hintText: 'Enter your password',
+                                hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter your password', bnText: 'আপনার পাসওয়ার্ড লিখুন'),
                                 hintStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -429,7 +429,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                               textInputAction: TextInputAction.done,
                               obscureText: false,
                               decoration: InputDecoration(
-                                labelText: 'Referral Code (Optional)',
+                                labelText: FFLocalizations.of(context).getVariableText(enText: 'Referral Code (Optional)', bnText: 'রেফারেল কোড (ঐচ্ছিক)'),
                                 labelStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -439,7 +439,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                       fontSize: 14.0,
                                       letterSpacing: 0.0,
                                     ),
-                                hintText: 'Enter referral code',
+                                hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter referral code', bnText: 'রেফারেল কোড লিখুন'),
                                 hintStyle: FlutterFlowTheme.of(context)
                                     .labelMedium
                                     .override(
@@ -560,7 +560,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                   text: TextSpan(
                                     children: [
                                       TextSpan(
-                                        text: 'I agree with ',
+                                        text: FFLocalizations.of(context).getVariableText(enText: 'I agree with ', bnText: 'আমি সম্মত বই '),
                                         style: FlutterFlowTheme.of(context)
                                             .bodyMedium
                                             .override(
@@ -574,7 +574,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                                             ),
                                       ),
                                       TextSpan(
-                                        text: 'Terms and Privacy',
+                                        text: FFLocalizations.of(context).getVariableText(enText: 'Terms and Privacy', bnText: 'পলিসি ও শর্তাবলী সমূহতে'),
                                         style: TextStyle(
                                           color: FlutterFlowTheme.of(context)
                                               .primary,
@@ -697,7 +697,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
 
                             safeSetState(() {});
                           },
-                          text: 'Sign up',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Sign up', bnText: 'সাইন আপ করুন'),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,
@@ -745,7 +745,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: 'Already have an account? ',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Already have an account? ', bnText: 'অ্যাকাউন্ট আছে? '),
                           style: FlutterFlowTheme.of(context)
                               .bodyMedium
                               .override(
@@ -757,7 +757,7 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget>
                               ),
                         ),
                         TextSpan(
-                          text: 'Sign in',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Sign in', bnText: 'লগইন করুন'),
                           style: TextStyle(
                             color: FlutterFlowTheme.of(context).primary,
                             fontWeight: FontWeight.w600,

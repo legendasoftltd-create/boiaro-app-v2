@@ -6,6 +6,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import 'index.dart'; // Imports other custom actions
 import '/flutter_flow/custom_functions.dart'; // Imports custom functions
 import 'package:flutter/material.dart';
+import '/flutter_flow/internationalization.dart';
 // Begin custom action code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
@@ -103,7 +104,7 @@ void handleExternalWalletSelected(
 void showAlertDialog(BuildContext context, String title, String message) {
   // set up the buttons
   Widget continueButton = ElevatedButton(
-    child: const Text("Continue"),
+    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Continue', bnText: 'চালিয়ে যান')),
     onPressed: () {},
   );
   // set up the AlertDialog

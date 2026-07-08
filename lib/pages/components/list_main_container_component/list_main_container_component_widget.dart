@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -252,7 +253,7 @@ class _ListMainContainerComponentWidgetState
                           borderRadius: BorderRadius.circular(10.0),
                         ),
                         child: Text(
-                          'Purchased',
+                          FFLocalizations.of(context).getVariableText(enText: 'Purchased', bnText: 'ক্রয়কৃত'),
                           style:
                               FlutterFlowTheme.of(context).bodySmall.override(
                                     fontFamily: 'SF Pro Display',
@@ -276,8 +277,8 @@ class _ListMainContainerComponentWidgetState
                       ),
                       child: Text(
                         discountPercentageValue > 0
-                            ? '${widget.discountPercentage}% OFF'
-                            : '৳${widget.discountAmount} OFF',
+                            ? '${widget.discountPercentage}% ${FFLocalizations.of(context).getVariableText(enText: 'OFF', bnText: 'ছাড়')}'
+                            : '৳${widget.discountAmount} ${FFLocalizations.of(context).getVariableText(enText: 'OFF', bnText: 'ছাড়')}',
                         style: FlutterFlowTheme.of(context).bodySmall.override(
                               fontFamily: 'SF Pro Display',
                               color: FlutterFlowTheme.of(context)
@@ -315,8 +316,7 @@ class _ListMainContainerComponentWidgetState
                               lineHeight: 1.5,
                             ),
                       ),
-                      Text(
-                        'By ${widget.authorName}',
+                      Text(FFLocalizations.of(context).getVariableText(enText: 'By ', bnText: 'লেখক: ') + '${widget.authorName}',
                         textAlign: TextAlign.start,
                         maxLines: 1,
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -376,7 +376,7 @@ class _ListMainContainerComponentWidgetState
                                     "৳ ${widget.price}",
                                     '\$0.00',
                                   )}"
-                                : "Free",
+                                : FFLocalizations.of(context).getVariableText(enText: 'Free', bnText: 'ফ্রি'),
                             textAlign: TextAlign.start,
                             maxLines: 1,
                             style: FlutterFlowTheme.of(context)
@@ -410,8 +410,7 @@ class _ListMainContainerComponentWidgetState
                                           FlutterFlowTheme.of(context).primary,
                                       borderRadius: BorderRadius.circular(16.0),
                                     ),
-                                    child: Text(
-                                      'Read Now',
+                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Read Now', bnText: 'এখনই পড়ুন'),
                                       style: FlutterFlowTheme.of(context)
                                           .bodyMedium
                                           .override(

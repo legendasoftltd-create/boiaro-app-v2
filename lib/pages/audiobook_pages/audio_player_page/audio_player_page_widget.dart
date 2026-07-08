@@ -28,6 +28,7 @@ import '/pages/cart_pages/payment_screen.dart';
 import '/pages/cart_pages/make_payment.dart';
 import '/pages/login_pages/sign_in_page/sign_in_page_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
+import '/flutter_flow/internationalization.dart';
 
 
 class AudioPlayerPageWidget extends StatefulWidget {
@@ -325,10 +326,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Preview Ended'),
+        title: Text(FFLocalizations.of(context).getVariableText(enText: 'Preview Ended', bnText: 'প্রিভিউ শেষ')),
         content: Text(
-          'You\'ve reached the $_previewPercent% preview limit for "$bookName". '
-          'Purchase the full audiobook to keep listening.',
+          FFLocalizations.of(context).getVariableText(
+            enText: 'You\'ve reached the $_previewPercent% preview limit for "$bookName". Purchase the full audiobook to keep listening.',
+            bnText: 'â\u0080\u009c$bookNameâ\u0080\u009d-এর $_previewPercent% প্রিভিউ শেষ হয়েছে। সম্পূর্ণ অডিওবুক শুনতে কিনুন।',
+          ),
         ),
         actions: [
           TextButton(
@@ -336,11 +339,11 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
               Navigator.of(ctx).pop();
               context.safePop();
             },
-            child: const Text('Buy Now'),
+            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Buy Now', bnText: 'এখনি কিনুন')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Close', bnText: 'বন্ধ করুন')),
           ),
         ],
       ),
@@ -843,8 +846,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Background Ambient Sound',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'Background Ambient Sound', bnText: 'পার্শ্ববর্তী পারিপার্শ্বিক শব্দ'),
                           style: FlutterFlowTheme.of(context).headlineSmall.override(
                                 fontFamily: 'SF Pro Display',
                                 fontSize: 18,
@@ -869,8 +871,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      'Select Track',
+                    Text(FFLocalizations.of(context).getVariableText(enText: 'Select Track', bnText: 'ট্র্যাক নির্বাচন করুন'),
                       style: FlutterFlowTheme.of(context).bodyMedium.override(
                             fontFamily: 'SF Pro Display',
                             color: FlutterFlowTheme.of(context).secondaryText,
@@ -916,8 +917,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Ambient Volume',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'Ambient Volume', bnText: 'পারিপার্শ্বিক শব্দ ভলিউম'),
                           style: FlutterFlowTheme.of(context).bodyMedium.override(
                                 fontFamily: 'SF Pro Display',
                                 color: FlutterFlowTheme.of(context).secondaryText,
@@ -1108,8 +1108,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Episodes',
+                              Text(FFLocalizations.of(context).getVariableText(enText: 'Episodes', bnText: 'পর্বসমূহ'),
                                 style: FlutterFlowTheme.of(context)
                                     .headlineSmall
                                     .override(
@@ -1297,8 +1296,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                                           .withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
-                                    child: Text(
-                                      'Playing',
+                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Playing', bnText: 'চলছে'),
                                       style: TextStyle(
                                         fontFamily: 'SF Pro Display',
                                         fontSize: 11,
@@ -1318,8 +1316,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                                           .withValues(alpha: 0.06),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
-                                    child: Text(
-                                      'Unlock',
+                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Unlock', bnText: 'আনলক করুন'),
                                       style: TextStyle(
                                         fontFamily: 'SF Pro Display',
                                         fontSize: 11,
@@ -1362,7 +1359,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     final bookId = _bookId();
 
     if (trackId.toString().isEmpty) {
-      await actions.showCustomToastBottom('Unable to unlock: invalid chapter ID');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to unlock: invalid chapter ID', bnText: 'আনলক করতে ব্যর্থ: অবৈধ অধ্যায় আইডি'));
       return;
     }
 
@@ -1499,8 +1496,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Text(
-                          'Unlock Chapter',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'Unlock Chapter', bnText: 'অধ্যায় আনলক করুন'),
                           style: TextStyle(
                             fontFamily: 'SF Pro Display',
                             fontSize: 18,
@@ -1563,8 +1559,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: Text(
-                              'Cancel',
+                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন'),
                               style: TextStyle(
                                 fontFamily: 'SF Pro Display',
                                 fontSize: 14,
@@ -1602,7 +1597,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
         );
 
         if (res.statusCode == 200 || res.succeeded) {
-          await actions.showCustomToastBottom('Chapter unlocked successfully!');
+          await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Chapter unlocked successfully!', bnText: 'অধ্যায় সফলভাবে আনলক করা হয়েছে!'));
           await _refreshChapters();
         } else {
           final msg = getJsonField(res.jsonBody, r'''$.error''') ?? 
@@ -1618,7 +1613,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     } else if (option == 'coins') {
       final balance = await _walletBalance();
       if (balance == null || balance < coinPrice) {
-        await actions.showCustomToastBottom('Insufficient coins. Earn coins by watching ads or buying them!');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Insufficient coins. Earn coins by watching ads or buying them!', bnText: 'পর্যাপ্ত কয়েন নেই। বিজ্ঞাপন দেখে বা কিনে কয়েন উপার্জন করুন!'));
         return;
       }
       final res = await EbookGroup.unlockChapterWithCoinsCall.call(
@@ -1626,7 +1621,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
         token: FFAppState().token,
       );
       if (res.statusCode == 200 || res.succeeded) {
-        await actions.showCustomToastBottom('Chapter unlocked successfully!');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Chapter unlocked successfully!', bnText: 'অধ্যায় সফলভাবে আনলক করা হয়েছে!'));
         await _refreshChapters();
       } else {
         final msg = getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock failed';
@@ -1664,10 +1659,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
             await _refreshChapters();
           }
         } else {
-          await actions.showCustomToastBottom('Failed to get gateway URL');
+          await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to get gateway URL', bnText: 'গেটওয়ে ইউআরএল পেতে ব্যর্থ'));
         }
       } else {
-        await actions.showCustomToastBottom('Failed to initiate payment');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to initiate payment', bnText: 'পেমেন্ট শুরু করতে ব্যর্থ'));
       }
     }
   }
@@ -1844,8 +1839,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                           horizontal: 20, vertical: 12),
                       child: Row(
                         children: [
-                          Text(
-                            'More Options',
+                          Text(FFLocalizations.of(context).getVariableText(enText: 'More Options', bnText: 'আরও অপশন'),
                             style: FlutterFlowTheme.of(context)
                                 .headlineSmall
                                 .override(
@@ -2161,8 +2155,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                         color: FlutterFlowTheme.of(context).primary,
                         size: 22),
                     const SizedBox(width: 8),
-                    Text(
-                      'Copyright & Credits',
+                    Text(FFLocalizations.of(context).getVariableText(enText: 'Copyright & Credits', bnText: 'কপিরাইট ও ক্রেডিট'),
                       style: FlutterFlowTheme.of(context)
                           .headlineSmall
                           .override(
@@ -2341,8 +2334,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                 color: FlutterFlowTheme.of(context).primaryText, size: 30),
             onPressed: () => context.safePop(),
           ),
-          title: Text(
-            'Now Playing',
+          title: Text(FFLocalizations.of(context).getVariableText(enText: 'Now Playing', bnText: 'বর্তমানে চলছে'),
             style: FlutterFlowTheme.of(context).headlineSmall.override(
                   fontFamily: 'SF Pro Display',
                   color: FlutterFlowTheme.of(context).primaryText,
@@ -2643,7 +2635,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                             color: Colors.orange, size: 14),
                         const SizedBox(width: 6),
                         Text(
-                          'Preview ($_previewPercent%) — Buy to unlock full audiobook',
+                          FFLocalizations.of(context).getVariableText(enText: 'Preview', bnText: 'প্রিভিউ') + ' ($_previewPercent%) — ' + FFLocalizations.of(context).getVariableText(enText: 'Buy to unlock full audiobook', bnText: 'সম্পূর্ণ অডিওবুক আনলক করতে কিনুন'),
                           style: TextStyle(
                             color: Colors.orange.shade700,
                             fontSize: 12,

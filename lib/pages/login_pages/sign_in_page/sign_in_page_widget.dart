@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/services/revenue_cat_service.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
@@ -74,8 +76,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.0),
           ),
-          title: Text(
-            'Email Required',
+          title: Text(FFLocalizations.of(context).getVariableText(enText: 'Email Required', bnText: 'ইমেইল প্রয়োজন'),
             style: FlutterFlowTheme.of(context).headlineSmall.override(
                   fontFamily: 'SF Pro Display',
                   fontSize: 20.0,
@@ -90,8 +91,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Facebook didn\'t provide your email address. Please enter it to continue.',
+                  Text(FFLocalizations.of(context).getVariableText(enText: "Facebook didn't provide your email address. Please enter it to continue.", bnText: "ফেসবুক আপনার ইমেইল প্রদান করেনি। অনুগ্রহ করে চালিয়ে যেতে এটি লিখুন।"),
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
                           fontSize: 15.0,
@@ -105,8 +105,8 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                     autofocus: true,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      labelText: 'Email address',
-                      hintText: 'Enter your email address',
+                      labelText: FFLocalizations.of(context).getVariableText(enText: 'Email address', bnText: 'ইমেইল ঠিকানা'),
+                      hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter your email address', bnText: 'আপনার ইমেইল ঠিকানা লিখুন'),
                       labelStyle:
                           FlutterFlowTheme.of(context).labelMedium.override(
                                 fontFamily: 'SF Pro Display',
@@ -157,14 +157,20 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                         ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email address';
+                        return FFLocalizations.of(context).getVariableText(
+                          enText: 'Please enter your email address',
+                          bnText: 'অনুগ্রহ করে আপনার ইমেইল ঠিকানা লিখুন',
+                        );
                       }
                       // Basic email validation
                       final emailRegex = RegExp(
                         r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
                       );
                       if (!emailRegex.hasMatch(value)) {
-                        return 'Please enter a valid email address';
+                        return FFLocalizations.of(context).getVariableText(
+                          enText: 'Please enter a valid email address',
+                          bnText: 'অনুগ্রহ করে সঠিক ইমেইল ঠিকানা লিখুন',
+                        );
                       }
                       return null;
                     },
@@ -178,8 +184,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
               onPressed: () {
                 Navigator.of(dialogContext).pop(null);
               },
-              child: Text(
-                'Cancel',
+              child: Text(FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন'),
                 style: FlutterFlowTheme.of(context).bodyMedium.override(
                       fontFamily: 'SF Pro Display',
                       color: FlutterFlowTheme.of(context).secondaryText,
@@ -204,8 +209,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                 ),
                 elevation: 0.0,
               ),
-              child: Text(
-                'Continue',
+              child: Text(FFLocalizations.of(context).getVariableText(enText: 'Continue', bnText: 'চালিয়ে যান'),
                 style: FlutterFlowTheme.of(context).titleSmall.override(
                       fontFamily: 'SF Pro Display',
                       color: Colors.white,
@@ -300,8 +304,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                 ),
                               ),
                             ),
-                            Text(
-                              'Log in',
+                            Text(FFLocalizations.of(context).getVariableText(enText: 'Log in', bnText: 'লগ ইন'),
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
@@ -318,8 +321,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                         Padding(
                           padding: EdgeInsetsDirectional.fromSTEB(
                               0.0, 8.0, 0.0, 24.0),
-                          child: Text(
-                            'Welcome back please log in to continue your journey',
+                          child: Text(FFLocalizations.of(context).getVariableText(enText: 'Welcome back please log in to continue your journey', bnText: 'স্বাগতম, আপনার বই পড়া চালিয়ে যেতে লগইন করুন'),
                             style: FlutterFlowTheme.of(context)
                                 .bodyMedium
                                 .override(
@@ -337,7 +339,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                           textInputAction: TextInputAction.next,
                           obscureText: false,
                           decoration: InputDecoration(
-                            labelText: 'Email address',
+                            labelText: FFLocalizations.of(context).getVariableText(enText: 'Email address', bnText: 'ই-মেইল'),
                             labelStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -347,7 +349,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                   fontSize: 14.0,
                                   letterSpacing: 0.0,
                                 ),
-                            hintText: 'Enter your email address',
+                            hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter your email address', bnText: 'আপনার ইমেইল ঠিকানা লিখুন'),
                             hintStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -418,7 +420,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                             textInputAction: TextInputAction.done,
                             obscureText: !_model.passwordVisibility,
                             decoration: InputDecoration(
-                              labelText: 'Password',
+                              labelText: FFLocalizations.of(context).getVariableText(enText: 'Password', bnText: 'পাসওয়ার্ড'),
                               labelStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -428,7 +430,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                     fontSize: 14.0,
                                     letterSpacing: 0.0,
                                   ),
-                              hintText: 'Enter your password',
+                              hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter your password', bnText: 'আপনার পাসওয়ার্ড লিখুন'),
                               hintStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -520,8 +522,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                 context.pushNamed(
                                     ForgotpasswordPageWidget.routeName);
                               },
-                              child: Text(
-                                'Forgot password?',
+                              child: Text(FFLocalizations.of(context).getVariableText(enText: 'Forgot password?', bnText: 'পাসওয়ার্ড ভুলে গেছেন?'),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
                                     .override(
@@ -653,7 +654,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
 
                             safeSetState(() {});
                           },
-                          text: 'Log in',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Log in', bnText: 'লগইন করুন'),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,
@@ -698,8 +699,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8.0),
-                                    child: Text(
-                                      "OR",
+                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'OR', bnText: 'অথবা'),
                                       style: FlutterFlowTheme.of(context)
                                           .titleSmall
                                           .override(
@@ -804,8 +804,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                                 .primaryBackground,
                                           ),
                                           SizedBox(width: 10),
-                                          Text(
-                                            "Continue with Apple",
+                                          Text(FFLocalizations.of(context).getVariableText(enText: 'Continue with Apple', bnText: 'অ্যাপল দিয়ে চালিয়ে যান'),
                                             style: FlutterFlowTheme.of(context)
                                                 .bodyMedium
                                                 .override(
@@ -853,8 +852,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                           color: FlutterFlowTheme.of(context).primaryText,
                                         ),
                                         SizedBox(width: 10),
-                                        Text(
-                                          "Continue with Phone",
+                                        Text(FFLocalizations.of(context).getVariableText(enText: 'Continue with Phone', bnText: 'মোবাইল নম্বর লগইন'),
                                           style: FlutterFlowTheme.of(context)
                                               .bodyMedium
                                               .override(
@@ -951,8 +949,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                             width: 30,
                                           ),
                                           SizedBox(width: 10),
-                                          Text(
-                                            "Continue with Google",
+                                          Text(FFLocalizations.of(context).getVariableText(enText: 'Continue with Google', bnText: 'গুগল লগইন'),
                                             style: FlutterFlowTheme.of(context)
                                                 .bodyMedium
                                                 .override(
@@ -1128,8 +1125,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                                           width: 30,
                                         ),
                                         SizedBox(width: 10),
-                                        Text(
-                                          "Continue with Facebook",
+                                        Text(FFLocalizations.of(context).getVariableText(enText: 'Continue with Facebook', bnText: 'ফেসবুক লগইন'),
                                           style: FlutterFlowTheme.of(context)
                                               .bodyMedium
                                               .override(
@@ -1199,7 +1195,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: 'Don’t have an account? ',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Don’t have an account? ', bnText: 'অ্যাকাউন্ট নেই? '),
                           style: FlutterFlowTheme.of(context)
                               .bodyMedium
                               .override(
@@ -1211,7 +1207,7 @@ class _SignInPageWidgetState extends State<SignInPageWidget>
                               ),
                         ),
                         TextSpan(
-                          text: 'Sign up',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Sign up', bnText: 'সাইন আপ করুন'),
                           style: TextStyle(
                             color: FlutterFlowTheme.of(context).primary,
                             fontWeight: FontWeight.w600,

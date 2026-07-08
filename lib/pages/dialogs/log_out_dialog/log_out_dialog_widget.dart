@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -112,7 +114,7 @@ class _LogOutDialogWidgetState extends State<LogOutDialogWidget>
                           onPressed: () async {
                             Navigator.pop(context);
                           },
-                          text: 'Cancel',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন'),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,
@@ -145,7 +147,7 @@ class _LogOutDialogWidgetState extends State<LogOutDialogWidget>
                           onPressed: () async {
                             await widget.onTapLogout?.call();
                           },
-                          text: 'Log out',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Log out', bnText: 'লগআউট করুন'),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,

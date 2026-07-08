@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -81,7 +83,7 @@ class _AboutUsPageWidgetState extends State<AboutUsPageWidget>
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'About us',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'About us', bnText: 'আমাদের সম্পর্কে'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},

@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -86,8 +88,7 @@ class _PasswordSuccsessDialogWidgetState
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 28.0, 0.0, 16.0),
-                  child: Text(
-                    'Password Reset Success',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'Password Reset Success', bnText: 'পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে'),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -100,8 +101,7 @@ class _PasswordSuccsessDialogWidgetState
                 ),
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 28.0),
-                  child: Text(
-                    'You have successfully change your password use new password to log in ',
+                  child: Text(FFLocalizations.of(context).getVariableText(enText: 'You have successfully change your password use new password to log in ', bnText: 'আপনার পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে, নতুন পাসওয়ার্ড দিয়ে লগইন করুন'),
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           fontFamily: 'SF Pro Display',
@@ -115,7 +115,7 @@ class _PasswordSuccsessDialogWidgetState
                   onPressed: () async {
                     await widget.onTapLogin?.call();
                   },
-                  text: 'Go to login',
+                  text: FFLocalizations.of(context).getVariableText(enText: 'Go to login', bnText: 'লগইন পেজে যান'),
                   options: FFButtonOptions(
                     width: 250.0,
                     height: 56.0,

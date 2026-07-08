@@ -336,7 +336,7 @@ class _NavBarPageState extends State<NavBarPage> {
               FFIcons.kicon7,
               size: 24.0,
             ),
-            label: FFLocalizations.of(context).getText('nav_home'),
+            label: FFLocalizations.of(context).getVariableText(enText: 'Home', bnText: 'হোম'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -348,7 +348,7 @@ class _NavBarPageState extends State<NavBarPage> {
               FFIcons.kicon5,
               size: 24.0,
             ),
-            label: FFLocalizations.of(context).getText('nav_categories'),
+            label: FFLocalizations.of(context).getVariableText(enText: 'Categories', bnText: 'ক্যাটাগরি'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -360,7 +360,7 @@ class _NavBarPageState extends State<NavBarPage> {
               Icons.headphones_rounded,
               size: 24.0,
             ),
-            label: 'AudioBooks',
+            label: FFLocalizations.of(context).getVariableText(enText: 'Audiobooks', bnText: 'অডিওবুক'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -372,7 +372,7 @@ class _NavBarPageState extends State<NavBarPage> {
               Icons.local_library_rounded,
               size: 24.0,
             ),
-            label: 'Library',
+            label: FFLocalizations.of(context).getVariableText(enText: 'Library', bnText: 'লাইব্রেরি'),
             tooltip: '',
           ),
           BottomNavigationBarItem(
@@ -384,7 +384,7 @@ class _NavBarPageState extends State<NavBarPage> {
               Icons.menu_open_rounded,
               size: 24.0,
             ),
-            label: 'More',
+            label: FFLocalizations.of(context).getVariableText(enText: 'More', bnText: 'আরো'),
             tooltip: '',
           ),
         ],

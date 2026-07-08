@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -65,7 +67,7 @@ class _ForgotpasswordPageWidgetState extends State<ForgotpasswordPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Forgot password',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Forgot password', bnText: 'পাসওয়ার্ড ভুলে গেছেন'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -87,8 +89,7 @@ class _ForgotpasswordPageWidgetState extends State<ForgotpasswordPageWidget> {
                       ),
                       scrollDirection: Axis.vertical,
                       children: [
-                        Text(
-                          'Enter your email for the verification process. we will send 4 digits code to your email.',
+                        Text(FFLocalizations.of(context).getVariableText(enText: 'Enter your email for the verification process. we will send 4 digits code to your email.', bnText: 'যাচাইকরণের জন্য আপনার ইমেইল লিখুন। আমরা আপনার ইমেইলে একটি ৪ ডিজিটের কোড পাঠাবো।'),
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           style:
@@ -108,7 +109,7 @@ class _ForgotpasswordPageWidgetState extends State<ForgotpasswordPageWidget> {
                             autofocus: false,
                             obscureText: false,
                             decoration: InputDecoration(
-                              labelText: 'Email address',
+                              labelText: FFLocalizations.of(context).getVariableText(enText: 'Email address', bnText: 'ইমেইল ঠিকানা'),
                               labelStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -118,7 +119,7 @@ class _ForgotpasswordPageWidgetState extends State<ForgotpasswordPageWidget> {
                                     fontSize: 14.0,
                                     letterSpacing: 0.0,
                                   ),
-                              hintText: 'Enter your email address',
+                              hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter your email address', bnText: 'আপনার ইমেইল ঠিকানা লিখুন'),
                               hintStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -231,7 +232,7 @@ class _ForgotpasswordPageWidgetState extends State<ForgotpasswordPageWidget> {
 
                             safeSetState(() {});
                           },
-                          text: 'Send',
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Send', bnText: 'পাঠান'),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,

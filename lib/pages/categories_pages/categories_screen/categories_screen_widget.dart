@@ -2,6 +2,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/category_component/category_component_widget.dart';
 import '/pages/components/single_appbar/single_appbar_widget.dart';
 import '/pages/empty_components/no_categories_yet/no_categories_yet_widget.dart';
@@ -83,7 +84,7 @@ class _CategoriesScreenWidgetState extends State<CategoriesScreenWidget>
                 model: _model.singleAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: SingleAppbarWidget(
-                  title: 'Categories',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Categories', bnText: 'ক্যাটাগরি'),
                 ),
               ),
               Expanded(

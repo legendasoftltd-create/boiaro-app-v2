@@ -1,6 +1,7 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/components/list_main_container_component/list_main_container_component_widget.dart';
 import '/pages/empty_components/no_result_book_found/no_result_book_found_widget.dart';
@@ -129,7 +130,7 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Search',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Search', bnText: 'অনুসন্ধান'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -181,7 +182,7 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                           autofocus: false,
                           obscureText: false,
                           decoration: InputDecoration(
-                            hintText: 'Search ',
+                            hintText: FFLocalizations.of(context).getVariableText(enText: 'Search', bnText: 'অনুসন্ধান করুন'),
                             hintStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -271,7 +272,7 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Text(
-                                      'Recent search',
+                                      FFLocalizations.of(context).getVariableText(enText: 'Recent search', bnText: 'সাম্প্রতিক অনুসন্ধান'),
                                       style: FlutterFlowTheme.of(context)
                                           .bodyMedium
                                           .override(
@@ -291,8 +292,7 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                         FFAppState().searchList = [];
                                         FFAppState().update(() {});
                                       },
-                                      child: Text(
-                                        'Clear all',
+                                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'Clear all', bnText: 'সব মুছুন'),
                                         style: FlutterFlowTheme.of(context)
                                             .bodyMedium
                                             .override(

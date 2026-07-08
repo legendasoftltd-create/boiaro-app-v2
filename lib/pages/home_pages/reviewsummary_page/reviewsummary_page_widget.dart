@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -75,7 +77,7 @@ class _ReviewsummaryPageWidgetState extends State<ReviewsummaryPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Review summary',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Review summary', bnText: 'রিভিউ বিবরণী'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -233,8 +235,7 @@ class _ReviewsummaryPageWidgetState extends State<ReviewsummaryPageWidget> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          'Amount',
+                                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'Amount', bnText: 'পরিমাণ'),
                                           maxLines: 1,
                                           style: FlutterFlowTheme.of(context)
                                               .bodyMedium
@@ -272,8 +273,7 @@ class _ReviewsummaryPageWidgetState extends State<ReviewsummaryPageWidget> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          'Tax',
+                                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'Tax', bnText: 'ট্যাক্স'),
                                           maxLines: 1,
                                           style: FlutterFlowTheme.of(context)
                                               .bodyMedium
@@ -313,8 +313,7 @@ class _ReviewsummaryPageWidgetState extends State<ReviewsummaryPageWidget> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          'Total',
+                                        child: Text(FFLocalizations.of(context).getVariableText(enText: 'Total', bnText: 'সর্বমোট'),
                                           style: FlutterFlowTheme.of(context)
                                               .bodyMedium
                                               .override(
@@ -401,8 +400,7 @@ class _ReviewsummaryPageWidgetState extends State<ReviewsummaryPageWidget> {
                                       ),
                                 ),
                               ),
-                              Text(
-                                'Change',
+                              Text(FFLocalizations.of(context).getVariableText(enText: 'Change', bnText: 'পরিবর্তন করুন'),
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
                                     .override(
@@ -458,7 +456,7 @@ class _ReviewsummaryPageWidgetState extends State<ReviewsummaryPageWidget> {
                         },
                       );
                     },
-                    text: 'Pay now',
+                    text: FFLocalizations.of(context).getVariableText(enText: 'Pay now', bnText: 'এখনি পরিশোধ করুন'),
                     options: FFButtonOptions(
                       width: double.infinity,
                       height: 56.0,

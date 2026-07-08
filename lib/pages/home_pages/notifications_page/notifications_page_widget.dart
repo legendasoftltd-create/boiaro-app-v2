@@ -2,6 +2,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/empty_components/no_notification_yet/no_notification_yet_widget.dart';
 import 'dart:async';
@@ -85,7 +86,7 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Notifications',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Notifications', bnText: 'নোটিফিকেশন'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},

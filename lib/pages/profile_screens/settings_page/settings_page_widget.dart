@@ -240,14 +240,14 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget>
                                                   child: Column(
                                                     children: [
                                                       ListTile(
-                                                        title: Text('English', style: FlutterFlowTheme.of(context).bodyMedium),
+                                                        title: Text(FFLocalizations.of(context).getVariableText(enText: 'English', bnText: 'ইংরেজি'), style: FlutterFlowTheme.of(context).bodyMedium),
                                                         onTap: () {
                                                           MyApp.of(context).setLocale('en');
                                                           Navigator.pop(context);
                                                         },
                                                       ),
                                                       ListTile(
-                                                        title: Text('Bangla', style: FlutterFlowTheme.of(context).bodyMedium),
+                                                        title: Text(FFLocalizations.of(context).getVariableText(enText: 'Bangla', bnText: 'বাংলা'), style: FlutterFlowTheme.of(context).bodyMedium),
                                                         onTap: () {
                                                           MyApp.of(context).setLocale('bn');
                                                           Navigator.pop(context);

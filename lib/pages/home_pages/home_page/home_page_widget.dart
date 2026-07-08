@@ -294,7 +294,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
       final tracks = await _fetchAudioTracks(bookId);
       final effectiveTracks = List<Map<String, dynamic>>.from(tracks);
       if (effectiveTracks.isEmpty) {
-        await actions.showCustomToastBottom('No tracks available');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'No tracks available', bnText: 'কোনো ট্র্যাক উপলব্ধ নেই'));
         return;
       }
 
@@ -328,7 +328,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
       }
 
       if (chapters.isEmpty) {
-        await actions.showCustomToastBottom('Unable to load audiobook tracks');
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to load audiobook tracks', bnText: 'অডিওবুক ট্র্যাক লোড করতে ব্যর্থ'));
         return;
       }
 
@@ -384,7 +384,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         await playAudio();
       }
     } catch (_) {
-      await actions.showCustomToastBottom('Failed to load audiobook');
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to load audiobook', bnText: 'অডিওবুক লোড করতে ব্যর্থ'));
     } finally {
       if (mounted) {
         setState(() {
@@ -568,13 +568,13 @@ class _HomePageWidgetState extends State<HomePageWidget>
   String _selectedPopularTitle() {
     switch (_selectedFilter) {
       case HomeBookFilter.all:
-        return 'Popular books';
+        return FFLocalizations.of(context).getVariableText(enText: 'Popular books', bnText: 'জনপ্রিয় বই');
       case HomeBookFilter.ebook:
-        return 'Popular eBooks';
+        return FFLocalizations.of(context).getVariableText(enText: 'Popular eBooks', bnText: 'জনপ্রিয় ই-বুক');
       case HomeBookFilter.audiobook:
-        return 'Popular Audiobooks';
+        return FFLocalizations.of(context).getVariableText(enText: 'Popular Audiobooks', bnText: 'জনপ্রিয় অডিওবুক');
       case HomeBookFilter.hardcopy:
-        return 'Popular Hardcopies';
+        return FFLocalizations.of(context).getVariableText(enText: 'Popular Hardcopies', bnText: 'জনপ্রিয় হার্ডকপি');
     }
   }
 
@@ -599,26 +599,26 @@ class _HomePageWidgetState extends State<HomePageWidget>
   String _selectedTrendingTitle() {
     switch (_selectedFilter) {
       case HomeBookFilter.all:
-        return 'Trending books';
+        return FFLocalizations.of(context).getVariableText(enText: 'Trending books', bnText: 'ট্রেন্ডিং বই');
       case HomeBookFilter.ebook:
-        return 'Trending eBooks';
+        return FFLocalizations.of(context).getVariableText(enText: 'Trending eBooks', bnText: 'ট্রেন্ডিং ই-বুক');
       case HomeBookFilter.audiobook:
-        return 'Trending Audiobooks';
+        return FFLocalizations.of(context).getVariableText(enText: 'Trending Audiobooks', bnText: 'ট্রেন্ডিং অডিওবুক');
       case HomeBookFilter.hardcopy:
-        return 'Trending Hardcopies';
+        return FFLocalizations.of(context).getVariableText(enText: 'Trending Hardcopies', bnText: 'ট্রেন্ডিং হার্ডকপি');
     }
   }
 
   String _selectedNewTitle() {
     switch (_selectedFilter) {
       case HomeBookFilter.all:
-        return 'New books';
+        return FFLocalizations.of(context).getVariableText(enText: 'New books', bnText: 'নতুন বই');
       case HomeBookFilter.ebook:
-        return 'New eBooks';
+        return FFLocalizations.of(context).getVariableText(enText: 'New eBooks', bnText: 'নতুন ই-বুক');
       case HomeBookFilter.audiobook:
-        return 'New Audiobooks';
+        return FFLocalizations.of(context).getVariableText(enText: 'New Audiobooks', bnText: 'নতুন অডিওবুক');
       case HomeBookFilter.hardcopy:
-        return 'New Hardcopies';
+        return FFLocalizations.of(context).getVariableText(enText: 'New Hardcopies', bnText: 'নতুন হার্ডকপি');
     }
   }
 
@@ -662,25 +662,25 @@ class _HomePageWidgetState extends State<HomePageWidget>
             _buildToggleItem(
               context,
               filter: HomeBookFilter.all,
-              label: 'All',
+              label: FFLocalizations.of(context).getVariableText(enText: 'All', bnText: 'সব'),
               icon: Icons.sync_rounded,
             ),
             _buildToggleItem(
               context,
               filter: HomeBookFilter.ebook,
-              label: 'eBook',
+              label: FFLocalizations.of(context).getVariableText(enText: 'eBook', bnText: 'ই-বুক'),
               icon: Icons.menu_book_rounded,
             ),
             _buildToggleItem(
               context,
               filter: HomeBookFilter.audiobook,
-              label: 'Audiobook',
+              label: FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক'),
               icon: Icons.headphones_rounded,
             ),
             _buildToggleItem(
               context,
               filter: HomeBookFilter.hardcopy,
-              label: 'Hardcopy',
+              label: FFLocalizations.of(context).getVariableText(enText: 'Hardcopy', bnText: 'হার্ডকপি'),
               icon: Icons.local_library_rounded,
             ),
           ],
@@ -769,7 +769,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
   String _formatAudioProgressLabel(int positionSec, int durationSec) {
     if (durationSec <= 0) {
-      return 'Progress unavailable';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Progress unavailable',
+        bnText: 'অগ্রগতি পাওয়া যায়নি',
+      );
     }
     final position = Duration(seconds: positionSec);
     final duration = Duration(seconds: durationSec);
@@ -1570,7 +1573,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader(
-          'Continue Reading',
+          FFLocalizations.of(context).getVariableText(enText: 'Continue Reading', bnText: 'পড়া চালিয়ে যান'),
         ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -1604,7 +1607,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     context,
                     title: bookName,
                     bookAuthor: bookAuthor,
-                    bookType: 'eBook',
+                    bookType: FFLocalizations.of(context).getVariableText(enText: 'eBook', bnText: 'ই-বুক'),
                     progressLabel: ebookProgressLabel,
                     progressValue: ebookProgress,
                     imageUrl: coverUrl,
@@ -1645,7 +1648,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                           }.withoutNulls,
                         );
                       } catch (_) {
-                        await actions.showCustomToastBottom('Failed to load book');
+                        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to load book', bnText: 'বই লোড করতে ব্যর্থ'));
                       } finally {
                         if (mounted) {
                           setState(() {
@@ -1672,7 +1675,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader(
-          'Continue Listening',
+          FFLocalizations.of(context).getVariableText(enText: 'Continue Listening', bnText: 'শোনা চালিয়ে যান'),
         ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -1710,7 +1713,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     context,
                     title: bookName,
                     bookAuthor: bookAuthor,
-                    bookType: 'Audiobook',
+                    bookType: FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক'),
                     progressLabel: audioProgressLabel,
                     progressValue: audioProgress,
                     imageUrl: coverUrl,
@@ -2300,26 +2303,26 @@ class _HomePageWidgetState extends State<HomePageWidget>
             favouriteJson: favouriteJson,
           ),
           _buildBookStripSection(
-            title: 'Top 10 Most Read',
+            title: FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
             sectionKey: 'top_10_most_read',
             books: topTen,
             favouriteJson: favouriteJson,
             onViewAll: () async {
               await _openHomepageSectionViewAll(
                 sectionKey: 'topMostRead',
-                title: 'Top 10 Most Read',
+                title: FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
               );
             },
           ),
           _buildBookStripSection(
-            title: 'Free Books',
+            title: FFLocalizations.of(context).getVariableText(enText: 'Free Books', bnText: 'ফ্রি বই'),
             sectionKey: 'free_books',
             books: freeBooks,
             favouriteJson: favouriteJson,
             onViewAll: () async {
               await _openHomepageSectionViewAll(
                 sectionKey: 'freeBooks',
-                title: 'Free Books',
+                title: FFLocalizations.of(context).getVariableText(enText: 'Free Books', bnText: 'ফ্রি বই'),
               );
             },
           ),
@@ -2330,40 +2333,40 @@ class _HomePageWidgetState extends State<HomePageWidget>
             ),
           ),
           _buildBookStripSection(
-            title: 'Editor\'s Pick',
+            title: FFLocalizations.of(context).getVariableText(enText: 'Editor\'s Pick', bnText: 'সম্পাদকের পছন্দ'),
             sectionKey: 'editors_pick',
             books: editorsPick,
             favouriteJson: favouriteJson,
             onViewAll: () async {
               await _openHomepageSectionViewAll(
                 sectionKey: 'editorsPick',
-                title: 'Editor\'s Pick',
+                title: FFLocalizations.of(context).getVariableText(enText: 'Editor\'s Pick', bnText: 'সম্পাদকের পছন্দ'),
               );
             },
           ),
           _buildBookStripSection(
-            title: 'Because You Read',
+            title: FFLocalizations.of(context).getVariableText(enText: 'Because You Read', bnText: 'আপনার পছন্দের সাথে মিল রেখে'),
             sectionKey: 'because_you_read',
             books: becauseYouRead,
             favouriteJson: favouriteJson,
             onViewAll: () async {
               await _openHomepageSectionViewAll(
                 sectionKey: 'becauseYouRead',
-                title: 'Because You Read',
+                title: FFLocalizations.of(context).getVariableText(enText: 'Because You Read', bnText: 'আপনার পছন্দের সাথে মিল রেখে'),
               );
             },
           ),
           if (_selectedFilter == HomeBookFilter.all ||
               _selectedFilter == HomeBookFilter.audiobook)
             _buildBookStripSection(
-              title: 'Popular Audiobooks',
+              title: FFLocalizations.of(context).getVariableText(enText: 'Popular Audiobooks', bnText: 'জনপ্রিয় অডিওবুক'),
               sectionKey: 'popular_audiobooks',
               books: popularAudiobooks,
               favouriteJson: favouriteJson,
               onViewAll: () async {
                 await _openHomepageSectionViewAll(
                   sectionKey: 'popularAudiobooks',
-                  title: 'Popular Audiobooks',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Popular Audiobooks', bnText: 'জনপ্রিয় অডিওবুক'),
                   type: 'audiobook',
                 );
               },
@@ -2371,14 +2374,14 @@ class _HomePageWidgetState extends State<HomePageWidget>
           if (_selectedFilter == HomeBookFilter.all ||
               _selectedFilter == HomeBookFilter.hardcopy)
             _buildBookStripSection(
-              title: 'Hard Copies',
+              title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
               sectionKey: 'hard_copies',
               books: popularHardCopies,
               favouriteJson: favouriteJson,
               onViewAll: () async {
                 await _openHomepageSectionViewAll(
                   sectionKey: 'popularHardCopies',
-                  title: 'Hard Copies',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
                   type: 'hardcopy',
                 );
               },

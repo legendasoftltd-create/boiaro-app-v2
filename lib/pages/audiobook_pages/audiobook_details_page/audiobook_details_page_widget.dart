@@ -271,7 +271,7 @@
 //       authRequired: true,
 //     );
 //     if (body == null) {
-//       await actions.showCustomToastBottom('Wallet unlock failed');
+//       await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Wallet unlock failed', bnText: 'ওয়ালেট আনলক ব্যর্থ হয়েছে'));
 //       return false;
 //     }
 //     final err = body['error']?.toString();
@@ -889,7 +889,7 @@
 //                                     : null,
 //                               );
 //                               await actions
-//                                   .showCustomToastBottom('Added to cart!');
+//                                   .showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Added to cart!', bnText: 'কার্টে যোগ করা হয়েছে!'));
 //                             },
 //                           ),
 //                         ),

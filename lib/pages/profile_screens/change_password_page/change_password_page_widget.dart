@@ -2,6 +2,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import 'package:flutter/material.dart';
@@ -67,7 +68,7 @@ class _ChangePasswordPageWidgetState extends State<ChangePasswordPageWidget> {
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Change password',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Change password', bnText: 'পাসওয়ার্ড পরিবর্তন'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -75,8 +76,7 @@ class _ChangePasswordPageWidgetState extends State<ChangePasswordPageWidget> {
               ),
               Padding(
                 padding: EdgeInsetsDirectional.fromSTEB(35.0, 16.0, 35.0, 0.0),
-                child: Text(
-                  'Change your password today it\'s time to take back control of your online security',
+                child: Text(FFLocalizations.of(context).getVariableText(enText: "Change your password today it's time to take back control of your online security", bnText: "আপনার পাসওয়ার্ড আজই পরিবর্তন করুন, অনলাইন নিরাপত্তা আরও জোরদার করার এখনই সময়"),
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -113,7 +113,7 @@ class _ChangePasswordPageWidgetState extends State<ChangePasswordPageWidget> {
                             textInputAction: TextInputAction.next,
                             obscureText: !_model.passwordVisibility1,
                             decoration: InputDecoration(
-                              labelText: 'New password',
+                              labelText: FFLocalizations.of(context).getVariableText(enText: 'New password', bnText: 'নতুন পাসর্ওয়ার্ড'),
                               labelStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -123,7 +123,7 @@ class _ChangePasswordPageWidgetState extends State<ChangePasswordPageWidget> {
                                     fontSize: 14.0,
                                     letterSpacing: 0.0,
                                   ),
-                              hintText: 'Enter new password',
+                              hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter new password', bnText: 'নতুন পাসর্ওয়ার্ড লিখুন'),
                               hintStyle: FlutterFlowTheme.of(context)
                                   .labelMedium
                                   .override(
@@ -209,7 +209,7 @@ class _ChangePasswordPageWidgetState extends State<ChangePasswordPageWidget> {
                           textInputAction: TextInputAction.done,
                           obscureText: !_model.passwordVisibility2,
                           decoration: InputDecoration(
-                            labelText: 'Confirm password',
+                            labelText: FFLocalizations.of(context).getVariableText(enText: 'Confirm password', bnText: 'পাসর্ওয়ার্ড নিশ্চিত করুন'),
                             labelStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -219,7 +219,7 @@ class _ChangePasswordPageWidgetState extends State<ChangePasswordPageWidget> {
                                   fontSize: 14.0,
                                   letterSpacing: 0.0,
                                 ),
-                            hintText: 'Enter confirm password',
+                            hintText: FFLocalizations.of(context).getVariableText(enText: 'Enter confirm password', bnText: 'পাসর্ওয়ার্ড আবার লিখুন'),
                             hintStyle: FlutterFlowTheme.of(context)
                                 .labelMedium
                                 .override(
@@ -349,13 +349,13 @@ class _ChangePasswordPageWidgetState extends State<ChangePasswordPageWidget> {
                       }
                     } else {
                       await actions.showCustomToastBottom(
-                        'please valid same password!',
+                        FFLocalizations.of(context).getVariableText(enText: 'Please enter matching passwords!', bnText: 'অনুগ্রহ করে একই পাসওয়ার্ড লিখুন!'),
                       );
                     }
 
                     safeSetState(() {});
                   },
-                  text: 'Save',
+                  text: FFLocalizations.of(context).getVariableText(enText: 'Save', bnText: 'সংরক্ষণ করুন'),
                   options: FFButtonOptions(
                     width: double.infinity,
                     height: 56.0,

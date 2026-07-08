@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_timer.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -23,10 +25,16 @@ class VerificationPageModel extends FlutterFlowModel<VerificationPageWidget> {
   String? Function(BuildContext, String?)? pinCodeControllerValidator;
   String? _pinCodeControllerValidator(BuildContext context, String? val) {
     if (val == null || val.isEmpty) {
-      return 'Please enter a valid OTP';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Please enter a valid OTP',
+        bnText: 'অনুগ্রহ করে সঠিক OTP লিখুন',
+      );
     }
     if (val.length < 4) {
-      return 'Requires 4 characters.';
+      return FFLocalizations.of(context).getVariableText(
+        enText: 'Requires 4 characters.',
+        bnText: 'ন্যূনতম ৪টি অক্ষর প্রয়োজন।',
+      );
     }
     return null;
   }

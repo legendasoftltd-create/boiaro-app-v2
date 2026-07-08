@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -114,7 +116,7 @@ class _PaymentMethodPageWidgetState extends State<PaymentMethodPageWidget>
                 model: _model.customCenterAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: CustomCenterAppbarWidget(
-                  title: 'Payment method',
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Payment method', bnText: 'পেমেন্ট পদ্ধতি'),
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
@@ -239,8 +241,7 @@ class _PaymentMethodPageWidgetState extends State<PaymentMethodPageWidget>
                                                                   0.0,
                                                                   0.0,
                                                                   19.0),
-                                                      child: Text(
-                                                        'Payment method',
+                                                      child: Text(FFLocalizations.of(context).getVariableText(enText: 'Payment method', bnText: 'পেমেন্ট পদ্ধতি'),
                                                         style: FlutterFlowTheme
                                                                 .of(context)
                                                             .bodyMedium
@@ -353,8 +354,7 @@ class _PaymentMethodPageWidgetState extends State<PaymentMethodPageWidget>
                                                                           16.0,
                                                                           0.0),
                                                                       child:
-                                                                          Text(
-                                                                        'Stripe',
+                                                                          Text(FFLocalizations.of(context).getVariableText(enText: 'Stripe', bnText: 'স্ট্রাইপ'),
                                                                         maxLines:
                                                                             1,
                                                                         style: FlutterFlowTheme.of(context)
@@ -511,8 +511,7 @@ class _PaymentMethodPageWidgetState extends State<PaymentMethodPageWidget>
                                                                           16.0,
                                                                           0.0),
                                                                       child:
-                                                                          Text(
-                                                                        'Razorpay',
+                                                                          Text(FFLocalizations.of(context).getVariableText(enText: 'Razorpay', bnText: 'রেজরপে'),
                                                                         maxLines:
                                                                             1,
                                                                         style: FlutterFlowTheme.of(context)
@@ -659,8 +658,7 @@ class _PaymentMethodPageWidgetState extends State<PaymentMethodPageWidget>
                                                                             0.0,
                                                                             16.0,
                                                                             0.0),
-                                                                    child: Text(
-                                                                      'Paypal',
+                                                                    child: Text(FFLocalizations.of(context).getVariableText(enText: 'Paypal', bnText: 'পেপ্যাল'),
                                                                       maxLines:
                                                                           1,
                                                                       style: FlutterFlowTheme.of(
@@ -1235,7 +1233,7 @@ class _PaymentMethodPageWidgetState extends State<PaymentMethodPageWidget>
 
                                                     safeSetState(() {});
                                                   },
-                                                  text: 'Buy now',
+                                                  text: FFLocalizations.of(context).getVariableText(enText: 'Buy now', bnText: 'এখনি কিনুন'),
                                                   options: FFButtonOptions(
                                                     width: double.infinity,
                                                     height: 56.0,

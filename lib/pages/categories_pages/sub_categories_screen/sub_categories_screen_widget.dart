@@ -1,3 +1,5 @@
+import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -202,8 +204,7 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                                                 BorderRadius.circular(20.0),
                                           ),
                                           child: Center(
-                                            child: Text(
-                                              'All',
+                                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'All', bnText: 'সব'),
                                               style: FlutterFlowTheme.of(
                                                       context)
                                                   .bodyMedium
