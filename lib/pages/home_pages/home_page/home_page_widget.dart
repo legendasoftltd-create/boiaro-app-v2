@@ -490,6 +490,11 @@ class _HomePageWidgetState extends State<HomePageWidget>
           getJsonField(book, r'''$._id''').toString(),
           ParamType.String,
         ),
+        if (widget.embeddedAudiobookMode == true)
+          'initialTab': serializeParam(
+            'audiobook',
+            ParamType.String,
+          ),
       }.withoutNulls,
     );
   }

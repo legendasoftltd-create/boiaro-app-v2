@@ -10,12 +10,14 @@ class AdRewardDialog extends StatefulWidget {
   final VoidCallback onWatchAd;
   final String? bookImage;
   final String adType; // 'rewarded' or 'interstitial'
+  final bool claimReward;
 
   const AdRewardDialog({
     Key? key,
     required this.onWatchAd,
     this.bookImage,
     this.adType = 'rewarded',
+    this.claimReward = true,
   }) : super(key: key);
 
   @override
@@ -75,6 +77,7 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
       if (isLoaded) {
         AdManager.showRewardedInterstitialAd(
           context: context,
+          claimReward: widget.claimReward,
           onRewardEarned: () {
             widget.onWatchAd();
           },
@@ -90,6 +93,7 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
       if (isLoaded) {
         AdManager.showRewardedAd(
           context: context,
+          claimReward: widget.claimReward,
           onRewardEarned: () {
             widget.onWatchAd();
           },

@@ -432,6 +432,10 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               'id',
               ParamType.String,
             ),
+            initialTab: params.getParam(
+              'initialTab',
+              ParamType.String,
+            ),
           ),
         ),
         FFRoute(

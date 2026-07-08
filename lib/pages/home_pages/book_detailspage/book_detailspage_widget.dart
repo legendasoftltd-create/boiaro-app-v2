@@ -44,12 +44,14 @@ class BookDetailspageWidget extends StatefulWidget {
     required this.price,
     required this.image,
     required this.id,
+    this.initialTab,
   });
 
   final String? name;
   final String? image;
   final String? price;
   final String? id;
+  final String? initialTab;
 
   static String routeName = 'BookDetailspage';
   static String routePath = '/bookDetailspage';
@@ -63,6 +65,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   BookMasterFormatTab _activeFormatTab = BookMasterFormatTab.ebook;
+  bool _showAllNarrators = false;
   bool _isOpeningReader = false;
   bool _lastEbookAuthError = false;
   final Set<String> _purchasedFormatKeys = <String>{};
@@ -76,10 +79,146 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   String? _audiobookPricingMode;
   String? _bookSlug;
 
+  void _showSupportErrorDialog(String actionType) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: FlutterFlowTheme.of(context).primary.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.error_outline_rounded,
+                    color: FlutterFlowTheme.of(context).primary,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  FFLocalizations.of(context).getVariableText(
+                    enText: 'Error',
+                    bnText: 'সমস্যাঃ',
+                  ),
+                  textAlign: TextAlign.center,
+                  style: FlutterFlowTheme.of(context).headlineSmall.override(
+                        fontFamily: 'SF Pro Display',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20.0,
+                        color: FlutterFlowTheme.of(context).primaryText,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  FFLocalizations.of(context).getVariableText(
+                    enText: 'This book is not prepared to $actionType. Please contact support or the administrator.',
+                    bnText: 'এই বইটি $actionType করার জন্য প্রস্তুত নয়। অনুগ্রহ করে সহায়তা বা অ্যাডমিনের সাথে যোগাযোগ করুন।',
+                  ),
+                  textAlign: TextAlign.center,
+                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                        fontFamily: 'SF Pro Display',
+                        color: FlutterFlowTheme.of(context).secondaryText,
+                        fontSize: 14.0,
+                        lineHeight: 1.4,
+                      ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: FlutterFlowTheme.of(context).alternate,
+                            width: 1.0,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        ),
+                        child: Text(
+                          FFLocalizations.of(context).getVariableText(
+                            enText: 'Close',
+                            bnText: 'বন্ধ করুন',
+                          ),
+                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                fontFamily: 'SF Pro Display',
+                                color: FlutterFlowTheme.of(context).secondaryText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          if (FFAppState().isLogin) {
+                            context.pushNamed(CreateTicketPageWidget.routeName);
+                          } else {
+                            context.pushNamed(SignInPageWidget.routeName);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: FlutterFlowTheme.of(context).primary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        ),
+                        child: Text(
+                          FFLocalizations.of(context).getVariableText(
+                            enText: 'Support',
+                            bnText: 'সহায়তা',
+                          ),
+                          style: const TextStyle(
+                            fontFamily: 'SF Pro Display',
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => BookDetailspageModel());
+    if (widget.initialTab == 'audiobook') {
+      _activeFormatTab = BookMasterFormatTab.audiobook;
+    } else if (widget.initialTab == 'hardcopy') {
+      _activeFormatTab = BookMasterFormatTab.hardcopy;
+    } else {
+      _activeFormatTab = BookMasterFormatTab.ebook;
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (FFAppState().isLogin) {
@@ -916,7 +1055,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
 
     if (chapters.isEmpty) {
-      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to load audiobook tracks', bnText: 'অডিওবুক ট্র্যাক লোড করতে ব্যর্থ'));
+      _showSupportErrorDialog('listen');
       return false;
     }
 
@@ -1232,8 +1371,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         url ??= _extractEbookUrlFromDetails(responseJson);
 
         if (url == null || url.trim().isEmpty) {
-          await actions
-              .showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to load book for preview', bnText: 'প্রিভিউ করার জন্য বইটি লোড করতে ব্যর্থ'));
+          _showSupportErrorDialog('preview');
           return;
         }
         await _markPreviewSeen(bookId);
@@ -1294,7 +1432,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       }
       url ??= _extractEbookUrlFromDetails(responseJson);
 
-      if (hasAccess && url != null && url.trim().isNotEmpty) {
+      if (hasAccess) {
+        if (url == null || url.trim().isEmpty) {
+          _showSupportErrorDialog('read');
+          return;
+        }
         final finalUrl = url;
         void performRead() async {
           await _openBook(
@@ -1317,6 +1459,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                 bookImage: bookImage,
                 onWatchAd: performRead,
                 adType: 'rewarded_interstitial',
+                claimReward: false,
               ),
             );
           } else {
@@ -1331,13 +1474,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       if (_lastEbookAuthError) {
         await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Please login to read this ebook', bnText: 'এই ই-বুকটি পড়তে অনুগ্রহ করে লগইন করুন'));
         context.pushNamed(SignInPageWidget.routeName);
-        return;
-      }
-
-      if (hasAccess) {
-         context.pushNamed(SignInPageWidget.routeName);
-        await actions.showCustomToastBottom(
-            'Access Denied. Please login and try again.');
         return;
       }
       final previewUrl =
@@ -1379,8 +1515,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
             );
             return;
           }
-          await actions.showCustomToastBottom(
-              'Unlocked, but unable to fetch ebook URL right now.');
+          _showSupportErrorDialog('read');
           return;
         }
       }
@@ -1438,6 +1573,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                 bookImage: bookImage,
                 onWatchAd: performPlay,
                 adType: 'rewarded_interstitial',
+                claimReward: false,
               ),
             );
           } else {
@@ -1506,7 +1642,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         String? url = await _fetchEbookSignedUrl(bookId);
         url ??= await _fetchEbookSignedUrlGuestAware(bookId);
         if (url == null || url.trim().isEmpty) {
-          await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Unable to fetch download URL', bnText: 'ডাউনলোড ইউআরএল পেতে ব্যর্থ'));
+          _showSupportErrorDialog('download');
           return;
         }
         await LocalDownloadService.downloadBook(
@@ -1537,6 +1673,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
             bookImage: bookImage,
             onWatchAd: performDownload,
             adType: 'rewarded',
+            claimReward: false,
           ),
         );
       } else {
@@ -1752,6 +1889,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                 bookImage: bookImage,
                 onWatchAd: performPlay,
                 adType: 'rewarded',
+                claimReward: false,
               ),
             );
           } else {
@@ -2290,6 +2428,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                     bookImage: bookImage,
                                     onWatchAd: performPlay,
                                     adType: 'rewarded',
+                                    claimReward: false,
                                   ),
                                 );
                               } else {
@@ -4867,7 +5006,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                          ),
 
                                        // Narrator row (audiobook only)
-                                       for (final narrator in resolvedNarrators)
+                                       for (final narrator in (_showAllNarrators
+                                           ? resolvedNarrators
+                                           : resolvedNarrators.take(3)))
                                          _buildPersonRow(
                                            label: FFLocalizations.of(context).getVariableText(enText: 'Narrator', bnText: 'কণ্ঠশিল্পী'),
                                            name: narrator['name']?.toString() ?? '',
@@ -4900,6 +5041,40 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                );
                                              }
                                            },
+                                         ),
+                                       if (resolvedNarrators.length > 3)
+                                         Padding(
+                                           padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 8.0),
+                                           child: InkWell(
+                                             onTap: () {
+                                               safeSetState(() {
+                                                 _showAllNarrators = !_showAllNarrators;
+                                               });
+                                             },
+                                             child: Row(
+                                               mainAxisSize: MainAxisSize.max,
+                                               mainAxisAlignment: MainAxisAlignment.end,
+                                               children: [
+                                                 Text(
+                                                   _showAllNarrators
+                                                       ? FFLocalizations.of(context).getVariableText(enText: 'See less', bnText: 'কম দেখান')
+                                                       : FFLocalizations.of(context).getVariableText(enText: 'See more', bnText: 'আরো দেখান'),
+                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                     fontFamily: 'SF Pro Display',
+                                                     color: FlutterFlowTheme.of(context).primary,
+                                                     fontWeight: FontWeight.w600,
+                                                   ),
+                                                 ),
+                                                 Icon(
+                                                   _showAllNarrators
+                                                       ? Icons.keyboard_arrow_up_rounded
+                                                       : Icons.keyboard_arrow_down_rounded,
+                                                   color: FlutterFlowTheme.of(context).primary,
+                                                   size: 20.0,
+                                                 ),
+                                               ],
+                                             ),
+                                           ),
                                          ),
 
                                       if (publisherName.isNotEmpty)
@@ -5095,6 +5270,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                               bookImage: bookImage,
                                                               onWatchAd: playAudiobook,
                                                               adType: 'rewarded_interstitial',
+                                                              claimReward: false,
                                                             ),
                                                           );
                                                         } else {

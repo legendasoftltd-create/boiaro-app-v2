@@ -295,6 +295,7 @@ class AdManager {
     required Function onRewardEarned,
     required BuildContext context,
     Function? onAdFailed,
+    bool claimReward = true,
   }) {
     if (_isRewardedLoaded && _rewardedAd != null) {
       bool isRewardEarned = false;
@@ -327,27 +328,29 @@ class AdManager {
         onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
           isRewardEarned = true;
           recordAdShown();
-          try {
-            final token = FFAppState().token;
-            if (token.isNotEmpty) {
-              final responseId = ad.responseInfo?.responseId ?? '';
-              EbookGroup.claimRewardedAdRewardCall.call(
-                placement: 'mobile_player',
-                adEventId: responseId,
-                token: token,
-              ).then((res) {
-                if (res.statusCode == 200) {
-                  print('[AD] Backend ad claim successful: ${res.jsonBody}');
-                  FFAppState().update(() {});
-                } else {
-                  print('[AD] Backend ad claim failed: ${res.statusCode} - ${res.jsonBody}');
-                }
-              }).catchError((err) {
-                print('[AD] Backend ad claim error: $err');
-              });
+          if (claimReward) {
+            try {
+              final token = FFAppState().token;
+              if (token.isNotEmpty) {
+                final responseId = ad.responseInfo?.responseId ?? '';
+                EbookGroup.claimRewardedAdRewardCall.call(
+                  placement: 'mobile_player',
+                  adEventId: responseId,
+                  token: token,
+                ).then((res) {
+                  if (res.statusCode == 200) {
+                    print('[AD] Backend ad claim successful: ${res.jsonBody}');
+                    FFAppState().update(() {});
+                  } else {
+                    print('[AD] Backend ad claim failed: ${res.statusCode} - ${res.jsonBody}');
+                  }
+                }).catchError((err) {
+                  print('[AD] Backend ad claim error: $err');
+                });
+              }
+            } catch (e) {
+              print('[AD] Failed to claim reward on backend: $e');
             }
-          } catch (e) {
-            print('[AD] Failed to claim reward on backend: $e');
           }
         },
       );
@@ -464,6 +467,7 @@ class AdManager {
     required Function onRewardEarned,
     required BuildContext context,
     Function? onAdFailed,
+    bool claimReward = true,
   }) {
     if (_isRewardedInterstitialLoaded && _rewardedInterstitialAd != null) {
       bool isRewardEarned = false;
@@ -492,27 +496,29 @@ class AdManager {
         onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
           isRewardEarned = true;
           recordAdShown();
-          try {
-            final token = FFAppState().token;
-            if (token.isNotEmpty) {
-              final responseId = ad.responseInfo?.responseId ?? '';
-              EbookGroup.claimRewardedAdRewardCall.call(
-                placement: 'mobile_player',
-                adEventId: responseId,
-                token: token,
-              ).then((res) {
-                if (res.statusCode == 200) {
-                  print('[AD] Backend ad claim successful: ${res.jsonBody}');
-                  FFAppState().update(() {});
-                } else {
-                  print('[AD] Backend ad claim failed: ${res.statusCode} - ${res.jsonBody}');
-                }
-              }).catchError((err) {
-                print('[AD] Backend ad claim error: $err');
-              });
+          if (claimReward) {
+            try {
+              final token = FFAppState().token;
+              if (token.isNotEmpty) {
+                final responseId = ad.responseInfo?.responseId ?? '';
+                EbookGroup.claimRewardedAdRewardCall.call(
+                  placement: 'mobile_player',
+                  adEventId: responseId,
+                  token: token,
+                ).then((res) {
+                  if (res.statusCode == 200) {
+                    print('[AD] Backend ad claim successful: ${res.jsonBody}');
+                    FFAppState().update(() {});
+                  } else {
+                    print('[AD] Backend ad claim failed: ${res.statusCode} - ${res.jsonBody}');
+                  }
+                }).catchError((err) {
+                  print('[AD] Backend ad claim error: $err');
+                });
+              }
+            } catch (e) {
+              print('[AD] Failed to claim reward on backend: $e');
             }
-          } catch (e) {
-            print('[AD] Failed to claim reward on backend: $e');
           }
         },
       );
