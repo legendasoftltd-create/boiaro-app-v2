@@ -40,31 +40,6 @@ class _AudiobookPageWidgetState extends State<AudiobookPageWidget> {
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-      appBar: AppBar(
-        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: false,
-        title: Text(
-          FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক'),
-          style: FlutterFlowTheme.of(context).headlineSmall.override(
-                fontFamily: 'SF Pro Display',
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        iconTheme: IconThemeData(
-          color: FlutterFlowTheme.of(context).primaryText,
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            tooltip: FFLocalizations.of(context).getText('search_hint'),
-            onPressed: () async {
-              context.pushNamed(SearchPageWidget.routeName);
-            },
-          ),
-        ],
-      ),
       body: const HomePageWidget(embeddedAudiobookMode: true),
     );
   }

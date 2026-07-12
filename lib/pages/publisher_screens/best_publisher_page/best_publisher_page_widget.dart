@@ -29,17 +29,90 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
   late BestPublisherPageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  final ScrollController _scrollController = ScrollController();
+  List<dynamic> _publishers = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _offset = 0;
+  final int _limit = 24;
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => BestPublisherPageModel());
+    _scrollController.addListener(_onScroll);
+    _loadMorePublishers(isFirstLoad: true);
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+  void _onScroll() {
+    debugPrint('Publishers Scroll: pixels=${_scrollController.position.pixels}, max=${_scrollController.position.maxScrollExtent}');
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMorePublishers();
+    }
+  }
+
+  Future<void> _loadMorePublishers({bool isFirstLoad = false}) async {
+    if (_isLoading || (!_hasMore && !isFirstLoad)) return;
+    debugPrint('Publishers Load: isFirstLoad=$isFirstLoad, offset=$_offset, limit=$_limit, hasMore=$_hasMore');
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final res = await EbookGroup.getpublishersApiCall.call(
+        token: FFAppState().token,
+        limit: _limit,
+        offset: _offset,
+      );
+      final newPublishers =
+          EbookGroup.getpublishersApiCall.publisherDetailsList(res.jsonBody) ??
+              [];
+      debugPrint('Publishers API Result: count=${newPublishers.length}');
+      if (newPublishers.length < _limit) {
+        _hasMore = false;
+      }
+      setState(() {
+        if (isFirstLoad) {
+          _publishers.clear();
+          _offset = 0;
+        }
+        final existingIds = _publishers
+            .map((p) => getJsonField(p, r'''$._id''')?.toString())
+            .where((id) => id != null)
+            .toSet();
+        for (final publisher in newPublishers) {
+          final publisherId = getJsonField(publisher, r'''$._id''')?.toString();
+          if (publisherId == null || !existingIds.contains(publisherId)) {
+            _publishers.add(publisher);
+            if (publisherId != null) {
+              existingIds.add(publisherId);
+            }
+          }
+        }
+        _offset += newPublishers.length;
+      });
+
+      // If the content is not scrollable yet but we have more, load more automatically
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_hasMore && _scrollController.hasClients && _scrollController.position.maxScrollExtent == 0) {
+          debugPrint('Publishers screen not filled, auto loading next page');
+          _loadMorePublishers();
+        }
+      });
+    } catch (e) {
+      debugPrint('Error loading publishers: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _model.dispose();
 
     super.dispose();
@@ -74,248 +147,124 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                 child: Builder(
                   builder: (context) {
                     if (FFAppState().connected) {
-                      return FutureBuilder<ApiCallResponse>(
-                        future: FFAppState()
-                            .getpublishersCache(
-                          uniqueQueryKey: FFAppState().userId,
-                          requestFn: () =>
-                              EbookGroup.getpublishersApiCall.call(),
-                        )
-                            .then((result) {
-                          try {
-                            _model.apiRequestCompleted = true;
-                            _model.apiRequestLastUniqueKey =
-                                FFAppState().userId;
-                          } finally {}
-                          return result;
-                        }),
-                        builder: (context, snapshot) {
-                          // Customize what your widget looks like when it's loading.
-                          if (!snapshot.hasData) {
-                            return Center(
-                              child: SizedBox(
-                                width: 50.0,
-                                height: 50.0,
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    FlutterFlowTheme.of(context).primary,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                          final containerGetpublishersApiResponse =
-                              snapshot.data!;
-
-                          return Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(),
-                            child: Builder(
-                              builder: (context) {
-                                if (EbookGroup.getpublishersApiCall.success(
-                                      containerGetpublishersApiResponse
-                                          .jsonBody,
-                                    ) ==
-                                    2) {
-                                  return Align(
-                                    alignment: AlignmentDirectional(0.0, 0.0),
-                                    child: Padding(
-                                      padding: EdgeInsetsDirectional.fromSTEB(
-                                          16.0, 0.0, 16.0, 0.0),
-                                      child: Text(
-                                        valueOrDefault<String>(
-                                          EbookGroup.getpublishersApiCall
-                                              .message(
-                                            containerGetpublishersApiResponse
-                                                .jsonBody,
-                                          ),
-                                          'Message',
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              fontFamily: 'SF Pro Display',
-                                              fontSize: 18.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.w600,
-                                              lineHeight: 1.5,
-                                            ),
-                                      ),
-                                    ),
-                                  );
-                                } else {
-                                  return Builder(
-                                    builder: (context) {
-                                      if (EbookGroup.getpublishersApiCall
-                                                  .publisherDetailsList(
-                                                containerGetpublishersApiResponse
-                                                    .jsonBody,
-                                              ) !=
-                                              null &&
-                                          (EbookGroup.getpublishersApiCall
-                                                  .publisherDetailsList(
-                                            containerGetpublishersApiResponse
-                                                .jsonBody,
-                                          ))!
-                                              .isNotEmpty) {
-                                        return RefreshIndicator(
-                                          key: Key('RefreshIndicator_3d7e1s78'),
-                                          color: FlutterFlowTheme.of(context)
-                                              .primary,
-                                          onRefresh: () async {
-                                            safeSetState(() {
-                                              FFAppState()
-                                                  .clearGetpublishersCacheCacheKey(
-                                                      _model
-                                                          .apiRequestLastUniqueKey);
-                                              _model.apiRequestCompleted =
-                                                  false;
-                                            });
-                                            await _model
-                                                .waitForApiRequestCompleted();
-                                          },
-                                          child: ListView(
-                                            padding: EdgeInsets.fromLTRB(
-                                              0,
-                                              16.0,
-                                              0,
-                                              16.0,
-                                            ),
-                                            scrollDirection: Axis.vertical,
-                                            children: [
-                                              Padding(
-                                                padding: EdgeInsetsDirectional
-                                                    .fromSTEB(
-                                                        16.0, 0.0, 16.0, 0.0),
-                                                child: Builder(
-                                                  builder: (context) {
-                                                    final publisherDetailsList =
-                                                        EbookGroup
-                                                                .getpublishersApiCall
-                                                                .publisherDetailsList(
-                                                                  containerGetpublishersApiResponse
-                                                                      .jsonBody,
-                                                                )
-                                                                ?.toList() ??
-                                                            [];
-
-                                                    return Wrap(
-                                                      spacing: 16.0,
-                                                      runSpacing: 16.0,
-                                                      alignment:
-                                                          WrapAlignment.start,
-                                                      crossAxisAlignment:
-                                                          WrapCrossAlignment
-                                                              .start,
-                                                      direction:
-                                                          Axis.horizontal,
-                                                      runAlignment:
-                                                          WrapAlignment.start,
-                                                      verticalDirection:
-                                                          VerticalDirection
-                                                              .down,
-                                                      clipBehavior: Clip.none,
-                                                      children: List.generate(
-                                                          publisherDetailsList
-                                                              .length,
-                                                          (publisherDetailsListIndex) {
-                                                        final publisherDetailsListItem =
-                                                            publisherDetailsList[
-                                                                publisherDetailsListIndex];
-                                                        return wrapWithModel(
-                                                          model: _model
-                                                              .categoryComponentModels
-                                                              .getModel(
-                                                            getJsonField(
-                                                              publisherDetailsListItem,
-                                                              r'''$.name''',
-                                                            ).toString(),
-                                                            publisherDetailsListIndex,
-                                                          ),
-                                                          updateCallback: () =>
-                                                              safeSetState(
-                                                                  () {}),
-                                                          child:
-                                                              CategoryComponentWidget(
-                                                            key: Key(
-                                                              'Keyhj5_${getJsonField(
-                                                                publisherDetailsListItem,
-                                                                r'''$.name''',
-                                                              ).toString()}',
-                                                            ),
-                                                            icon:
-                                                                '${FFAppConstants.imageUrl}${getJsonField(
-                                                              publisherDetailsListItem,
-                                                              r'''$.image''',
-                                                            ).toString()}',
-                                                            name: getJsonField(
-                                                              publisherDetailsListItem,
-                                                              r'''$.name''',
-                                                            ).toString(),
-                                                            isSmall: true,
-                                                            onMainTap:
-                                                                () async {
-                                                              context.pushNamed(
-                                                                AboutPublisherPageWidget
-                                                                    .routeName,
-                                                                queryParameters:
-                                                                    {
-                                                                  'name':
-                                                                      serializeParam(
-                                                                    getJsonField(
-                                                                      publisherDetailsListItem,
-                                                                      r'''$.name''',
-                                                                    ).toString(),
-                                                                    ParamType
-                                                                        .String,
-                                                                  ),
-                                                                  'publisherImage':
-                                                                      serializeParam(
-                                                                    '${FFAppConstants.imageUrl}${getJsonField(
-                                                                      publisherDetailsListItem,
-                                                                      r'''$.image''',
-                                                                    ).toString()}',
-                                                                    ParamType
-                                                                        .String,
-                                                                  ),
-                                                                  'publisherId':
-                                                                      serializeParam(
-                                                                    getJsonField(
-                                                                      publisherDetailsListItem,
-                                                                      r'''$._id''',
-                                                                    ).toString(),
-                                                                    ParamType
-                                                                        .String,
-                                                                  ),
-                                                                }.withoutNulls,
-                                                              );
-                                                            },
-                                                          ),
-                                                        );
-                                                      }),
+                      return Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(),
+                        child: _publishers.isEmpty && !_isLoading
+                            ? wrapWithModel(
+                                model: _model.noAuthorYetModel,
+                                updateCallback: () => safeSetState(() {}),
+                                child: NoAuthorYetWidget(),
+                              )
+                            : RefreshIndicator(
+                                key: const Key('RefreshIndicator_3d7e1s78'),
+                                color: FlutterFlowTheme.of(context).primary,
+                                onRefresh: () async {
+                                  setState(() {
+                                    _offset = 0;
+                                    _hasMore = true;
+                                  });
+                                  await _loadMorePublishers(isFirstLoad: true);
+                                },
+                                child: ListView(
+                                  controller: _scrollController,
+                                  padding: const EdgeInsets.fromLTRB(0, 16.0, 0, 16.0),
+                                  scrollDirection: Axis.vertical,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                                      child: Wrap(
+                                        spacing: 16.0,
+                                        runSpacing: 16.0,
+                                        alignment: WrapAlignment.start,
+                                        crossAxisAlignment: WrapCrossAlignment.start,
+                                        direction: Axis.horizontal,
+                                        runAlignment: WrapAlignment.start,
+                                        verticalDirection: VerticalDirection.down,
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          ...List.generate(
+                                            _publishers.length,
+                                            (publisherDetailsListIndex) {
+                                              final publisherDetailsListItem = _publishers[publisherDetailsListIndex];
+                                              return wrapWithModel(
+                                                model: _model.categoryComponentModels.getModel(
+                                                  getJsonField(
+                                                    publisherDetailsListItem,
+                                                    r'''$.name''',
+                                                  ).toString(),
+                                                  publisherDetailsListIndex,
+                                                ),
+                                                updateCallback: () => safeSetState(() {}),
+                                                child: CategoryComponentWidget(
+                                                  key: Key(
+                                                    'Keyhj5_${getJsonField(
+                                                      publisherDetailsListItem,
+                                                      r'''$.name''',
+                                                    ).toString()}',
+                                                  ),
+                                                  icon: '${FFAppConstants.imageUrl}${getJsonField(
+                                                    publisherDetailsListItem,
+                                                    r'''$.image''',
+                                                  ).toString()}',
+                                                  name: getJsonField(
+                                                    publisherDetailsListItem,
+                                                    r'''$.name''',
+                                                  ).toString(),
+                                                  isSmall: true,
+                                                  onMainTap: () async {
+                                                    context.pushNamed(
+                                                      AboutPublisherPageWidget.routeName,
+                                                      queryParameters: {
+                                                        'name': serializeParam(
+                                                          getJsonField(
+                                                            publisherDetailsListItem,
+                                                            r'''$.name''',
+                                                          ).toString(),
+                                                          ParamType.String,
+                                                        ),
+                                                        'publisherImage': serializeParam(
+                                                          '${FFAppConstants.imageUrl}${getJsonField(
+                                                            publisherDetailsListItem,
+                                                            r'''$.image''',
+                                                          ).toString()}',
+                                                          ParamType.String,
+                                                        ),
+                                                        'publisherId': serializeParam(
+                                                          getJsonField(
+                                                            publisherDetailsListItem,
+                                                            r'''$._id''',
+                                                          ).toString(),
+                                                          ParamType.String,
+                                                        ),
+                                                      }.withoutNulls,
                                                     );
                                                   },
                                                 ),
-                                              ),
-                                            ],
+                                              );
+                                            },
                                           ),
-                                        );
-                                      } else {
-                                        return wrapWithModel(
-                                          model: _model.noAuthorYetModel,
-                                          updateCallback: () =>
-                                              safeSetState(() {}),
-                                          child: NoAuthorYetWidget(),
-                                        );
-                                      }
-                                    },
-                                  );
-                                }
-                              },
-                            ),
-                          );
-                        },
+                                          if (_isLoading)
+                                            Center(
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(12.0),
+                                                child: SizedBox(
+                                                  width: 32.0,
+                                                  height: 32.0,
+                                                  child: CircularProgressIndicator(
+                                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                                      FlutterFlowTheme.of(context).primary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                       );
                     } else {
                       return Align(

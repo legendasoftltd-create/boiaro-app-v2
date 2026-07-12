@@ -2,7 +2,6 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/internationalization.dart';
-import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/components/list_main_container_component/list_main_container_component_widget.dart';
 import '/pages/empty_components/no_result_book_found/no_result_book_found_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
@@ -72,8 +71,114 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
       if (FFAppState().isLogin) {
         await _loadPurchasedBooks();
       }
+      await _loadCategories();
+      if (mounted) {
+        _model.textFieldFocusNode?.requestFocus();
+      }
       safeSetState(() {});
     });
+  }
+
+  String? _selectedFormat;
+  String? _selectedSort = 'newest';
+  String? _selectedCategoryId;
+  int _pageSize = 10;
+  List<dynamic> _categoriesList = [];
+  Future<void> _loadCategories() async {
+    if (!mounted) return;
+    try {
+      final res = await EbookGroup.getcategoriesApiCall.call(
+        token: FFAppState().token,
+      );
+      if (res.statusCode == 200 && res.jsonBody != null) {
+        final List? cats = EbookGroup.getcategoriesApiCall.categoryDetailsList(res.jsonBody);
+        if (cats != null && mounted) {
+          setState(() {
+            _categoriesList = cats;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Widget _buildFormatChip(String? format, String label) {
+    final isSelected = _selectedFormat == format;
+    return ChoiceChip(
+      label: Text(
+        FFLocalizations.of(context).getVariableText(
+          enText: label,
+          bnText: label == 'All' ? 'সব' : (label == 'Ebook' ? 'ই-বই' : (label == 'Audiobook' ? 'অডিওবুক' : 'হার্ডকপি')),
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (_) {
+        setState(() {
+          _selectedFormat = format;
+          _model.apiRequestCompleter2 = null;
+        });
+      },
+      showCheckmark: false,
+      labelStyle: FlutterFlowTheme.of(context).bodySmall.override(
+            fontFamily: 'SF Pro Display',
+            color: isSelected
+                ? FlutterFlowTheme.of(context).primary
+                : FlutterFlowTheme.of(context).secondaryText,
+            fontWeight: FontWeight.bold,
+          ),
+      selectedColor: FlutterFlowTheme.of(context).primary.withOpacity(0.12),
+      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.0),
+        side: BorderSide(
+          color: isSelected
+              ? FlutterFlowTheme.of(context).primary
+              : FlutterFlowTheme.of(context).alternate,
+        ),
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    );
+  }
+
+  Widget _buildSortChip(String sortValue, String label) {
+    final isSelected = _selectedSort == sortValue;
+    return ChoiceChip(
+      label: Text(
+        FFLocalizations.of(context).getVariableText(
+          enText: label,
+          bnText: label == 'Newest' ? 'নতুনতম' : (label == 'Popular' ? 'জনপ্রিয়' : (label == 'Price: Low-High' ? 'মূল্য: নিম্ন-উচ্চ' : 'মূল্য: উচ্চ-নিম্ন')),
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (_) {
+        setState(() {
+          _selectedSort = sortValue;
+          _model.apiRequestCompleter2 = null;
+        });
+      },
+      showCheckmark: false,
+      labelStyle: FlutterFlowTheme.of(context).bodySmall.override(
+            fontFamily: 'SF Pro Display',
+            color: isSelected
+                ? FlutterFlowTheme.of(context).primary
+                : FlutterFlowTheme.of(context).secondaryText,
+            fontWeight: FontWeight.bold,
+          ),
+      selectedColor: FlutterFlowTheme.of(context).primary.withOpacity(0.12),
+      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.0),
+        side: BorderSide(
+          color: isSelected
+              ? FlutterFlowTheme.of(context).primary
+              : FlutterFlowTheme.of(context).alternate,
+        ),
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    );
   }
 
   Future<void> _loadPurchasedBooks() async {
@@ -98,7 +203,6 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
     }
   }
 
-  @override
   late DebounceAction _searchDebouncer;
 
   @override
@@ -120,43 +224,114 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
       child: Scaffold(
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-        body: SafeArea(
-          top: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              wrapWithModel(
-                model: _model.customCenterAppbarModel,
-                updateCallback: () => safeSetState(() {}),
-                child: CustomCenterAppbarWidget(
-                  title: FFLocalizations.of(context).getVariableText(enText: 'Search', bnText: 'অনুসন্ধান'),
-                  backIcon: false,
-                  addIcon: false,
-                  onTapAdd: () async {},
+        appBar: AppBar(
+          backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+          automaticallyImplyLeading: false,
+          elevation: 0,
+          titleSpacing: 0,
+          title: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).primaryBackground,
+                borderRadius: BorderRadius.circular(12.0),
+                border: Border.all(
+                  color: FlutterFlowTheme.of(context).black20,
                 ),
               ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).primaryBackground,
-                    borderRadius: BorderRadius.circular(12.0),
-                    border: Border.all(
-                      color: FlutterFlowTheme.of(context).black20,
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                        16.0, 0.0, 16.0, 0.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(0.0),
+                      child: SvgPicture.asset(
+                        'assets/images/search.svg',
+                        width: 24.0,
+                        height: 24.0,
+                        fit: BoxFit.cover,
+                        colorFilter: ColorFilter.mode(
+                            FlutterFlowTheme.of(context).primaryText,
+                            BlendMode.srcIn),
+                      ),
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 0.0),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _model.textController,
+                      focusNode: _model.textFieldFocusNode,
+                      onChanged: (_) => _searchDebouncer.run(),
+                      onFieldSubmitted: (_) async {
+                        if (_model.textController.text.trim().isNotEmpty) {
+                          FFAppState()
+                              .addToSearchList(_model.textController.text);
+                          FFAppState().update(() {});
+                        }
+                        safeSetState(
+                            () => _model.apiRequestCompleter2 = null);
+                        await _model.waitForApiRequestCompleted2();
+                      },
+                      autofocus: true,
+                      obscureText: false,
+                      decoration: InputDecoration(
+                        hintText: FFLocalizations.of(context).getVariableText(enText: 'Search', bnText: 'অনুসন্ধান করুন'),
+                        hintStyle: FlutterFlowTheme.of(context)
+                            .labelMedium
+                            .override(
+                              fontFamily: 'SF Pro Display',
+                              fontSize: 17.0,
+                              letterSpacing: 0.0,
+                              lineHeight: 1.5,
+                            ),
+                        errorStyle: FlutterFlowTheme.of(context)
+                            .bodyMedium
+                            .override(
+                              fontFamily: 'SF Pro Display',
+                              color: FlutterFlowTheme.of(context).error,
+                              fontSize: 15.0,
+                              letterSpacing: 0.0,
+                              lineHeight: 1.2,
+                            ),
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                      ),
+                      style:
+                          FlutterFlowTheme.of(context).bodyMedium.override(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 17.0,
+                                letterSpacing: 0.0,
+                                lineHeight: 1.5,
+                              ),
+                      cursorColor: FlutterFlowTheme.of(context).primary,
+                      validator: _model.textControllerValidator
+                          .asValidator(context),
+                    ),
+                  ),
+                  if (_model.textController.text != '')
+                    Padding(
+                      padding: EdgeInsetsDirectional.fromSTEB(
+                          16.0, 0.0, 16.0, 0.0),
+                      child: InkWell(
+                        splashColor: Colors.transparent,
+                        focusColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                        onTap: () async {
+                          safeSetState(() {
+                            _model.textController?.clear();
+                          });
+                          _model.focus = false;
+                          safeSetState(() {});
+                        },
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(0.0),
                           child: SvgPicture.asset(
-                            'assets/images/search.svg',
+                            'assets/images/close_ic.svg',
                             width: 24.0,
                             height: 24.0,
                             fit: BoxFit.cover,
@@ -166,89 +341,151 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _model.textController,
-                          focusNode: _model.textFieldFocusNode,
-                          onChanged: (_) => _searchDebouncer.run(),
-                          onFieldSubmitted: (_) async {
-                            FFAppState()
-                                .addToSearchList(_model.textController.text);
-                            FFAppState().update(() {});
-                            safeSetState(
-                                () => _model.apiRequestCompleter2 = null);
-                            await _model.waitForApiRequestCompleted2();
-                          },
-                          autofocus: false,
-                          obscureText: false,
-                          decoration: InputDecoration(
-                            hintText: FFLocalizations.of(context).getVariableText(enText: 'Search', bnText: 'অনুসন্ধান করুন'),
-                            hintStyle: FlutterFlowTheme.of(context)
-                                .labelMedium
-                                .override(
-                                  fontFamily: 'SF Pro Display',
-                                  fontSize: 17.0,
-                                  letterSpacing: 0.0,
-                                  lineHeight: 1.5,
-                                ),
-                            errorStyle: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  fontFamily: 'SF Pro Display',
-                                  color: FlutterFlowTheme.of(context).error,
-                                  fontSize: 15.0,
-                                  letterSpacing: 0.0,
-                                  lineHeight: 1.2,
-                                ),
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            errorBorder: InputBorder.none,
-                            focusedErrorBorder: InputBorder.none,
-                          ),
-                          style:
-                              FlutterFlowTheme.of(context).bodyMedium.override(
-                                    fontFamily: 'SF Pro Display',
-                                    fontSize: 17.0,
-                                    letterSpacing: 0.0,
-                                    lineHeight: 1.5,
-                                  ),
-                          cursorColor: FlutterFlowTheme.of(context).primary,
-                          validator: _model.textControllerValidator
-                              .asValidator(context),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        body: SafeArea(
+          top: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Filters Section
+              Container(
+                padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 4.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Format selector
+                    Row(
+                      children: [
+                        Text(
+                          FFLocalizations.of(context).getVariableText(enText: 'Format:', bnText: 'ফরম্যাট:'),
+                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                fontFamily: 'SF Pro Display',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                         ),
-                      ),
-                      if (_model.textController.text != '')
-                        Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                              16.0, 0.0, 16.0, 0.0),
-                          child: InkWell(
-                            splashColor: Colors.transparent,
-                            focusColor: Colors.transparent,
-                            hoverColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                            onTap: () async {
-                              safeSetState(() {
-                                _model.textController?.clear();
-                              });
-                              _model.focus = false;
-                              safeSetState(() {});
-                            },
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(0.0),
-                              child: SvgPicture.asset(
-                                'assets/images/close_ic.svg',
-                                width: 24.0,
-                                height: 24.0,
-                                fit: BoxFit.cover,
-                                colorFilter: ColorFilter.mode(
-                                    FlutterFlowTheme.of(context).primaryText,
-                                    BlendMode.srcIn),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _buildFormatChip(null, 'All'),
+                                const SizedBox(width: 6),
+                                _buildFormatChip('ebook', 'Ebook'),
+                                const SizedBox(width: 6),
+                                _buildFormatChip('audiobook', 'Audiobook'),
+                                const SizedBox(width: 6),
+                                _buildFormatChip('hardcopy', 'Hardcopy'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Sort Selector
+                    Row(
+                      children: [
+                        Text(
+                          FFLocalizations.of(context).getVariableText(enText: 'Sort:', bnText: 'সাজান:'),
+                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                fontFamily: 'SF Pro Display',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _buildSortChip('newest', 'Newest'),
+                                const SizedBox(width: 6),
+                                _buildSortChip('popular', 'Popular'),
+                                const SizedBox(width: 6),
+                                _buildSortChip('price_asc', 'Price: Low-High'),
+                                const SizedBox(width: 6),
+                                _buildSortChip('price_desc', 'Price: High-Low'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Category & Page Size Row
+                    Row(
+                      children: [
+                        // Category Dropdown
+                        Expanded(
+                          child: Container(
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                            decoration: BoxDecoration(
+                              color: FlutterFlowTheme.of(context).secondaryBackground,
+                              borderRadius: BorderRadius.circular(8.0),
+                              border: Border.all(
+                                color: FlutterFlowTheme.of(context).alternate,
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String?>(
+                                value: _selectedCategoryId,
+                                hint: Text(
+                                  FFLocalizations.of(context).getVariableText(enText: 'All Categories', bnText: 'সব ক্যাটাগরি'),
+                                  style: FlutterFlowTheme.of(context).bodySmall.override(
+                                        fontFamily: 'SF Pro Display',
+                                        color: FlutterFlowTheme.of(context).secondaryText,
+                                      ),
+                                ),
+                                isExpanded: true,
+                                icon: Icon(
+                                  Icons.arrow_drop_down_rounded,
+                                  color: FlutterFlowTheme.of(context).secondaryText,
+                                  size: 20,
+                                ),
+                                items: [
+                                  DropdownMenuItem<String?>(
+                                    value: null,
+                                    child: Text(
+                                      FFLocalizations.of(context).getVariableText(enText: 'All Categories', bnText: 'সব ক্যাটাগরি'),
+                                      style: FlutterFlowTheme.of(context).bodySmall,
+                                    ),
+                                  ),
+                                  ..._categoriesList.map((cat) {
+                                    final id = getJsonField(cat, r'''$._id''')?.toString();
+                                    final name = getJsonField(cat, r'''$.name''')?.toString() ?? 'Category';
+                                    return DropdownMenuItem<String?>(
+                                      value: id,
+                                      child: Text(
+                                        name,
+                                        style: FlutterFlowTheme.of(context).bodySmall,
+                                      ),
+                                    );
+                                  }).toList(),
+                                ],
+                                onChanged: (val) {
+                                  setState(() {
+                                    _selectedCategoryId = val;
+                                    _model.apiRequestCompleter2 = null;
+                                  });
+                                },
                               ),
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               Expanded(
@@ -256,7 +493,7 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                   alignment: AlignmentDirectional(0.0, 0.0),
                   child: Builder(
                     builder: (context) {
-                      if (_model.focus == false) {
+                      if (_model.textController.text.trim().length < 2) {
                         return Column(
                           mainAxisSize: MainAxisSize.max,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,7 +514,7 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                           .bodyMedium
                                           .override(
                                             fontFamily: 'SF Pro Display',
-                                            fontSize: 24.0,
+                                            fontSize: 16.0,
                                             letterSpacing: 0.0,
                                             fontWeight: FontWeight.bold,
                                             lineHeight: 1.5,
@@ -353,6 +590,11 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                                 width: 24.0,
                                                 height: 24.0,
                                                 fit: BoxFit.cover,
+                                                colorFilter: ColorFilter.mode(
+                                                    FlutterFlowTheme.of(
+                                                            context)
+                                                        .primaryText,
+                                                    BlendMode.srcIn),
                                               ),
                                             ),
                                             Expanded(
@@ -370,12 +612,15 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                                   highlightColor:
                                                       Colors.transparent,
                                                   onTap: () async {
-                                                    safeSetState(() {
-                                                      _model.textController
-                                                              ?.text =
-                                                          searchListItem;
-                                                    });
-                                                  },
+                                                     setState(() {
+                                                       _model.textController.text = searchListItem;
+                                                       _model.focus = true;
+                                                       _model.apiRequestCompleter2 = null;
+                                                     });
+                                                     _model.textController?.selection = TextSelection.fromPosition(
+                                                       TextPosition(offset: searchListItem.length),
+                                                     );
+                                                   },
                                                   child: Text(
                                                     searchListItem,
                                                     maxLines: 1,
@@ -478,6 +723,11 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
                                                     .call(
                                                   search: _model
                                                       .textController.text,
+                                                  token: FFAppState().token,
+                                                  pageSize: _pageSize,
+                                                  format: _selectedFormat,
+                                                  sort: _selectedSort,
+                                                  categoryId: _selectedCategoryId,
                                                 )))
                                           .future,
                                       builder: (context, snapshot) {

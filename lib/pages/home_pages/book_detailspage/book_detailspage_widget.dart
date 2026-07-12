@@ -8,6 +8,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/internationalization.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/pages/cart_pages/checkout_page_widget.dart';
+import '/pages/cart_pages/cart_page_widget.dart';
 import '/pages/cart_pages/payment_screen.dart';
 import '/pages/cart_pages/make_payment.dart';
 import '/pages/components/main_book_component/main_book_component_widget.dart';
@@ -78,6 +79,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   final Set<String> _loadingNarratorIds = {};
   String? _audiobookPricingMode;
   String? _bookSlug;
+  bool _isSubscribed = false;
 
   void _showSupportErrorDialog(String actionType) {
     showDialog(
@@ -208,6 +210,27 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     );
   }
 
+  Future<void> _checkSubscriptionValidity() async {
+    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) {
+      _isSubscribed = false;
+      return;
+    }
+    try {
+      final res = await EbookGroup.usersubscriptionvalidityApiCall.call(
+        token: FFAppState().token,
+      );
+      if (res.succeeded) {
+        final success = EbookGroup.usersubscriptionvalidityApiCall.success(res.jsonBody) == 1;
+        final days = EbookGroup.usersubscriptionvalidityApiCall.daysLeft(res.jsonBody) ?? 0;
+        _isSubscribed = success && days >= 0;
+      } else {
+        _isSubscribed = false;
+      }
+    } catch (_) {
+      _isSubscribed = false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -222,6 +245,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (FFAppState().isLogin) {
+        await _checkSubscriptionValidity();
         await _checkIfPurchased();
         await _loadBookmarkStatus();
         await _refreshWalletCoinBalance();
@@ -530,8 +554,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required String format,
     required bool isFree,
     required double price,
+    bool subscriberAccess = false,
   }) {
     if (price <= 0) return true;
+    if (subscriberAccess && _isSubscribed) return true;
     return _purchasedFormatKeys
         .contains('${bookId.toLowerCase()}::${format.toLowerCase().trim()}');
   }
@@ -587,12 +613,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   Future<bool> _hasFormatAccess({
     required String bookId,
     required String format,
+    bool subscriberAccess = false,
   }) async {
     if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) {
       return false;
     }
     final formatKey = '${bookId.toLowerCase()}::${format.toLowerCase().trim()}';
     if (_purchasedFormatKeys.contains(formatKey)) {
+      return true;
+    }
+    if (subscriberAccess && _isSubscribed) {
       return true;
     }
     final body = await _postV2(
@@ -851,6 +881,148 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
   }
 
+  Future<void> _earnCoinsByWatchingAd(BuildContext context) async {
+    final canShow = await AdManager.canShowAd();
+    if (!canShow) {
+      await actions.showCustomToastBottom(
+          'Please wait 3 minutes between ads or daily limit of 20 ads reached.');
+      return;
+    }
+
+    if (!AdManager.isAdLoaded) {
+      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(
+          enText: 'Loading Ad... Please wait a second.',
+          bnText: 'বিজ্ঞাপন লোড হচ্ছে... অনুগ্রহ করে একটু অপেক্ষা করুন।'));
+      final loaded = await AdManager.ensureAdLoaded();
+      if (!loaded) {
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(
+            enText: 'Failed to load ad. Please try again.',
+            bnText: 'বিজ্ঞাপন লোড করতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।'));
+        return;
+      }
+    }
+
+    AdManager.showRewardedAd(
+      context: context,
+      claimReward: true,
+      onRewardEarned: () async {
+        final res = await EbookGroup.walletClaimAdApiCall.call(
+          token: FFAppState().token,
+          placement: 'general',
+        );
+        final msg = EbookGroup.walletClaimAdApiCall.message(res.jsonBody) ?? 'Coins earned successfully!';
+        await actions.showCustomToastBottom(msg);
+        await _refreshWalletCoinBalance();
+      },
+      onAdFailed: () async {
+        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(
+            enText: 'Failed to show ad. Please try again.',
+            bnText: 'বিজ্ঞাপন দেখাতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।'));
+      },
+    );
+  }
+
+  Future<void> _showInsufficientCoinsDialog({
+    required BuildContext context,
+    required int requiredCoins,
+    required int currentCoins,
+  }) async {
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.monetization_on_rounded,
+                  color: Colors.amber,
+                  size: 48,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                FFLocalizations.of(context).getVariableText(
+                    enText: 'Insufficient Coins', bnText: 'কয়েন অপর্যাপ্ত'),
+                style: FlutterFlowTheme.of(dialogContext).headlineSmall.override(
+                      fontFamily: 'SF Pro Display',
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                FFLocalizations.of(context).getVariableText(
+                  enText: 'You need $requiredCoins coins to unlock this content.\nYour current balance: $currentCoins coins.\n\nWatch a quick video ad to earn coins!',
+                  bnText: 'এই কন্টেন্টটি আনলক করতে আপনার $requiredCoins কয়েন লাগবে।\nআপনার বর্তমান ব্যালেন্স: $currentCoins কয়েন।\n\nকয়েন অর্জন করতে একটি বিজ্ঞাপন দেখুন!',
+                ),
+                textAlign: TextAlign.center,
+                style: FlutterFlowTheme.of(dialogContext).bodyMedium.override(
+                      fontFamily: 'SF Pro Display',
+                      color: FlutterFlowTheme.of(dialogContext).secondaryText,
+                    ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: Text(
+                        FFLocalizations.of(context).getVariableText(
+                            enText: 'Cancel', bnText: 'বাতিল'),
+                        style: TextStyle(
+                          fontFamily: 'SF Pro Display',
+                          color: FlutterFlowTheme.of(dialogContext).secondaryText,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        _earnCoinsByWatchingAd(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: FlutterFlowTheme.of(dialogContext).primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        FFLocalizations.of(context).getVariableText(
+                            enText: 'Watch Ad', bnText: 'বিজ্ঞাপন দেখুন'),
+                        style: const TextStyle(
+                          fontFamily: 'SF Pro Display',
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<bool> _confirmAndUnlockWithCoins({
     required String bookName,
     required String bookId,
@@ -859,6 +1031,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   }) async {
     final balance = await _walletBalance();
     if (!mounted) return false;
+
+    if (balance == null || balance < coinCost) {
+      await _showInsufficientCoinsDialog(
+        context: context,
+        requiredCoins: coinCost,
+        currentCoins: balance ?? 0,
+      );
+      return false;
+    }
+
     final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) {
@@ -1253,6 +1435,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       return;
     }
 
+
+
     final cart = Provider.of<CartProvider>(context, listen: false);
     cart.addItem(
       bookId,
@@ -1267,6 +1451,32 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       context,
       MaterialPageRoute<void>(
         builder: (BuildContext context) => CheckoutPageWidget(),
+      ),
+    );
+  }
+
+  void _addToCartOnly({
+    required String bookId,
+    required String bookName,
+    required String bookImage,
+    required double price,
+    required String type,
+    required int? coinPrice,
+  }) {
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    cart.addItem(
+      bookId,
+      bookName,
+      bookImage,
+      price,
+      increment: false,
+      type: type,
+      coinPrice: coinPrice,
+    );
+    actions.showCustomToastBottom(
+      FFLocalizations.of(context).getVariableText(
+        enText: 'Added to cart successfully',
+        bnText: 'সফলভাবে কার্টে যোগ করা হয়েছে',
       ),
     );
   }
@@ -1418,7 +1628,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       final ebookPreviewPercent = _previewPercent(ebookFormat);
       final isEbookFree = isBookFree || ebookPrice <= 0;
       final hasAccessByApi = FFAppState().isLogin
-          ? await _hasFormatAccess(bookId: bookId, format: 'ebook')
+          ? await _hasFormatAccess(
+              bookId: bookId,
+              format: 'ebook',
+              subscriberAccess: (getJsonField(responseJson, r'''$.data.bookDetails[0].subscriber_access''') == true) || (ebookFormat?['subscriber_access'] == true),
+            )
           : false;
       final hasAccess = isEbookFree || hasAccessByApi;
 
@@ -1542,7 +1756,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           ? false
           : (isBookFree || audiobookPrice <= 0);
       final hasAccessByApi = FFAppState().isLogin &&
-          await _hasFormatAccess(bookId: bookId, format: 'audiobook');
+          await _hasFormatAccess(
+            bookId: bookId,
+            format: 'audiobook',
+            subscriberAccess: (getJsonField(responseJson, r'''$.data.bookDetails[0].subscriber_access''') == true) || (audiobookFormat?['subscriber_access'] == true),
+          );
       final hasAccess = isAudiobookFree || hasAccessByApi;
       if (hasAccess) {
         final performPlay = () async {
@@ -1618,6 +1836,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required String bookImage,
     required String authorName,
     required bool isBookFree,
+    bool subscriberAccess = false,
   }) async {
     if (_isDownloadingEbook) return;
     if (!FFAppState().isLogin) {
@@ -1627,7 +1846,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
     safeSetState(() => _isDownloadingEbook = true);
     final hasAccess =
-        isBookFree || await _hasFormatAccess(bookId: bookId, format: 'ebook');
+        isBookFree || await _hasFormatAccess(bookId: bookId, format: 'ebook', subscriberAccess: subscriberAccess);
     safeSetState(() => _isDownloadingEbook = false);
 
     if (!hasAccess) {
@@ -2166,7 +2385,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         } else if (option == 'coins') {
           final balance = await _walletBalance();
           if (balance == null || balance < coinPrice) {
-            await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Insufficient coins. Earn coins by watching ads or buying them!', bnText: 'পর্যাপ্ত কয়েন নেই। বিজ্ঞাপন দেখে বা কিনে কয়েন উপার্জন করুন!'));
+            await _showInsufficientCoinsDialog(
+              context: context,
+              requiredCoins: coinPrice,
+              currentCoins: balance ?? 0,
+            );
             return;
           }
           final res = await EbookGroup.unlockChapterWithCoinsCall.call(
@@ -2701,7 +2924,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                             } else if (option == 'coins') {
                               final balance = await _walletBalance();
                               if (balance == null || balance < coinPrice) {
-                                await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Insufficient coins. Earn coins by watching ads or buying them!', bnText: 'পর্যাপ্ত কয়েন নেই। বিজ্ঞাপন দেখে বা কিনে কয়েন উপার্জন করুন!'));
+                                await _showInsufficientCoinsDialog(
+                                  context: context,
+                                  requiredCoins: coinPrice,
+                                  currentCoins: balance ?? 0,
+                                );
                                 return;
                               }
                               final res = await EbookGroup.unlockChapterWithCoinsCall.call(
@@ -2884,6 +3111,26 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           selectedFormat = hardcopyFormat;
           selectedLabel = 'Hardcopy';
         }
+        String selectedType = '';
+        if (activeTab == BookMasterFormatTab.ebook) {
+          selectedType = 'ebook';
+        } else if (activeTab == BookMasterFormatTab.audiobook) {
+          selectedType = 'audiobook';
+        } else {
+          selectedType = 'hardcopy';
+        }
+        final double selectedPrice = _formatPrice(selectedFormat);
+        final int? selectedCoinPrice = selectedFormat != null && _formatCoinPrice(selectedFormat) > 0
+            ? _formatCoinPrice(selectedFormat)
+            : null;
+        final bool isFormatFree = selectedPrice <= 0;
+        final bool hasFormatAccess = _hasLocalFormatAccess(
+          bookId: bookId,
+          format: selectedType,
+          isFree: isBookFree,
+          price: selectedPrice,
+          subscriberAccess: (getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r'''$.data.bookDetails[0].subscriber_access''') == true) || (selectedFormat?['subscriber_access'] == true),
+        );
         final previewPercent = _previewPercent(selectedFormat);
         final ebookPrice = _formatPrice(ebookFormat);
         final hasEbookAccess = _hasLocalFormatAccess(
@@ -2891,6 +3138,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           format: 'ebook',
           isFree: isBookFree,
           price: ebookPrice,
+          subscriberAccess: (getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r'''$.data.bookDetails[0].subscriber_access''') == true) || (ebookFormat?['subscriber_access'] == true),
         );
         final isEbookPremium = !isBookFree && ebookPrice > 0;
 
@@ -2902,6 +3150,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                   : 'audiobook',
               isFree: isBookFree,
               price: _formatPrice(selectedFormat),
+              subscriberAccess: (getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r'''$.data.bookDetails[0].subscriber_access''') == true) || (selectedFormat?['subscriber_access'] == true),
             );
 
         return Scaffold(
@@ -3047,62 +3296,35 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       ),
                                             ),
                                           ),
-                                          // Row(
-                                          //   mainAxisSize: MainAxisSize.min,
-                                          //   children: [
-                                          //     InkWell(
-                                          //       splashColor: Colors.transparent,
-                                          //       focusColor: Colors.transparent,
-                                          //       hoverColor: Colors.transparent,
-                                          //       highlightColor: Colors.transparent,
-                                          //       onTap: () async {
-                                          //         // Shopping cart action
-                                          //       },
-                                          //       child: Container(
-                                          //         width: 40.0,
-                                          //         height: 40.0,
-                                          //         decoration: BoxDecoration(
-                                          //           color: Colors.white.withOpacity(0.2),
-                                          //           shape: BoxShape.circle,
-                                          //         ),
-                                          //         alignment: AlignmentDirectional(0.0, 0.0),
-                                          //         child: Icon(
-                                          //           Icons.shopping_cart,
-                                          //           color: Colors.white,
-                                          //           size: 20.0,
-                                          //         ),
-                                          //       ),
-                                          //     ),
-                                          //     SizedBox(width: 8.0),
-                                          InkWell(
-                                            splashColor: Colors.transparent,
-                                            focusColor: Colors.transparent,
-                                            hoverColor: Colors.transparent,
-                                            highlightColor: Colors.transparent,
-                                            onTap: () async {
-                                              await SharePlus.instance.share(
-                                                  ShareParams(
-                                                      text: bookSlug.isNotEmpty
-                                                          ? "${FFAppConstants.webUrl}/book/$bookSlug"
-                                                          : "${FFAppConstants.webUrl}/b/$bookId"));
-                                            },
-                                            child: Container(
-                                              width: 40.0,
-                                              height: 40.0,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white
-                                                    .withOpacity(0.2),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              alignment: AlignmentDirectional(
-                                                  0.0, 0.0),
-                                              child: Icon(
-                                                Icons.share,
-                                                color: Colors.white,
-                                                size: 20.0,
-                                              ),
-                                            ),
-                                          ),
+                                           InkWell(
+                                             splashColor: Colors.transparent,
+                                             focusColor: Colors.transparent,
+                                             hoverColor: Colors.transparent,
+                                             highlightColor: Colors.transparent,
+                                             onTap: () async {
+                                               await SharePlus.instance.share(
+                                                   ShareParams(
+                                                       text: bookSlug.isNotEmpty
+                                                           ? "${FFAppConstants.webUrl}/book/$bookSlug"
+                                                           : "${FFAppConstants.webUrl}/b/$bookId"));
+                                             },
+                                             child: Container(
+                                               width: 40.0,
+                                               height: 40.0,
+                                               decoration: BoxDecoration(
+                                                 color: Colors.white
+                                                     .withOpacity(0.2),
+                                                 shape: BoxShape.circle,
+                                               ),
+                                               alignment: AlignmentDirectional(
+                                                   0.0, 0.0),
+                                               child: Icon(
+                                                 Icons.share,
+                                                 color: Colors.white,
+                                                 size: 20.0,
+                                               ),
+                                             ),
+                                           ),
                                         ],
                                       ),
                                     ),
@@ -3526,15 +3748,15 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                           .favorite
                                                                       : Icons
                                                                           .favorite_border,
-                                                                  size: 16.0,
+                                                                  
                                                                   color: FlutterFlowTheme.of(
                                                                           context)
                                                                       .primary,
                                                                 ),
                                                       label: Text(
                                                         _model.isFavorite!
-                                                            ? FFLocalizations.of(context).getVariableText(enText: 'Wishlisted', bnText: 'প্রিয় তালিকায় যুক্ত')
-                                                            : FFLocalizations.of(context).getVariableText(enText: 'Wishlist', bnText: 'প্রিয় তালিকা'),
+                                                            ? FFLocalizations.of(context).getVariableText(enText: 'Wishlisted', bnText: 'প্রিয়')
+                                                            : FFLocalizations.of(context).getVariableText(enText: 'Wishlist', bnText: 'প্রিয়'),
                                                         style:
                                                             FlutterFlowTheme.of(
                                                                     context)
@@ -3573,6 +3795,69 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                       ),
                                                     ),
                                                   ),
+                                                  if (selectedFormat != null && !isFormatFree && !hasFormatAccess) ...[
+                                                    const SizedBox(width: 12.0),
+                                                    Expanded(
+                                                      child: Consumer<CartProvider>(
+                                                        builder: (context, cart, child) {
+                                                          final isInCart = cart.items.containsKey(bookId);
+                                                          return OutlinedButton.icon(
+                                                            onPressed: () {
+                                                              if (isInCart) {
+                                                                Navigator.push<void>(
+                                                                  context,
+                                                                  MaterialPageRoute<void>(
+                                                                    builder: (BuildContext context) => const CartPageWidget(),
+                                                                  ),
+                                                                );
+                                                              } else {
+                                                                _addToCartOnly(
+                                                                  bookId: bookId,
+                                                                  bookName: bookName,
+                                                                  bookImage: bookImage,
+                                                                  price: selectedPrice,
+                                                                  type: selectedType,
+                                                                  coinPrice: selectedCoinPrice,
+                                                                );
+                                                              }
+                                                            },
+                                                            icon: Icon(
+                                                              isInCart
+                                                                  ? Icons.shopping_cart_rounded
+                                                                  : Icons.add_shopping_cart_rounded,
+                                                              color: FlutterFlowTheme.of(context).primary,
+                                                            ),
+                                                            label: Text(
+                                                              isInCart
+                                                                  ? FFLocalizations.of(context).getVariableText(
+                                                                      enText: 'In Cart',
+                                                                      bnText: 'কার্টে আছে',
+                                                                    )
+                                                                  : FFLocalizations.of(context).getVariableText(
+                                                                      enText: 'Cart',
+                                                                      bnText: 'কার্ট',
+                                                                    ),
+                                                              style: FlutterFlowTheme.of(context).bodySmall.override(
+                                                                    fontFamily: 'SF Pro Display',
+                                                                    color: FlutterFlowTheme.of(context).primary,
+                                                                    fontSize: 14.0,
+                                                                    letterSpacing: 0.0,
+                                                                  ),
+                                                            ),
+                                                            style: OutlinedButton.styleFrom(
+                                                              side: BorderSide(
+                                                                color: FlutterFlowTheme.of(context).primary.withOpacity(0.5),
+                                                              ),
+                                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.circular(8),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ],
@@ -4242,6 +4527,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                           authorName,
                                                                       isBookFree:
                                                                           isBookFree,
+                                                                      subscriberAccess: (getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r'''$.data.bookDetails[0].subscriber_access''') == true) || (ebookFormat?['subscriber_access'] == true),
                                                                     );
                                                                   },
                                                         text:
@@ -4298,6 +4584,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                 isFree: isBookFree,
                                                 price: _formatPrice(
                                                     audiobookFormat),
+                                                 subscriberAccess: (getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r'''$.data.bookDetails[0].subscriber_access''') == true) || (audiobookFormat?['subscriber_access'] == true),
                                               );
                                               if (hasAudioAccess) {
                                                 return FFButtonWidget(
@@ -7035,4 +7322,3 @@ class _EpisodesListPage extends StatelessWidget {
     );
   }
 }
-

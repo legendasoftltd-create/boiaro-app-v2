@@ -3,10 +3,12 @@ import 'dart:developer';
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_theme.dart';
 import 'package:a_i_ebook_app/flutter_flow/flutter_flow_util.dart';
 import 'package:a_i_ebook_app/flutter_flow/internationalization.dart';
+import 'package:a_i_ebook_app/index.dart';
 import 'package:a_i_ebook_app/pages/cart_pages/payment_screen.dart';
 import 'package:a_i_ebook_app/providers/cart_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MakeCheckOutScreen extends StatefulWidget {
@@ -110,71 +112,126 @@ class _MakeCheckOutScreenState extends State<MakeCheckOutScreen> {
           return;
         }
         if (mounted) {
+          final purchasedFormats =
+              widget.cartLines.map((e) => e.type.toLowerCase().trim()).toSet();
+
+          // Build the label for the action button
+          String actionLabel;
+          if (purchasedFormats.contains('hardcopy') ||
+              purchasedFormats.contains('hard') ||
+              purchasedFormats.contains('print')) {
+            actionLabel = FFLocalizations.of(context)
+                .getVariableText(enText: 'View Orders', bnText: 'অর্ডার দেখুন');
+          } else if (purchasedFormats.contains('audiobook') ||
+              purchasedFormats.contains('audio')) {
+            actionLabel = FFLocalizations.of(context)
+                .getVariableText(enText: 'Start Listening', bnText: 'শোনা শুরু করুন');
+          } else {
+            actionLabel = FFLocalizations.of(context)
+                .getVariableText(enText: 'Start Reading', bnText: 'পড়া শুরু করুন');
+          }
+
           showDialog(
             context: context,
             barrierDismissible: false,
             builder: (BuildContext dialogContext) {
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        shape: BoxShape.circle,
+              return PopScope(
+                canPop: false,
+                child: AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.0),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.green,
+                          size: 48,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.check_circle_rounded,
-                        color: Colors.green,
-                        size: 48,
+                      SizedBox(height: 16),
+                      Text(
+                        FFLocalizations.of(context).getVariableText(
+                            enText: 'Order Successful!', bnText: 'অর্ডার সফল হয়েছে!'),
+                        style: FlutterFlowTheme.of(dialogContext)
+                            .headlineSmall
+                            .override(
+                              fontFamily: 'SF Pro Display',
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    Text(FFLocalizations.of(context).getVariableText(enText: 'Order Successful!', bnText: 'অর্ডার সফল হয়েছে!'),
-                      style: FlutterFlowTheme.of(dialogContext).headlineSmall.override(
+                      SizedBox(height: 8),
+                      Text(
+                        response['message']?.toString() ??
+                            'Order placed successfully.',
+                        textAlign: TextAlign.center,
+                        style: FlutterFlowTheme.of(dialogContext)
+                            .bodyMedium
+                            .override(
+                              fontFamily: 'SF Pro Display',
+                              color: FlutterFlowTheme.of(dialogContext)
+                                  .secondaryText,
+                            ),
+                      ),
+                      SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop(); // Close dialog
+                          // Clear cart
+                          context.read<CartProvider>().clear();
+                          // Pop ALL MaterialPageRoute screens (MakeCheckOutScreen,
+                          // CheckoutPage, etc.) back to GoRouter's root shell,
+                          // then navigate to the correct destination.
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                          if (purchasedFormats.contains('hardcopy') ||
+                              purchasedFormats.contains('hard') ||
+                              purchasedFormats.contains('print')) {
+                            // Hardcopy → My Orders screen
+                            context.pushNamed(OrdersPageWidget.routeName);
+                          } else if (purchasedFormats.contains('audiobook') ||
+                              purchasedFormats.contains('audio')) {
+                            // Audiobook → Library, Audiobook tab (index 1), Purchased sub-tab (index 3)
+                            context.pushNamed(
+                              PurchaseHistoryPageWidget.routeName,
+                              queryParameters: {'tab': '1', 'chip': '3'},
+                            );
+                          } else {
+                            // Ebook → Library, Ebook tab (index 0), Purchased sub-tab (index 3)
+                            context.pushNamed(
+                              PurchaseHistoryPageWidget.routeName,
+                              queryParameters: {'tab': '0', 'chip': '3'},
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              FlutterFlowTheme.of(dialogContext).primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 12),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          actionLabel,
+                          style: TextStyle(
                             fontFamily: 'SF Pro Display',
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      response['message']?.toString() ??
-                          'Order placed successfully.',
-                      textAlign: TextAlign.center,
-                      style: FlutterFlowTheme.of(dialogContext).bodyMedium.override(
-                            fontFamily: 'SF Pro Display',
-                            color: FlutterFlowTheme.of(dialogContext).secondaryText,
-                          ),
-                    ),
-                    SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(dialogContext); // Close dialog
-                        Navigator.pop(context, true); // Pop MakeCheckOutScreen with success
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: FlutterFlowTheme.of(dialogContext).primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        FFLocalizations.of(context).getVariableText(enText: 'OK', bnText: 'ঠিক আছে'),
-                        style: TextStyle(
-                          fontFamily: 'SF Pro Display',
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },

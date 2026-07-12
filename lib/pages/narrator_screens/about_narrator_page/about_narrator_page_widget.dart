@@ -49,10 +49,20 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
   bool _isFollowLoading = false;
   int? _followersCount;
 
+  final ScrollController _scrollController = ScrollController();
+  List<dynamic> _books = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _offset = 0;
+  final int _limit = 20;
+  String? _nextCursor;
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => AboutNarratorPageModel());
+    _scrollController.addListener(_onScroll);
+    _loadMoreBooks(isFirstLoad: true);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (FFAppState().isLogin) {
@@ -62,6 +72,73 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
       }
       safeSetState(() {});
     });
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreBooks();
+    }
+  }
+
+  Future<void> _loadMoreBooks({bool isFirstLoad = false}) async {
+    if (_isLoading || (!_hasMore && !isFirstLoad)) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final res = await EbookGroup.getbookbynarratorApiCall.call(
+        narratorId: widget.narratorId,
+        limit: _limit,
+        cursor: isFirstLoad ? null : _nextCursor,
+      );
+      final newBooks =
+          EbookGroup.getbookbynarratorApiCall.bookDetailsList(res.jsonBody) ??
+              [];
+      final nextCursorVal =
+          EbookGroup.getbookbynarratorApiCall.nextCursor(res.jsonBody);
+
+      setState(() {
+        if (isFirstLoad) {
+          _books.clear();
+          _offset = 0;
+        }
+        final existingIds = _books
+            .map((book) => getJsonField(book, r'''$._id''')?.toString())
+            .where((id) => id != null)
+            .toSet();
+        for (final book in newBooks) {
+          final bookId = getJsonField(book, r'''$._id''')?.toString();
+          if (bookId == null || !existingIds.contains(bookId)) {
+            _books.add(book);
+            if (bookId != null) {
+              existingIds.add(bookId);
+            }
+          }
+        }
+        _offset += newBooks.length;
+        _nextCursor = nextCursorVal;
+        if (_nextCursor == null || _nextCursor!.isEmpty) {
+          _hasMore = false;
+        } else {
+          _hasMore = true;
+        }
+      });
+
+      // Auto load next page if content doesn't fill screen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_hasMore && _scrollController.hasClients && _scrollController.position.maxScrollExtent == 0) {
+          _loadMoreBooks();
+        }
+      });
+    } catch (e) {
+      // Error loading narrator books
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadFollowState() async {
@@ -161,12 +238,14 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
         safeSetState(() {});
       }
     } catch (e) {
-      debugPrint('Error loading purchased books: $e');
+      // Error loading purchased books
     }
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _model.dispose();
 
     super.dispose();
@@ -300,13 +379,19 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                     key: Key('RefreshIndicator_zhgjuy02'),
                                     color: FlutterFlowTheme.of(context).primary,
                                     onRefresh: () async {
-                                      safeSetState(() =>
-                                          _model.apiRequestCompleter2 = null);
-                                      await _model
-                                          .waitForApiRequestCompleted2();
+                                      safeSetState(() {
+                                        _model.apiRequestCompleter2 = null;
+                                        _offset = 0;
+                                        _hasMore = true;
+                                      });
+                                      await Future.wait([
+                                        _model.waitForApiRequestCompleted2(),
+                                        _loadMoreBooks(isFirstLoad: true),
+                                      ]);
                                     },
                                     child: ListView(
-                                      padding: EdgeInsets.fromLTRB(
+                                      controller: _scrollController,
+                                      padding: const EdgeInsets.fromLTRB(
                                         0,
                                         16.0,
                                         0,
@@ -849,342 +934,322 @@ class _AboutNarratorPageWidgetState extends State<AboutNarratorPageWidget> {
                                                 padding: EdgeInsetsDirectional
                                                     .fromSTEB(
                                                         0.0, 16.0, 0.0, 0.0),
-                                                child: FutureBuilder<
-                                                    ApiCallResponse>(
-                                                  future: EbookGroup
-                                                      .getbookbynarratorApiCall
-                                                      .call(
-                                                    narratorId:
-                                                        widget.narratorId,
-                                                  ),
-                                                  builder: (context, snapshot) {
-                                                    // Customize what your widget looks like when it's loading.
-                                                    if (!snapshot.hasData) {
-                                                      return AboutAuthorSecShimmerWidget();
-                                                    }
-                                                    final columnGetbookbyauthorApiResponse =
-                                                        snapshot.data!;
-
-                                                    return Column(
-                                                      mainAxisSize:
-                                                          MainAxisSize.max,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        if (EbookGroup
-                                                                .getbookbynarratorApiCall
-                                                                .success(
-                                                              columnGetbookbyauthorApiResponse
-                                                                  .jsonBody,
-                                                            ) ==
-                                                            1)
-                                                          Padding(
-                                                            padding:
-                                                                EdgeInsetsDirectional
-                                                                    .fromSTEB(
-                                                                        16.0,
-                                                                        0.0,
-                                                                        16.0,
-                                                                        16.0),
-                                                            child: Text(FFLocalizations.of(context).getVariableText(enText: 'Popular books', bnText: 'জনপ্রিয় বইসমূহ'),
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .start,
-                                                              style: FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .bodyMedium
-                                                                  .override(
-                                                                    fontFamily:
-                                                                        'SF Pro Display',
-                                                                    fontSize:
-                                                                        18.0,
-                                                                    letterSpacing:
-                                                                        0.0,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                    lineHeight:
-                                                                        1.5,
-                                                                  ),
+                                                child: _books.isEmpty && _isLoading
+                                                    ? AboutAuthorSecShimmerWidget()
+                                                    : Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.max,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          if (_books.isNotEmpty)
+                                                            Padding(
+                                                              padding:
+                                                                  EdgeInsetsDirectional
+                                                                      .fromSTEB(
+                                                                          16.0,
+                                                                          0.0,
+                                                                          16.0,
+                                                                          16.0),
+                                                              child: Text(FFLocalizations.of(context).getVariableText(enText: 'Popular books', bnText: 'জনপ্রিয় বইসমূহ'),
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .start,
+                                                                style: FlutterFlowTheme
+                                                                        .of(context)
+                                                                    .bodyMedium
+                                                                    .override(
+                                                                      fontFamily:
+                                                                          'SF Pro Display',
+                                                                      fontSize:
+                                                                          18.0,
+                                                                      letterSpacing:
+                                                                          0.0,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      lineHeight:
+                                                                          1.5,
+                                                                    ),
+                                                              ),
                                                             ),
-                                                          ),
-                                                        if (EbookGroup
-                                                                .getbookbynarratorApiCall
-                                                                .success(
-                                                              columnGetbookbyauthorApiResponse
-                                                                  .jsonBody,
-                                                            ) ==
-                                                            1)
-                                                          Padding(
-                                                            padding:
-                                                                EdgeInsetsDirectional
-                                                                    .fromSTEB(
-                                                                        16.0,
-                                                                        0.0,
-                                                                        16.0,
-                                                                        0.0),
-                                                            child: Builder(
-                                                              builder:
-                                                                  (context) {
-                                                                final bookDetailsList = EbookGroup
-                                                                        .getbookbynarratorApiCall
-                                                                        .bookDetailsList(
-                                                                          columnGetbookbyauthorApiResponse
-                                                                              .jsonBody,
-                                                                        )
-                                                                        ?.toList() ??
-                                                                    [];
+                                                          if (_books.isNotEmpty)
+                                                            Padding(
+                                                              padding:
+                                                                  EdgeInsetsDirectional
+                                                                      .fromSTEB(
+                                                                          16.0,
+                                                                          0.0,
+                                                                          16.0,
+                                                                          0.0),
+                                                              child: Builder(
+                                                                builder:
+                                                                    (context) {
+                                                                  final bookDetailsList = _books;
 
-                                                                final screenWidth =
-                                                                    MediaQuery.sizeOf(
-                                                                            context)
-                                                                        .width;
-                                                                final crossAxisCount =
-                                                                    screenWidth <
-                                                                            810.0
-                                                                        ? 3
-                                                                        : screenWidth <
-                                                                                1280.0
-                                                                            ? 4
-                                                                            : 6;
+                                                                  final screenWidth =
+                                                                      MediaQuery.sizeOf(
+                                                                              context)
+                                                                          .width;
+                                                                  final crossAxisCount =
+                                                                      screenWidth <
+                                                                              810.0
+                                                                          ? 3
+                                                                          : screenWidth <
+                                                                                  1280.0
+                                                                              ? 4
+                                                                              : 6;
 
-                                                                return GridView
-                                                                    .builder(
-                                                                  shrinkWrap:
-                                                                      true,
-                                                                  physics:
-                                                                      NeverScrollableScrollPhysics(),
-                                                                  gridDelegate:
-                                                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                                                    crossAxisCount:
-                                                                        crossAxisCount,
-                                                                    crossAxisSpacing:
-                                                                        8.0,
-                                                                    mainAxisSpacing:
-                                                                        8.0,
-                                                                    mainAxisExtent:
-                                                                        235.0,
-                                                                  ),
-                                                                  itemCount:
-                                                                      bookDetailsList
-                                                                          .length,
-                                                                  itemBuilder:
-                                                                      (context,
-                                                                          bookDetailsListIndex) {
-                                                                    final bookDetailsListItem =
-                                                                        bookDetailsList[
-                                                                            bookDetailsListIndex];
-                                                                    return wrapWithModel(
-                                                                      model: _model
-                                                                          .mainBookComponentModels
-                                                                          .getModel(
-                                                                        getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.name''',
-                                                                        ).toString(),
-                                                                        bookDetailsListIndex,
-                                                                      ),
-                                                                      updateCallback:
-                                                                          () =>
-                                                                              safeSetState(() {}),
-                                                                      child:
-                                                                          MainBookComponentWidget(
-                                                                        key:
-                                                                            Key(
-                                                                          'Keyu5q_${getJsonField(
+                                                                  return GridView
+                                                                      .builder(
+                                                                    shrinkWrap:
+                                                                        true,
+                                                                    physics:
+                                                                        NeverScrollableScrollPhysics(),
+                                                                    gridDelegate:
+                                                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                                                      crossAxisCount:
+                                                                          crossAxisCount,
+                                                                      crossAxisSpacing:
+                                                                          8.0,
+                                                                      mainAxisSpacing:
+                                                                          8.0,
+                                                                      mainAxisExtent:
+                                                                          235.0,
+                                                                    ),
+                                                                    itemCount:
+                                                                        bookDetailsList
+                                                                            .length,
+                                                                    itemBuilder:
+                                                                        (context,
+                                                                            bookDetailsListIndex) {
+                                                                      final bookDetailsListItem =
+                                                                          bookDetailsList[
+                                                                              bookDetailsListIndex];
+                                                                      return wrapWithModel(
+                                                                        model: _model
+                                                                            .mainBookComponentModels
+                                                                            .getModel(
+                                                                          getJsonField(
                                                                             bookDetailsListItem,
                                                                             r'''$.name''',
-                                                                          ).toString()}',
+                                                                          ).toString(),
+                                                                          bookDetailsListIndex,
                                                                         ),
-                                                                        imageHeight: 155,
-                                                                        image:
-                                                                            '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.image''',
-                                                                        ).toString()}',
-                                                                        bookName:
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.name''',
-                                                                        ).toString(),
-                                                                        id: getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$._id''',
-                                                                        ).toString(),
-                                                                        price:
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.price''',
-                                                                        ).toString(),
-                                                                        bookType:
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.type''',
-                                                                        )?.toString(),
-                                                                        discountAmount:
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.discount_amount''',
-                                                                        ).toString(),
-                                                                        discountPercentage:
-                                                                            getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.discount_percentage''',
-                                                                        ).toString(),
-                                                                        authorsName:
-                                                                            'By ${getJsonField(
-                                                                          bookDetailsListItem,
-                                                                          r'''$.author.name''',
-                                                                        ).toString()}',
-                                                                        isFav: functions.checkFavOrNot(
-                                                                                EbookGroup.getFavouriteBookCall
-                                                                                    .favouriteBookDetailsList(
-                                                                                      containerGetFavouriteBookResponse.jsonBody,
-                                                                                    )
-                                                                                    ?.toList(),
-                                                                                getJsonField(
-                                                                                  bookDetailsListItem,
-                                                                                  r'''$._id''',
-                                                                                ).toString()) ==
-                                                                            true,
-                                                                        indicator:
-                                                                            (bookDetailsListIndex == _model.popularIndex) &&
-                                                                                (_model.isPopular == true),
-                                                                        isFavAction:
-                                                                            () async {
-                                                                          if (FFAppState().isLogin ==
-                                                                              true) {
-                                                                            _model.isPopular =
-                                                                                true;
-                                                                            _model.popularIndex =
-                                                                                bookDetailsListIndex;
-                                                                            safeSetState(() {});
-                                                                            if (functions.checkFavOrNot(
-                                                                                    EbookGroup.getFavouriteBookCall
-                                                                                        .favouriteBookDetailsList(
-                                                                                          containerGetFavouriteBookResponse.jsonBody,
+                                                                        updateCallback:
+                                                                            () =>
+                                                                                safeSetState(() {}),
+                                                                        child:
+                                                                            MainBookComponentWidget(
+                                                                          key:
+                                                                              Key(
+                                                                            'Keyu5q_${getJsonField(
+                                                                              bookDetailsListItem,
+                                                                              r'''$.name''',
+                                                                            ).toString()}',
+                                                                          ),
+                                                                          imageHeight: 155,
+                                                                          image:
+                                                                              '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.image''',
+                                                                          ).toString()}',
+                                                                          bookName:
+                                                                              getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.name''',
+                                                                          ).toString(),
+                                                                          id: getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$._id''',
+                                                                          ).toString(),
+                                                                          price:
+                                                                              getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.price''',
+                                                                          ).toString(),
+                                                                          bookType:
+                                                                              getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.type''',
+                                                                          )?.toString(),
+                                                                          discountAmount:
+                                                                              getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.discount_amount''',
+                                                                          ).toString(),
+                                                                          discountPercentage:
+                                                                              getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.discount_percentage''',
+                                                                          ).toString(),
+                                                                          authorsName:
+                                                                              'By ${getJsonField(
+                                                                            bookDetailsListItem,
+                                                                            r'''$.author.name''',
+                                                                          ).toString()}',
+                                                                          isFav: functions.checkFavOrNot(
+                                                                                  EbookGroup.getFavouriteBookCall
+                                                                                      .favouriteBookDetailsList(
+                                                                                        containerGetFavouriteBookResponse.jsonBody,
                                                                                         )
                                                                                         ?.toList(),
                                                                                     getJsonField(
                                                                                       bookDetailsListItem,
                                                                                       r'''$._id''',
                                                                                     ).toString()) ==
+                                                                                true,
+                                                                          indicator:
+                                                                              (bookDetailsListIndex == _model.popularIndex) &&
+                                                                                  (_model.isPopular == true),
+                                                                          isFavAction:
+                                                                              () async {
+                                                                            if (FFAppState().isLogin ==
                                                                                 true) {
-                                                                              _model.getPopularDetete = await EbookGroup.removeFavouritebookCall.call(
-                                                                                userId: FFAppState().userId,
-                                                                                token: FFAppState().token,
-                                                                                bookId: getJsonField(
-                                                                                  bookDetailsListItem,
-                                                                                  r'''$._id''',
-                                                                                ).toString(),
-                                                                              );
+                                                                              _model.isPopular =
+                                                                                  true;
+                                                                              _model.popularIndex =
+                                                                                  bookDetailsListIndex;
+                                                                              safeSetState(() {});
+                                                                              if (functions.checkFavOrNot(
+                                                                                      EbookGroup.getFavouriteBookCall
+                                                                                          .favouriteBookDetailsList(
+                                                                                            containerGetFavouriteBookResponse.jsonBody,
+                                                                                          )
+                                                                                          ?.toList(),
+                                                                                      getJsonField(
+                                                                                        bookDetailsListItem,
+                                                                                        r'''$._id''',
+                                                                                      ).toString()) ==
+                                                                                    true) {
+                                                                                  _model.getPopularDetete = await EbookGroup.removeFavouritebookCall.call(
+                                                                                    userId: FFAppState().userId,
+                                                                                    token: FFAppState().token,
+                                                                                    bookId: getJsonField(
+                                                                                      bookDetailsListItem,
+                                                                                      r'''$._id''',
+                                                                                    ).toString(),
+                                                                                  );
 
-                                                                              safeSetState(() {
+                                                                                  safeSetState(() {
+                                                                                    FFAppState().clearGetFavouriteBookCacheCache();
+                                                                                    _model.apiRequestCompleted1 = false;
+                                                                                  });
+                                                                                  await _model.waitForApiRequestCompleted1();
+                                                                                  await actions.showCustomToastBottom(
+                                                                                    FFAppState().unFavText,
+                                                                                  );
+                                                                                } else {
+                                                                                  _model.getPopularAdd = await EbookGroup.addFavouriteBookApiCall.call(
+                                                                                    userId: FFAppState().userId,
+                                                                                    token: FFAppState().token,
+                                                                                    bookId: getJsonField(
+                                                                                      bookDetailsListItem,
+                                                                                      r'''$._id''',
+                                                                                    ).toString(),
+                                                                                  );
+
+                                                                                  safeSetState(() {
+                                                                                    FFAppState().clearGetFavouriteBookCacheCache();
+                                                                                    _model.apiRequestCompleted1 = false;
+                                                                                  });
+                                                                                  await _model.waitForApiRequestCompleted1();
+                                                                                  await actions.showCustomToastBottom(
+                                                                                    FFAppState().favText,
+                                                                                  );
+                                                                                }
+
                                                                                 FFAppState().clearGetFavouriteBookCacheCache();
-                                                                                _model.apiRequestCompleted1 = false;
-                                                                              });
-                                                                              await _model.waitForApiRequestCompleted1();
-                                                                              await actions.showCustomToastBottom(
-                                                                                FFAppState().unFavText,
-                                                                              );
-                                                                            } else {
-                                                                              _model.getPopularAdd = await EbookGroup.addFavouriteBookApiCall.call(
-                                                                                userId: FFAppState().userId,
-                                                                                token: FFAppState().token,
-                                                                                bookId: getJsonField(
+                                                                                _model.isPopular =
+                                                                                    false;
+                                                                                safeSetState(() {});
+                                                                              } else {
+                                                                                FFAppState().favChange =
+                                                                                    true;
+                                                                                FFAppState().bookId =
+                                                                                    getJsonField(
                                                                                   bookDetailsListItem,
                                                                                   r'''$._id''',
-                                                                                ).toString(),
+                                                                                ).toString();
+                                                                                FFAppState().update(() {});
+
+                                                                                context.pushNamed(SignInPageWidget.routeName);
+                                                                              }
+
+                                                                              safeSetState(
+                                                                                  () {});
+                                                                            },
+                                                                            isPurchased: _model
+                                                                                .purchasedBookIds
+                                                                                .contains(
+                                                                              getJsonField(
+                                                                                bookDetailsListItem,
+                                                                                r'''$._id''',
+                                                                              ).toString(),
+                                                                            ),
+                                                                            isMainTap:
+                                                                                () async {
+                                                                              context
+                                                                                  .pushNamed(
+                                                                                BookDetailspageWidget.routeName,
+                                                                                queryParameters:
+                                                                                    {
+                                                                                  'name': serializeParam(
+                                                                                    getJsonField(
+                                                                                      bookDetailsListItem,
+                                                                                      r'''$.name''',
+                                                                                    ).toString(),
+                                                                                    ParamType.String,
+                                                                                  ),
+                                                                                  'price': serializeParam(
+                                                                                    getJsonField(
+                                                                                      bookDetailsListItem,
+                                                                                      r'''$.price''',
+                                                                                    ).toString(),
+                                                                                    ParamType.String,
+                                                                                  ),
+                                                                                  'image': serializeParam(
+                                                                                    '${FFAppConstants.bookImagesUrl}${getJsonField(
+                                                                                      bookDetailsListItem,
+                                                                                      r'''$.image''',
+                                                                                    ).toString()}',
+                                                                                    ParamType.String,
+                                                                                  ),
+                                                                                  'id': serializeParam(
+                                                                                    getJsonField(
+                                                                                      bookDetailsListItem,
+                                                                                      r'''$._id''',
+                                                                                    ).toString(),
+                                                                                    ParamType.String,
+                                                                                  ),
+                                                                                }.withoutNulls,
                                                                               );
-
-                                                                              safeSetState(() {
-                                                                                FFAppState().clearGetFavouriteBookCacheCache();
-                                                                                _model.apiRequestCompleted1 = false;
-                                                                              });
-                                                                              await _model.waitForApiRequestCompleted1();
-                                                                              await actions.showCustomToastBottom(
-                                                                                FFAppState().favText,
-                                                                              );
-                                                                            }
-
-                                                                            FFAppState().clearGetFavouriteBookCacheCache();
-                                                                            _model.isPopular =
-                                                                                false;
-                                                                            safeSetState(() {});
-                                                                          } else {
-                                                                            FFAppState().favChange =
-                                                                                true;
-                                                                            FFAppState().bookId =
-                                                                                getJsonField(
-                                                                              bookDetailsListItem,
-                                                                              r'''$._id''',
-                                                                            ).toString();
-                                                                            FFAppState().update(() {});
-
-                                                                            context.pushNamed(SignInPageWidget.routeName);
-                                                                          }
-
-                                                                          safeSetState(
-                                                                              () {});
-                                                                        },
-                                                                        isPurchased: _model
-                                                                            .purchasedBookIds
-                                                                            .contains(
-                                                                          getJsonField(
-                                                                            bookDetailsListItem,
-                                                                            r'''$._id''',
-                                                                          ).toString(),
-                                                                        ),
-                                                                        isMainTap:
-                                                                            () async {
-                                                                          context
-                                                                              .pushNamed(
-                                                                            BookDetailspageWidget.routeName,
-                                                                            queryParameters:
-                                                                                {
-                                                                              'name': serializeParam(
-                                                                                getJsonField(
-                                                                                  bookDetailsListItem,
-                                                                                  r'''$.name''',
-                                                                                ).toString(),
-                                                                                ParamType.String,
-                                                                              ),
-                                                                              'price': serializeParam(
-                                                                                getJsonField(
-                                                                                  bookDetailsListItem,
-                                                                                  r'''$.price''',
-                                                                                ).toString(),
-                                                                                ParamType.String,
-                                                                              ),
-                                                                              'image': serializeParam(
-                                                                                '${FFAppConstants.bookImagesUrl}${getJsonField(
-                                                                                  bookDetailsListItem,
-                                                                                  r'''$.image''',
-                                                                                ).toString()}',
-                                                                                ParamType.String,
-                                                                              ),
-                                                                              'id': serializeParam(
-                                                                                getJsonField(
-                                                                                  bookDetailsListItem,
-                                                                                  r'''$._id''',
-                                                                                ).toString(),
-                                                                                ParamType.String,
-                                                                              ),
-                                                                            }.withoutNulls,
-                                                                          );
-                                                                        },
-                                                                      ),
+                                                                            },
+                                                                          ),
+                                                                        );
+                                                                      },
                                                                     );
                                                                   },
-                                                                );
-                                                              },
-                                                            ),
-                                                          ),
-                                                      ],
-                                                    );
-                                                  },
-                                                ),
+                                                                ),
+                                                              ),
+                                                            if (_isLoading && _books.isNotEmpty)
+                                                              Center(
+                                                                child: Padding(
+                                                                  padding: const EdgeInsets.all(12.0),
+                                                                  child: SizedBox(
+                                                                    width: 32.0,
+                                                                    height: 32.0,
+                                                                    child: CircularProgressIndicator(
+                                                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                                                        FlutterFlowTheme.of(context).primary,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                          ],
+                                                        ),
                                               ),
                                             );
                                           },

@@ -60,7 +60,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   // Ambient Sound player state delegated to handler
   bool get _ambientEnabled => _handler?.ambientEnabled ?? false;
   int get _selectedAmbientIndex => _handler?.selectedAmbientIndex ?? 0;
-  double get _ambientVolume => _handler?.ambientVolume ?? 0.3;
+  double get _ambientVolume => _handler?.ambientVolume ?? 0.1;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   AudiobookAudioHandler? _handler;

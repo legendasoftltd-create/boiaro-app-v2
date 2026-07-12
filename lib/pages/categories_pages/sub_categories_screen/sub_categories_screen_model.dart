@@ -3,6 +3,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/category_component/category_component_widget.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/empty_components/no_categories_yet/no_categories_yet_widget.dart';
+import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/index.dart';
 import 'dart:async';
 import 'sub_categories_screen_widget.dart' show SubCategoriesScreenWidget;
@@ -23,6 +24,8 @@ class SubCategoriesScreenModel
   late FlutterFlowDynamicModels<CategoryComponentModel> categoryComponentModels;
   // Model for NoCategoriesYet component.
   late NoCategoriesYetModel noCategoriesYetModel;
+  // Models for MainBookComponent dynamic component.
+  late FlutterFlowDynamicModels<MainBookComponentModel> mainBookComponentModels;
 
   @override
   void initState(BuildContext context) {
@@ -31,6 +34,8 @@ class SubCategoriesScreenModel
     categoryComponentModels =
         FlutterFlowDynamicModels(() => CategoryComponentModel());
     noCategoriesYetModel = createModel(context, () => NoCategoriesYetModel());
+    mainBookComponentModels =
+        FlutterFlowDynamicModels(() => MainBookComponentModel());
   }
 
   @override
@@ -38,6 +43,7 @@ class SubCategoriesScreenModel
     customCenterAppbarModel.dispose();
     categoryComponentModels.dispose();
     noCategoriesYetModel.dispose();
+    mainBookComponentModels.dispose();
   }
 
   /// Additional helper methods.

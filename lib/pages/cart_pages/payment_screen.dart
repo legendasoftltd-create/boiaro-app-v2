@@ -291,7 +291,7 @@ void _showSuccessDialog(String message) {
           isSuccess: true,
           successButtonText: _postSuccessActionLabel,
           onOkPressed: () {
-            Navigator.of(context).pop(); // ✅ close manually
+            Navigator.of(context).pop(); // ✅ close dialog
             if (widget.isChapterUnlock) {
               Navigator.of(context).pop(true);
               return;
@@ -299,22 +299,26 @@ void _showSuccessDialog(String message) {
             context.read<CartProvider>().clear();
             final formats =
                 widget.purchasedFormats.map((e) => e.toLowerCase().trim()).toSet();
+            // Pop ALL MaterialPageRoute screens (PaymentWebView, MakeCheckOutScreen,
+            // CheckoutPage, etc.) back to GoRouter's root shell first.
+            Navigator.of(context).popUntil((route) => route.isFirst);
             if (formats.contains('hardcopy') ||
                 formats.contains('hard') ||
                 formats.contains('print')) {
-              context.goNamed(ProfilePageWidget.routeName);
               context.pushNamed(OrdersPageWidget.routeName);
               return;
             }
-            context.goNamed(ProfilePageWidget.routeName);
-            if (formats.contains('audiobook') || formats.contains('audio')) {
-              context.pushNamed(
-                PurchaseHistoryPageWidget.routeName,
-                queryParameters: {'tab': '1'},
-              );
-            } else {
-              context.pushNamed(PurchaseHistoryPageWidget.routeName);
-            }
+             if (formats.contains('audiobook') || formats.contains('audio')) {
+               context.pushNamed(
+                 PurchaseHistoryPageWidget.routeName,
+                 queryParameters: {'tab': '1', 'chip': '3'},
+               );
+             } else {
+               context.pushNamed(
+                 PurchaseHistoryPageWidget.routeName,
+                 queryParameters: {'tab': '0', 'chip': '3'},
+               );
+             }
           },
         ),
       );

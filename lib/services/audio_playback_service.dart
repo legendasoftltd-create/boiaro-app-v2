@@ -75,7 +75,7 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
 
   final AudioPlayer _ambientPlayer = AudioPlayer();
   bool ambientEnabled = false;
-  double ambientVolume = 0.3;
+  double ambientVolume = 0.1;
   int selectedAmbientIndex = 0;
 
   Map<String, dynamic>? currentAudiobook;

@@ -627,9 +627,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: PurchaseHistoryPageWidget.routePath,
           builder: (context, params) {
             final tab = params.getParam('tab', ParamType.int) ?? 0;
+            final chip = params.getParam('chip', ParamType.int) ?? 1;
             return NavBarPage(
               initialPage: 'LibraryPage',
-              page: PurchaseHistoryPageWidget(initialTabIndex: tab),
+              page: PurchaseHistoryPageWidget(
+                initialTabIndex: tab,
+                initialChipIndex: chip,
+              ),
             );
           },
         ),

@@ -684,7 +684,7 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            FFLocalizations.of(context).getVariableText(enText: 'Welcome to BoiAro', bnText: 'বইআড়ো-তে স্বাগতম'),
+                                            FFLocalizations.of(context).getVariableText(enText: 'Welcome to BoiAro', bnText: 'বই আরো-তে স্বাগতম'),
                                             style: FlutterFlowTheme.of(context).bodyMedium.override(
                                                   fontFamily: 'SF Pro Display',
                                                   fontWeight: FontWeight.bold,

@@ -1107,8 +1107,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
             return Column(
               mainAxisSize: MainAxisSize.max,
               children: [
-                if (!widget.embeddedAudiobookMode) ...[
-                  Padding(
+                const SizedBox(height: 24.0),
+                Padding(
                     padding:
                         EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 16.0),
                     child: Row(
@@ -1365,12 +1365,12 @@ class _HomePageWidgetState extends State<HomePageWidget>
                       ],
                     ),
                   ),
+                if (!widget.embeddedAudiobookMode)
                   Padding(
                     padding:
                         EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 12.0),
                     child: _buildFormatToggle(context),
                   ),
-                ],
                 Expanded(
                   child: FutureBuilder<ApiCallResponse>(
                     future:
@@ -1542,7 +1542,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     },
                   ),
                 ),
-              ].addToStart(SizedBox(height: 24.0)),
+              ],
             );
           } else {
             return Align(

@@ -60,7 +60,12 @@ class _LibraryItem {
 
 class PurchaseHistoryPageWidget extends StatefulWidget {
   final int initialTabIndex;
-  const PurchaseHistoryPageWidget({super.key, this.initialTabIndex = 0});
+  final int initialChipIndex;
+  const PurchaseHistoryPageWidget({
+    super.key,
+    this.initialTabIndex = 0,
+    this.initialChipIndex = 1,
+  });
 
   static String routeName = 'PurchaseHistoryPage';
   static String routePath = '/purchaseHistoryPage';
@@ -101,6 +106,7 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
   void initState() {
     super.initState();
     _selectedTabIndex = widget.initialTabIndex;
+    _selectedChipIndex = widget.initialChipIndex;
     _model = createModel(context, () => PurchaseHistoryPageModel());
     _tabController = TabController(
       length: 3,
@@ -640,10 +646,11 @@ class _PurchaseHistoryPageWidgetState extends State<PurchaseHistoryPageWidget>
                     child: Column(
                       children: [
                         Align(
-                          alignment: AlignmentDirectional.centerStart,
+                          alignment: AlignmentDirectional.center,
                           child: TabBar(
                             controller: _tabController,
                             isScrollable: true,
+                            tabAlignment: TabAlignment.center,
                             labelColor: FlutterFlowTheme.of(context).primary,
                             unselectedLabelColor:
                                 FlutterFlowTheme.of(context).secondaryText,

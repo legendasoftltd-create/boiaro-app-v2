@@ -223,6 +223,7 @@ class BoiaroLegacyAdapter {
       'description': b['description'],
       'is_free': b['is_free'],
       'total_listens': b['total_listens'],
+      'total_reads': b['total_reads'],
     };
   }
 
@@ -259,6 +260,7 @@ class BoiaroLegacyAdapter {
       'icon': c['icon'],
       'color': c['color'],
       'slug': c['slug'],
+      'priority': c['priority'],
     };
   }
 

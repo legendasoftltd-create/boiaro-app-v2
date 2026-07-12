@@ -17,7 +17,6 @@ class WalletPageWidget extends StatefulWidget {
 }
 
 class _WalletPageWidgetState extends State<WalletPageWidget> {
-  int _remainingAds = 0;
   int _coinsPerAd = 5;
 
   // Gamification tab and data state
@@ -49,26 +48,14 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
         token: FFAppState().token,
       );
       if (res.statusCode == 200 && res.jsonBody != null) {
-        final remaining = getJsonField(res.jsonBody, r'''$.remaining''') ?? getJsonField(res.jsonBody, r'''$.data.remaining''');
         final coinPerAd = getJsonField(res.jsonBody, r'''$.coin_per_ad''') ?? getJsonField(res.jsonBody, r'''$.data.coin_per_ad''');
         if (mounted) {
           setState(() {
-            if (remaining is num) _remainingAds = remaining.toInt();
             if (coinPerAd is num) _coinsPerAd = coinPerAd.toInt();
           });
         }
       }
     } catch (_) {}
-  }
-
-  Future<void> _claimDaily() async {
-    final res = await EbookGroup.walletClaimDailyApiCall.call(
-      token: FFAppState().token,
-    );
-    await actions.showCustomToastBottom(
-      EbookGroup.walletClaimDailyApiCall.message(res.jsonBody) ?? 'Done',
-    );
-    if (mounted) safeSetState(() {});
   }
 
   Future<void> _claimAd() async {
@@ -80,35 +67,6 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
       EbookGroup.walletClaimAdApiCall.message(res.jsonBody) ?? 'Done',
     );
     if (mounted) safeSetState(() {});
-  }
-
-  Future<void> _handleClaimDaily() async {
-    final canShow = await AdManager.canShowAd();
-    if (!canShow) {
-      await actions.showCustomToastBottom(
-          'Please wait 3 minutes between ads or daily limit of 20 ads reached.');
-      return;
-    }
-
-    if (!AdManager.isAdLoaded) {
-      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Loading Ad... Please wait a second.', bnText: 'বিজ্ঞাপন লোড হচ্ছে... অনুগ্রহ করে একটু অপেক্ষা করুন।'));
-      final loaded = await AdManager.ensureAdLoaded();
-      if (!loaded) {
-        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to load ad. Please try again.', bnText: 'বিজ্ঞাপন লোড করতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।'));
-        return;
-      }
-    }
-
-    AdManager.showRewardedAd(
-      context: context,
-      onRewardEarned: () async {
-        await _claimDaily();
-        await _loadAdStatus();
-      },
-      onAdFailed: () async {
-        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to show ad. Please try again.', bnText: 'বিজ্ঞাপন দেখাতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।'));
-      },
-    );
   }
 
   Future<void> _handleClaimAd() async {
@@ -1424,86 +1382,34 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       children: [
                                         _buildDailyCheckInCard(),
-                                        // Compact Action Row
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: InkWell(
-                                                onTap: _handleClaimDaily,
-                                                borderRadius: BorderRadius.circular(10),
-                                                child: Container(
-                                                  height: 44,
-                                                  decoration: BoxDecoration(
-                                                    color: FlutterFlowTheme.of(context).secondaryBackground,
-                                                    borderRadius: BorderRadius.circular(10),
-                                                    border: Border.all(
-                                                      color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
-                                                      width: 1,
-                                                    ),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    children: [
-                                                      Icon(Icons.task_alt, color: FlutterFlowTheme.of(context).primary, size: 16),
-                                                      const SizedBox(width: 6),
-                                                      Text(FFLocalizations.of(context).getVariableText(enText: 'Daily Reward', bnText: 'দৈনিক পুরস্কার'),
-                                                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                              fontFamily: 'SF Pro Display',
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
+                                        // Watch Ad Button (Full Width)
+                                        InkWell(
+                                          onTap: _handleClaimAd,
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: Container(
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: FlutterFlowTheme.of(context).secondaryBackground,
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(Icons.play_circle_fill_rounded, color: Colors.orangeAccent, size: 18),
+                                                const SizedBox(width: 6),
+                                                Text(FFLocalizations.of(context).getVariableText(enText: 'Watch Ad', bnText: 'বিজ্ঞাপন দেখুন') + ' (+$_coinsPerAd)',
+                                                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                        fontFamily: 'SF Pro Display',
+                                                        fontWeight: FontWeight.bold,
                                                       ),
-                                                    ],
-                                                  ),
                                                 ),
-                                              ),
+                                              ],
                                             ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  InkWell(
-                                                    onTap: _handleClaimAd,
-                                                    borderRadius: BorderRadius.circular(10),
-                                                    child: Container(
-                                                      height: 44,
-                                                      decoration: BoxDecoration(
-                                                        color: FlutterFlowTheme.of(context).secondaryBackground,
-                                                        borderRadius: BorderRadius.circular(10),
-                                                        border: Border.all(
-                                                          color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
-                                                          width: 1,
-                                                        ),
-                                                      ),
-                                                      child: Row(
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        children: [
-                                                          const Icon(Icons.play_circle_fill_rounded, color: Colors.orangeAccent, size: 18),
-                                                          const SizedBox(width: 6),
-                                                          Text(FFLocalizations.of(context).getVariableText(enText: 'Watch Ad', bnText: 'বিজ্ঞাপন দেখুন') + ' (+$_coinsPerAd)',
-                                                            style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                                                  fontFamily: 'SF Pro Display',
-                                                                  fontWeight: FontWeight.bold,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  if (FFAppState().isLogin) ...[
-                                                    const SizedBox(height: 4),
-                                                    Text('$_remainingAds ' + FFLocalizations.of(context).getVariableText(enText: 'left today', bnText: 'আজ বাকি আছে'),
-                                                      style: FlutterFlowTheme.of(context).bodySmall.override(
-                                                            fontFamily: 'SF Pro Display',
-                                                            color: FlutterFlowTheme.of(context).secondaryText,
-                                                            fontSize: 11,
-                                                          ),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                            ),
-                                          ],
+                                          ),
                                         ),
                                         const SizedBox(height: 12),
                                         const custom_widgets.AdBannerWidget(

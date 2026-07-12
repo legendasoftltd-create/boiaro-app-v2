@@ -1,9 +1,11 @@
+import 'package:a_i_ebook_app/index.dart';
 import 'package:a_i_ebook_app/pages/cart_pages/make_payment.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/internationalization.dart';
@@ -56,6 +58,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   Map<String, dynamic>? _selectedArea;
   bool _isLoadingAreas = false;
   String _areaSearchQuery = '';
+  bool _isPlacingCodOrder = false;
 
   @override
   void initState() {
@@ -1398,25 +1401,17 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                 ],
               ),
               child: ElevatedButton(
-                onPressed: () async {
+                onPressed: _isPlacingCodOrder
+                    ? null
+                    : () async {
                   final shippingAddress =
                       hasHardcopy ? _shippingAddressForOrder() : null;
-                  // if (selectedPaymentMethod == 'wallet' && hasHardcopy) {
-                  //   ScaffoldMessenger.of(context).showSnackBar(
-                  //     const SnackBar(
-                  //       content: Text(
-                  //         'Wallet coins are supported for ebook/audiobook only.',
-                  //       ),
-                  //       backgroundColor: Colors.red,
-                  //     ),
-                  //   );
-                  //   return;
-                  // }
                   if (hasHardcopy && shippingAddress == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(FFLocalizations.of(context).getVariableText(enText: 'Please provide complete shipping details for hardcopy orders.', bnText: 'প্রিন্ট কপির জন্য অনুগ্রহ করে সম্পূর্ণ শিপিং ঠিকানা প্রদান করুন।'),
-                        ),
+                        content: Text(FFLocalizations.of(context).getVariableText(
+                            enText: 'Please provide complete shipping details for hardcopy orders.',
+                            bnText: 'প্রিন্ট কপির জন্য অনুগ্রহ করে সম্পূর্ণ শিপিং ঠিকানা প্রদান করুন।')),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -1425,10 +1420,149 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                   if (hasHardcopy &&
                       (_selectedShippingMethodId == null ||
                           _selectedShippingMethodId!.trim().isEmpty)) {
-                    setState(() {
-                      _selectedShippingMethodId = 'standard';
-                    });
+                    setState(() => _selectedShippingMethodId = 'standard');
                   }
+
+                  // ─── COD: handle directly on this screen ───────────────
+                  if (selectedPaymentMethod == 'cod') {
+                    setState(() => _isPlacingCodOrder = true);
+                    try {
+                      final prefs = await SharedPreferences.getInstance();
+                      final lang = prefs.getString('ff_language') ?? 'en';
+                      final controller = CheckoutController(
+                        jwtToken: FFAppState().token,
+                        userId: FFAppState().userId,
+                        isBangla: lang == 'bn',
+                      );
+                      final response = await controller.initiatePayment(
+                        cart.items.values.toList(),
+                        couponCode: _appliedCouponCode,
+                        couponDiscount: _discountAmount,
+                        appliedCouponId: _appliedCouponId,
+                        shippingMethodId: _selectedShippingMethodId,
+                        shippingMethodName: _selectedShippingMethodName,
+                        shippingCarrier: _selectedShippingCarrier,
+                        shippingCost: _shippingCost,
+                        estimatedDeliveryDays: _estimatedDeliveryDays,
+                        shippingAddress: shippingAddress,
+                        paymentMethod: 'cod',
+                      );
+                      if (!mounted) return;
+                      setState(() => _isPlacingCodOrder = false);
+
+                      if (response['success'] == 1) {
+                        cart.clear();
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (dialogContext) => PopScope(
+                            canPop: false,
+                            child: AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 72,
+                                    height: 72,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.check_circle_rounded,
+                                      color: Colors.green,
+                                      size: 48,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    FFLocalizations.of(context).getVariableText(
+                                        enText: 'Order Placed!',
+                                        bnText: 'অর্ডার সম্পন্ন হয়েছে!'),
+                                    style: FlutterFlowTheme.of(context)
+                                        .headlineSmall
+                                        .override(
+                                          fontFamily: 'SF Pro Display',
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    response['message']?.toString() ??
+                                        FFLocalizations.of(context).getVariableText(
+                                            enText: 'Your order has been placed successfully.',
+                                            bnText: 'আপনার অর্ডার সফলভাবে দেওয়া হয়েছে।'),
+                                    textAlign: TextAlign.center,
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodyMedium
+                                        .override(
+                                          fontFamily: 'SF Pro Display',
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryText,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.of(dialogContext).pop();
+                                      context.pushNamed(
+                                          OrdersPageWidget.routeName);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          FlutterFlowTheme.of(context).primary,
+                                      minimumSize:
+                                          const Size(double.infinity, 48),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    child: Text(
+                                      FFLocalizations.of(context).getVariableText(
+                                          enText: 'View My Orders',
+                                          bnText: 'আমার অর্ডার দেখুন'),
+                                      style: const TextStyle(
+                                        fontFamily: 'SF Pro Display',
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(response['message']?.toString() ??
+                                FFLocalizations.of(context).getVariableText(
+                                    enText: 'Order failed. Please try again.',
+                                    bnText: 'অর্ডার ব্যর্থ হয়েছে। আবার চেষ্টা করুন।')),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        setState(() => _isPlacingCodOrder = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(e.toString()),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                    return; // COD handled — stop here
+                  }
+
+                  // ─── Online / Wallet: go to MakeCheckOutScreen ─────────
                   final paid = await Navigator.of(context).push<bool>(
                     MaterialPageRoute(
                       builder: (context) => MakeCheckOutScreen(
@@ -1542,15 +1676,29 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                   ),
                   elevation: 2.0,
                 ),
-                child: Row(
+                child: _isPlacingCodOrder
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon( Icons.credit_card,
+                    Icon( selectedPaymentMethod == 'cod'
+                            ? Icons.local_shipping_rounded
+                            : Icons.credit_card,
                       color: Colors.white,
                       size: 25.0,
                     ),
                     SizedBox(width: 12.0),
-                    Text('${FFLocalizations.of(context).getVariableText(enText: 'Pay', bnText: 'পরিশোধ করুন')} ৳${finalTotal.toStringAsFixed(2)}',
+                    Text(
+                      selectedPaymentMethod == 'cod'
+                          ? '${FFLocalizations.of(context).getVariableText(enText: 'Place Order', bnText: 'অর্ডার দিন')} ৳${finalTotal.toStringAsFixed(2)}'
+                          : '${FFLocalizations.of(context).getVariableText(enText: 'Pay', bnText: 'পরিশোধ করুন')} ৳${finalTotal.toStringAsFixed(2)}',
                       style: FlutterFlowTheme.of(context).titleMedium.override(
                         fontFamily: 'SF Pro Display',
                         color: Colors.white,

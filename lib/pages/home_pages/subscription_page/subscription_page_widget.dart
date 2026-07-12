@@ -3,6 +3,7 @@ import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/flutter_flow/internationalization.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/dialogs/verifiy_email_dialog/verifiy_email_dialog_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
@@ -698,6 +699,33 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                       ),
                     ),
               ],
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _handleCancelSubscription(context),
+                  icon: const Icon(Icons.cancel_outlined, color: Colors.white, size: 16),
+                  label: Text(
+                    FFLocalizations.of(context).getVariableText(
+                      enText: 'Cancel Subscription',
+                      bnText: 'সাবস্ক্রিপশন বাতিল করুন',
+                    ),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    backgroundColor: Colors.white.withValues(alpha: 0.12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1009,5 +1037,100 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
         ),
       ),
     );
+  }
+
+  Future<void> _handleCancelSubscription(BuildContext context) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          FFLocalizations.of(context).getVariableText(
+            enText: 'Cancel Subscription?',
+            bnText: 'সাবস্ক্রিপশন বাতিল করবেন?',
+          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          FFLocalizations.of(context).getVariableText(
+            enText: 'Are you sure you want to cancel your current subscription? You will still retain access until the end of your billing cycle.',
+            bnText: 'আপনি কি নিশ্চিত যে আপনার বর্তমান সাবস্ক্রিপশন বাতিল করতে চান? আপনার বিলিং চক্রের শেষ পর্যন্ত অ্যাক্সেস বজায় থাকবে।',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              FFLocalizations.of(context).getVariableText(
+                enText: 'No',
+                bnText: 'না',
+              ),
+              style: TextStyle(color: FlutterFlowTheme.of(context).secondaryText),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: FlutterFlowTheme.of(context).primary,
+            ),
+            child: Text(
+              FFLocalizations.of(context).getVariableText(
+                enText: 'Yes, Cancel',
+                bnText: 'হ্যাঁ, বাতিল করুন',
+              ),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final res = await EbookGroup.cancelSubscriptionApiCall.call(
+        token: FFAppState().token,
+      );
+
+      // Pop progress dialog
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
+      if (res.succeeded) {
+        final msg = EbookGroup.cancelSubscriptionApiCall.message(res.jsonBody) ?? 
+            FFLocalizations.of(context).getVariableText(
+              enText: 'Subscription cancelled successfully.',
+              bnText: 'সাবস্ক্রিপশন সফলভাবে বাতিল করা হয়েছে।',
+            );
+        await actions.showCustomToastBottom(msg);
+        safeSetState(() {});
+      } else {
+        final err = getJsonField(res.jsonBody, r'''$.error''')?.toString() ?? 
+            FFLocalizations.of(context).getVariableText(
+              enText: 'Failed to cancel subscription.',
+              bnText: 'সাবস্ক্রিপশন বাতিল করতে ব্যর্থ হয়েছে।',
+            );
+        await actions.showCustomToastBottom(err);
+      }
+    } catch (e) {
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      await actions.showCustomToastBottom(
+        FFLocalizations.of(context).getVariableText(
+          enText: 'An error occurred. Please try again.',
+          bnText: 'একটি সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।',
+        ),
+      );
+    }
   }
 }
