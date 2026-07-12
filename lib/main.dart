@@ -300,94 +300,104 @@ class _NavBarPageState extends State<NavBarPage> {
     };
     final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
 
-    return Scaffold(
-      resizeToAvoidBottomInset: !widget.disableResizeToAvoidBottomInset,
-      body: _currentPage ?? tabs[_currentPageName],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (i) => safeSetState(() {
+    return PopScope(
+      canPop: _currentPageName == 'HomePage',
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        safeSetState(() {
           _currentPage = null;
-          _currentPageName = tabs.keys.toList()[i];
-        }),
-        backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-        selectedItemColor: FlutterFlowTheme.of(context).primary,
-        unselectedItemColor: FlutterFlowTheme.of(context).secondaryText,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: TextStyle(
-          fontFamily: 'Poppins',
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-        unselectedLabelStyle: TextStyle(
-          fontFamily: 'Poppins',
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
+          _currentPageName = 'HomePage';
+        });
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: !widget.disableResizeToAvoidBottomInset,
+        body: _currentPage ?? tabs[_currentPageName],
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: currentIndex,
+          onTap: (i) => safeSetState(() {
+            _currentPage = null;
+            _currentPageName = tabs.keys.toList()[i];
+          }),
+          backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+          selectedItemColor: FlutterFlowTheme.of(context).primary,
+          unselectedItemColor: FlutterFlowTheme.of(context).secondaryText,
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed,
+          selectedLabelStyle: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+          unselectedLabelStyle: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
 
-        items: <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(
-              FFIcons.kgroup26086143,
-              size: 24.0,
+          items: <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(
+                FFIcons.kgroup26086143,
+                size: 24.0,
+              ),
+              activeIcon: Icon(
+                FFIcons.kicon7,
+                size: 24.0,
+              ),
+              label: FFLocalizations.of(context).getVariableText(enText: 'Home', bnText: 'হোম'),
+              tooltip: '',
             ),
-            activeIcon: Icon(
-              FFIcons.kicon7,
-              size: 24.0,
+            BottomNavigationBarItem(
+              icon: Icon(
+                FFIcons.kgroup260861433,
+                size: 24.0,
+              ),
+              activeIcon: Icon(
+                FFIcons.kicon5,
+                size: 24.0,
+              ),
+              label: FFLocalizations.of(context).getVariableText(enText: 'Categories', bnText: 'ক্যাটাগরি'),
+              tooltip: '',
             ),
-            label: FFLocalizations.of(context).getVariableText(enText: 'Home', bnText: 'হোম'),
-            tooltip: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              FFIcons.kgroup260861433,
-              size: 24.0,
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.headphones_outlined,
+                size: 24.0,
+              ),
+              activeIcon: Icon(
+                Icons.headphones_rounded,
+                size: 24.0,
+              ),
+              label: FFLocalizations.of(context).getVariableText(enText: 'Audiobooks', bnText: 'অডিওবুক'),
+              tooltip: '',
             ),
-            activeIcon: Icon(
-              FFIcons.kicon5,
-              size: 24.0,
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.local_library_outlined,
+                size: 24.0,
+              ),
+              activeIcon: Icon(
+                Icons.local_library_rounded,
+                size: 24.0,
+              ),
+              label: FFLocalizations.of(context).getVariableText(enText: 'Library', bnText: 'লাইব্রেরি'),
+              tooltip: '',
             ),
-            label: FFLocalizations.of(context).getVariableText(enText: 'Categories', bnText: 'ক্যাটাগরি'),
-            tooltip: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.headphones_outlined,
-              size: 24.0,
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.menu_rounded,
+                size: 24.0,
+              ),
+              activeIcon: Icon(
+                Icons.menu_open_rounded,
+                size: 24.0,
+              ),
+              label: FFLocalizations.of(context).getVariableText(enText: 'More', bnText: 'আরো'),
+              tooltip: '',
             ),
-            activeIcon: Icon(
-              Icons.headphones_rounded,
-              size: 24.0,
-            ),
-            label: FFLocalizations.of(context).getVariableText(enText: 'Audiobooks', bnText: 'অডিওবুক'),
-            tooltip: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.local_library_outlined,
-              size: 24.0,
-            ),
-            activeIcon: Icon(
-              Icons.local_library_rounded,
-              size: 24.0,
-            ),
-            label: FFLocalizations.of(context).getVariableText(enText: 'Library', bnText: 'লাইব্রেরি'),
-            tooltip: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.menu_rounded,
-              size: 24.0,
-            ),
-            activeIcon: Icon(
-              Icons.menu_open_rounded,
-              size: 24.0,
-            ),
-            label: FFLocalizations.of(context).getVariableText(enText: 'More', bnText: 'আরো'),
-            tooltip: '',
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
