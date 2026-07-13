@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:a_i_ebook_app/backend/api_requests/api_calls.dart';
-import 'package:a_i_ebook_app/app_state.dart';
+import 'package:a_i_ebook_app/services/audio_playback_service.dart';
+import 'package:a_i_ebook_app/services/progress_sync_service.dart';
+import 'package:a_i_ebook_app/flutter_flow/flutter_flow_util.dart';
 
 enum PresenceActivity {
   browsing,
@@ -82,10 +85,60 @@ class PresenceTrackingService {
   }
 
   Future<void> _sendHeartbeat() async {
-    final activityType = _currentActivity.name;
+    String activityType = _currentActivity.name;
+    String? currentBookId = _bookId;
+    String? currentProgress = _currentPage;
     final token = FFAppState().token.trim();
 
-    _notifyDebug('PRESENCE HEARTBEAT SEND: type=$activityType, session=$_sessionId, bookId=$_bookId, currentPage=$_currentPage');
+    // Check if background audio is playing
+    bool isAudioPlaying = false;
+    PlaybackState? audioState;
+    final handler = AudioPlaybackService.activeHandler;
+    try {
+      if (handler != null && handler.playbackState.hasValue) {
+        audioState = handler.playbackState.value;
+        isAudioPlaying = audioState.playing == true;
+      }
+    } catch (_) {}
+
+    if (isAudioPlaying && handler != null) {
+      final book = handler.currentAudiobook;
+      if (book != null) {
+        final bId = (book['id'] ??
+                book['_id'] ??
+                getJsonField(book, r'''$._id''') ??
+                '')
+            .toString()
+            .trim();
+        if (bId.isNotEmpty) {
+          activityType = PresenceActivity.listening.name;
+          currentBookId = bId;
+          currentProgress = _formatDurationPresence(audioState?.updatePosition ?? Duration.zero);
+
+          // Sync progress of background audio play session to backend
+          final chapter = handler.currentChapter;
+          final trackNum = chapter?['track_number'] ?? 1;
+          final parsedTrackNum = int.tryParse(trackNum.toString()) ?? 1;
+          final posSec = audioState?.updatePosition.inSeconds ?? 0;
+          final totalSec = handler.mediaItem.value?.duration?.inSeconds ?? 0;
+
+          if (posSec >= 0 && totalSec > 0) {
+            ProgressSyncService.saveListeningProgress(
+              bookId: bId,
+              trackNumber: parsedTrackNum,
+              positionSeconds: posSec,
+              totalSeconds: totalSec,
+            ).then((success) {
+              _notifyDebug('BACKGROUND PROGRESS SYNC SUCCESS: $success');
+            }).catchError((err) {
+              _notifyDebug('BACKGROUND PROGRESS SYNC ERROR: $err');
+            });
+          }
+        }
+      }
+    }
+
+    _notifyDebug('PRESENCE HEARTBEAT SEND: type=$activityType, session=$_sessionId, bookId=$currentBookId, currentPage=$currentProgress');
 
     if (token.isEmpty) {
       _streakUpdated = false;
@@ -100,12 +153,11 @@ class PresenceTrackingService {
         });
       }
 
-      if (_bookId != null && _bookId!.isNotEmpty) {
-        if (_currentActivity == PresenceActivity.reading ||
-            _currentActivity == PresenceActivity.listening) {
-          final format = _currentActivity == PresenceActivity.listening ? 'audiobook' : 'ebook';
+      if (currentBookId != null && currentBookId.isNotEmpty) {
+        if (activityType == 'reading' || activityType == 'listening') {
+          final format = activityType == 'listening' ? 'audiobook' : 'ebook';
           EbookGroup.logConsumptionTimeCall.call(
-            bookId: _bookId,
+            bookId: currentBookId,
             format: format,
             seconds: 30,
             token: token,
@@ -122,14 +174,22 @@ class PresenceTrackingService {
       final res = await EbookGroup.presenceHeartbeatApiCall.call(
         activityType: activityType,
         sessionId: _sessionId,
-        bookId: _bookId,
-        currentPage: _currentPage,
+        bookId: currentBookId,
+        currentPage: currentProgress,
         token: token,
       );
       _notifyDebug('PRESENCE HEARTBEAT SUCCESS: status=${res.statusCode}, succeeded=${res.succeeded}');
     } catch (e) {
       _notifyDebug('PRESENCE HEARTBEAT ERROR: $e');
     }
+  }
+
+  String _formatDurationPresence(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   void dispose() {

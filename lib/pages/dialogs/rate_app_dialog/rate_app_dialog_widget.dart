@@ -35,7 +35,7 @@ class _RateAppDialogWidgetState extends State<RateAppDialogWidget> {
       // High rating -> Launch Play Store URL
       Navigator.of(context).pop();
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('boiaro_has_rated_app', true);
+      await prefs.setInt('boiaro_last_rate_submitted_time_ms', DateTime.now().millisecondsSinceEpoch);
       await launchURL('https://play.google.com/store/apps/details?id=com.boiaro.app');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -54,7 +54,7 @@ class _RateAppDialogWidgetState extends State<RateAppDialogWidget> {
   void _submitFeedback() async {
     Navigator.of(context).pop();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('boiaro_has_rated_app', true);
+    await prefs.setInt('boiaro_last_rate_submitted_time_ms', DateTime.now().millisecondsSinceEpoch);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('আপনার ফিডব্যাকের জন্য ধন্যবাদ! আমরা অ্যাপটি আরও উন্নত করব।'),

@@ -18,6 +18,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
+import '/pages/dialogs/rate_app_dialog/rate_app_dialog_widget.dart';
 import 'read_book_custom_page_model.dart';
 import 'ios_epub_reader_screen.dart';
 export 'read_book_custom_page_model.dart';
@@ -67,6 +69,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   String? _openedEpubSource;
   bool _previewLimitShown = false;
   int _initialPdfPage = 1;
+  int _entryTimeMs = 0;
 
   bool get _isEpub => (widget.pdf ?? '').toLowerCase().trim().contains('.epub');
 
@@ -83,6 +86,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   @override
   void initState() {
     super.initState();
+    _entryTimeMs = DateTime.now().millisecondsSinceEpoch;
     print('DEBUG_INIT: widget.pdf = ${widget.pdf}');
     print('DEBUG_INIT: _isEpub = $_isEpub');
     WidgetsBinding.instance.addObserver(this);
@@ -165,7 +169,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     await ReadingReportService.instance.endSession();
     _showDebugSnack('READING NATIVE EPUB END (on resume)');
     if (mounted) {
-      Navigator.of(context).maybePop();
+      await _handleBackPress();
     }
   }
 
@@ -437,6 +441,34 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     );
   }
 
+  Future<void> _handleBackPress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final int lastSubmittedMs = prefs.getInt('boiaro_last_rate_submitted_time_ms') ?? 0;
+    final int lastDismissedMs = prefs.getInt('boiaro_last_rate_dismissed_time_ms') ?? 0;
+    final int currentMs = DateTime.now().millisecondsSinceEpoch;
+
+    final int submitCooldownMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+    final int dismissCooldownMs = 2 * 24 * 60 * 60 * 1000; // 2 days
+    
+    final int durationSeconds = (DateTime.now().millisecondsSinceEpoch - _entryTimeMs) ~/ 1000;
+    final bool readEnough = durationSeconds >= 120; // 2 minutes
+
+    if ((currentMs - lastSubmittedMs >= submitCooldownMs) &&
+        (currentMs - lastDismissedMs >= dismissCooldownMs) &&
+        readEnough) {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const RateAppDialogWidget(),
+        );
+      }
+    }
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   Future<void> _openIosEpub({double? initialProgress}) async {
     print('EPUB_DEBUG: _openIosEpub started');
     final sourcePath = _resolveBookPath(widget.pdf ?? '');
@@ -477,7 +509,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       
       if (mounted) {
         setState(() => _isOpeningEpub = false);
-        Navigator.of(context).maybePop();
+        await _handleBackPress();
       }
     } catch (e) {
       print('EPUB_DEBUG: Error opening iOS EPUB: $e');
@@ -641,12 +673,18 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        FocusManager.instance.primaryFocus?.unfocus();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBackPress();
       },
-      child: Scaffold(
+      child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          FocusManager.instance.primaryFocus?.unfocus();
+        },
+        child: Scaffold(
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         body: SafeArea(
@@ -710,6 +748,6 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
           ),
         ),
       ),
-    );
+    ),);
   }
 }

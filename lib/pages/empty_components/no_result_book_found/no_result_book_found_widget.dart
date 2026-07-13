@@ -73,17 +73,17 @@ class _NoResultBookFoundWidgetState extends State<NoResultBookFoundWidget> {
                     ),
               ),
             ),
-            Text(
-              'Congratulations, your account is already registered in this application',
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              style: FlutterFlowTheme.of(context).bodyMedium.override(
-                    fontFamily: 'SF Pro Display',
-                    fontSize: 17.0,
-                    letterSpacing: 0.0,
-                    lineHeight: 1.5,
-                  ),
-            ),
+            // Text(
+            //   'Congratulations, your account is already registered in this application',
+            //   textAlign: TextAlign.center,
+            //   maxLines: 2,
+            //   style: FlutterFlowTheme.of(context).bodyMedium.override(
+            //         fontFamily: 'SF Pro Display',
+            //         fontSize: 17.0,
+            //         letterSpacing: 0.0,
+            //         lineHeight: 1.5,
+            //       ),
+            // ),
           ],
         ),
       ),

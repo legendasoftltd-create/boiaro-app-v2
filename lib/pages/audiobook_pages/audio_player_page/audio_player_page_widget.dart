@@ -157,13 +157,17 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
 
   Future<void> _maybeShowRateDialog() async {
     final prefs = await SharedPreferences.getInstance();
-    final bool hasRated = prefs.getBool('boiaro_has_rated_app') ?? false;
-    if (hasRated) return;
-
+    final int lastSubmittedMs = prefs.getInt('boiaro_last_rate_submitted_time_ms') ?? 0;
     final int lastDismissedMs = prefs.getInt('boiaro_last_rate_dismissed_time_ms') ?? 0;
     final int currentMs = DateTime.now().millisecondsSinceEpoch;
-    final int cooldownMs = 30 * 24 * 60 * 60 * 1000; // 30 days
-    if (currentMs - lastDismissedMs < cooldownMs) {
+
+    final int submitCooldownMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+    final int dismissCooldownMs = 2 * 24 * 60 * 60 * 1000; // 2 days
+
+    if (currentMs - lastSubmittedMs < submitCooldownMs) {
+      return;
+    }
+    if (currentMs - lastDismissedMs < dismissCooldownMs) {
       return;
     }
 
@@ -172,6 +176,32 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
         context: context,
         builder: (context) => const RateAppDialogWidget(),
       );
+    }
+  }
+
+  Future<void> _handleBackPress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final int lastSubmittedMs = prefs.getInt('boiaro_last_rate_submitted_time_ms') ?? 0;
+    final int lastDismissedMs = prefs.getInt('boiaro_last_rate_dismissed_time_ms') ?? 0;
+    final int currentMs = DateTime.now().millisecondsSinceEpoch;
+
+    final int submitCooldownMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+    final int dismissCooldownMs = 2 * 24 * 60 * 60 * 1000; // 2 days
+    final bool playedEnough = _position.inSeconds >= 45;
+
+    if ((currentMs - lastSubmittedMs >= submitCooldownMs) &&
+        (currentMs - lastDismissedMs >= dismissCooldownMs) &&
+        playedEnough) {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const RateAppDialogWidget(),
+        );
+      }
+    }
+    if (mounted) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -359,6 +389,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _model.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
+
     PresenceTrackingService.instance.updateActivity(PresenceActivity.browsing);
     super.dispose();
   }
@@ -453,9 +484,36 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       if (_videoController != null) {
         await _videoController!.pause();
       }
+
+      Duration? initialPosition;
+      final remote = _remoteListeningProgress;
+      final currentTrack =
+          int.tryParse((_currentChapter?['track_number'] ?? '').toString()) ??
+              (_currentIndex + 1);
+
+      if (remote != null && remote.hasProgress) {
+        if (remote.currentTrack == currentTrack && remote.positionSeconds > 0) {
+          initialPosition = Duration(seconds: remote.positionSeconds);
+        }
+      } else {
+        final isSameBook = widget.audiobook['id']?.toString() ==
+                FFAppState().homePageLastAudioBookId ||
+            widget.audiobook['_id']?.toString() ==
+                FFAppState().homePageLastAudioBookId;
+        if (isSameBook) {
+          final savedSec = FFAppState().homePageLastAudioPositionSec;
+          final lastTrack =
+              FFAppState().prefs.getInt('ff_homePageLastAudioTrackNumber') ?? 1;
+          if (currentTrack == lastTrack && savedSec > 0) {
+            initialPosition = Duration(seconds: savedSec);
+          }
+        }
+      }
+
       await handler.playChapter(
         audiobook: widget.audiobook,
         chapter: _currentChapter ?? widget.chapter,
+        initialPosition: initialPosition,
       );
       await _restoreSavedAudioPosition(handler);
     }
@@ -630,7 +688,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     }
     final currentSeconds = position.inSeconds;
     if (_lastPersistedSecond >= 0 &&
-        (currentSeconds - _lastPersistedSecond).abs() < 5) {
+        (currentSeconds - _lastPersistedSecond).abs() < 60) {
       return;
     }
     _lastPersistedSecond = currentSeconds;
@@ -644,21 +702,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     FFAppState()
         .prefs
         .setInt('ff_homePageLastAudioTrackNumber', parsedTrackNum);
-    if (bookId.isNotEmpty) {
-      unawaited(ProgressSyncService.saveListeningProgress(
-        bookId: bookId,
-        trackNumber: parsedTrackNum,
-        positionSeconds: currentSeconds,
-        totalSeconds: totalSeconds,
-      ));
-      if (_isPlaying) {
-        PresenceTrackingService.instance.updateActivity(
-          PresenceActivity.listening,
-          bookId: bookId,
-          currentPage: _formatDurationPresence(position),
-        );
-      }
-    }
+
   }
 
   String _formatDurationPresence(Duration duration) {
@@ -2318,22 +2362,28 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     final coverImage = _resolveBookImage(widget.audiobook['image']?.toString());
     final effectiveDuration = _effectiveDuration();
 
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        FocusManager.instance.primaryFocus?.unfocus();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBackPress();
       },
-      child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          automaticallyImplyLeading: false,
-          leading: IconButton(
-            icon: Icon(Icons.keyboard_arrow_down_rounded,
-                color: FlutterFlowTheme.of(context).primaryText, size: 30),
-            onPressed: () => context.safePop(),
-          ),
+      child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          FocusManager.instance.primaryFocus?.unfocus();
+        },
+        child: Scaffold(
+          key: scaffoldKey,
+          backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: Icon(Icons.keyboard_arrow_down_rounded,
+                  color: FlutterFlowTheme.of(context).primaryText, size: 30),
+              onPressed: () => _handleBackPress(),
+            ),
           title: Text(FFLocalizations.of(context).getVariableText(enText: 'Now Playing', bnText: 'বর্তমানে চলছে'),
             style: FlutterFlowTheme.of(context).headlineSmall.override(
                   fontFamily: 'SF Pro Display',
@@ -2951,7 +3001,7 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
           ),
         ),
       ),
-    );
+    ),);
   }
 
   Widget _buildBottomAction(

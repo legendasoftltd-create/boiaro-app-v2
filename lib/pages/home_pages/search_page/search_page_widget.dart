@@ -353,141 +353,142 @@ class _SearchPageWidgetState extends State<SearchPageWidget> {
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Filters Section
-              Container(
-                padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 4.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Format selector
-                    Row(
-                      children: [
-                        Text(
-                          FFLocalizations.of(context).getVariableText(enText: 'Format:', bnText: 'ফরম্যাট:'),
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                fontFamily: 'SF Pro Display',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                _buildFormatChip(null, 'All'),
-                                const SizedBox(width: 6),
-                                _buildFormatChip('ebook', 'Ebook'),
-                                const SizedBox(width: 6),
-                                _buildFormatChip('audiobook', 'Audiobook'),
-                                const SizedBox(width: 6),
-                                _buildFormatChip('hardcopy', 'Hardcopy'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    // Sort Selector
-                    Row(
-                      children: [
-                        Text(
-                          FFLocalizations.of(context).getVariableText(enText: 'Sort:', bnText: 'সাজান:'),
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                fontFamily: 'SF Pro Display',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                _buildSortChip('newest', 'Newest'),
-                                const SizedBox(width: 6),
-                                _buildSortChip('popular', 'Popular'),
-                                const SizedBox(width: 6),
-                                _buildSortChip('price_asc', 'Price: Low-High'),
-                                const SizedBox(width: 6),
-                                _buildSortChip('price_desc', 'Price: High-Low'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    // Category & Page Size Row
-                    Row(
-                      children: [
-                        // Category Dropdown
-                        Expanded(
-                          child: Container(
-                            height: 38,
-                            padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context).secondaryBackground,
-                              borderRadius: BorderRadius.circular(8.0),
-                              border: Border.all(
-                                color: FlutterFlowTheme.of(context).alternate,
-                              ),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String?>(
-                                value: _selectedCategoryId,
-                                hint: Text(
-                                  FFLocalizations.of(context).getVariableText(enText: 'All Categories', bnText: 'সব ক্যাটাগরি'),
-                                  style: FlutterFlowTheme.of(context).bodySmall.override(
-                                        fontFamily: 'SF Pro Display',
-                                        color: FlutterFlowTheme.of(context).secondaryText,
-                                      ),
-                                ),
-                                isExpanded: true,
-                                icon: Icon(
-                                  Icons.arrow_drop_down_rounded,
-                                  color: FlutterFlowTheme.of(context).secondaryText,
-                                  size: 20,
-                                ),
-                                items: [
-                                  DropdownMenuItem<String?>(
-                                    value: null,
-                                    child: Text(
-                                      FFLocalizations.of(context).getVariableText(enText: 'All Categories', bnText: 'সব ক্যাটাগরি'),
-                                      style: FlutterFlowTheme.of(context).bodySmall,
-                                    ),
-                                  ),
-                                  ..._categoriesList.map((cat) {
-                                    final id = getJsonField(cat, r'''$._id''')?.toString();
-                                    final name = getJsonField(cat, r'''$.name''')?.toString() ?? 'Category';
-                                    return DropdownMenuItem<String?>(
-                                      value: id,
-                                      child: Text(
-                                        name,
-                                        style: FlutterFlowTheme.of(context).bodySmall,
-                                      ),
-                                    );
-                                  }).toList(),
-                                ],
-                                onChanged: (val) {
-                                  setState(() {
-                                    _selectedCategoryId = val;
-                                    _model.apiRequestCompleter2 = null;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              // // Filters Section
+              // Container(
+              //   padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 4.0),
+              //   child: Column(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     mainAxisSize: MainAxisSize.min,
+              //     children: [
+              //       // Format selector
+              //       Row(
+              //         children: [
+              //           Text(
+              //             FFLocalizations.of(context).getVariableText(enText: 'Format:', bnText: 'ফরম্যাট:'),
+              //             style: FlutterFlowTheme.of(context).bodyMedium.override(
+              //                   fontFamily: 'SF Pro Display',
+              //                   fontWeight: FontWeight.bold,
+              //                   fontSize: 13,
+              //                 ),
+              //           ),
+              //           const SizedBox(width: 8),
+              //           Expanded(
+              //             child: SingleChildScrollView(
+              //               scrollDirection: Axis.horizontal,
+              //               child: Row(
+              //                 children: [
+              //                   _buildFormatChip(null, 'All'),
+              //                   const SizedBox(width: 6),
+              //                   _buildFormatChip('ebook', 'Ebook'),
+              //                   const SizedBox(width: 6),
+              //                   _buildFormatChip('audiobook', 'Audiobook'),
+              //                   const SizedBox(width: 6),
+              //                   _buildFormatChip('hardcopy', 'Hardcopy'),
+              //                 ],
+              //               ),
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //       const SizedBox(height: 8),
+              //       // Sort Selector
+              //       Row(
+              //         children: [
+              //           Text(
+              //             FFLocalizations.of(context).getVariableText(enText: 'Sort:', bnText: 'সাজান:'),
+              //             style: FlutterFlowTheme.of(context).bodyMedium.override(
+              //                   fontFamily: 'SF Pro Display',
+              //                   fontWeight: FontWeight.bold,
+              //                   fontSize: 13,
+              //                 ),
+              //           ),
+              //           const SizedBox(width: 8),
+              //           Expanded(
+              //             child: SingleChildScrollView(
+              //               scrollDirection: Axis.horizontal,
+              //               child: Row(
+              //                 children: [
+              //                   _buildSortChip('newest', 'Newest'),
+              //                   const SizedBox(width: 6),
+              //                   _buildSortChip('popular', 'Popular'),
+              //                   const SizedBox(width: 6),
+              //                   _buildSortChip('price_asc', 'Price: Low-High'),
+              //                   const SizedBox(width: 6),
+              //                   _buildSortChip('price_desc', 'Price: High-Low'),
+              //                 ],
+              //               ),
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //       const SizedBox(height: 8),
+              //       // Category & Page Size Row
+              //       Row(
+              //         children: [
+              //           // Category Dropdown
+              //           Expanded(
+              //             child: Container(
+              //               height: 38,
+              //               padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              //               decoration: BoxDecoration(
+              //                 color: FlutterFlowTheme.of(context).secondaryBackground,
+              //                 borderRadius: BorderRadius.circular(8.0),
+              //                 border: Border.all(
+              //                   color: FlutterFlowTheme.of(context).alternate,
+              //                 ),
+              //               ),
+              //               child: DropdownButtonHideUnderline(
+              //                 child: DropdownButton<String?>(
+              //                   value: _selectedCategoryId,
+              //                   hint: Text(
+              //                     FFLocalizations.of(context).getVariableText(enText: 'All Categories', bnText: 'সব ক্যাটাগরি'),
+              //                     style: FlutterFlowTheme.of(context).bodySmall.override(
+              //                           fontFamily: 'SF Pro Display',
+              //                           color: FlutterFlowTheme.of(context).secondaryText,
+              //                         ),
+              //                   ),
+              //                   isExpanded: true,
+              //                   icon: Icon(
+              //                     Icons.arrow_drop_down_rounded,
+              //                     color: FlutterFlowTheme.of(context).secondaryText,
+              //                     size: 20,
+              //                   ),
+              //                   items: [
+              //                     DropdownMenuItem<String?>(
+              //                       value: null,
+              //                       child: Text(
+              //                         FFLocalizations.of(context).getVariableText(enText: 'All Categories', bnText: 'সব ক্যাটাগরি'),
+              //                         style: FlutterFlowTheme.of(context).bodySmall,
+              //                       ),
+              //                     ),
+              //                     ..._categoriesList.map((cat) {
+              //                       final id = getJsonField(cat, r'''$._id''')?.toString();
+              //                       final name = getJsonField(cat, r'''$.name''')?.toString() ?? 'Category';
+              //                       return DropdownMenuItem<String?>(
+              //                         value: id,
+              //                         child: Text(
+              //                           name,
+              //                           style: FlutterFlowTheme.of(context).bodySmall,
+              //                         ),
+              //                       );
+              //                     }).toList(),
+              //                   ],
+              //                   onChanged: (val) {
+              //                     setState(() {
+              //                       _selectedCategoryId = val;
+              //                       _model.apiRequestCompleter2 = null;
+              //                     });
+              //                   },
+              //                 ),
+              //               ),
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ],
+              //   ),
+              // ),
+             
               Expanded(
                 child: Align(
                   alignment: AlignmentDirectional(0.0, 0.0),

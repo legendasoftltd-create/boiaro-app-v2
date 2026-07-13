@@ -14,6 +14,8 @@ import '/backend/boiaro_legacy_adapter.dart';
 class AudioPlaybackService {
   static AudiobookAudioHandler? _handler;
 
+  static AudiobookAudioHandler? get activeHandler => _handler;
+
   static Future<AudiobookAudioHandler> get handler async {
     _handler ??= await AudioService.init(
       builder: () => AudiobookAudioHandler(),
@@ -126,6 +128,7 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> playChapter({
     required Map<String, dynamic> audiobook,
     required Map<String, dynamic> chapter,
+    Duration? initialPosition,
   }) async {
     debugPrint('[Audio Playback Service] playChapter called');
     debugPrint('  - audiobook: $audiobook');
@@ -161,8 +164,8 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
     final artUri = _resolveBookImage(audiobook['image']?.toString());
 
     try {
-      debugPrint('[Audio Playback Service] Setting player URL: $url');
-      await _player.setUrl(url);
+      debugPrint('[Audio Playback Service] Setting player URL: $url with initialPosition: $initialPosition');
+      await _player.setUrl(url, initialPosition: initialPosition);
       debugPrint('[Audio Playback Service] URL set successfully. Player duration: ${_player.duration}');
     } on PlayerException catch (e) {
       // Likely a bad/unsupported stream (e.g. HTML/JSON instead of audio).

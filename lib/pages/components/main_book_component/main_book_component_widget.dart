@@ -183,30 +183,10 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
           double screenHeight = MediaQuery.sizeOf(context).height;
           double screenWidth = MediaQuery.sizeOf(context).width;
           if (screenHeight / screenWidth < 1.78) {
-            return 235.0;
+            return 239.0;
           }
-          return 230.0;
+          return 234.0;
         }(),
-        // decoration: BoxDecoration(
-        //   color: FlutterFlowTheme.of(context).secondaryBackground,
-        //   boxShadow: [
-        //     BoxShadow(
-        //       blurRadius: 16.0,
-        //       color: FlutterFlowTheme.of(context).shadowColor,
-        //       offset: Offset(
-        //         0.0,
-        //         4.0,
-        //       ),
-        //     )
-        //   ],
-        //   borderRadius: BorderRadius.circular(12.0),
-        //   border: Border.all(
-        //     color: FlutterFlowTheme.of(context).primary.withValues(
-        //       alpha: 0.1,
-        //     ),
-        //     width: 2.0,
-        //   ),
-        // ),
         child: Stack(
           children: [
             Align(
@@ -218,75 +198,86 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(5.0),
-                            // topLeft: Radius.circular(10.0),
-                            // topRight: Radius.circular(10.0),
-                          ),
-                          child: CachedNetworkImage(
-                            fadeInDuration: Duration(milliseconds: 200),
-                            fadeOutDuration: Duration(milliseconds: 200),
-                            imageUrl: widget.image!,
-                            width: double.infinity,
-                            height: widget.imageHeight ?? 160.0,
-                            fit: BoxFit.fill,
-                            alignment: Alignment(0.0, 0.0),
-                            errorWidget: (context, error, stackTrace) =>
-                                Icon(
-                                  Icons.photo_size_select_actual_outlined,
-                                  size: 84.0,
-                                  color: FlutterFlowTheme.of(context).primaryText.withValues(alpha: 0.1),
-                                ),
-                                
-                          ),
+                    Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            blurRadius: 10.0,
+                            color: FlutterFlowTheme.of(context).primary.withValues(alpha: 0.2),
+                            offset: Offset(0.0, 4.0),
+                          )
+                        ],
+                        borderRadius: BorderRadius.circular(8.0),
+                        border: Border.all(
+                          color: FlutterFlowTheme.of(context).primary.withValues(alpha: 0.2),
+                          width: 1.0,
                         ),
-                        if (formatIcons.isNotEmpty)
-                          Positioned(
-                            right: 6.0,
-                            bottom: 6.0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4.0,
-                                vertical: 2.0,
-                              ),
-                              decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .primaryBackground
-                                    .withValues(alpha: 0.9),
-                                borderRadius: BorderRadius.circular(12.0),
-                                boxShadow: [
-                                  BoxShadow(
-                                    blurRadius: 8.0,
-                                    color: FlutterFlowTheme.of(context)
-                                        .shadowColor,
-                                    offset: Offset(0.0, 2.0),
-                                  )
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: formatIcons
-                                    .map(
-                                      (ic) => Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 1.0,
-                                        ),
-                                        child: Icon(
-                                          ic,
-                                          size: 15.0,
-                                          color: FlutterFlowTheme.of(context)
-                                              .primaryText,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(7.0),
+                        child: Stack(
+                          children: [
+                            CachedNetworkImage(
+                              fadeInDuration: Duration(milliseconds: 200),
+                              fadeOutDuration: Duration(milliseconds: 200),
+                              imageUrl: widget.image!,
+                              width: double.infinity,
+                              height: widget.imageHeight ?? 160.0,
+                              fit: BoxFit.fill,
+                              alignment: Alignment(0.0, 0.0),
+                              errorWidget: (context, error, stackTrace) =>
+                                  Icon(
+                                    Icons.photo_size_select_actual_outlined,
+                                    size: 84.0,
+                                    color: FlutterFlowTheme.of(context).primaryText.withValues(alpha: 0.1),
+                                  ),
                             ),
-                          ),
-                      ],
+                            if (formatIcons.isNotEmpty)
+                              Positioned(
+                                right: 6.0,
+                                bottom: 6.0,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4.0,
+                                    vertical: 2.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: FlutterFlowTheme.of(context)
+                                        .primaryBackground
+                                        .withValues(alpha: 0.9),
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        blurRadius: 8.0,
+                                        color: FlutterFlowTheme.of(context)
+                                            .shadowColor,
+                                        offset: Offset(0.0, 2.0),
+                                      )
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: formatIcons
+                                        .map(
+                                          (ic) => Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 1.0,
+                                            ),
+                                            child: Icon(
+                                              ic,
+                                              size: 15.0,
+                                              color: FlutterFlowTheme.of(context)
+                                                  .primaryText,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
                     Expanded(
                       child: Padding(
