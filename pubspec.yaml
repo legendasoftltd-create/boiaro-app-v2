@@ -96,7 +96,7 @@ dependencies:
   google_sign_in: ^7.2.0
   flutter_facebook_auth: ^7.1.6
   sign_in_with_apple: ^7.0.1
-  purchases_flutter: ^10.1.0
+  purchases_flutter: ^10.4.1
   flutter_tts: ^4.2.3
   screen_brightness: ^2.1.7
   epubx: ^4.0.0

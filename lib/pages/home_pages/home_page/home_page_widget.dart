@@ -375,6 +375,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
               bookImage: bookImage,
               onWatchAd: playAudio,
               adType: 'rewarded_interstitial',
+              claimReward: false,
             ),
           );
         } else {

@@ -59,6 +59,7 @@ class BoiaroLegacyAdapter {
       'rating': m['rating'],
       'total_reads': m['total_reads'],
       'is_free': m['is_free'],
+      'subscriber_access': m['subscriber_access'],
       'author': m['author'] ?? m['authors'],
       'authors': m['authors'] ?? m['author'],
       'category': m['category'] ?? m['categories'],
@@ -222,6 +223,7 @@ class BoiaroLegacyAdapter {
       'formats': formats,
       'description': b['description'],
       'is_free': b['is_free'],
+      'subscriber_access': b['subscriber_access'] ?? false,
       'total_listens': b['total_listens'],
       'total_reads': b['total_reads'],
     };

@@ -2045,6 +2045,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required String authorName,
     required bool isBookFree,
     required List<Map<String, dynamic>> formats,
+    required bool hasAudiobookAccess,
   }) {
     final theme = FlutterFlowTheme.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2053,11 +2054,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
     final isAlreadyPurchased = FFAppState().isLogin &&
         _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
-    final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
-    final isAudiobookFree = _audiobookPricingMode == 'per_chapter'
-        ? false
-        : (isBookFree || audiobookPrice <= 0);
-    final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
 
     final isFree = track['is_free'] == true;
     final isUnlocked = track['is_unlocked'] == true;
@@ -2074,13 +2070,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       if (!isLocked) {
         final audiobookFormat =
             _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
-        final isAlreadyPurchased = FFAppState().isLogin &&
-            _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
-        final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
-        final isAudiobookFree = _audiobookPricingMode == 'per_chapter'
-            ? false
-            : (isBookFree || audiobookPrice <= 0);
-        final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
 
         final audiobookPreviewPercent = audiobookFormat != null ? _previewPercent(audiobookFormat) : 15;
         final performPlay = () async {
@@ -2098,7 +2087,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
         };
 
         final isEpisodeFree = isFree || track['is_preview'] == true;
-        if (isEpisodeFree && !isAlreadyPurchased) {
+        if (isEpisodeFree && !isAlreadyPurchased && !_isSubscribed) {
           final canShowAd = await AdManager.canShowAd();
           if (canShowAd) {
             showDialog(
@@ -2469,6 +2458,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     required String bookImage,
     required String authorName,
     required bool isBookFree,
+    required bool hasAudiobookAccess,
   }) {
     // Trigger load on first render.
     if (_tracks == null && !_tracksLoading) {
@@ -2480,6 +2470,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     final showSeeMore = trackCount > _episodePreviewLimit;
     final displayTracks =
         showSeeMore ? tracks.take(_episodePreviewLimit).toList() : tracks;
+    final isAlreadyPurchased = FFAppState().isLogin &&
+        _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
+    final audiobookFormat =
+        _pickFormat(formats.cast<Map<String, dynamic>>(), 'audiobook');
 
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(0.0, 12.0, 0.0, 0.0),
@@ -2579,6 +2573,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               authorName: authorName,
               isBookFree: isBookFree,
               formats: formats,
+              hasAudiobookAccess: hasAudiobookAccess,
             );
           }),
 
@@ -2593,17 +2588,6 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                     context.pushNamed(SignInPageWidget.routeName);
                     return;
                   }
-                  final audiobookFormat = _pickFormat(
-                      formats.cast<Map<String, dynamic>>(),
-                      'audiobook');
-                  final isAlreadyPurchased = FFAppState().isLogin &&
-                      _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
-                  final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
-                  final isAudiobookFree = _audiobookPricingMode == 'per_chapter'
-                      ? false
-                      : (isBookFree || audiobookPrice <= 0);
-                  final hasAudiobookAccess = isAudiobookFree || isAlreadyPurchased;
-
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => _EpisodesListPage(
@@ -2641,7 +2625,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                             };
 
                             final isEpisodeFree = isFree || track['is_preview'] == true;
-                            if (isEpisodeFree && !isAlreadyPurchased) {
+                            if (isEpisodeFree && !isAlreadyPurchased && !_isSubscribed) {
                               final canShowAd = await AdManager.canShowAd();
                               if (canShowAd) {
                                 showDialog(
@@ -3141,6 +3125,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           subscriberAccess: (getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r'''$.data.bookDetails[0].subscriber_access''') == true) || (ebookFormat?['subscriber_access'] == true),
         );
         final isEbookPremium = !isBookFree && ebookPrice > 0;
+        final isAlreadyPurchased = FFAppState().isLogin &&
+            _purchasedFormatKeys.contains('${bookId.toLowerCase()}::audiobook');
+        final audiobookPrice = audiobookFormat != null ? _formatPrice(audiobookFormat) : 0.0;
+        final hasAudiobookAccess = _hasLocalFormatAccess(
+          bookId: bookId,
+          format: 'audiobook',
+          isFree: isBookFree,
+          price: audiobookPrice,
+          subscriberAccess: (getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r'''$.data.bookDetails[0].subscriber_access''') == true) || (audiobookFormat?['subscriber_access'] == true),
+        );
 
         final showPreviewBadge = activeTab != BookMasterFormatTab.hardcopy &&
             !_hasLocalFormatAccess(
@@ -4823,6 +4817,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                       bookImage: bookImage,
                                       authorName: authorName,
                                       isBookFree: isBookFree,
+                                      hasAudiobookAccess: hasAudiobookAccess,
                                     ),
                                   ),
                                 // Book details placement banner
