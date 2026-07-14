@@ -1895,7 +1895,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           builder: (ctx) => custom_widgets.AdRewardDialog(
             bookImage: bookImage,
             onWatchAd: performDownload,
-            adType: 'rewarded',
+            adType: 'rewarded_interstitial',
             claimReward: false,
           ),
         );
@@ -2100,7 +2100,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
               builder: (ctx) => custom_widgets.AdRewardDialog(
                 bookImage: bookImage,
                 onWatchAd: performPlay,
-                adType: 'rewarded',
+                adType: 'rewarded_interstitial',
                 claimReward: false,
               ),
             );
@@ -2657,7 +2657,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                   builder: (ctx) => custom_widgets.AdRewardDialog(
                                     bookImage: bookImage,
                                     onWatchAd: performPlay,
-                                    adType: 'rewarded',
+                                    adType: 'rewarded_interstitial',
                                     claimReward: false,
                                   ),
                                 );
@@ -4710,7 +4710,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                   builder: (ctx) => custom_widgets.AdRewardDialog(
                                                                     bookImage: bookImage,
                                                                     onWatchAd: performPlay,
-                                                                    adType: 'rewarded',
+                                                                    adType: 'rewarded_interstitial',
                                                                     claimReward: false,
                                                                   ),
                                                                 );
