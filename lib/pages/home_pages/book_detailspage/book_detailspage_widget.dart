@@ -244,6 +244,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final bookId = (widget.id ?? '').trim();
+      if (bookId.isNotEmpty) {
+        _loadTracks(bookId);
+      }
       if (FFAppState().isLogin) {
         await _checkSubscriptionValidity();
         await _checkIfPurchased();
@@ -2276,7 +2280,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                               ),
                             ),
                             const SizedBox(height: 24),
-                            if (Platform.isIOS) ...[
+                            if (coinPrice <= 0 && bdtPrice <= 0) ...[
+                              buildUnlockOptionCard(
+                                icon: Icons.shopping_bag_rounded,
+                                iconColor: theme.primary,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Buy Full Book', bnText: 'সম্পূর্ণ বইটি কিনুন'),
+                                value: FFLocalizations.of(context).getVariableText(enText: 'Buy Now', bnText: 'এখনই কিনুন'),
+                                onTap: () => Navigator.of(ctx).pop('buy_full_book'),
+                              ),
+                              const SizedBox(height: 12),
+                            ] else if (Platform.isIOS) ...[
                               buildUnlockOptionCard(
                                 icon: Icons.apple,
                                 iconColor: theme.primaryText,
@@ -2432,6 +2445,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
           } else {
             await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to initiate payment', bnText: 'পেমেন্ট শুরু করতে ব্যর্থ'));
           }
+        } else if (option == 'buy_full_book') {
+          await _handleBuyNow(
+            tab: BookMasterFormatTab.audiobook,
+            bookId: bookId,
+            bookName: bookName,
+            bookImage: bookImage,
+            ebookFormat: _pickFormat(formats.cast<Map<String, dynamic>>(), 'ebook'),
+            audiobookFormat: audiobookFormat,
+            hardcopyFormat: _pickFormat(formats.cast<Map<String, dynamic>>(), 'hardcopy'),
+          );
         }
       }
     }
@@ -2814,7 +2837,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   ),
                                                 ),
                                                 const SizedBox(height: 24),
-                                                if (Platform.isIOS) ...[
+                                                if (coinPrice <= 0 && bdtPrice <= 0) ...[
+                                                  buildUnlockOptionCard(
+                                                    icon: Icons.shopping_bag_rounded,
+                                                    iconColor: theme.primary,
+                                                    label: FFLocalizations.of(context).getVariableText(enText: 'Buy Full Book', bnText: 'সম্পূর্ণ বইটি কিনুন'),
+                                                    value: FFLocalizations.of(context).getVariableText(enText: 'Buy Now', bnText: 'এখনই কিনুন'),
+                                                    onTap: () => Navigator.of(ctx).pop('buy_full_book'),
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                ] else if (Platform.isIOS) ...[
                                                   buildUnlockOptionCard(
                                                     icon: Icons.apple,
                                                     iconColor: theme.primaryText,
@@ -2966,6 +2998,16 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                               } else {
                                 await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to initiate payment', bnText: 'পেমেন্ট শুরু করতে ব্যর্থ'));
                               }
+                            } else if (option == 'buy_full_book') {
+                              await _handleBuyNow(
+                                tab: BookMasterFormatTab.audiobook,
+                                bookId: bookId,
+                                bookName: bookName,
+                                bookImage: bookImage,
+                                ebookFormat: _pickFormat(formats.cast<Map<String, dynamic>>(), 'ebook'),
+                                audiobookFormat: audiobookFormat,
+                                hardcopyFormat: _pickFormat(formats.cast<Map<String, dynamic>>(), 'hardcopy'),
+                              );
                             }
                           }
                         },
@@ -4634,29 +4676,69 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   children: [
                                                     Expanded(
                                                       child: FFButtonWidget(
-                                                        onPressed: () =>
-                                                            _handleMasterAction(
-                                                          tab: activeTab,
-                                                          bookId: bookId,
-                                                          bookName: bookName,
-                                                          bookImage: bookImage,
-                                                          authorName:
-                                                              authorName,
-                                                          isBookFree:
-                                                              isBookFree,
-                                                          ebookFormat:
-                                                              ebookFormat,
-                                                          audiobookFormat:
-                                                              audiobookFormat,
-                                                          hardcopyFormat:
-                                                              hardcopyFormat,
-                                                          responseJson:
-                                                              bookDetailspageGetbookdetailsApiResponse
-                                                                  .jsonBody,
-                                                          forcePreview: true,
-                                                        ),
-                                                        text:
-                                                            '${FFLocalizations.of(context).getVariableText(enText: 'Preview', bnText: 'প্রিভিউ')} ($previewPercent%)',
+                                                        onPressed: () async {
+                                                            final hasFreeChapter = _tracks != null &&
+                                                                _tracks!.any((t) =>
+                                                                    t['is_free'] == true ||
+                                                                    t['is_preview'] == true);
+                                                            if (hasFreeChapter) {
+                                                              final firstFreeTrack = _tracks?.firstWhere(
+                                                                (t) => t['is_free'] == true || t['is_preview'] == true,
+                                                                orElse: () => <String, dynamic>{},
+                                                              );
+                                                              final initialTrackNum = (firstFreeTrack != null && firstFreeTrack.isNotEmpty)
+                                                                  ? (firstFreeTrack['track_number'] is num ? (firstFreeTrack['track_number'] as num).toInt() : null)
+                                                                  : null;
+                                                              final performPlay = () async {
+                                                                await _openAudiobookPlayerFromV2(
+                                                                  bookId: bookId,
+                                                                  bookName: bookName,
+                                                                  bookImage: bookImage,
+                                                                  authorName: authorName,
+                                                                  hasFullAccess: false,
+                                                                  forceIsPreviewMode: false,
+                                                                  initialTrackNumber: initialTrackNum,
+                                                                  audiobookFormat: audiobookFormat,
+                                                                );
+                                                              };
+
+                                                              final canShowAd = await AdManager.canShowAd();
+                                                              if (canShowAd) {
+                                                                showDialog(
+                                                                  context: context,
+                                                                  barrierDismissible: false,
+                                                                  builder: (ctx) => custom_widgets.AdRewardDialog(
+                                                                    bookImage: bookImage,
+                                                                    onWatchAd: performPlay,
+                                                                    adType: 'rewarded',
+                                                                    claimReward: false,
+                                                                  ),
+                                                                );
+                                                              } else {
+                                                                await performPlay();
+                                                              }
+                                                            } else {
+                                                              await _handleMasterAction(
+                                                                tab: activeTab,
+                                                                bookId: bookId,
+                                                                bookName: bookName,
+                                                                bookImage: bookImage,
+                                                                authorName: authorName,
+                                                                isBookFree: isBookFree,
+                                                                ebookFormat: ebookFormat,
+                                                                audiobookFormat: audiobookFormat,
+                                                                hardcopyFormat: hardcopyFormat,
+                                                                responseJson: bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                                                forcePreview: true,
+                                                              );
+                                                            }
+                                                          },
+                                                          text: (_tracks != null &&
+                                                                  _tracks!.any((t) =>
+                                                                      t['is_free'] == true ||
+                                                                      t['is_preview'] == true))
+                                                              ? FFLocalizations.of(context).getVariableText(enText: 'Listen Now', bnText: 'এখনি শুনুন')
+                                                              : '${FFLocalizations.of(context).getVariableText(enText: 'Preview', bnText: 'প্রিভিউ')} ($previewPercent%)',
                                                         icon: Icon(
                                                           Icons
                                                               .headphones_rounded,
@@ -5855,6 +5937,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                           final reviewListItem =
                                                               reviewList[
                                                                   reviewListIndex];
+                                                          bool isReviewExpanded = false;
                                                           return Padding(
                                                             padding:
                                                                 EdgeInsetsDirectional
@@ -6022,26 +6105,51 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                                         ],
                                                                       ),
                                                                     ),
-                                                                    Text(
-                                                                      getJsonField(
-                                                                        reviewListItem,
-                                                                        r'''$.description''',
-                                                                      ).toString(),
-                                                                      maxLines:
-                                                                          3,
-                                                                      style: FlutterFlowTheme.of(
-                                                                              context)
-                                                                          .bodyMedium
-                                                                          .override(
-                                                                            fontFamily:
-                                                                                'SF Pro Display',
-                                                                            fontSize:
-                                                                                14.0,
-                                                                            letterSpacing:
-                                                                                0.0,
-                                                                            lineHeight:
-                                                                                1.5,
-                                                                          ),
+                                                                    StatefulBuilder(
+                                                                      builder: (context, setStateBuilder) {
+                                                                        final text = getJsonField(
+                                                                          reviewListItem,
+                                                                          r'''$.description''',
+                                                                        ).toString();
+                                                                        final isLong = text.length > 90;
+                                                                        return Column(
+                                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                                          children: [
+                                                                            Text(
+                                                                              text,
+                                                                              maxLines: isReviewExpanded ? null : 3,
+                                                                              overflow: isReviewExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                                                                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                    fontFamily: 'SF Pro Display',
+                                                                                    fontSize: 14.0,
+                                                                                    letterSpacing: 0.0,
+                                                                                    lineHeight: 1.5,
+                                                                                  ),
+                                                                            ),
+                                                                            if (isLong)
+                                                                              InkWell(
+                                                                                onTap: () {
+                                                                                  setStateBuilder(() {
+                                                                                    isReviewExpanded = !isReviewExpanded;
+                                                                                  });
+                                                                                },
+                                                                                child: Padding(
+                                                                                  padding: const EdgeInsets.only(top: 4.0),
+                                                                                  child: Text(
+                                                                                    isReviewExpanded
+                                                                                        ? FFLocalizations.of(context).getVariableText(enText: 'See less', bnText: 'কম দেখুন')
+                                                                                        : FFLocalizations.of(context).getVariableText(enText: 'See more', bnText: 'আরও দেখুন'),
+                                                                                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                          fontFamily: 'SF Pro Display',
+                                                                                          color: FlutterFlowTheme.of(context).primary,
+                                                                                          fontWeight: FontWeight.bold,
+                                                                                        ),
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                          ],
+                                                                        );
+                                                                      },
                                                                     ),
                                                                   ],
                                                                 ),

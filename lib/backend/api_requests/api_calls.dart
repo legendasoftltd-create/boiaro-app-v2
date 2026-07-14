@@ -2235,6 +2235,11 @@ class GetcategoriesApiCall {
         .map((e) => BoiaroLegacyAdapter.legacyCategoryFromV2(
             Map<String, dynamic>.from(e)))
         .toList();
+    leg.sort((a, b) {
+      final pA = a['priority'] is num ? (a['priority'] as num).toInt() : 999999;
+      final pB = b['priority'] is num ? (b['priority'] as num).toInt() : 999999;
+      return pA.compareTo(pB);
+    });
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'categoryDetails': leg}),
       res.headers,

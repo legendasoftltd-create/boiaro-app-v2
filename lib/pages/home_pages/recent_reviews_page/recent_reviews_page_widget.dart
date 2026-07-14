@@ -11,6 +11,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:readmore/readmore.dart';
 import 'recent_reviews_page_model.dart';
 export 'recent_reviews_page_model.dart';
 
@@ -429,22 +430,36 @@ class _RecentReviewsPageWidgetState extends State<RecentReviewsPageWidget> {
                                                           ],
                                                         ),
                                                       ),
-                                                      Text(
+                                                      ReadMoreText(
                                                         getJsonField(
                                                           reviewListItem,
                                                           r'''$.description''',
                                                         ).toString(),
-                                                        maxLines: 3,
-                                                        style: FlutterFlowTheme
-                                                                .of(context)
-                                                            .bodyMedium
-                                                            .override(
-                                                              fontFamily:
-                                                                  'SF Pro Display',
+                                                        trimLines: 3,
+                                                        trimMode: TrimMode.Line,
+                                                        trimCollapsedText: FFLocalizations.of(context).getVariableText(enText: ' See more', bnText: ' আরও দেখুন'),
+                                                        trimExpandedText: FFLocalizations.of(context).getVariableText(enText: ' See less', bnText: ' কম দেখুন'),
+                                                        style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                              fontFamily: 'SF Pro Display',
                                                               fontSize: 17.0,
-                                                              letterSpacing:
-                                                                  0.0,
+                                                              letterSpacing: 0.0,
                                                               lineHeight: 1.5,
+                                                            ),
+                                                        moreStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                              fontFamily: 'SF Pro Display',
+                                                              fontSize: 17.0,
+                                                              letterSpacing: 0.0,
+                                                              lineHeight: 1.5,
+                                                              color: FlutterFlowTheme.of(context).primary,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                        lessStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                              fontFamily: 'SF Pro Display',
+                                                              fontSize: 17.0,
+                                                              letterSpacing: 0.0,
+                                                              lineHeight: 1.5,
+                                                              color: FlutterFlowTheme.of(context).primary,
+                                                              fontWeight: FontWeight.bold,
                                                             ),
                                                       ),
                                                     ],
