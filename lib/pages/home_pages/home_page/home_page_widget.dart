@@ -1643,16 +1643,39 @@ class _HomePageWidgetState extends State<HomePageWidget>
                         FFAppState().homePageTotalPdfPageIndex = totalPages;
                         FFAppState().update(() {});
 
-                        await context.pushNamed(
-                          ReadBookCustomPageWidget.routeName,
-                          queryParameters: {
-                            'pdf': serializeParam(freshUrl, ParamType.String),
-                            'id': serializeParam(bookId, ParamType.String),
-                            'name': serializeParam(bookName, ParamType.String),
-                            'author': serializeParam(bookAuthor, ParamType.String),
-                            'image': serializeParam(coverUrl, ParamType.String),
-                          }.withoutNulls,
-                        );
+                        final performRead = () async {
+                          await context.pushNamed(
+                            ReadBookCustomPageWidget.routeName,
+                            queryParameters: {
+                              'pdf': serializeParam(freshUrl, ParamType.String),
+                              'id': serializeParam(bookId, ParamType.String),
+                              'name': serializeParam(bookName, ParamType.String),
+                              'author': serializeParam(bookAuthor, ParamType.String),
+                              'image': serializeParam(coverUrl, ParamType.String),
+                            }.withoutNulls,
+                          );
+                        };
+
+                        final isFree = bookData['is_free'] == true;
+                        if (isFree) {
+                          final canShowAd = await AdManager.canShowAd();
+                          if (canShowAd) {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (ctx) => custom_widgets.AdRewardDialog(
+                                bookImage: coverUrl,
+                                onWatchAd: performRead,
+                                adType: 'rewarded_interstitial',
+                                claimReward: false,
+                              ),
+                            );
+                          } else {
+                            await performRead();
+                          }
+                        } else {
+                          await performRead();
+                        }
                       } catch (_) {
                         await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to load book', bnText: 'বই লোড করতে ব্যর্থ'));
                       } finally {

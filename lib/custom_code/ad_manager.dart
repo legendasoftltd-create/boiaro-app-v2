@@ -30,6 +30,14 @@ class AdManager {
   static const int _maxRewardedRetries = 3;
   static int _totalRewardedRequestCount = 0;
 
+  static int _interstitialRetryCount = 0;
+  static const int _maxInterstitialRetries = 3;
+  static int _totalInterstitialRequestCount = 0;
+
+  static int _rewardedInterstitialRetryCount = 0;
+  static const int _maxRewardedInterstitialRetries = 3;
+  static int _totalRewardedInterstitialRequestCount = 0;
+
   // Backwards compatibility getters
   static bool get isAdLoaded => _isRewardedLoaded;
   static bool get isRewardedLoaded => _isRewardedLoaded;
@@ -137,7 +145,7 @@ class AdManager {
     Duration timeout = const Duration(seconds: 8),
   }) async {
     if (_isInterstitialLoaded) return true;
-    loadInterstitialAd();
+    loadInterstitialAd(resetRetry: true);
     try {
       await waitForInterstitial().timeout(timeout);
     } catch (_) {}
@@ -148,7 +156,7 @@ class AdManager {
     Duration timeout = const Duration(seconds: 8),
   }) async {
     if (_isRewardedInterstitialLoaded) return true;
-    loadRewardedInterstitialAd();
+    loadRewardedInterstitialAd(resetRetry: true);
     try {
       await waitForRewardedInterstitial().timeout(timeout);
     } catch (_) {}
@@ -157,22 +165,6 @@ class AdManager {
 
   static Future<bool> canShowAd() async {
     try {
-      final token = FFAppState().token.trim();
-      if (token.isNotEmpty) {
-        try {
-          final res = await EbookGroup.getRewardedAdStatusCall.call(token: token);
-          if (res.statusCode == 200 && res.jsonBody != null) {
-            final canWatch = res.jsonBody['can_watch'];
-            if (canWatch is bool) {
-              print('[AD] Ad frequency check from backend: can_watch = $canWatch');
-              return canWatch;
-            }
-          }
-        } catch (e) {
-          print('[AD] Backend ad status check failed, falling back to local: $e');
-        }
-      }
-
       final prefs = await SharedPreferences.getInstance();
 
       final now = DateTime.now();
@@ -199,6 +191,22 @@ class AdManager {
           print(
               'Ad frequency check: Under 3 minutes difference (was $difference min).');
           return false; // 3 min difference not met
+        }
+      }
+
+      final token = FFAppState().token.trim();
+      if (token.isNotEmpty) {
+        try {
+          final res = await EbookGroup.getRewardedAdStatusCall.call(token: token);
+          if (res.statusCode == 200 && res.jsonBody != null) {
+            final canWatch = res.jsonBody['can_watch'];
+            if (canWatch is bool) {
+              print('[AD] Ad frequency check from backend: can_watch = $canWatch');
+              return canWatch;
+            }
+          }
+        } catch (e) {
+          print('[AD] Backend ad status check failed, falling back to local: $e');
         }
       }
 
@@ -360,11 +368,22 @@ class AdManager {
     }
   }
 
-  static void loadInterstitialAd() {
+  static void loadInterstitialAd({bool resetRetry = false}) {
     if (_isInterstitialLoaded || _isInterstitialLoading) return;
+    if (resetRetry) _interstitialRetryCount = 0;
 
+    _totalInterstitialRequestCount++;
     _isInterstitialLoading = true;
-    print('[AD] Interstitial ad loading started...');
+
+    final now = DateTime.now();
+    final timestamp = '${now.hour.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')}:'
+        '${now.second.toString().padLeft(2, '0')}';
+
+    print('[AD] Interstitial request #$_totalInterstitialRequestCount @ $timestamp');
+    print('[AD] Retry: $_interstitialRetryCount / $_maxInterstitialRetries');
+    print('[AD] AdUnitId: $interstitialAdUnitId');
+
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: const AdRequest(),
@@ -373,7 +392,7 @@ class AdManager {
           _interstitialAd = ad;
           _isInterstitialLoaded = true;
           _isInterstitialLoading = false;
-          print('[AD] Interstitial ad loaded successfully');
+          print('[AD] Interstitial request #$_totalInterstitialRequestCount loaded successfully @ $timestamp');
           if (_interstitialCompleter != null &&
               !_interstitialCompleter!.isCompleted) {
             _interstitialCompleter!.complete();
@@ -383,14 +402,20 @@ class AdManager {
           _interstitialAd = null;
           _isInterstitialLoaded = false;
           _isInterstitialLoading = false;
-          print('[AD] Interstitial ad failed to load: $error');
+          print('[AD] Interstitial request #$_totalInterstitialRequestCount failed: $error');
           if (_interstitialCompleter != null &&
               !_interstitialCompleter!.isCompleted) {
             _interstitialCompleter!.completeError(error);
           }
-          Future.delayed(const Duration(seconds: 15), () {
-            loadInterstitialAd();
-          });
+          if (_interstitialRetryCount < _maxInterstitialRetries) {
+            _interstitialRetryCount++;
+            print('[AD] Interstitial retry $_interstitialRetryCount/$_maxInterstitialRetries scheduled in 30s');
+            Future.delayed(const Duration(seconds: 30), () {
+              loadInterstitialAd();
+            });
+          } else {
+            print('[AD] Interstitial max retries reached. Waiting for next user action.');
+          }
         },
       ),
     );
@@ -409,13 +434,13 @@ class AdManager {
           _isInterstitialLoaded = false;
           recordAdShown();
           onAdClosed();
-          loadInterstitialAd();
+          loadInterstitialAd(resetRetry: true);
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
           ad.dispose();
           _interstitialAd = null;
           _isInterstitialLoaded = false;
-          loadInterstitialAd();
+          loadInterstitialAd(resetRetry: true);
           if (onAdFailed != null) onAdFailed();
         },
       );
@@ -423,15 +448,26 @@ class AdManager {
       _interstitialAd!.show();
     } else {
       if (onAdFailed != null) onAdFailed();
-      loadInterstitialAd();
+      loadInterstitialAd(resetRetry: true);
     }
   }
 
-  static void loadRewardedInterstitialAd() {
+  static void loadRewardedInterstitialAd({bool resetRetry = false}) {
     if (_isRewardedInterstitialLoaded || _isRewardedInterstitialLoading) return;
+    if (resetRetry) _rewardedInterstitialRetryCount = 0;
 
+    _totalRewardedInterstitialRequestCount++;
     _isRewardedInterstitialLoading = true;
-    print('[AD] Rewarded Interstitial ad loading started...');
+
+    final now = DateTime.now();
+    final timestamp = '${now.hour.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')}:'
+        '${now.second.toString().padLeft(2, '0')}';
+
+    print('[AD] Rewarded Interstitial request #$_totalRewardedInterstitialRequestCount @ $timestamp');
+    print('[AD] Retry: $_rewardedInterstitialRetryCount / $_maxRewardedInterstitialRetries');
+    print('[AD] AdUnitId: $rewardedInterstitialAdUnitId');
+
     RewardedInterstitialAd.load(
       adUnitId: rewardedInterstitialAdUnitId,
       request: const AdRequest(),
@@ -440,7 +476,7 @@ class AdManager {
           _rewardedInterstitialAd = ad;
           _isRewardedInterstitialLoaded = true;
           _isRewardedInterstitialLoading = false;
-          print('[AD] Rewarded Interstitial ad loaded successfully');
+          print('[AD] Rewarded Interstitial request #$_totalRewardedInterstitialRequestCount loaded successfully @ $timestamp');
           if (_rewardedInterstitialCompleter != null &&
               !_rewardedInterstitialCompleter!.isCompleted) {
             _rewardedInterstitialCompleter!.complete();
@@ -450,14 +486,20 @@ class AdManager {
           _rewardedInterstitialAd = null;
           _isRewardedInterstitialLoaded = false;
           _isRewardedInterstitialLoading = false;
-          print('[AD] Rewarded Interstitial ad failed to load: $error');
+          print('[AD] Rewarded Interstitial request #$_totalRewardedInterstitialRequestCount failed: $error');
           if (_rewardedInterstitialCompleter != null &&
               !_rewardedInterstitialCompleter!.isCompleted) {
             _rewardedInterstitialCompleter!.completeError(error);
           }
-          Future.delayed(const Duration(seconds: 15), () {
-            loadRewardedInterstitialAd();
-          });
+          if (_rewardedInterstitialRetryCount < _maxRewardedInterstitialRetries) {
+            _rewardedInterstitialRetryCount++;
+            print('[AD] Rewarded Interstitial retry $_rewardedInterstitialRetryCount/$_maxRewardedInterstitialRetries scheduled in 30s');
+            Future.delayed(const Duration(seconds: 30), () {
+              loadRewardedInterstitialAd();
+            });
+          } else {
+            print('[AD] Rewarded Interstitial max retries reached. Waiting for next user action.');
+          }
         },
       ),
     );
@@ -480,14 +522,14 @@ class AdManager {
           if (isRewardEarned) {
             onRewardEarned();
           }
-          loadRewardedInterstitialAd();
+          loadRewardedInterstitialAd(resetRetry: true);
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
           ad.dispose();
           _rewardedInterstitialAd = null;
           _isRewardedInterstitialLoaded = false;
           print('[AD] Rewarded Interstitial ad failed to show: $error. Preloading next...');
-          loadRewardedInterstitialAd();
+          loadRewardedInterstitialAd(resetRetry: true);
           if (onAdFailed != null) onAdFailed();
         },
       );
@@ -524,7 +566,7 @@ class AdManager {
       );
     } else {
       if (onAdFailed != null) onAdFailed();
-      loadRewardedInterstitialAd();
+      loadRewardedInterstitialAd(resetRetry: true);
     }
   }
 }
