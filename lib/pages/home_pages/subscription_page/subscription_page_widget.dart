@@ -465,7 +465,8 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                                 context, planList[i], i);
                                           }).addToEnd(
                                               const SizedBox(height: 4)),
-                                          _sslcommerzBadge(context),
+                                          if (Theme.of(context).platform != TargetPlatform.iOS && Theme.of(context).platform != TargetPlatform.android)
+                                            _sslcommerzBadge(context),
                                         ],
                                       ],
                                     ),
@@ -937,84 +938,298 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
               )!,
             );
             context.safePop();
-          } else if (Theme.of(context).platform == TargetPlatform.iOS) {
-            // iOS: Purchases through RevenueCat IAP
-            final planId =
-                getJsonField(_model.subDetail, r'''$._id''')?.toString() ??
-                    getJsonField(_model.subDetail, r'''$.id''')?.toString() ??
-                    '';
-            final planName =
-                getJsonField(_model.subDetail, r'''$.name''')?.toString() ?? '';
-            final durationDays =
-                getJsonField(_model.subDetail, r'''$.duration_days''')?.toString() ?? '30';
+          } else {
+            final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+            final isAndroid = Theme.of(context).platform == TargetPlatform.android;
+            String? paymentChoice;
 
-            // Determine product identifier (e.g. com.boiaro.app.monthly or com.boiaro.app.yearly)
-            // Configure these product IDs in App Store Connect & RevenueCat dashboard.
-            String productIdentifier = 'com.boiaro.app.monthly';
-            if (durationDays == '365' || planName.toLowerCase().contains('year')) {
-              productIdentifier = 'com.boiaro.app.yearly';
-            } else if (durationDays == '180' || planName.toLowerCase().contains('half')) {
-              productIdentifier = 'com.boiaro.app.halfyearly';
+            if (isIOS) {
+              paymentChoice = 'google_play'; // iOS uses IAP path
+            } else if (isAndroid) {
+              // Show bottom sheet to choose between Google Play and Local Payment
+              paymentChoice = await showModalBottomSheet<String>(
+                context: context,
+                backgroundColor: Colors.transparent,
+                isScrollControlled: true,
+                builder: (ctx) {
+                  final sheetTheme = FlutterFlowTheme.of(context);
+                  return Padding(
+                    padding: MediaQuery.viewInsetsOf(ctx),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                      decoration: BoxDecoration(
+                        color: sheetTheme.secondaryBackground,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24.0),
+                          topRight: Radius.circular(24.0),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            blurRadius: 20,
+                            color: Colors.black.withOpacity(0.1),
+                            offset: const Offset(0, -4),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: sheetTheme.alternate,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'পেমেন্ট পদ্ধতি নির্বাচন করুন',
+                            style: TextStyle(
+                              fontFamily: 'SF Pro Display',
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: sheetTheme.primaryText,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'সাবক্রিপশন সম্পন্ন করতে নিচের যেকোনো একটি পদ্ধতি বেছে নিন',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'SF Pro Display',
+                              fontSize: 13,
+                              color: sheetTheme.secondaryText,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Option 1: Google Play IAP (Recommended)
+                          InkWell(
+                            onTap: () => Navigator.of(ctx).pop('google_play'),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: sheetTheme.primaryBackground,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: sheetTheme.primary.withOpacity(0.5), width: 1.5),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: sheetTheme.primary.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.payment_rounded, color: sheetTheme.primary, size: 22),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'Google Play Billing',
+                                              style: TextStyle(
+                                                fontFamily: 'SF Pro Display',
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: sheetTheme.primaryText,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: sheetTheme.primary,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Text(
+                                                'Recommended',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'গুগল পে বা কার্ড ব্যবহার করে পেমেন্ট করুন',
+                                          style: TextStyle(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 12,
+                                            color: sheetTheme.secondaryText,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Option 2: Local Payment (SSLCommerz)
+                          InkWell(
+                            onTap: () => Navigator.of(ctx).pop('local_payment'),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: sheetTheme.primaryBackground,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: sheetTheme.primaryText.withOpacity(0.2)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0B7B3E).withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF0B7B3E), size: 22),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Local Payment (বিকাশ, রকেট, কার্ড)',
+                                          style: TextStyle(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: sheetTheme.primaryText,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'যদি কার্ড বা গুগল প্লে ব্যালেন্স না থাকে',
+                                          style: TextStyle(
+                                            fontFamily: 'SF Pro Display',
+                                            fontSize: 12,
+                                            color: sheetTheme.secondaryText,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop('cancel'),
+                            child: Text(
+                              'বাতিল করুন',
+                              style: TextStyle(
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 14,
+                                color: sheetTheme.secondaryText,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            } else {
+              paymentChoice = 'local_payment';
             }
 
-            // Sync user login state to RevenueCat
-            if (FFAppState().userId.isNotEmpty) {
-              await RevenueCatService.logIn(FFAppState().userId);
-            }
+            if (paymentChoice == 'google_play') {
+              // Purchases through RevenueCat IAP (iOS or Android)
+              final planId =
+                  getJsonField(_model.subDetail, r'''$._id''')?.toString() ??
+                      getJsonField(_model.subDetail, r'''$.id''')?.toString() ??
+                      '';
+              final planName =
+                  getJsonField(_model.subDetail, r'''$.name''')?.toString() ?? '';
+              final durationDays =
+                  getJsonField(_model.subDetail, r'''$.duration_days''')?.toString() ?? '30';
 
-            // Show a progress indicator
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (ctx) => const Center(child: CircularProgressIndicator()),
-            );
+              // Determine product identifier
+              String productIdentifier = 'com.boiaro.app.monthly';
+              if (durationDays == '365' || planName.toLowerCase().contains('year')) {
+                productIdentifier = 'com.boiaro.app.yearly';
+              } else if (durationDays == '180' || planName.toLowerCase().contains('half')) {
+                productIdentifier = 'com.boiaro.app.halfyearly';
+              }
 
-            final purchaseResult = await RevenueCatService.purchasePlan(productIdentifier);
-            
-            // Pop the loading indicator
-            if (Navigator.canPop(context)) {
-              Navigator.of(context).pop();
-            }
+              // Sync user login state to RevenueCat
+              if (FFAppState().userId.isNotEmpty) {
+                await RevenueCatService.logIn(FFAppState().userId);
+              }
 
-            if (purchaseResult['success'] == true) {
-              final txnId = purchaseResult['transactionId'] ?? 'rc_${DateTime.now().millisecondsSinceEpoch}';
-              
-              // Call backend API to record subscription
-              _model.subscriptionFree = await EbookGroup.usersubscriptionApiCall.call(
-                userId: FFAppState().userId,
-                subscriptionplanId: planId,
-                paymentmode: 'appstore',
-                transactionId: txnId,
-                paymentstatus: 'success',
-                paymentdate: dateTimeFormat("dd-MM-yyyy", getCurrentTimestamp),
-                price: price,
-                token: FFAppState().token,
+              // Show a progress indicator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) => const Center(child: CircularProgressIndicator()),
               );
 
-              await actions.showCustomToastBottom('সাবস্ক্রিপশন সফলভাবে সক্রিয় হয়েছে!');
-              context.safePop();
-            } else {
-              final errMsg = purchaseResult['errorMessage'] ?? 'পেমেন্ট ব্যর্থ হয়েছে।';
-              await actions.showCustomToastBottom(errMsg);
-            }
-          } else {
-            // Paid plan → SSLCommerz via PaymentMethodPage
-            FFAppState().subscriptionId =
-                getJsonField(_model.subDetail, r'''$._id''')?.toString() ??
-                    getJsonField(_model.subDetail, r'''$.id''')?.toString() ??
-                    '';
-            safeSetState(() {});
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => SubscriptionPaymentScreen(
-                  subscriptionJson: _model.subDetail,
+              final purchaseResult = await RevenueCatService.purchasePlan(productIdentifier);
+              
+              // Pop the loading indicator
+              if (Navigator.canPop(context)) {
+                Navigator.of(context).pop();
+              }
+
+              if (purchaseResult['success'] == true) {
+                final txnId = purchaseResult['transactionId'] ?? 'rc_${DateTime.now().millisecondsSinceEpoch}';
+                
+                // Call backend API to record subscription
+                _model.subscriptionFree = await EbookGroup.usersubscriptionApiCall.call(
+                  userId: FFAppState().userId,
+                  subscriptionplanId: planId,
+                  paymentmode: 'appstore',
+                  transactionId: txnId,
+                  paymentstatus: 'success',
+                  paymentdate: dateTimeFormat("dd-MM-yyyy", getCurrentTimestamp),
+                  price: price,
+                  token: FFAppState().token,
+                );
+
+                await actions.showCustomToastBottom('সাবস্ক্রিপশন সফলভাবে সক্রিয় হয়েছে!');
+                context.safePop();
+              } else {
+                final errMsg = purchaseResult['errorMessage'] ?? 'পেমেন্ট ব্যর্থ হয়েছে।';
+                await actions.showCustomToastBottom(errMsg);
+              }
+            } else if (paymentChoice == 'local_payment') {
+              // Paid plan → SSLCommerz via PaymentMethodPage
+              FFAppState().subscriptionId =
+                  getJsonField(_model.subDetail, r'''$._id''')?.toString() ??
+                      getJsonField(_model.subDetail, r'''$.id''')?.toString() ??
+                      '';
+              safeSetState(() {});
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SubscriptionPaymentScreen(
+                    subscriptionJson: _model.subDetail,
+                  ),
                 ),
-              ),
-            );
+              );
+            }
           }
           safeSetState(() {});
         },
-        text: Theme.of(context).platform == TargetPlatform.iOS
+        text: (Theme.of(context).platform == TargetPlatform.iOS || Theme.of(context).platform == TargetPlatform.android)
             ? 'সাবস্ক্রাইব করুন'
             : ((getJsonField(_model.subDetail, r'''$.price''')?.toString() ??
                         '1') ==

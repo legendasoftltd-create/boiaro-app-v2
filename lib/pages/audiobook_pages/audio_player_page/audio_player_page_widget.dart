@@ -1570,6 +1570,35 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                             onTap: () => Navigator.of(ctx).pop('apple_iap'),
                           ),
                           const SizedBox(height: 12),
+                        ] else if (Platform.isAndroid) ...[
+                          buildUnlockOptionCard(
+                            icon: Icons.payment_rounded,
+                            iconColor: theme.primary,
+                            label: 'Unlock with Google Play (Recommended)',
+                            value: 'Google Play IAP',
+                            onTap: () => Navigator.of(ctx).pop('apple_iap'),
+                          ),
+                          const SizedBox(height: 12),
+                          if (coinPrice > 0) ...[
+                            buildUnlockOptionCard(
+                              icon: Icons.monetization_on_rounded,
+                              iconColor: const Color(0xFFFFB03A),
+                              label: 'Use Coins',
+                              value: '$coinPrice Coins',
+                              onTap: () => Navigator.of(ctx).pop('coins'),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          if (bdtPrice > 0) ...[
+                            buildUnlockOptionCard(
+                              icon: Icons.account_balance_wallet_rounded,
+                              iconColor: const Color(0xFF2EC4B6),
+                              label: 'Local Payment (বিকাশ, রকেট, কার্ড)',
+                              value: '৳${bdtPrice.toStringAsFixed(0)}',
+                              onTap: () => Navigator.of(ctx).pop('payment'),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                         ] else ...[
                           if (coinPrice > 0) ...[
                             buildUnlockOptionCard(

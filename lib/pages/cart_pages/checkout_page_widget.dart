@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:a_i_ebook_app/index.dart';
+import 'package:a_i_ebook_app/services/revenue_cat_service.dart';
 import 'package:a_i_ebook_app/pages/cart_pages/make_payment.dart';
+import '/custom_code/actions/index.dart' as actions;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -63,6 +67,16 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final cart = Provider.of<CartProvider>(context, listen: false);
+        if (_hasDigital(cart) && !_hasHardcopy(cart)) {
+          setState(() {
+            selectedPaymentMethod = 'iap';
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -861,11 +875,13 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                       value == 'ssl' ? Icons.credit_card :
                       value == 'wallet' ? Icons.account_balance_wallet_rounded :
                       value == 'cod' ? Icons.local_shipping_rounded :
+                      value == 'iap' ? (Platform.isIOS ? Icons.apple : Icons.payment_rounded) :
                       Icons.payment,
                       color: value == 'bkash' ? Colors.pink : 
                              value == 'ssl' ? Colors.blue :
                              value == 'wallet' ? Colors.amber.shade700 :
-                             value == 'cod' ? Colors.green.shade700 : Colors.grey,
+                             value == 'cod' ? Colors.green.shade700 :
+                             value == 'iap' ? FlutterFlowTheme.of(context).primary : Colors.grey,
                     ),
                 //   },
                 // ),
@@ -1319,12 +1335,28 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                       //   'assets/images/bkash_logo.png',
                       // ),
                       
+                      if (hasDigital && !hasHardcopy) ...[
+                        if (Platform.isAndroid)
+                          _buildPaymentOption(
+                            'iap',
+                            'Google Play Billing (Recommended)',
+                            'গুগল পে বা কার্ড ব্যবহার করে পেমেন্ট করুন',
+                            'assets/images/play_logo.png',
+                          )
+                        else if (Platform.isIOS)
+                          _buildPaymentOption(
+                            'iap',
+                            'Apple Pay / IAP (Recommended)',
+                            'অ্যাপল পে দিয়ে পেমেন্ট করুন',
+                            'assets/images/apple_logo.png',
+                          ),
+                      ],
+                      
                       _buildPaymentOption(
                         'ssl',
                         'SSLCommerz',
                         'Credit Card, Debit Card & Bank Transfer',
                         'assets/images/ssl_logo.png',
-                        
                       ),
                       // _buildPaymentOption(
                       //   'wallet',
@@ -1560,6 +1592,159 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                       }
                     }
                     return; // COD handled — stop here
+                  }
+
+                  // ─── IAP: Google Play / Apple Pay ───────────────────────
+                  if (selectedPaymentMethod == 'iap') {
+                    // Show a progress indicator
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+                    );
+
+                    try {
+                      await RevenueCatService.initialize();
+                      final productId = RevenueCatService.getProductIdForBdtPrice(finalTotal);
+                      final purchaseResult = await RevenueCatService.purchaseChapter(productId);
+
+                      // Pop the progress indicator
+                      if (Navigator.canPop(context)) {
+                        Navigator.of(context).pop();
+                      }
+
+                      if (purchaseResult['success'] == true) {
+                        final transactionId = purchaseResult['transactionId'];
+
+                        // Show another progress indicator for verification
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) => const Center(child: CircularProgressIndicator()),
+                        );
+
+                        // Unlock each digital book in the cart
+                        bool allSuccessful = true;
+                        String errorMessage = '';
+                        for (final item in cart.items.values) {
+                          if (item.type.toLowerCase().trim() == 'hardcopy') continue;
+                          
+                          final res = await EbookGroup.unlockBookWithIAPCall.call(
+                            bookId: item.id.trim(),
+                            transactionId: transactionId,
+                            productId: productId,
+                            format: item.type,
+                            token: FFAppState().token,
+                          );
+
+                          if (res.statusCode != 200 && !res.succeeded) {
+                            allSuccessful = false;
+                            errorMessage = getJsonField(res.jsonBody, r'''$.error''')?.toString() ?? 
+                                           getJsonField(res.jsonBody, r'''$.message''')?.toString() ?? 
+                                           'Unlock verification failed';
+                          }
+                        }
+
+                        // Pop the verification progress indicator
+                        if (Navigator.canPop(context)) {
+                          Navigator.of(context).pop();
+                        }
+
+                        if (allSuccessful) {
+                          cart.clear();
+                          // Show Order Placed / Unlock Successful dialog
+                          await showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (dialogContext) => PopScope(
+                              canPop: false,
+                              child: AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 72,
+                                      height: 72,
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade50,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: Colors.green,
+                                        size: 48,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      FFLocalizations.of(context).getVariableText(
+                                          enText: 'Purchase Successful!',
+                                          bnText: 'পেমেন্ট সম্পন্ন হয়েছে!'),
+                                      style: FlutterFlowTheme.of(context).headlineSmall.override(
+                                            fontFamily: 'SF Pro Display',
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      FFLocalizations.of(context).getVariableText(
+                                          enText: 'Your books have been unlocked successfully.',
+                                          bnText: 'আপনার বইগুলো সফলভাবে আনলক করা হয়েছে।'),
+                                      textAlign: TextAlign.center,
+                                      style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                            fontFamily: 'SF Pro Display',
+                                            color: FlutterFlowTheme.of(context).secondaryText,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(dialogContext).pop();
+                                        Navigator.of(context).popUntil((route) => route.isFirst);
+                                        context.pushNamed(
+                                          PurchaseHistoryPageWidget.routeName,
+                                          queryParameters: {'tab': '0', 'chip': '3'},
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: FlutterFlowTheme.of(context).primary,
+                                        minimumSize: const Size(double.infinity, 48),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: Text(
+                                        FFLocalizations.of(context).getVariableText(
+                                            enText: 'Go to Library',
+                                            bnText: 'লাইব্রেরিতে যান'),
+                                        style: const TextStyle(
+                                          fontFamily: 'SF Pro Display',
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        } else {
+                          await actions.showCustomToastBottom(errorMessage.isNotEmpty ? errorMessage : 'Verification failed');
+                        }
+                      } else {
+                        final errMsg = purchaseResult['errorMessage'] ?? 'পেমেন্ট ব্যর্থ হয়েছে।';
+                        await actions.showCustomToastBottom(errMsg);
+                      }
+                    } catch (e) {
+                      if (Navigator.canPop(context)) {
+                        Navigator.of(context).pop();
+                      }
+                      await actions.showCustomToastBottom('Error: $e');
+                    }
+                    return;
                   }
 
                   // ─── Online / Wallet: go to MakeCheckOutScreen ─────────

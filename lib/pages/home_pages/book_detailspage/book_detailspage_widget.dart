@@ -1296,148 +1296,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       return;
     }
 
-    if (Platform.isIOS && type != 'hardcopy') {
-      final theme = FlutterFlowTheme.of(context);
-      final confirm = await showModalBottomSheet<bool>(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder: (ctx) {
-          return Padding(
-            padding: MediaQuery.viewInsetsOf(ctx),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-              decoration: BoxDecoration(
-                color: theme.secondaryBackground,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24.0),
-                  topRight: Radius.circular(24.0),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 20,
-                    color: Colors.black.withOpacity(0.1),
-                    offset: const Offset(0, -4),
-                  )
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.alternate,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    FFLocalizations.of(context).getVariableText(enText: 'Unlock Full Book', bnText: 'সম্পূর্ণ বই আনলক করুন'),
-                    style: TextStyle(
-                      fontFamily: 'SF Pro Display',
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: theme.primaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${FFLocalizations.of(context).getVariableText(enText: 'Unlock', bnText: 'আনলক করুন')} "$bookName" ($type) ${FFLocalizations.of(context).getVariableText(enText: 'using Apple Pay.', bnText: 'অ্যাপল পে ব্যবহার করে।')}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'SF Pro Display',
-                      fontSize: 14,
-                      color: theme.secondaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  InkWell(
-                    onTap: () => Navigator.of(ctx).pop(true),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: theme.primaryBackground,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: theme.primaryText.withOpacity(0.2)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.apple, color: theme.primaryText, size: 24),
-                          const SizedBox(width: 8),
-                          Text(
-                            FFLocalizations.of(context).getVariableText(enText: 'Pay with Apple IAP', bnText: 'অ্যাপল পে দিয়ে পে করুন'),
-                            style: TextStyle(
-                              fontFamily: 'SF Pro Display',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: theme.primaryText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(false),
-                    child: Text(
-                      FFLocalizations.of(context).getVariableText(enText: 'Cancel', bnText: 'বাতিল করুন'),
-                      style: TextStyle(
-                        fontFamily: 'SF Pro Display',
-                        fontSize: 14,
-                        color: theme.secondaryText,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ),
-            ),
-          );
-        },
-      );
 
-      if (confirm == true) {
-        await RevenueCatService.initialize();
-        final productId = RevenueCatService.getProductIdForBdtPrice(price);
-        final purchaseResult = await RevenueCatService.purchaseChapter(productId);
-        
-        if (purchaseResult['success'] == true) {
-          final transactionId = purchaseResult['transactionId'];
-          final res = await EbookGroup.unlockBookWithIAPCall.call(
-            bookId: bookId,
-            transactionId: transactionId,
-            productId: productId,
-            format: type,
-            token: FFAppState().token,
-          );
-
-          if (res.statusCode == 200 || res.succeeded) {
-            await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Book unlocked successfully!', bnText: 'বইটি সফলভাবে আনলক করা হয়েছে!'));
-            _purchasedFormatKeys.add('${bookId.toLowerCase()}::${type.toLowerCase().trim()}');
-            if (!_model.purchasedBookIds.contains(bookId)) {
-              _model.purchasedBookIds.add(bookId);
-            }
-            safeSetState(() {});
-          } else {
-            final msg = getJsonField(res.jsonBody, r'''$.error''') ?? 
-                        getJsonField(res.jsonBody, r'''$.message''') ?? 'Unlock verification failed';
-            await actions.showCustomToastBottom(msg.toString());
-          }
-        } else {
-          final error = purchaseResult['errorMessage'];
-          if (error != null) {
-            await actions.showCustomToastBottom(error);
-          }
-        }
-      }
-      return;
-    }
 
 
 
@@ -2298,6 +2157,35 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 onTap: () => Navigator.of(ctx).pop('apple_iap'),
                               ),
                               const SizedBox(height: 12),
+                            ] else if (Platform.isAndroid) ...[
+                              buildUnlockOptionCard(
+                                icon: Icons.payment_rounded,
+                                iconColor: theme.primary,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Google Play (Recommended)', bnText: 'গুগল প্লে দিয়ে আনলক করুন (Recommended)'),
+                                value: FFLocalizations.of(context).getVariableText(enText: 'Google Play IAP', bnText: 'গুগল প্লে ইন-অ্যাপ পারচেস'),
+                                onTap: () => Navigator.of(ctx).pop('apple_iap'),
+                              ),
+                              const SizedBox(height: 12),
+                              if (coinPrice > 0) ...[
+                                buildUnlockOptionCard(
+                                  icon: Icons.monetization_on_rounded,
+                                  iconColor: const Color(0xFFFFB03A),
+                                  label: FFLocalizations.of(context).getVariableText(enText: 'Use Coins', bnText: 'কয়েন ব্যবহার করুন'),
+                                  value: '$coinPrice ' + FFLocalizations.of(context).getVariableText(enText: 'Coins', bnText: 'কয়েন'),
+                                  onTap: () => Navigator.of(ctx).pop('coins'),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (bdtPrice > 0) ...[
+                                buildUnlockOptionCard(
+                                  icon: Icons.account_balance_wallet_rounded,
+                                  iconColor: const Color(0xFF2EC4B6),
+                                  label: FFLocalizations.of(context).getVariableText(enText: 'Local Payment (বিকাশ, রকেট, কার্ড)', bnText: 'লোকাল পেমেন্ট (বিকাশ, রকেট, কার্ড)'),
+                                  value: '৳${bdtPrice.toStringAsFixed(0)}',
+                                  onTap: () => Navigator.of(ctx).pop('payment'),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                             ] else ...[
                               if (coinPrice > 0) ...[
                                 buildUnlockOptionCard(

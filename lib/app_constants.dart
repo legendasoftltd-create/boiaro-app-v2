@@ -1,6 +1,6 @@
 
 abstract class FFAppConstants {
-  static const String webUrl = 'https://boiaro.com';
+  static const String webUrl = 'https://staging.boiaro.com';
 
   /// BoiAro REST API for mobile clients.
   static const String mobileApiBaseUrl ='$webUrl/api/v1';

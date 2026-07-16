@@ -7,6 +7,10 @@ class RevenueCatService {
   // Replace this with your actual iOS public API key from the RevenueCat Dashboard.
   static const String _iosApiKey = 'appl_MCimSCMpnugptRSjinNTsOvcdWc';
 
+  // Replace this with your actual Android public API key from the RevenueCat Dashboard.
+  // TODO: Replace with your actual Android API Key from RevenueCat
+  static const String _androidApiKey = 'goog_YOUR_ANDROID_API_KEY_HERE';
+
   // Entitlement ID defined in the RevenueCat dashboard.
   static const String premiumEntitlementId = 'premium';
 
@@ -56,23 +60,24 @@ class RevenueCatService {
     return 'com.boiaro.app.tier_$tierString';
   }
 
-  /// Initialize the RevenueCat SDK for iOS
+  /// Initialize the RevenueCat SDK for iOS and Android
   static Future<void> initialize({String? appUserId}) async {
     if (_initialized) return;
 
-    // RevenueCat IAP is only supported on iOS in this implementation
-    if (!kIsWeb && Platform.isIOS) {
+    // RevenueCat IAP is supported on iOS and Android
+    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
       try {
         await Purchases.setLogLevel(LogLevel.debug);
         
-        final configuration = PurchasesConfiguration(_iosApiKey);
+        String apiKey = Platform.isIOS ? _iosApiKey : _androidApiKey;
+        final configuration = PurchasesConfiguration(apiKey);
         if (appUserId != null && appUserId.trim().isNotEmpty) {
           configuration.appUserID = appUserId.trim();
         }
         
         await Purchases.configure(configuration);
         _initialized = true;
-        debugPrint('RevenueCat initialized successfully for iOS');
+        debugPrint('RevenueCat initialized successfully');
       } catch (e, stack) {
         debugPrint('Failed to initialize RevenueCat: $e');
         debugPrint('$stack');
@@ -86,7 +91,7 @@ class RevenueCatService {
       await initialize(appUserId: userId);
       return;
     }
-    if (!kIsWeb && Platform.isIOS) {
+    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
       try {
         await Purchases.logIn(userId);
         debugPrint('RevenueCat: Logged in user: $userId');
@@ -98,7 +103,7 @@ class RevenueCatService {
 
   /// Log out the user from RevenueCat
   static Future<void> logOut() async {
-    if (_initialized && !kIsWeb && Platform.isIOS) {
+    if (_initialized && !kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
       try {
         await Purchases.logOut();
         debugPrint('RevenueCat: Logged out user');
@@ -110,7 +115,7 @@ class RevenueCatService {
 
   /// Check if the user currently has active entitlements
   static Future<bool> isUserPremium() async {
-    if (!kIsWeb && Platform.isIOS) {
+    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
       try {
         if (!_initialized) await initialize();
         final customerInfo = await Purchases.getCustomerInfo();
@@ -126,7 +131,7 @@ class RevenueCatService {
 
   /// Fetch all available offerings/packages configured in RevenueCat
   static Future<Offerings?> getOfferings() async {
-    if (!kIsWeb && Platform.isIOS) {
+    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
       try {
         if (!_initialized) await initialize();
         return await Purchases.getOfferings();
@@ -141,11 +146,11 @@ class RevenueCatService {
   /// Purchase a subscription plan by finding the package that matches the product ID
   /// Returns a map with {'success': bool, 'transactionId': String?, 'errorMessage': String?}
   static Future<Map<String, dynamic>> purchasePlan(String productIdentifier) async {
-    if (kIsWeb || !Platform.isIOS) {
+    if (kIsWeb || (!Platform.isIOS && !Platform.isAndroid)) {
       return {
         'success': false,
         'transactionId': null,
-        'errorMessage': 'In-App Purchase is only supported on iOS devices.'
+        'errorMessage': 'In-App Purchase is only supported on mobile devices.'
       };
     }
 
@@ -228,7 +233,7 @@ class RevenueCatService {
 
   /// Restore purchases for the current user
   static Future<bool> restorePurchases() async {
-    if (!kIsWeb && Platform.isIOS) {
+    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
       try {
         if (!_initialized) await initialize();
         final customerInfo = await Purchases.restorePurchases();
@@ -241,14 +246,14 @@ class RevenueCatService {
     return false;
   }
 
-  /// Purchase a consumable chapter (For iOS)
+  /// Purchase a consumable chapter
   /// Returns a map with {'success': bool, 'transactionId': String?, 'errorMessage': String?}
   static Future<Map<String, dynamic>> purchaseChapter(String productIdentifier) async {
-    if (kIsWeb || !Platform.isIOS) {
+    if (kIsWeb || (!Platform.isIOS && !Platform.isAndroid)) {
       return {
         'success': false,
         'transactionId': null,
-        'errorMessage': 'In-App Purchase is only supported on iOS devices.'
+        'errorMessage': 'In-App Purchase is only supported on mobile devices.'
       };
     }
 
