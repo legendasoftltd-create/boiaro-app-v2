@@ -123,6 +123,9 @@ class TtsService extends ChangeNotifier {
   int _currentParagraphIndex = -1;
   int get currentParagraphIndex => _currentParagraphIndex;
 
+  /// Callback when a speech utterance finishes.
+  VoidCallback? onSpeechCompleted;
+
   // ── Internal ───────────────────────────────────────────────────────────────
   final FlutterTts _deviceTts = FlutterTts();
   final AudioPlayer _premiumPlayer = AudioPlayer();
@@ -149,6 +152,7 @@ class TtsService extends ChangeNotifier {
     _deviceTts.setCompletionHandler(() {
       _isPlaying = false;
       notifyListeners();
+      onSpeechCompleted?.call();
     });
     _deviceTts.setCancelHandler(() {
       _isPlaying = false;
@@ -168,6 +172,9 @@ class TtsService extends ChangeNotifier {
       if (_isPlaying != playing) {
         _isPlaying = playing;
         notifyListeners();
+      }
+      if (state.processingState == ProcessingState.completed) {
+        onSpeechCompleted?.call();
       }
     });
   }

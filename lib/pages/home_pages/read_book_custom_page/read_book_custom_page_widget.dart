@@ -21,7 +21,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '/pages/dialogs/rate_app_dialog/rate_app_dialog_widget.dart';
 import 'read_book_custom_page_model.dart';
-import 'ios_epub_reader_screen.dart';
+import 'epub_reader/epub_reader_screen.dart';
 export 'read_book_custom_page_model.dart';
 
 class ReadBookCustomPageWidget extends StatefulWidget {
@@ -498,7 +498,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => IosEpubReaderScreen(
+          builder: (context) => EpubReaderScreen(
             epubPath: path,
             bookTitle: widget.name ?? 'Book',
             initialProgress: initialProgress,
