@@ -4,6 +4,7 @@ import '/backend/api_requests/api_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'flutter_flow/flutter_flow_util.dart';
 import 'dart:convert';
+import 'backend/api_requests/api_calls.dart';
 
 class FFAppState extends ChangeNotifier {
   static FFAppState _instance = FFAppState._internal();
@@ -885,6 +886,31 @@ class FFAppState extends ChangeNotifier {
       _getFeaturedBooksByCategoryCacheManager.clear();
   void clearGetFeaturedBooksByCategoryCacheCacheKey(String? uniqueKey) =>
       _getFeaturedBooksByCategoryCacheManager.clearRequest(uniqueKey);
+
+  bool? _showSslcommerzIos;
+  bool get showSslcommerzIos => _showSslcommerzIos ?? false;
+  set showSslcommerzIos(bool value) {
+    _showSslcommerzIos = value;
+    notifyListeners();
+  }
+
+  bool get isSslcommerzIosConfigFetched => _showSslcommerzIos != null;
+
+  Future<void> fetchSslcommerzIosConfig() async {
+    try {
+      final res = await EbookGroup.getIosPaymentConfigApiCall.call(token: _token);
+      if (res.jsonBody != null && res.jsonBody['success'] == true) {
+        _showSslcommerzIos = res.jsonBody['show_sslcommerz'] == true;
+        notifyListeners();
+      } else {
+        _showSslcommerzIos = false;
+        notifyListeners();
+      }
+    } catch (_) {
+      _showSslcommerzIos = false;
+      notifyListeners();
+    }
+  }
 }
 
 void _safeInit(Function() initializeField) {

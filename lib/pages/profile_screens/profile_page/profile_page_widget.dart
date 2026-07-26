@@ -933,24 +933,23 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                     size: 20,
                                   ),
                                   onTap: () => context.pushNamed(OrdersPageWidget.routeName),
-                                  showDivider: !Platform.isIOS,
+                                  showDivider: true,
                                 ),
-                                if (!Platform.isIOS)
-                                  _buildRowItem(
-                                    context,
-                                    label: FFLocalizations.of(context).getText('subscription'),
-                                    icon: SvgPicture.asset(
-                                      'assets/images/premium.svg',
-                                      colorFilter: ColorFilter.mode(
-                                        FlutterFlowTheme.of(context).primaryText,
-                                        BlendMode.srcIn,
-                                      ),
-                                      width: 20,
-                                      height: 20,
+                                _buildRowItem(
+                                  context,
+                                  label: FFLocalizations.of(context).getText('subscription'),
+                                  icon: SvgPicture.asset(
+                                    'assets/images/premium.svg',
+                                    colorFilter: ColorFilter.mode(
+                                      FlutterFlowTheme.of(context).primaryText,
+                                      BlendMode.srcIn,
                                     ),
-                                    onTap: () => context.pushNamed(SubscriptionPageWidget.routeName),
-                                    showDivider: true,
+                                    width: 20,
+                                    height: 20,
                                   ),
+                                  onTap: () => context.pushNamed(SubscriptionPageWidget.routeName),
+                                  showDivider: true,
+                                ),
                                 _buildRowItem(
                                   context,
                                   label: FFLocalizations.of(context).getVariableText(enText: 'Refer & Earn', bnText: 'রেফার করুন ও আয় করুন'),

@@ -670,6 +670,40 @@ class EbookGroup {
       GetSupportTicketDetailApiCall();
   static ReplySupportTicketApiCall replySupportTicketApiCall =
       ReplySupportTicketApiCall();
+  static GetIosPaymentConfigApiCall getIosPaymentConfigApiCall =
+      GetIosPaymentConfigApiCall();
+}
+
+class GetIosPaymentConfigApiCall {
+  Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl(
+      token: token,
+    );
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetIosPaymentConfig',
+      apiUrl: '${baseUrl}payment/config/ios',
+      callType: ApiCallType.GET,
+      headers: {
+        if ((token ?? '').isNotEmpty) 'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+      params: {},
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  bool? showSslcommerz(dynamic response) => castToType<bool>(getJsonField(
+        response,
+        r'''$.show_sslcommerz''',
+      ));
 }
 
 class PhoneSendOtpApiCall {

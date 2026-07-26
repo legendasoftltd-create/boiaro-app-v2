@@ -53,6 +53,9 @@ void main() async {
 
   await appState.initializePersistedState();
   AppUpdateUtils.checkForUpdate();
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+    appState.fetchSslcommerzIosConfig();
+  }
 
 
   runApp(

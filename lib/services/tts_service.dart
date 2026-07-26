@@ -144,7 +144,16 @@ class TtsService extends ChangeNotifier {
     if (_deviceTtsInitialized) return;
     _deviceTtsInitialized = true;
 
-    await _deviceTts.setLanguage('bn-BD');
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final isBnInAvailable = await _deviceTts.isLanguageAvailable('bn-IN') == true;
+      if (isBnInAvailable) {
+        await _deviceTts.setLanguage('bn-IN');
+      } else {
+        await _deviceTts.setLanguage('bn-BD');
+      }
+    } else {
+      await _deviceTts.setLanguage('bn-BD');
+    }
     await _deviceTts.setSpeechRate(_speechRate);
     await _deviceTts.setVolume(1.0);
     await _deviceTts.setPitch(1.0);
@@ -427,9 +436,15 @@ class TtsService extends ChangeNotifier {
   }
 
   Future<void> stop() async {
-    await _deviceTts.stop();
-    await _premiumPlayer.stop();
-    await _ambientPlayer.stop();
+    try {
+      await _deviceTts.stop();
+    } catch (_) {}
+    try {
+      await _premiumPlayer.stop();
+    } catch (_) {}
+    try {
+      await _ambientPlayer.stop();
+    } catch (_) {}
     _isPlaying = false;
     _isLoading = false;
     _currentParagraphIndex = -1;

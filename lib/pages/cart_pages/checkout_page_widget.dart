@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:a_i_ebook_app/index.dart';
 import 'package:a_i_ebook_app/services/revenue_cat_service.dart';
@@ -69,6 +70,9 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        if (Platform.isIOS && !FFAppState().isSslcommerzIosConfigFetched) {
+          unawaited(FFAppState().fetchSslcommerzIosConfig());
+        }
         final cart = Provider.of<CartProvider>(context, listen: false);
         if (_hasDigital(cart) && !_hasHardcopy(cart)) {
           setState(() {
@@ -916,6 +920,7 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<FFAppState>();
     final cart = Provider.of<CartProvider>(context);
     final originalSubtotal = cart.totalAmount;
     final subtotalAfterBookDiscounts = cart.totalAmountAfterBookDiscounts;
@@ -924,6 +929,12 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
         (subtotalAfterBookDiscounts - _discountAmount).clamp(0.0, double.infinity);
     final hasHardcopy = _hasHardcopy(cart);
     final hasDigital = _hasDigital(cart);
+
+    // Ensure selected payment method is valid if SSLCommerz is hidden on iOS
+    if (Platform.isIOS && !FFAppState().showSslcommerzIos && selectedPaymentMethod == 'ssl') {
+      selectedPaymentMethod = hasHardcopy ? 'cod' : 'iap';
+    }
+
     final finalTotal =
         hasHardcopy ? (baseTotal + _shippingCost) : baseTotal;
 
@@ -1352,12 +1363,13 @@ class _CheckoutPageWidgetState extends State<CheckoutPageWidget> {
                           ),
                       ],
                       
-                      _buildPaymentOption(
-                        'ssl',
-                        'SSLCommerz',
-                        'Credit Card, Debit Card & Bank Transfer',
-                        'assets/images/ssl_logo.png',
-                      ),
+                      if (!Platform.isIOS || FFAppState().showSslcommerzIos)
+                        _buildPaymentOption(
+                          'ssl',
+                          'SSLCommerz',
+                          'Credit Card, Debit Card & Bank Transfer',
+                          'assets/images/ssl_logo.png',
+                        ),
                       // _buildPaymentOption(
                       //   'wallet',
                       //   'Wallet Coins',

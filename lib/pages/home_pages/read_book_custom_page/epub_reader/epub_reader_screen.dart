@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_epub_viewer/flutter_epub_viewer.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +19,9 @@ import '/services/tts_service.dart';
 import 'style_sheets.dart';
 import 'search_overlay.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
+
+// ── Isolate helper for base64-encoding font bytes ──────────────────────────
+String _encodeBase64Isolate(List<int> bytes) => base64Encode(bytes);
 
 class EpubReaderScreen extends StatefulWidget {
   final String epubPath;
@@ -52,8 +58,11 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
 
   // Style preferences
   ReaderThemeType _themeType = ReaderThemeType.light;
-  String _fontFamily = 'default';
+  String _fontFamily = 'noto serif bengali'; // Default: Noto Serif Bengali
   double _fontSize = 16.0;
+
+  // Local font base64 cache (populated once on epub load)
+  final Map<String, String> _localFontBase64 = {};
   double _originalBrightness = 0.5;
   double _currentBrightness = 0.5;
 
@@ -75,10 +84,19 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
   int _touchStartTime = 0;
   EpubTextSelection? _lastSelection;
 
+  // Cached SharedPreferences instance to avoid Repeated async resolution
+  SharedPreferences? _prefs;
+
+  // Guard against rapid duplicate tap events (iOS WKWebView iframe touchend fallback)
+  int _lastTapTimeMs = 0;
+  // Guard to prevent TTS text extraction before new page DOM is ready
+  bool _ttsPageSettling = false;
+
   @override
   void initState() {
     super.initState();
     epubSource = EpubSource.fromFile(File(widget.epubPath));
+    unawaited(_preloadLocalFonts()); // Start font preloading early on isolate
     _loadPreferences();
     _loadBookmarksAndHighlights();
     _initBrightness();
@@ -96,7 +114,8 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
   // ── Preferences and Settings ───────────────────────────────────────────────
 
   Future<void> _loadPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
+    _prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs!;
     
     // Scoped style settings
     final themeIndex = prefs.getInt('epub_theme_${widget.bookId}') ?? 
@@ -107,7 +126,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                       16.0;
     final fontFamily = prefs.getString('epub_font_family_${widget.bookId}') ?? 
                        prefs.getString('epub_font_family_global') ?? 
-                       'default';
+                       'noto serif bengali'; // Default to Noto Serif Bengali
 
     setState(() {
       _themeType = ReaderThemeType.values[themeIndex];
@@ -131,7 +150,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
   }
 
   Future<void> _savePreference(String key, dynamic value) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
     if (value is int) {
       await prefs.setInt(key, value);
     } else if (value is double) {
@@ -143,7 +162,120 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
     }
   }
 
+  // Map to track actual rendered screen pages per chapter dynamically
+  final Map<int, int> _chapterPageTotals = {};
+
+  void _registerAllPagesHandler() {
+    epubController.webViewController?.addJavaScriptHandler(
+      handlerName: 'epubAllPagesCalculated',
+      callback: (args) {
+        if (args.isNotEmpty && args[0] is String) {
+          try {
+            final map = jsonDecode(args[0] as String) as Map<String, dynamic>;
+            final total = (map['total'] as num?)?.toInt() ?? 0;
+            final pages = (map['pages'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [];
+
+            if (total > 0 && pages.isNotEmpty) {
+              for (int i = 0; i < pages.length; i++) {
+                _chapterPageTotals[i] = pages[i];
+              }
+              _prefs?.setInt('epub_total_pages_${widget.bookId}_$_fontSize', total);
+              if (mounted) {
+                setState(() {
+                  _totalPages = total;
+                });
+              }
+            }
+          } catch (_) {}
+        }
+      },
+    );
+  }
+
+  Future<void> _preloadAllChapterPages() async {
+    try {
+      _registerAllPagesHandler();
+
+      final js = '''
+        (function() {
+          try {
+            var spine = rendition.book.spine;
+            if (!spine || !spine.spineItems || spine.spineItems.length === 0) return;
+            
+            var chapterPages = [];
+            var promises = [];
+            var fs = $_fontSize;
+            // 790 chars per page maps 1:1 to rendered WKWebView column page density for Bengali text
+            var charsPerPage = Math.max(150, Math.round(790 * (16.0 / fs)));
+
+            for (var i = 0; i < spine.spineItems.length; i++) {
+              (function(item, idx) {
+                promises.push(
+                  item.load(rendition.book.load.bind(rendition.book)).then(function(doc) {
+                    if (!doc) { chapterPages[idx] = 1; return 1; }
+                    var text = (doc.body ? doc.body.textContent : doc.textContent) || '';
+                    var len = text.replace(/\\s+/g, ' ').trim().length;
+                    if (len === 0) { chapterPages[idx] = 1; return 1; }
+                    
+                    var pages = Math.max(1, Math.ceil(len / charsPerPage));
+                    chapterPages[idx] = pages;
+                    return pages;
+                  }).catch(function() {
+                    chapterPages[idx] = 1;
+                    return 1;
+                  })
+                );
+              })(spine.spineItems[i], i);
+            }
+
+            Promise.all(promises).then(function() {
+              var total = 0;
+              for (var k = 0; k < chapterPages.length; k++) {
+                total += (chapterPages[k] || 1);
+              }
+              try {
+                window.flutter_inappwebview.callHandler('epubAllPagesCalculated', JSON.stringify({
+                  total: total,
+                  pages: chapterPages
+                }));
+              } catch(err) {}
+            });
+          } catch(e) {}
+        })();
+      ''';
+
+      await epubController.webViewController?.evaluateJavascript(source: js);
+    } catch (_) {}
+  }
+
+  void _updateTotalPages() {
+    _chapterPageTotals.clear();
+    final cached = _prefs?.getInt('epub_total_pages_${widget.bookId}_$_fontSize');
+    if (cached != null && cached > 0) {
+      if (_totalPages != cached) {
+        setState(() {
+          _totalPages = cached;
+        });
+      }
+      return;
+    }
+
+    final numChapters = _chapters.isNotEmpty ? _chapters.length : 1;
+    final fontScale = _fontSize / 16.0;
+    final totalEst = (numChapters * 4.1 * fontScale).round().clamp(10, 800);
+    if (_totalPages != totalEst) {
+      setState(() {
+        _totalPages = totalEst;
+      });
+    }
+  }
+
   Future<void> _applyStyles() async {
+    // Inject @font-face BEFORE updateTheme so EpubJS can resolve the
+    // font-family name when it applies the theme CSS
+    await _injectLocalFontsInWebView();
+    await _injectGoogleFontsInWebView();
+
     final theme = EpubStyleHelper.getEpubTheme(
       themeType: _themeType,
       fontFamilyKey: _fontFamily,
@@ -151,7 +283,81 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
     );
     await epubController.updateTheme(theme: theme);
     await epubController.setFontSize(fontSize: _fontSize);
-    await _injectGoogleFontsInWebView();
+    _updateTotalPages();
+  }
+
+  Future<void> _loadPageTextAndPlay() async {
+    try {
+      // Small settle delay (150ms) for EpubJS iframe DOM rendering
+      await Future.delayed(const Duration(milliseconds: 150));
+      if (!_isTtsActive || !mounted) return;
+
+      // Extract text strictly from leaf elements visible inside current page column bounds
+      const js = '''
+        (function() {
+          try {
+            var iframes = document.querySelectorAll('iframe');
+            var visibleText = "";
+            for (var i = 0; i < iframes.length; i++) {
+              var iframe = iframes[i];
+              var doc = iframe.contentDocument || iframe.contentWindow.document;
+              if (!doc || !doc.body) continue;
+
+              var winWidth = iframe.clientWidth || window.innerWidth;
+              var winHeight = iframe.clientHeight || window.innerHeight;
+
+              var allElements = doc.body.querySelectorAll('*');
+              var pageLines = [];
+              for (var j = 0; j < allElements.length; j++) {
+                var el = allElements[j];
+                // Only inspect leaf elements (elements with no child elements) that contain text
+                if (el.children && el.children.length > 0) continue;
+                var text = (el.textContent || el.innerText || '').trim();
+                if (!text || text.length < 2) continue;
+
+                var rect = el.getBoundingClientRect();
+                if (rect.right > 5 && rect.left < winWidth - 5 && rect.bottom > 0 && rect.top < winHeight) {
+                  pageLines.push(text);
+                }
+              }
+              if (pageLines.length > 0) {
+                visibleText = pageLines.join(' ');
+                break;
+              }
+              if (doc.body.innerText) {
+                visibleText = doc.body.innerText;
+              }
+            }
+            return visibleText;
+          } catch(e) { return ""; }
+        })();
+      ''';
+
+      final rawText = await epubController.webViewController
+          ?.evaluateJavascript(source: js)
+          .timeout(const Duration(seconds: 2), onTimeout: () => '');
+      
+      String text = rawText is String ? rawText.trim() : '';
+
+      final parsed = _splitIntoSentences(text);
+      
+      if (mounted) {
+        setState(() {
+          _sentences = parsed;
+          _currentSentenceIndex = 0;
+        });
+      }
+
+      if (_isTtsPlaying && mounted && _sentences.isNotEmpty) {
+        await _speakCurrentSentence();
+      }
+    } catch (_) {
+      if (_isTtsPlaying && mounted) {
+        await Future.delayed(const Duration(seconds: 1));
+        _ttsPageSettling = true;
+        epubController.next();
+      }
+    }
   }
 
   Future<void> _loadBookmarksAndHighlights() async {
@@ -167,6 +373,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
 
   Future<void> _initBrightness() async {
     try {
+      await ScreenBrightness().setAnimate(false);
       _originalBrightness = await ScreenBrightness().application;
       _currentBrightness = _originalBrightness;
     } catch (_) {}
@@ -188,6 +395,102 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
   }
 
   // ── JavaScript injections ──────────────────────────────────────────────────
+
+  /// Preloads local font bytes from Flutter assets and caches them as base64.
+  /// Heavy encoding work is run on a background isolate.
+  Future<void> _preloadLocalFonts() async {
+    const fontAssets = {
+      'NotoSerifBengali': 'assets/fonts/NotoSerifBengali.ttf',
+      'SolaimanLipi': 'assets/fonts/SolaimanLipi.ttf',
+    };
+    for (final entry in fontAssets.entries) {
+      if (_localFontBase64.containsKey(entry.key)) continue;
+      try {
+        final bytes = await rootBundle.load(entry.value);
+        final list = bytes.buffer.asUint8List();
+        // Encode on isolate to avoid blocking UI thread
+        final b64 = await compute(_encodeBase64Isolate, list);
+        _localFontBase64[entry.key] = b64;
+      } catch (e) {
+        debugPrint('Failed to preload font ${entry.key}: $e');
+      }
+    }
+  }
+
+  /// Injects locally bundled Bengali fonts as @font-face CSS into EPUB iframes.
+  /// Fonts are served as base64 data URIs so no network is needed.
+  /// Uses JSON-encoded strings to safely embed the base64 data in JS without quoting issues.
+  Future<void> _injectLocalFontsInWebView() async {
+    if (_localFontBase64.isEmpty) return;
+
+    // Build @font-face blocks. We pass the base64 string via a JS variable
+    // to avoid any single/double quote conflicts in the evaluateJavascript call.
+    final declarations = <Map<String, String>>[];
+    if (_localFontBase64.containsKey('NotoSerifBengali')) {
+      declarations.add({
+        'family': 'Noto Serif Bengali',
+        'weight': '100 900',
+        'b64': _localFontBase64['NotoSerifBengali']!,
+      });
+    }
+    if (_localFontBase64.containsKey('SolaimanLipi')) {
+      declarations.add({
+        'family': 'SolaimanLipi',
+        'weight': '400',
+        'b64': _localFontBase64['SolaimanLipi']!,
+      });
+    }
+    if (declarations.isEmpty) return;
+
+    for (final decl in declarations) {
+      // Encode family name and b64 as JSON strings so JS receives them safely
+      final familyJson = jsonEncode(decl['family']);
+      final weightJson = jsonEncode(decl['weight']);
+      // The base64 string is very long; assign it to a JS variable rather than
+      // embedding it inside a string literal to avoid any escaping issues.
+      final b64 = decl['b64']!;
+
+      final js = '''
+        (function() {
+          var family = $familyJson;
+          var weight = $weightJson;
+          var b64 = "$b64";
+          var css = "@font-face { font-family: '" + family + "'; font-style: normal; font-weight: " + weight + "; src: url('data:font/truetype;base64," + b64 + "') format('truetype'); }";
+          var styleId = 'local-font-' + family.replace(/\\s+/g, '-');
+
+          function injectDoc(doc) {
+            if (!doc || !doc.head) return;
+            if (doc.getElementById(styleId)) return;
+            var style = doc.createElement('style');
+            style.id = styleId;
+            style.textContent = css;
+            doc.head.insertBefore(style, doc.head.firstChild);
+          }
+
+          // Inject into all current iframes
+          var iframes = document.querySelectorAll('iframe');
+          for (var i = 0; i < iframes.length; i++) {
+            var iframeDoc = iframes[i].contentDocument || iframes[i].contentWindow.document;
+            injectDoc(iframeDoc);
+          }
+
+          // Register hook on EpubJS rendition so all future chapter iframes automatically get font CSS
+          if (window.rendition && window.rendition.hooks && window.rendition.hooks.content) {
+            var hookKey = '_fontHook_' + styleId.replace(/-/g, '_');
+            if (!window[hookKey]) {
+              window[hookKey] = true;
+              window.rendition.hooks.content.register(function(contents) {
+                if (contents && contents.document) {
+                  injectDoc(contents.document);
+                }
+              });
+            }
+          }
+        })();
+      ''';
+      await epubController.webViewController?.evaluateJavascript(source: js);
+    }
+  }
 
   Future<void> _injectGoogleFontsInWebView() async {
     const js = '''
@@ -286,7 +589,8 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
               if (parent) {
                 parent.insertBefore(span, matchedText);
                 span.appendChild(matchedText);
-                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Do NOT call scrollIntoView in paginated mode, as horizontal scrolling
+                // corrupts WKWebView column layout alignment and shifts page margins!
                 return true;
               }
             }
@@ -326,18 +630,22 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
 
   void _initTts() {
     TtsService.instance.onSpeechCompleted = () {
-      if (_isTtsActive && _isTtsPlaying) {
+      if (_isTtsActive && _isTtsPlaying && mounted) {
         _onSentenceFinished();
       }
     };
   }
 
   Future<void> _toggleTtsPlay() async {
-    if (_isTtsPlaying) {
+    if (_isTtsPlaying || TtsService.instance.isPlaying) {
       await TtsService.instance.pause();
-      setState(() => _isTtsPlaying = false);
+      if (mounted) {
+        setState(() => _isTtsPlaying = false);
+      }
     } else {
-      setState(() => _isTtsPlaying = true);
+      if (mounted) {
+        setState(() => _isTtsPlaying = true);
+      }
       if (_sentences.isEmpty) {
         await _loadPageTextAndPlay();
       } else {
@@ -346,28 +654,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
     }
   }
 
-  Future<void> _loadPageTextAndPlay() async {
-    try {
-      final result = await epubController.extractCurrentPageText();
-      final text = result.text ?? '';
-      final parsed = _splitIntoSentences(text);
-      
-      setState(() {
-        _sentences = parsed;
-        _currentSentenceIndex = 0;
-      });
 
-      if (_isTtsPlaying) {
-        await _speakCurrentSentence();
-      }
-    } catch (_) {
-      // Fallback: If text extraction fails, just skip to next page after delay
-      if (_isTtsPlaying) {
-        await Future.delayed(const Duration(seconds: 2));
-        epubController.next();
-      }
-    }
-  }
 
   List<String> _splitIntoSentences(String text) {
     if (text.isEmpty) return [];
@@ -388,12 +675,15 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
 
     if (_currentSentenceIndex >= _sentences.length) {
       // Page completed, turn to next page
+      _ttsPageSettling = true;
+      await _clearTtsHighlight();
       epubController.next();
       return;
     }
 
     final sentence = _sentences[_currentSentenceIndex];
-    await _highlightSentenceInWebView(sentence);
+    // Start sentence highlight in webview asynchronously so audio starts instantly
+    unawaited(_highlightSentenceInWebView(sentence));
     await TtsService.instance.speak(
       text: sentence,
       bookId: widget.bookId,
@@ -401,12 +691,21 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
     );
   }
 
+
+
   Future<void> _onSentenceFinished() async {
     _currentSentenceIndex++;
     if (_currentSentenceIndex < _sentences.length) {
-      await _speakCurrentSentence();
+      // Small 60ms delay for iOS AVSpeechSynthesizer delegate reset before next utterance
+      await Future.delayed(const Duration(milliseconds: 60));
+      if (_isTtsActive && _isTtsPlaying && mounted) {
+        await _speakCurrentSentence();
+      }
     } else {
-      // Turn page and continue
+      // Mark that we are waiting for the new page to settle before extracting text
+      _ttsPageSettling = true;
+      await _clearTtsHighlight();
+      // Turn to next page; onRelocated will trigger _loadPageTextAndPlay after settle delay
       epubController.next();
     }
   }
@@ -444,15 +743,18 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
   }
 
   Future<void> _stopTts() async {
+    TtsService.instance.onSpeechCompleted = null;
     await TtsService.instance.stop();
     await _clearTtsHighlight();
-    setState(() {
-      _isTtsActive = false;
-      _isTtsPlaying = false;
-      _sentences = [];
-      _currentSentenceIndex = 0;
-      _showControls = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isTtsActive = false;
+        _isTtsPlaying = false;
+        _sentences = [];
+        _currentSentenceIndex = 0;
+        _showControls = true;
+      });
+    }
   }
 
   Future<void> _clearSelection() async {
@@ -995,11 +1297,10 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                             setState(() {
                               _appliedAmbientTrack = _selectedAmbientTrack;
                             });
-                            final prefs = await SharedPreferences.getInstance();
                             if (_selectedAmbientTrack != null) {
-                              await prefs.setString('epub_ambient_track_id_${widget.bookId}', _selectedAmbientTrack!.id);
+                              _prefs?.setString('epub_ambient_track_id_${widget.bookId}', _selectedAmbientTrack!.id);
                             } else {
-                              await prefs.remove('epub_ambient_track_id_${widget.bookId}');
+                              _prefs?.remove('epub_ambient_track_id_${widget.bookId}');
                             }
                             Navigator.pop(context);
                           },
@@ -1037,8 +1338,8 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
             Positioned(
               top: (_showControls && !isLoading) ? 56.0 : 0.0,
               bottom: (_showControls && !isLoading)
-                  ? (_isTtsActive ? 70.0 : 60.0)
-                  : (isLoading ? 0.0 : 50.0),
+                  ? (_isTtsActive ? 70.0 : 56.0) // nav bar height only
+                  : (isLoading ? 0.0 : 28.0), // slim progress bar at bottom
               left: 0,
               right: 0,
               child: EpubViewer(
@@ -1052,26 +1353,30 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                     fontSize: _fontSize,
                   ),
                   useSnapAnimationAndroid: false,
-                  snap: true,
+                  snap: false, // snap: false on iOS avoids WKWebView scroll-snap column misalignment & overlap
                   allowScriptedContent: true,
                 ),
                 onChaptersLoaded: (chapters) {
                   setState(() {
                     _chapters = chapters;
+                    _updateTotalPages();
                   });
                 },
                 onEpubLoaded: () async {
                   setState(() {
                     isLoading = false;
                   });
-                  await _applyStyles();
+                  // Preload local fonts on isolate (fire-and-forget, then apply)
+                  unawaited(_preloadLocalFonts().then((_) async {
+                    await _applyStyles();
+                    await _preloadAllChapterPages();
+                  }));
 
                   if (!_hasJumpedToInitial) {
                     _hasJumpedToInitial = true;
                     
                     // Prioritize SharedPreferences exact CFI position
-                    final prefs = await SharedPreferences.getInstance();
-                    final savedCfi = prefs.getString('epub_cfi_${widget.bookId}');
+                    final savedCfi = _prefs?.getString('epub_cfi_${widget.bookId}');
                     
                     if (savedCfi != null && savedCfi.isNotEmpty) {
                       await Future.delayed(const Duration(milliseconds: 600));
@@ -1087,18 +1392,9 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                   }
                 },
                 onRelocated: (value) async {
-                  setState(() {
-                    progress = value.progress;
-                    _currentCfi = value.startCfi;
-                  });
+                  final percent = (value.progress * 100).toInt().clamp(0, 100);
 
-                  // Clear active selection on relocate to prevent blocked gestures/white screens
-                  if (_lastSelection != null) {
-                    await _clearSelection();
-                  }
-
-                  // Sync reading progress
-                  final percent = (progress * 100).toInt().clamp(0, 100);
+                  // Sync reading progress (non-blocking)
                   if (percent > 0) {
                     unawaited(ProgressSyncService.saveReadingProgress(
                       bookId: widget.bookId,
@@ -1108,31 +1404,77 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                     unawaited(ReadingReportService.instance.updateProgress(
                       percentage: percent,
                     ));
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setString('epub_cfi_${widget.bookId}', value.startCfi);
+                    _prefs?.setString('epub_cfi_${widget.bookId}', value.startCfi);
                   }
 
-                  // Determine current location index (estimated page numbers)
-                  final length = await epubController.webViewController?.evaluateJavascript(source: 'rendition.book.locations.length()');
-                  final idx = await epubController.webViewController?.evaluateJavascript(source: 'rendition.book.locations.locationFromCfi("${value.startCfi}")');
-                  if (length is int && idx is int && length > 0) {
-                    setState(() {
-                      _totalPages = length;
-                      _currentPage = idx + 1; // 1-indexed
-                    });
-                  } else {
-                    setState(() {
-                      _totalPages = 100;
-                      _currentPage = percent;
-                    });
+                  // Clear active selection on relocate to prevent blocked gestures/white screens
+                  if (_lastSelection != null) {
+                    unawaited(_clearSelection());
                   }
 
-                  // Load dynamic fonts inside the new iframe
-                  await _injectGoogleFontsInWebView();
+                  // Determine current page & total pages using exact chapter screen page counts
+                  int calcTotal = _totalPages;
+                  int calcCurrent = _currentPage;
+                  try {
+                    final rawJson = await epubController.webViewController?.evaluateJavascript(
+                      source: '(function(){ try { var c = rendition.currentLocation(); if (!c || !c.start) return JSON.stringify({chI: 0, p: 1, t: 1}); var chI = c.start.index !== undefined ? c.start.index : 0; var p = (c.start.displayed && c.start.displayed.page) ? c.start.displayed.page : 1; var t = (c.start.displayed && c.start.displayed.total) ? c.start.displayed.total : 1; return JSON.stringify({chI: chI, p: p, t: t}); } catch(e){ return "{\\"chI\\":0,\\"p\\":1,\\"t\\":1}"; } })()',
+                    );
+                    if (rawJson is String && rawJson.contains('{')) {
+                      final map = jsonDecode(rawJson) as Map<String, dynamic>;
+                      final chI = (map['chI'] as num?)?.toInt() ?? 0;
+                      final p = (map['p'] as num?)?.toInt() ?? 1;
+                      final t = (map['t'] as num?)?.toInt() ?? 1;
+
+                      _chapterPageTotals[chI] = t;
+
+                      int totalVisitedPages = 0;
+                      _chapterPageTotals.forEach((_, count) => totalVisitedPages += count);
+                      final avgPages = _chapterPageTotals.isNotEmpty
+                          ? (totalVisitedPages / _chapterPageTotals.length).round()
+                          : 5;
+
+                      int prevSum = 0;
+                      for (int i = 0; i < chI; i++) {
+                        prevSum += _chapterPageTotals[i] ?? avgPages;
+                      }
+                      calcCurrent = prevSum + p;
+
+                      int totalSum = 0;
+                      final numChapters = _chapters.isNotEmpty ? _chapters.length : (chI + 1);
+                      for (int i = 0; i < numChapters; i++) {
+                        totalSum += _chapterPageTotals[i] ?? avgPages;
+                      }
+                      calcTotal = totalSum > 0 ? totalSum : 1;
+                    }
+                  } catch (_) {
+                    calcTotal = _totalPages > 0 ? _totalPages : (_chapters.length * 5).clamp(10, 300);
+                    calcCurrent = ((value.progress * calcTotal).floor() + 1).clamp(1, calcTotal);
+                  }
+
+                  // Single batched state update per page relocation
+                  setState(() {
+                    progress = value.progress;
+                    _currentCfi = value.startCfi;
+                    _totalPages = calcTotal;
+                    _currentPage = calcCurrent.clamp(1, calcTotal);
+                  });
+
+                  // Note: Local and Google fonts are injected during initial load (onEpubLoaded)
+                  // and when theme changes (_applyStyles). Do NOT re-inject on every relocate,
+                  // as injecting <style> nodes during page turns causes WKWebView reflow flickering.
 
                   // TTS continuous playback logic when page turns
-                  if (_isTtsActive && _isTtsPlaying) {
-                    await _loadPageTextAndPlay();
+                  if (_isTtsActive && _isTtsPlaying && _ttsPageSettling) {
+                    _ttsPageSettling = false;
+                    setState(() {
+                      _sentences = [];
+                      _currentSentenceIndex = 0;
+                    });
+                    // Wait for the new page iframe to fully render before extracting text
+                    await Future.delayed(const Duration(milliseconds: 600));
+                    if (_isTtsActive && _isTtsPlaying && mounted) {
+                      await _loadPageTextAndPlay();
+                    }
                   }
                 },
                 onTouchDown: (x, y) {
@@ -1141,22 +1483,45 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                   _touchStartTime = DateTime.now().millisecondsSinceEpoch;
                 },
                 onTouchUp: (x, y) async {
-                  final diffX = (x - _touchStartX).abs();
-                  final diffY = (y - _touchStartY).abs();
-                  final duration = DateTime.now().millisecondsSinceEpoch - _touchStartTime;
+                  final nowMs = DateTime.now().millisecondsSinceEpoch;
+                  // Debounce rapid duplicate taps (e.g. within 350ms)
+                  if (nowMs - _lastTapTimeMs < 350) return;
 
-                  // Only treat as tap if movement is minimal and duration is short (not a swipe/scroll)
-                  if (diffX < 0.05 && diffY < 0.05 && duration < 300) {
+                  final deltaX = x - _touchStartX; // Directional horizontal distance
+                  final deltaY = (y - _touchStartY).abs();
+                  final duration = nowMs - _touchStartTime;
+
+                  // 1. Swipe / Drag gesture (horizontal distance >= 6% of screen, vertical < 15%)
+                  if (deltaX.abs() >= 0.06 && deltaY < 0.15 && duration < 750) {
+                    _lastTapTimeMs = nowMs;
+                    if (_lastSelection != null) {
+                      await _clearSelection();
+                      return;
+                    }
+                    if (deltaX < 0) {
+                      // Swiped left (dragged right-to-left) -> Next page
+                      epubController.next();
+                    } else {
+                      // Swiped right (dragged left-to-right) -> Previous page
+                      epubController.prev();
+                    }
+                    return;
+                  }
+
+                  // 2. Tap gesture (minimal movement < 6% of screen)
+                  if (deltaX.abs() < 0.06 && deltaY < 0.12 && duration < 450) {
+                    _lastTapTimeMs = nowMs;
+
                     // If text selection is active, clear it first
                     if (_lastSelection != null) {
                       await _clearSelection();
                       return;
                     }
-                    if (x < 0.2) {
+                    if (x < 0.35) {
                       epubController.prev();
-                    } else if (x > 0.8) {
+                    } else if (x > 0.65) {
                       epubController.next();
-                    } else if (x >= 0.4 && x <= 0.6) {
+                    } else {
                       setState(() {
                         _showControls = !_showControls;
                       });
@@ -1248,11 +1613,11 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                 right: 0,
                 child: Container(
                   height: 56,
-                  color: theme.secondaryBackground,
+                  color: EpubStyleHelper.getBackgroundColor(_themeType),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: Icon(Icons.arrow_back_ios_new, color: theme.primaryText),
+                        icon: Icon(Icons.arrow_back_ios_new, color: EpubStyleHelper.getForegroundColor(_themeType)),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       Expanded(
@@ -1263,12 +1628,13 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                           style: theme.titleMedium.override(
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.bold,
+                            color: EpubStyleHelper.getForegroundColor(_themeType),
                           ),
                         ),
                       ),
                       // Search icon
                       IconButton(
-                        icon: Icon(Icons.search, color: theme.primaryText),
+                        icon: Icon(Icons.search, color: EpubStyleHelper.getForegroundColor(_themeType)),
                         onPressed: () {
                           Navigator.push(
                             context,
@@ -1281,11 +1647,11 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                           );
                         },
                       ),
-                      // TTS audio toggle
+                      // TTS audio toggle — always show headset icon; use color to indicate state
                       IconButton(
                         icon: Icon(
-                          _isTtsActive ? Icons.headset : Icons.headset_off,
-                          color: _isTtsActive ? theme.primary : theme.secondaryText,
+                          Icons.headset,
+                          color: _isTtsActive ? theme.primary : EpubStyleHelper.getForegroundColor(_themeType).withValues(alpha: 0.7),
                         ),
                         onPressed: () async {
                           if (_isTtsActive) {
@@ -1297,6 +1663,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                             }
                             setState(() {
                               _isTtsActive = true;
+                              _showControls = false; // Automatically enter full screen when TTS starts
                             });
                             await _loadPageTextAndPlay();
                           }
@@ -1308,7 +1675,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                           _isCurrentPageBookmarked(_currentCfi)
                               ? Icons.bookmark
                               : Icons.bookmark_border,
-                          color: theme.primary,
+                          color: _isCurrentPageBookmarked(_currentCfi) ? theme.primary : EpubStyleHelper.getForegroundColor(_themeType),
                         ),
                         onPressed: _toggleBookmarkCurrentPage,
                       ),
@@ -1317,15 +1684,15 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                 ),
               ),
 
-            // Bottom Navigation Bar
+            // Bottom Navigation Bar (no progress indicator here — only in fullscreen)
             if (_showControls && !_isTtsActive && !isLoading)
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: 60,
-                  color: theme.secondaryBackground,
+                  height: 56,
+                  color: EpubStyleHelper.getBackgroundColor(_themeType),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -1355,19 +1722,19 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                 right: 0,
                 child: Container(
                   height: 70,
-                  color: theme.secondaryBackground,
+                  color: EpubStyleHelper.getBackgroundColor(_themeType),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Settings
                       IconButton(
-                        icon: Icon(Icons.settings, color: theme.primaryText),
+                        icon: Icon(Icons.settings, color: EpubStyleHelper.getForegroundColor(_themeType)),
                         onPressed: _openTtsSettingsSheet,
                       ),
                       // Skip previous / Left
                       IconButton(
-                        icon: Icon(Icons.skip_previous, color: theme.primaryText, size: 28),
+                        icon: Icon(Icons.skip_previous, color: EpubStyleHelper.getForegroundColor(_themeType), size: 28),
                         onPressed: _ttsMoveLeft,
                       ),
                       // Play / Pause
@@ -1382,7 +1749,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                       ),
                       // Skip next / Right
                       IconButton(
-                        icon: Icon(Icons.skip_next, color: theme.primaryText, size: 28),
+                        icon: Icon(Icons.skip_next, color: EpubStyleHelper.getForegroundColor(_themeType), size: 28),
                         onPressed: _ttsMoveRight,
                       ),
                       // Stop
@@ -1395,46 +1762,38 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                 ),
               ),
 
-            // Floating progress overlay when controls are hidden
-            if (!_showControls && !isLoading)
+            // Progress bar at very bottom (visible when controls hidden, but hidden during TTS)
+            if (!_showControls && !_isTtsActive && !isLoading)
               Positioned(
-                bottom: 12,
-                left: 24,
-                right: 24,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: theme.secondaryBackground.withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$_currentPage/$_totalPages . ${(progress * 100).toInt()}%',
-                        style: theme.bodySmall.override(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.bold,
+                bottom: 8,
+                left: 8,
+                right: 8,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text(
+                        _totalPages > 0
+                            ? '$_currentPage/$_totalPages  ·  ${(progress * 100).toInt()}%'
+                            : '${(progress * 100).toInt()}%',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: EpubStyleHelper.getForegroundColor(_themeType).withValues(alpha: 0.75),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor: theme.alternate,
-                          valueColor: AlwaysStoppedAnimation<Color>(theme.primary),
-                        ),
+                    ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: progress.clamp(0.0, 1.0),
+                        minHeight: 6,
+                        backgroundColor: EpubStyleHelper.getForegroundColor(_themeType).withValues(alpha: 0.15),
+                        valueColor: AlwaysStoppedAnimation<Color>(theme.primary),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -1445,18 +1804,19 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
 
   Widget _buildBottomNavButton(IconData icon, String label, VoidCallback onTap) {
     final theme = FlutterFlowTheme.of(context);
+    final fgColor = EpubStyleHelper.getForegroundColor(_themeType).withValues(alpha: 0.7);
     return InkWell(
       onTap: onTap,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: theme.secondaryText, size: 22),
+          Icon(icon, color: fgColor, size: 22),
           const SizedBox(height: 4),
           Text(
             label,
             style: theme.bodySmall.override(
               fontFamily: 'Inter',
-              color: theme.secondaryText,
+              color: fgColor,
               fontSize: 10,
             ),
           ),

@@ -244,6 +244,9 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (Platform.isIOS && !FFAppState().isSslcommerzIosConfigFetched) {
+        FFAppState().fetchSslcommerzIosConfig();
+      }
       final bookId = (widget.id ?? '').trim();
       if (bookId.isNotEmpty) {
         _loadTracks(bookId);
@@ -2148,7 +2151,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 onTap: () => Navigator.of(ctx).pop('buy_full_book'),
                               ),
                               const SizedBox(height: 12),
-                            ] else if (Platform.isIOS) ...[
+                                                        ] else if (Platform.isIOS && !FFAppState().showSslcommerzIos) ...[
                               buildUnlockOptionCard(
                                 icon: Icons.apple,
                                 iconColor: theme.primaryText,
@@ -2157,15 +2160,26 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 onTap: () => Navigator.of(ctx).pop('apple_iap'),
                               ),
                               const SizedBox(height: 12),
-                            ] else if (Platform.isAndroid) ...[
-                              buildUnlockOptionCard(
-                                icon: Icons.payment_rounded,
-                                iconColor: theme.primary,
-                                label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Google Play (Recommended)', bnText: 'গুগল প্লে দিয়ে আনলক করুন (Recommended)'),
-                                value: FFLocalizations.of(context).getVariableText(enText: 'Google Play IAP', bnText: 'গুগল প্লে ইন-অ্যাপ পারচেস'),
-                                onTap: () => Navigator.of(ctx).pop('apple_iap'),
-                              ),
-                              const SizedBox(height: 12),
+                            ] else ...[
+                              if (Platform.isIOS) ...[
+                                buildUnlockOptionCard(
+                                  icon: Icons.apple,
+                                  iconColor: theme.primaryText,
+                                  label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Apple Pay', bnText: 'অ্যাপল পে দিয়ে আনলক করুন'),
+                                  value: FFLocalizations.of(context).getVariableText(enText: 'Apple IAP', bnText: 'অ্যাপল ইন-অ্যাপ পারচেস'),
+                                  onTap: () => Navigator.of(ctx).pop('apple_iap'),
+                                ),
+                                const SizedBox(height: 12),
+                              ] else if (Platform.isAndroid) ...[
+                                buildUnlockOptionCard(
+                                  icon: Icons.payment_rounded,
+                                  iconColor: theme.primary,
+                                  label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Google Play (Recommended)', bnText: 'গুগল প্লে দিয়ে আনলক করুন (Recommended)'),
+                                  value: FFLocalizations.of(context).getVariableText(enText: 'Google Play IAP', bnText: 'গুগল প্লে ইন-অ্যাপ পারচেস'),
+                                  onTap: () => Navigator.of(ctx).pop('apple_iap'),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                               if (coinPrice > 0) ...[
                                 buildUnlockOptionCard(
                                   icon: Icons.monetization_on_rounded,
@@ -2176,32 +2190,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                 ),
                                 const SizedBox(height: 12),
                               ],
-                              if (bdtPrice > 0) ...[
+                              if (bdtPrice > 0 && (!Platform.isIOS || FFAppState().showSslcommerzIos)) ...[
                                 buildUnlockOptionCard(
                                   icon: Icons.account_balance_wallet_rounded,
                                   iconColor: const Color(0xFF2EC4B6),
                                   label: FFLocalizations.of(context).getVariableText(enText: 'Local Payment (বিকাশ, রকেট, কার্ড)', bnText: 'লোকাল পেমেন্ট (বিকাশ, রকেট, কার্ড)'),
-                                  value: '৳${bdtPrice.toStringAsFixed(0)}',
-                                  onTap: () => Navigator.of(ctx).pop('payment'),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                            ] else ...[
-                              if (coinPrice > 0) ...[
-                                buildUnlockOptionCard(
-                                  icon: Icons.monetization_on_rounded,
-                                  iconColor: const Color(0xFFFFB03A),
-                                  label: FFLocalizations.of(context).getVariableText(enText: 'Use Coins', bnText: 'কয়েন ব্যবহার করুন'),
-                                  value: '$coinPrice ' + FFLocalizations.of(context).getVariableText(enText: 'Coins', bnText: 'কয়েন'),
-                                  onTap: () => Navigator.of(ctx).pop('coins'),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                              if (bdtPrice > 0) ...[
-                                buildUnlockOptionCard(
-                                  icon: Icons.account_balance_wallet_rounded,
-                                  iconColor: const Color(0xFF2EC4B6),
-                                  label: FFLocalizations.of(context).getVariableText(enText: 'Pay with Cash', bnText: 'ক্যাশ পে করুন'),
                                   value: '৳${bdtPrice.toStringAsFixed(0)}',
                                   onTap: () => Navigator.of(ctx).pop('payment'),
                                 ),
@@ -2734,7 +2727,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     onTap: () => Navigator.of(ctx).pop('buy_full_book'),
                                                   ),
                                                   const SizedBox(height: 12),
-                                                ] else if (Platform.isIOS) ...[
+                                                                                                ] else if (Platform.isIOS && !FFAppState().showSslcommerzIos) ...[
                                                   buildUnlockOptionCard(
                                                     icon: Icons.apple,
                                                     iconColor: theme.primaryText,
@@ -2744,6 +2737,25 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                   ),
                                                   const SizedBox(height: 12),
                                                 ] else ...[
+                                                  if (Platform.isIOS) ...[
+                                                    buildUnlockOptionCard(
+                                                      icon: Icons.apple,
+                                                      iconColor: theme.primaryText,
+                                                      label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Apple Pay', bnText: 'অ্যাপল পে দিয়ে আনলক করুন'),
+                                                      value: FFLocalizations.of(context).getVariableText(enText: 'Apple IAP', bnText: 'অ্যাপল ইন-অ্যাপ পারচেস'),
+                                                      onTap: () => Navigator.of(ctx).pop('apple_iap'),
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                  ] else if (Platform.isAndroid) ...[
+                                                    buildUnlockOptionCard(
+                                                      icon: Icons.payment_rounded,
+                                                      iconColor: theme.primary,
+                                                      label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Google Play (Recommended)', bnText: 'গুগল প্লে দিয়ে আনলক করুন (Recommended)'),
+                                                      value: FFLocalizations.of(context).getVariableText(enText: 'Google Play IAP', bnText: 'গুগল প্লে ইন-অ্যাপ পারচেস'),
+                                                      onTap: () => Navigator.of(ctx).pop('apple_iap'),
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                  ],
                                                   if (coinPrice > 0) ...[
                                                     buildUnlockOptionCard(
                                                       icon: Icons.monetization_on_rounded,
@@ -2754,7 +2766,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     ),
                                                     const SizedBox(height: 12),
                                                   ],
-                                                  if (bdtPrice > 0) ...[
+                                                  if (bdtPrice > 0 && (!Platform.isIOS || FFAppState().showSslcommerzIos)) ...[
                                                     buildUnlockOptionCard(
                                                       icon: Icons.account_balance_wallet_rounded,
                                                       iconColor: const Color(0xFF2EC4B6),

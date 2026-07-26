@@ -38,8 +38,9 @@ class EpubStyleHelper {
         return 'Noto Serif Bengali';
       case 'tiro bangla':
         return 'Tiro Bangla';
+      case 'default':
       default:
-        return 'serif';
+        return 'Noto Serif Bengali';
     }
   }
 
@@ -47,7 +48,7 @@ class EpubStyleHelper {
     required ReaderThemeType themeType,
     required String fontFamilyKey,
     required double fontSize,
-    double lineHeight = 1.6,
+    double lineHeight = 1.75,
   }) {
     final bgColor = getBackgroundColor(themeType);
     final fgColor = getForegroundColor(themeType);
@@ -70,7 +71,8 @@ class EpubStyleHelper {
         'font-family': "'$fontName', serif !important",
         'font-size': '${fontSize}px !important',
         'line-height': '$lineHeight !important',
-        'margin-bottom': '1.2em !important',
+        'margin-bottom': '1.5em !important',
+        'text-align': 'justify !important',
       },
       'h1': {
         'font-family': "'$fontName', serif !important",

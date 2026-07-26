@@ -42,6 +42,9 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
     _model = createModel(context, () => SubscriptionPageModel());
 
     SchedulerBinding.instance.addPostFrameCallback((_) async {
+      if (Theme.of(context).platform == TargetPlatform.iOS && !FFAppState().isSslcommerzIosConfigFetched) {
+        unawaited(FFAppState().fetchSslcommerzIosConfig());
+      }
       _model.userisverified = await EbookGroup.userVerifyApiCall.call(
         email: getJsonField(
           FFAppState().userDetail,
@@ -943,9 +946,9 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
             final isAndroid = Theme.of(context).platform == TargetPlatform.android;
             String? paymentChoice;
 
-            if (isIOS) {
+            if (isIOS && !FFAppState().showSslcommerzIos) {
               paymentChoice = 'google_play'; // iOS uses IAP path
-            } else if (isAndroid) {
+            } else if (isAndroid || (isIOS && FFAppState().showSslcommerzIos)) {
               // Show bottom sheet to choose between Google Play and Local Payment
               paymentChoice = await showModalBottomSheet<String>(
                 context: context,
@@ -1034,7 +1037,7 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                         Row(
                                           children: [
                                             Text(
-                                              'Google Play Billing',
+                                              isIOS ? 'App Store Billing' : 'Google Play Billing',
                                               style: TextStyle(
                                                 fontFamily: 'SF Pro Display',
                                                 fontSize: 15,
@@ -1062,7 +1065,7 @@ class _SubscriptionPageWidgetState extends State<SubscriptionPageWidget>
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'গুগল পে বা কার্ড ব্যবহার করে পেমেন্ট করুন',
+                                          isIOS ? 'অ্যাপল পে বা কার্ড ব্যবহার করে পেমেন্ট করুন' : 'গুগল পে বা কার্ড ব্যবহার করে পেমেন্ট করুন',
                                           style: TextStyle(
                                             fontFamily: 'SF Pro Display',
                                             fontSize: 12,
