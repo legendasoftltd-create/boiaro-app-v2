@@ -21,10 +21,12 @@ class SubCategoriesScreenWidget extends StatefulWidget {
     super.key,
     required this.id,
     required this.name,
+    this.type,
   });
 
   final String? id;
   final String? name;
+  final String? type;
 
   static String routeName = 'SubCategoriesScreen';
   static String routePath = '/subCategoriesScreen';
@@ -49,11 +51,17 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
   final int _limit = 20;
   String? _nextCursor;
 
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebouncer;
+  String _searchQuery = '';
+  late String _selectedFormat;
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => SubCategoriesScreenModel());
     selectedId = widget.id; // Initialize with category id for "All"
+    _selectedFormat = (widget.type != null && widget.type!.isNotEmpty) ? widget.type! : 'all';
     _scrollController.addListener(_onScroll);
     _loadMoreBooks(isFirstLoad: true);
 
@@ -83,12 +91,16 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
       if (isAllSelected) {
         res = await EbookGroup.getbookbycategoryApiCall.call(
           categoryId: widget.id,
+          format: _selectedFormat == 'all' ? '' : _selectedFormat,
+          search: _searchQuery,
           limit: _limit,
           cursor: isFirstLoad ? null : _nextCursor,
         );
       } else {
         res = await EbookGroup.getbookbysubcategoryApiCall.call(
           subcategoryId: selectedId,
+          format: _selectedFormat == 'all' ? '' : _selectedFormat,
+          search: _searchQuery,
           limit: _limit,
           cursor: isFirstLoad ? null : _nextCursor,
         );
@@ -138,10 +150,67 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
     } catch (e) {
       // Error loading subcategories books
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  Widget _buildFormatFilterChips() {
+    final formats = [
+      {'label': FFLocalizations.of(context).getVariableText(enText: 'All', bnText: 'সব'), 'value': 'all'},
+      {'label': FFLocalizations.of(context).getVariableText(enText: 'eBook', bnText: 'ই-বুক'), 'value': 'ebook'},
+      {'label': FFLocalizations.of(context).getVariableText(enText: 'Audiobook', bnText: 'অডিওবুক'), 'value': 'audiobook'},
+      {'label': FFLocalizations.of(context).getVariableText(enText: 'Hard Copy', bnText: 'প্রিন্ট কপি'), 'value': 'hardcopy'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: formats.map((item) {
+            final isSelected = _selectedFormat == item['value'];
+            return Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: ChoiceChip(
+                label: Text(
+                  item['label']!,
+                  style: TextStyle(
+                    fontSize: 12.0,
+                    color: isSelected
+                        ? Colors.white
+                        : FlutterFlowTheme.of(context).primaryText,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                selected: isSelected,
+                selectedColor: FlutterFlowTheme.of(context).primary,
+                backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+                onSelected: (selected) {
+                  if (selected && _selectedFormat != item['value']) {
+                    setState(() {
+                      _selectedFormat = item['value']!;
+                      _books.clear();
+                      _offset = 0;
+                      _hasMore = true;
+                      _nextCursor = null;
+                    });
+                    _loadMoreBooks(isFirstLoad: true);
+                  }
+                },
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadPurchasedBooks() async {
@@ -225,6 +294,7 @@ class _SubCategoriesScreenWidgetState extends State<SubCategoriesScreenWidget> {
                   onTapAdd: () async {},
                 ),
               ),
+              _buildFormatFilterChips(),
               Expanded(
                 child: Builder(
                   builder: (context) {

@@ -911,6 +911,76 @@ class FFAppState extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  int _unreadNotificationCount = 0;
+  int get unreadNotificationCount => _unreadNotificationCount;
+  set unreadNotificationCount(int value) {
+    _unreadNotificationCount = value;
+    notifyListeners();
+  }
+
+  Future<void> fetchUnreadNotificationCount() async {
+    if (!_isLogin || _token.trim().isEmpty) {
+      _unreadNotificationCount = 0;
+      notifyListeners();
+      return;
+    }
+    try {
+      final res = await EbookGroup.getnotificationApiCall.call(token: _token);
+      if (res.succeeded) {
+        _unreadNotificationCount =
+            EbookGroup.getnotificationApiCall.unreadCount(res.jsonBody);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> checkAndRefreshTokenOnAppOpen() async {
+    if (!_isLogin || _token.trim().isEmpty || _refreshToken.trim().isEmpty) {
+      return;
+    }
+    try {
+      final tokenStr = _token.trim();
+      final parts = tokenStr.split('.');
+      if (parts.length == 3) {
+        final normalized = base64Url.normalize(parts[1]);
+        final payloadStr = utf8.decode(base64Url.decode(normalized));
+        final payload = jsonDecode(payloadStr);
+        if (payload is Map && payload['exp'] is num) {
+          final expSec = (payload['exp'] as num).toInt();
+          final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final remainingSec = expSec - nowSec;
+          // If token remaining expiration time is less than 5 minutes (300 seconds)
+          if (remainingSec < 300) {
+            final res = await EbookGroup.refreshTokenApiCall.call(
+              refreshToken: _refreshToken,
+            );
+            if (res.succeeded && res.jsonBody is Map) {
+              final newAccess =
+                  EbookGroup.refreshTokenApiCall.accessToken(res.jsonBody);
+              final newRefresh =
+                  EbookGroup.refreshTokenApiCall.refreshToken(res.jsonBody);
+              if (newAccess != null && newAccess.trim().isNotEmpty) {
+                token = newAccess.trim();
+                if (newRefresh != null && newRefresh.trim().isNotEmpty) {
+                  refreshToken = newRefresh.trim();
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// FOR TESTING ONLY: Corrupts the stored token so API requests return 401 Unauthorized.
+  /// Call this to simulate an invalid/expired token scenario.
+  void corruptTokenForTesting() {
+    _token = 'corrupted_invalid_token_for_testing_401';
+    prefs.setString('ff_token', _token);
+    ApiManager.setAuthTokens(accessToken: _token, refreshToken: _refreshToken);
+    print('[Debug] ⚠️ Token corrupted for testing. Next API call should return 401.');
+  }
 }
 
 void _safeInit(Function() initializeField) {

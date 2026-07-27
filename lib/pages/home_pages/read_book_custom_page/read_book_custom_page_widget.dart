@@ -8,7 +8,6 @@ import '/custom_code/widgets/pdf_viewer/flutter_pdf_view_widget.dart';
 import '/services/reading_report_service.dart';
 import '/services/reading_progress_service.dart';
 import '/services/progress_sync_service.dart';
-import 'package:a_i_ebook_app/backend/api_requests/api_calls.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -129,11 +128,10 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
           if (remote.hasProgress && remote.currentPage > 0) {
             _initialPdfPage = remote.currentPage;
           }
-          await ReadingReportService.instance.startSession(bookId: bookId);
-          unawaited(EbookGroup.registerBookReadApiCall.call(
+          await ReadingReportService.instance.startSession(
             bookId: bookId,
-            token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
-          ));
+            startPage: remote.currentPage > 0 ? remote.currentPage : 1,
+          );
         }
         if (!mounted) return;
         safeSetState(() {
@@ -486,10 +484,6 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       final bookId = (widget.id ?? '').trim();
       if (bookId.isNotEmpty) {
         await ReadingReportService.instance.startSession(bookId: bookId);
-        unawaited(EbookGroup.registerBookReadApiCall.call(
-          bookId: bookId,
-          token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
-        ));
       }
       
       final path = await _prepareNativeEpubPath(sourcePath);
@@ -543,13 +537,6 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       if (bookId.isNotEmpty) {
         await ReadingReportService.instance.startSession(bookId: bookId);
         print('EPUB_DEBUG: startSession finished');
-
-        // Register book read/view — fire-and-forget, auth optional
-        unawaited(EbookGroup.registerBookReadApiCall.call(
-          bookId: bookId,
-          token: FFAppState().token.isNotEmpty ? FFAppState().token : null,
-        ));
-        print('EPUB_DEBUG: registerBookReadApiCall dispatched');
 
         // Pre-load TTS context into native layer (Android only)
         unawaited(EpubReaderService.ttsSetContext(

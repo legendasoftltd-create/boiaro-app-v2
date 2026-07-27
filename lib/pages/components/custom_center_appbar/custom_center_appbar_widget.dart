@@ -15,6 +15,7 @@ class CustomCenterAppbarWidget extends StatefulWidget {
     this.onBackPressed,
     this.shareIcon,
     this.onTapShare,
+    this.customAction,
   }) : this.title = title ?? 'Title';
 
   final String title;
@@ -24,6 +25,7 @@ class CustomCenterAppbarWidget extends StatefulWidget {
   final Future Function()? onBackPressed;
   final bool? shareIcon;
   final Future Function()? onTapShare;
+  final Widget? customAction;
   @override
   State<CustomCenterAppbarWidget> createState() =>
       _CustomCenterAppbarWidgetState();
@@ -150,7 +152,9 @@ class _CustomCenterAppbarWidgetState extends State<CustomCenterAppbarWidget> {
                   alignment: AlignmentDirectional(0.0, 0.0),
                   child: Builder(
                     builder: (context) {
-                      if (widget.addIcon == true) {
+                      if (widget.customAction != null) {
+                        return widget.customAction!;
+                      } else if (widget.addIcon == true) {
                         return InkWell(
                           splashColor: Colors.transparent,
                           focusColor: Colors.transparent,

@@ -275,6 +275,7 @@ Future<ApiCallResponse> _homepageSectionRequest({
   String? token,
   int? limit,
   int? offset,
+  String? search,
 }) async {
   final normalizedType = _normalizeHomepageTypeValue(type);
   if (normalizedType == '__invalid__') {
@@ -297,6 +298,7 @@ Future<ApiCallResponse> _homepageSectionRequest({
       'limit': '$safeLimit',
       if (offset != null) 'offset': '$offset',
       if (normalizedType.isNotEmpty) 'type': normalizedType,
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
     },
     bodyType: BodyType.NONE,
     returnBody: true,
@@ -314,6 +316,7 @@ Future<ApiCallResponse> _homepageSectionAsBooks({
   String? token,
   int? limit,
   int? offset,
+  String? search,
 }) async {
   final res = await _homepageSectionRequest(
     sectionKey: sectionKey,
@@ -321,6 +324,7 @@ Future<ApiCallResponse> _homepageSectionAsBooks({
     token: token,
     limit: limit,
     offset: offset,
+    search: search,
   );
   final body = res.jsonBody;
   if (!res.succeeded || body is! Map) {
@@ -360,6 +364,8 @@ Future<ApiCallResponse> _homepageSectionAsBooks({
 Future<ApiCallResponse> _booksForAuthor({
   required String authorId,
   String? type,
+  String? format,
+  String? search,
   String? token,
   int? limit,
   int? offset,
@@ -367,6 +373,7 @@ Future<ApiCallResponse> _booksForAuthor({
 }) async {
   final baseUrl = EbookGroup.getBaseUrl();
   final safeLimit = (limit ?? 10).clamp(1, 100);
+  final fmt = (format ?? type ?? '').trim();
   final res = await ApiManager.instance.makeApiCall(
     callName: 'BooksForAuthor',
     apiUrl: '${baseUrl}books',
@@ -376,6 +383,8 @@ Future<ApiCallResponse> _booksForAuthor({
       'limit': '$safeLimit',
       if (offset != null) 'offset': '$offset',
       if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      if (fmt.isNotEmpty) 'format': fmt,
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       'author': authorId,
       'authorId': authorId,
     },
@@ -429,6 +438,9 @@ Future<ApiCallResponse> _booksForAuthor({
 Future<ApiCallResponse> _booksQuery({
   Map<String, String>? query,
   String? type,
+  String? format,
+  String? search,
+  String? tag,
   String? token,
   int? limit,
   int? offset,
@@ -436,10 +448,14 @@ Future<ApiCallResponse> _booksQuery({
 }) async {
   final baseUrl = EbookGroup.getBaseUrl();
   final safeLimit = (limit ?? 10).clamp(1, 100);
+  final fmt = (format ?? type ?? '').trim();
   final qp = <String, dynamic>{
     'limit': '$safeLimit',
     if (offset != null) 'offset': '$offset',
     if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+    if (fmt.isNotEmpty) 'format': fmt,
+    if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    if (tag != null && tag.trim().isNotEmpty) 'tag': tag.trim(),
     if (query != null) ...query,
   };
   final res = await ApiManager.instance.makeApiCall(
@@ -573,9 +589,12 @@ class EbookGroup {
   static GetHomepageApiCall getHomepageApiCall = GetHomepageApiCall();
   static GetCategorySectionsApiCall getCategorySectionsApiCall =
       GetCategorySectionsApiCall();
+  static GetCategorySectionBooksApiCall getCategorySectionBooksApiCall =
+      GetCategorySectionBooksApiCall();
   static GetTrendingBooksApiCall getTrendingBooksApiCall =
       GetTrendingBooksApiCall();
   static GetNewBooksApiCall getNewBooksApiCall = GetNewBooksApiCall();
+  static GetBookTagsApiCall getBookTagsApiCall = GetBookTagsApiCall();
   static GetPopularBooksApiCall getPopularBooksApiCall =
       GetPopularBooksApiCall();
   static AddFavouriteBookApiCall addFavouriteBookApiCall =
@@ -593,6 +612,7 @@ class EbookGroup {
   static ChangepasswordApiCall changepasswordApiCall = ChangepasswordApiCall();
   static UserVerifyApiCall userVerifyApiCall = UserVerifyApiCall();
   static ResendOTPApiCall resendOTPApiCall = ResendOTPApiCall();
+  static RefreshTokenApiCall refreshTokenApiCall = RefreshTokenApiCall();
   static PaymentGatewayApiCall paymentGatewayApiCall = PaymentGatewayApiCall();
   static GetSlidersApiCall getSlidersApiCall = GetSlidersApiCall();
   static UserBookPurchaseRecordsApiCall userBookPurchaseRecordsApiCall =
@@ -2236,14 +2256,22 @@ class SignoutApiCall {
 class GetcategoriesApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
+    String? search = '',
+    int? limit,
+    int? offset,
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
+    final params = <String, String>{
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      if (limit != null) 'limit': '$limit',
+      if (offset != null) 'offset': '$offset',
+    };
     final res = await ApiManager.instance.makeApiCall(
       callName: 'GetcategoriesApi',
       apiUrl: '${baseUrl}categories',
       callType: ApiCallType.GET,
       headers: _boiaroAuthHeaders(token),
-      params: {},
+      params: params,
       bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -2269,11 +2297,6 @@ class GetcategoriesApiCall {
         .map((e) => BoiaroLegacyAdapter.legacyCategoryFromV2(
             Map<String, dynamic>.from(e)))
         .toList();
-    leg.sort((a, b) {
-      final pA = a['priority'] is num ? (a['priority'] as num).toInt() : 999999;
-      final pB = b['priority'] is num ? (b['priority'] as num).toInt() : 999999;
-      return pA.compareTo(pB);
-    });
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'categoryDetails': leg}),
       res.headers,
@@ -2387,6 +2410,7 @@ class GetauthorsApiCall {
     String? token = '',
     int? limit,
     int? offset,
+    String? search = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
     final res = await ApiManager.instance.makeApiCall(
@@ -2397,6 +2421,7 @@ class GetauthorsApiCall {
       params: {
         'limit': '${limit ?? 50}',
         'offset': '${offset ?? 0}',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
       bodyType: BodyType.NONE,
       returnBody: true,
@@ -2468,6 +2493,7 @@ class GetpublishersApiCall {
     String? token = '',
     int? limit,
     int? offset,
+    String? search = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
     final res = await ApiManager.instance.makeApiCall(
@@ -2478,6 +2504,7 @@ class GetpublishersApiCall {
       params: {
         'limit': '${limit ?? 50}',
         'offset': '${offset ?? 0}',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
       bodyType: BodyType.NONE,
       returnBody: true,
@@ -2549,6 +2576,7 @@ class GetnarratorsApiCall {
     String? token = '',
     int? limit,
     int? offset,
+    String? search = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
     final res = await ApiManager.instance.makeApiCall(
@@ -2559,6 +2587,7 @@ class GetnarratorsApiCall {
       params: {
         'limit': '${limit ?? 50}',
         'offset': '${offset ?? 0}',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
       bodyType: BodyType.NONE,
       returnBody: true,
@@ -2723,6 +2752,8 @@ class GetbookbypublisherApiCall {
   Future<ApiCallResponse> call({
     String? publisherId = '',
     String? type = '',
+    String? format = '',
+    String? search = '',
     String? token = '',
     int? limit,
     int? offset,
@@ -2742,6 +2773,8 @@ class GetbookbypublisherApiCall {
     return _booksQuery(
       query: {'publisher': pid, 'publisherId': pid},
       type: type,
+      format: format,
+      search: search,
       token: token,
       limit: limit,
       offset: offset,
@@ -3227,6 +3260,8 @@ class GetbookbyauthorApiCall {
   Future<ApiCallResponse> call({
     String? authorId = '',
     String? type = '',
+    String? format = '',
+    String? search = '',
     String? token = '',
     int? limit,
     int? offset,
@@ -3235,6 +3270,8 @@ class GetbookbyauthorApiCall {
     return _booksForAuthor(
       authorId: authorId ?? '',
       type: type,
+      format: format,
+      search: search,
       token: token,
       limit: limit,
       offset: offset,
@@ -3260,6 +3297,9 @@ class GetbookbyauthorApiCall {
 class GetbookbynarratorApiCall {
   Future<ApiCallResponse> call({
     String? narratorId = '',
+    String? type = '',
+    String? format = '',
+    String? search = '',
     String? token = '',
     int? limit,
     int? offset,
@@ -3277,7 +3317,10 @@ class GetbookbynarratorApiCall {
       );
     }
     return _booksQuery(
-      query: {'narrator': nid},
+      query: {'narrator': nid, 'narratorId': nid},
+      type: type,
+      format: format,
+      search: search,
       token: token,
       limit: limit,
       offset: offset,
@@ -3304,6 +3347,8 @@ class GetbookbycategoryApiCall {
   Future<ApiCallResponse> call({
     String? categoryId = '',
     String? type = '',
+    String? format = '',
+    String? search = '',
     String? token = '',
     int? limit,
     int? offset,
@@ -3323,6 +3368,8 @@ class GetbookbycategoryApiCall {
     return _booksQuery(
       query: {'categoryId': cid},
       type: type,
+      format: format,
+      search: search,
       token: token,
       limit: limit,
       offset: offset,
@@ -3353,6 +3400,8 @@ class GetbookbysubcategoryApiCall {
   Future<ApiCallResponse> call({
     String? subcategoryId = '',
     String? type = '',
+    String? format = '',
+    String? search = '',
     String? token = '',
     int? limit,
     int? offset,
@@ -3375,6 +3424,8 @@ class GetbookbysubcategoryApiCall {
         'subcategory': sid,
       },
       type: type,
+      format: format,
+      search: search,
       token: token,
       limit: limit,
       offset: offset,
@@ -4607,16 +4658,11 @@ class GetHomepageApiCall {
     final catRaw = body['allCategory'];
     final categoryDetails = <Map<String, dynamic>>[];
     if (catRaw is List) {
-      final sortedCatRaw = List<Map<String, dynamic>>.from(
-        catRaw.whereType<Map>().map((e) => Map<String, dynamic>.from(e))
-      );
-      sortedCatRaw.sort((a, b) {
-        final pA = a['priority'] is num ? (a['priority'] as num).toInt() : 999999;
-        final pB = b['priority'] is num ? (b['priority'] as num).toInt() : 999999;
-        return pA.compareTo(pB);
-      });
-      for (final c in sortedCatRaw) {
-        categoryDetails.add(BoiaroLegacyAdapter.legacyCategoryFromV2(c));
+      for (final c in catRaw) {
+        if (c is Map) {
+          categoryDetails.add(BoiaroLegacyAdapter.legacyCategoryFromV2(
+              Map<String, dynamic>.from(c)));
+        }
       }
     }
 
@@ -4907,14 +4953,27 @@ class GetHomepageApiCall {
 class GetCategorySectionsApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
+    int? booksLimit = 20,
+    String? format = '',
+    int? limit,
+    int? offset,
+    String? search = '',
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
+    final normalizedFormat = (format ?? '').trim().toLowerCase();
+    final params = <String, String>{
+      'books_limit': '${booksLimit ?? 20}',
+      if (limit != null) 'limit': '$limit',
+      if (offset != null) 'offset': '$offset',
+      if (normalizedFormat.isNotEmpty) 'format': normalizedFormat,
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    };
     final res = await ApiManager.instance.makeApiCall(
       callName: 'GetCategorySectionsApi',
       apiUrl: '${baseUrl}category-sections',
       callType: ApiCallType.GET,
       headers: _boiaroAuthHeaders(token),
-      params: {},
+      params: params,
       bodyType: BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -5001,12 +5060,96 @@ class GetCategorySectionsApiCall {
       ));
 }
 
+class GetCategorySectionBooksApiCall {
+  Future<ApiCallResponse> call({
+    required String sectionId,
+    String? token = '',
+    int? limit,
+    int? offset,
+    String? format = '',
+    String? search = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final id = Uri.encodeComponent((sectionId ?? '').trim());
+    if (id.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+            success: 0, message: 'sectionId required'),
+        {},
+        400,
+      );
+    }
+    final normalizedFormat = (format ?? '').trim().toLowerCase();
+    final params = <String, String>{
+      if (limit != null) 'limit': '$limit',
+      if (offset != null) 'offset': '$offset',
+      if (normalizedFormat.isNotEmpty) 'format': normalizedFormat,
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    };
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'GetCategorySectionBooksApi',
+      apiUrl: '${baseUrl}category-sections/$id/books',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: params,
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final err = BoiaroLegacyAdapter.v2Error(body);
+    if (err != null) {
+      return _v2Error(body, res.statusCode);
+    }
+    final rawBooks = body['books'];
+    final books = <Map<String, dynamic>>[];
+    if (rawBooks is List) {
+      for (final bookRow in rawBooks) {
+        if (bookRow is Map) {
+          books.add(
+            BoiaroLegacyAdapter.legacyBookFromHomepageItem(
+              Map<String, dynamic>.from(bookRow),
+            ),
+          );
+        }
+      }
+    }
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'bookDetails': books}),
+      res.headers,
+      res.statusCode,
+    );
+  }
+
+  List? bookDetailsList(dynamic response) => getJsonField(
+        response,
+        r'''$.data.bookDetails''',
+        true,
+      ) as List?;
+  int? success(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.success''',
+      ));
+  String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.message''',
+      ));
+}
+
 class GetTrendingBooksApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
     String? type = '',
     int? limit,
     int? offset,
+    String? search = '',
   }) async {
     return _homepageSectionAsBooks(
       sectionKey: 'trendingNow',
@@ -5014,6 +5157,7 @@ class GetTrendingBooksApiCall {
       token: token,
       limit: limit,
       offset: offset,
+      search: search,
     );
   }
 
@@ -5038,13 +5182,27 @@ class GetNewBooksApiCall {
     String? type = '',
     int? limit,
     int? offset,
+    String? search = '',
+    String? tag = '',
   }) async {
+    final tg = (tag ?? '').trim();
+    if (tg.isNotEmpty) {
+      return _booksQuery(
+        tag: tg,
+        type: type,
+        token: token,
+        limit: limit,
+        offset: offset,
+        search: search,
+      );
+    }
     return _homepageSectionAsBooks(
       sectionKey: 'newReleases',
       type: type,
       token: token,
       limit: limit,
       offset: offset,
+      search: search,
     );
   }
 
@@ -5063,6 +5221,32 @@ class GetNewBooksApiCall {
       ));
 }
 
+class GetBookTagsApiCall {
+  Future<ApiCallResponse> call({
+    String? search = '',
+    String? token = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'GetBookTagsApi',
+      apiUrl: '${baseUrl}books/tags/list',
+      callType: ApiCallType.GET,
+      headers: _boiaroAuthHeaders(token),
+      params: {
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      },
+      bodyType: BodyType.NONE,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    return res;
+  }
+}
+
 class GetPopularBooksApiCall {
   Future<ApiCallResponse> call({
     String? token = '',
@@ -5070,6 +5254,7 @@ class GetPopularBooksApiCall {
     String? sectionKey = '',
     int? limit,
     int? offset,
+    String? search = '',
   }) async {
     final normalizedType = _normalizeHomepageTypeValue(type);
     final normalizedSection = (sectionKey ?? '').trim();
@@ -5088,6 +5273,7 @@ class GetPopularBooksApiCall {
       token: token,
       limit: limit,
       offset: offset,
+      search: search,
     );
   }
 
@@ -5517,12 +5703,29 @@ class GetnotificationApiCall {
         .map((e) => BoiaroLegacyAdapter.legacyNotificationFromV2(
             Map<String, dynamic>.from(e)))
         .toList();
+    final unreadCnt = body['unread_count'] ??
+        body['unread_notifications_count'] ??
+        body['unreadCount'] ??
+        rows.where((n) => n['is_read'] == false).length;
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(
-          extra: {'notificationDetails': rows}),
+          extra: {'notificationDetails': rows, 'unreadCount': unreadCnt}),
       res.headers,
       res.statusCode,
     );
+  }
+
+  int unreadCount(dynamic response) {
+    if (response is! Map) return 0;
+    final cnt = getJsonField(response, r'''$.data.unreadCount''');
+    if (cnt != null) {
+      return castToType<int>(cnt) ?? 0;
+    }
+    final list = notificationDetails(response);
+    if (list != null) {
+      return list.where((item) => item is Map && item['is_read'] != true).length;
+    }
+    return 0;
   }
 
   List? notificationDetails(dynamic response) => getJsonField(
@@ -5564,6 +5767,70 @@ class GetnotificationApiCall {
   String? message(dynamic response) => castToType<String>(getJsonField(
         response,
         r'''$.data.message''',
+      ));
+}
+
+class RefreshTokenApiCall {
+  Future<ApiCallResponse> call({
+    String? refreshToken = '',
+  }) async {
+    final baseUrl = EbookGroup.getBaseUrl();
+    final tokenToUse = (refreshToken ?? '').trim().isNotEmpty
+        ? refreshToken!.trim()
+        : FFAppState().refreshToken;
+    final res = await ApiManager.instance.makeApiCall(
+      callName: 'RefreshTokenApi',
+      apiUrl: '${baseUrl}auth/refresh',
+      callType: ApiCallType.POST,
+      headers: _boiaroAuthHeaders(''),
+      params: {},
+      body: BoiaroLegacyAdapter.jsonEncodeBody({
+        'refresh_token': tokenToUse,
+      }),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+    final body = res.jsonBody;
+    if (!res.succeeded || body is! Map) {
+      return _v2Error(body, res.statusCode);
+    }
+    final access = (body['access_token'] ?? body['accessToken'])?.toString();
+    final refresh = (body['refresh_token'] ?? body['refreshToken'])?.toString();
+    if (access == null || access.isEmpty) {
+      return _v2Error(body, res.statusCode);
+    }
+    return ApiCallResponse(
+      BoiaroLegacyAdapter.legacyDataEnvelope(
+        success: 1,
+        message: body['message']?.toString() ?? 'Token refreshed',
+        extra: {
+          'token': access,
+          'access_token': access,
+          'refresh_token': refresh ?? tokenToUse,
+          'expires_in': body['expires_in'],
+        },
+      ),
+      res.headers,
+      res.statusCode,
+    );
+  }
+
+  String? accessToken(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.access_token''',
+      ));
+  String? refreshToken(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.refresh_token''',
+      ));
+  int? expiresIn(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.expires_in''',
       ));
 }
 
@@ -6206,19 +6473,25 @@ class RegisterBookReadApiCall {
   Future<ApiCallResponse> call({
     String? bookId = '',
     String? token,
+    String? deviceId,
   }) async {
     final baseUrl = EbookGroup.getBaseUrl();
     final bid = Uri.encodeComponent((bookId ?? '').trim());
     final headers = token != null && token.isNotEmpty
         ? _boiaroAuthHeaders(token)
-        : <String, dynamic>{};
+        : <String, dynamic>{'Content-Type': 'application/json'};
+    final devId = (deviceId ?? '').trim().isNotEmpty
+        ? deviceId!.trim()
+        : FFAppState().deviceId;
+    final ffApiRequestBody = devId.isNotEmpty ? json.encode({'device_id': devId}) : null;
     final res = await ApiManager.instance.makeApiCall(
       callName: 'RegisterBookRead',
       apiUrl: '${baseUrl}books/$bid/read',
       callType: ApiCallType.POST,
       headers: headers,
       params: {},
-      bodyType: BodyType.NONE,
+      body: ffApiRequestBody,
+      bodyType: ffApiRequestBody != null ? BodyType.JSON : BodyType.NONE,
       returnBody: true,
       encodeBodyUtf8: false,
       decodeUtf8: false,
@@ -7134,14 +7407,29 @@ class GetbookbytranslatorApiCall {
   Future<ApiCallResponse> call({
     String? translatorId = '',
     String? type = '',
+    String? format = '',
+    String? search = '',
     String? token = '',
     int? limit,
     int? offset,
     String? cursor,
   }) async {
-    return _booksForTranslator(
-      translatorId: translatorId ?? '',
+    final tid = (translatorId ?? '').trim();
+    if (tid.isEmpty) {
+      return ApiCallResponse(
+        BoiaroLegacyAdapter.legacyDataEnvelope(
+          success: 0,
+          message: 'translatorId required',
+        ),
+        {},
+        400,
+      );
+    }
+    return _booksQuery(
+      query: {'translator': tid, 'translatorId': tid},
       type: type,
+      format: format,
+      search: search,
       token: token,
       limit: limit,
       offset: offset,

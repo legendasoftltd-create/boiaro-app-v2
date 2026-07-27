@@ -80,6 +80,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   String? _audiobookPricingMode;
   String? _bookSlug;
   bool _isSubscribed = false;
+  int? _bookmarkStatusCode;
 
   void _showSupportErrorDialog(String actionType) {
     showDialog(
@@ -250,6 +251,11 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
       final bookId = (widget.id ?? '').trim();
       if (bookId.isNotEmpty) {
         _loadTracks(bookId);
+        unawaited(EbookGroup.registerBookReadApiCall.call(
+          bookId: bookId,
+          token: FFAppState().isLogin ? FFAppState().token : null,
+          deviceId: FFAppState().deviceId,
+        ));
       }
       if (FFAppState().isLogin) {
         await _checkSubscriptionValidity();
@@ -298,13 +304,21 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
   }
 
   Future<void> _loadBookmarkStatus() async {
-    if (!FFAppState().isLogin || FFAppState().token.trim().isEmpty) return;
+    if (!FFAppState().isLogin) return;
     final bid = (widget.id ?? '').trim();
     if (bid.isEmpty) return;
     try {
       final uri =
           Uri.parse('${FFAppConstants.mobileApiBaseUrl}/books/$bid/bookmark');
       final res = await http.get(uri, headers: _apiHeaders(authRequired: true));
+      _bookmarkStatusCode = res.statusCode;
+      if (res.statusCode == 401) {
+        FFAppState().isLogin = false;
+        FFAppState().token = '';
+        FFAppState().refreshToken = '';
+        FFAppState().update(() {});
+        return;
+      }
       if (res.statusCode != 200) return;
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) {
@@ -1422,7 +1436,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     bool forcePreview = false,
   }) async {
     if (tab == BookMasterFormatTab.ebook || tab == BookMasterFormatTab.audiobook) {
-      if (!FFAppState().isLogin) {
+      if (!FFAppState().isLogin || _bookmarkStatusCode == 401) {
         context.pushNamed(SignInPageWidget.routeName);
         return;
       }
@@ -1705,7 +1719,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     bool subscriberAccess = false,
   }) async {
     if (_isDownloadingEbook) return;
-    if (!FFAppState().isLogin) {
+    if (!FFAppState().isLogin || _bookmarkStatusCode == 401) {
       await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Sign in to download', bnText: 'ডাউনলোড করতে সাইন ইন করুন'));
       context.pushNamed(SignInPageWidget.routeName);
       return;
@@ -1929,7 +1943,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     final dur = track['duration']?.toString() ?? '';
 
     Future<void> handlePlay() async {
-      if (!FFAppState().isLogin) {
+      if (!FFAppState().isLogin || _bookmarkStatusCode == 401) {
         context.pushNamed(SignInPageWidget.routeName);
         return;
       }
@@ -2750,8 +2764,8 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                     buildUnlockOptionCard(
                                                       icon: Icons.payment_rounded,
                                                       iconColor: theme.primary,
-                                                      label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Google Play (Recommended)', bnText: 'গুগল প্লে দিয়ে আনলক করুন (Recommended)'),
-                                                      value: FFLocalizations.of(context).getVariableText(enText: 'Google Play IAP', bnText: 'গুগল প্লে ইন-অ্যাপ পারচেস'),
+                                                      label: FFLocalizations.of(context).getVariableText(enText: 'Unlock with Google Play', bnText: 'গুগল প্লে দিয়ে আনলক করুন'),
+                                                      value: FFLocalizations.of(context).getVariableText(enText: 'G-Pay', bnText: 'G-Pay'),
                                                       onTap: () => Navigator.of(ctx).pop('apple_iap'),
                                                     ),
                                                     const SizedBox(height: 12),
@@ -3573,34 +3587,28 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                }),
                                               SizedBox(height: 12.0),
 
-                                              // Rating + reads row
+                                              // Stats row: Views, Reads, Listens (rating removed)
                                               Row(
                                                 children: [
-                                                  Icon(Icons.star,
-                                                      color: Colors.amber,
-                                                      size: 14.0),
+                                                  Icon(
+                                                    Icons.remove_red_eye_outlined,
+                                                    color: FlutterFlowTheme.of(context).secondaryText,
+                                                    size: 14.0,
+                                                  ),
                                                   const SizedBox(width: 3.0),
                                                   Text(
-                                                    valueOrDefault<String>(
-                                                      EbookGroup
-                                                          .getbookdetailsApiCall
-                                                          .averageRating(
-                                                            bookDetailspageGetbookdetailsApiResponse
-                                                                .jsonBody,
-                                                          )
-                                                          ?.toStringAsFixed(1),
-                                                      '0.0',
-                                                    ),
+                                                    '${getJsonField(bookDetailspageGetbookdetailsApiResponse.jsonBody, r"$.data.bookDetails[0].total_views") ?? 0} ' + FFLocalizations.of(context).getVariableText(enText: 'views', bnText: 'বার'),
                                                     style: FlutterFlowTheme.of(
                                                             context)
                                                         .bodySmall
                                                         .override(
                                                           fontFamily:
                                                               'SF Pro Display',
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .secondaryText,
                                                           fontSize: 12.0,
                                                           letterSpacing: 0.0,
-                                                          fontWeight:
-                                                              FontWeight.w600,
                                                         ),
                                                   ),
                                                   const SizedBox(width: 12.0),
@@ -4843,65 +4851,128 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                           maxLength: 150,
                                         ),
                                       ),
-                                      // Category chip at bottom of about book
-                                      Builder(builder: (context) {
-                                        final catId = EbookGroup.getbookdetailsApiCall.categoryId(
-                                          bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                        ) ?? '';
-                                        final catName = EbookGroup.getbookdetailsApiCall.categoryName(
-                                          bookDetailspageGetbookdetailsApiResponse.jsonBody,
-                                        ) ?? '';
-                                        if (catName.isEmpty) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        return Padding(
-                                          padding: const EdgeInsets.only(top: 16.0),
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              if (catId.isNotEmpty) {
-                                                context.pushNamed(
-                                                  SubCategoriesScreenWidget.routeName,
-                                                  queryParameters: {
-                                                    'id': serializeParam(catId, ParamType.String),
-                                                    'name': serializeParam(catName, ParamType.String),
-                                                  }.withoutNulls,
-                                                );
-                                              }
-                                            },
-                                            child: MouseRegion(
-                                              cursor: SystemMouseCursors.click,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 16.0, vertical: 8.0),
-                                                decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(context).primary.withOpacity(0.08),
-                                                  borderRadius: BorderRadius.circular(20.0),
-                                                  border: Border.all(
-                                                    color: FlutterFlowTheme.of(context).primary.withOpacity(0.2),
-                                                    width: 1.0,
-                                                  ),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                                                                      Text(
-                                                      catName,
-                                                      style: FlutterFlowTheme.of(context)
-                                                          .bodyMedium
-                                                          .override(
-                                                            fontFamily: 'SF Pro Display',
-                                                            color: FlutterFlowTheme.of(context).primary,
-                                                            fontSize: 13.0,
-                                                            fontWeight: FontWeight.w600,
-                                                          ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }),
+                                      // Category and Tags Wrap at bottom of about book
+                                       Builder(builder: (context) {
+                                         final catId = EbookGroup.getbookdetailsApiCall.categoryId(
+                                           bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                         ) ?? '';
+                                         final catName = EbookGroup.getbookdetailsApiCall.categoryName(
+                                           bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                         ) ?? '';
+
+                                         final rawTags = getJsonField(
+                                           bookDetailspageGetbookdetailsApiResponse.jsonBody,
+                                           r"$.data.bookDetails[0].tags",
+                                         );
+                                         final List<String> tagsList = (rawTags is List ? rawTags : [])
+                                             .map((e) => e?.toString() ?? '')
+                                             .where((s) => s.trim().isNotEmpty)
+                                             .toList();
+
+                                         if (catName.isEmpty && tagsList.isEmpty) {
+                                           return const SizedBox.shrink();
+                                         }
+
+                                         return Padding(
+                                           padding: const EdgeInsets.only(top: 16.0),
+                                           child: Wrap(
+                                             spacing: 8.0,
+                                             runSpacing: 8.0,
+                                             crossAxisAlignment: WrapCrossAlignment.center,
+                                             children: [
+                                               if (catName.isNotEmpty)
+                                                 GestureDetector(
+                                                   onTap: () {
+                                                     if (catId.isNotEmpty) {
+                                                       context.pushNamed(
+                                                         SubCategoriesScreenWidget.routeName,
+                                                         queryParameters: {
+                                                           'id': serializeParam(catId, ParamType.String),
+                                                           'name': serializeParam(catName, ParamType.String),
+                                                         }.withoutNulls,
+                                                       );
+                                                     }
+                                                   },
+                                                   child: MouseRegion(
+                                                     cursor: SystemMouseCursors.click,
+                                                     child: Container(
+                                                       padding: const EdgeInsets.symmetric(
+                                                           horizontal: 14.0, vertical: 6.0),
+                                                       decoration: BoxDecoration(
+                                                         color: FlutterFlowTheme.of(context).primary.withValues(alpha: 0.1),
+                                                         borderRadius: BorderRadius.circular(20.0),
+                                                         border: Border.all(
+                                                           color: FlutterFlowTheme.of(context).primary.withValues(alpha: 0.3),
+                                                           width: 1.0,
+                                                         ),
+                                                       ),
+                                                       child: Row(
+                                                         mainAxisSize: MainAxisSize.min,
+                                                         children: [
+                                                           Icon(
+                                                             Icons.folder_outlined,
+                                                             size: 13.0,
+                                                             color: FlutterFlowTheme.of(context).primary,
+                                                           ),
+                                                           const SizedBox(width: 4.0),
+                                                           Text(
+                                                             catName,
+                                                             style: FlutterFlowTheme.of(context)
+                                                                 .bodyMedium
+                                                                 .override(
+                                                                   fontFamily: 'SF Pro Display',
+                                                                   color: FlutterFlowTheme.of(context).primary,
+                                                                   fontSize: 12.0,
+                                                                   fontWeight: FontWeight.w600,
+                                                                 ),
+                                                           ),
+                                                         ],
+                                                       ),
+                                                     ),
+                                                   ),
+                                                 ),
+                                               for (final tag in tagsList)
+                                                 GestureDetector(
+                                                   onTap: () {
+                                                     context.pushNamed(
+                                                       NewBooksPageWidget.routeName,
+                                                       queryParameters: {
+                                                         'title': serializeParam(tag, ParamType.String),
+                                                         'tag': serializeParam(tag, ParamType.String),
+                                                       }.withoutNulls,
+                                                     );
+                                                   },
+                                                   child: MouseRegion(
+                                                     cursor: SystemMouseCursors.click,
+                                                     child: Container(
+                                                       padding: const EdgeInsets.symmetric(
+                                                           horizontal: 12.0, vertical: 6.0),
+                                                       decoration: BoxDecoration(
+                                                         color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                         borderRadius: BorderRadius.circular(20.0),
+                                                         border: Border.all(
+                                                           color: FlutterFlowTheme.of(context).alternate,
+                                                           width: 1.0,
+                                                         ),
+                                                       ),
+                                                       child: Text(
+                                                         '# $tag',
+                                                         style: FlutterFlowTheme.of(context)
+                                                             .bodyMedium
+                                                             .override(
+                                                               fontFamily: 'SF Pro Display',
+                                                               color: FlutterFlowTheme.of(context).secondaryText,
+                                                               fontSize: 12.0,
+                                                               fontWeight: FontWeight.w500,
+                                                             ),
+                                                       ),
+                                                     ),
+                                                   ),
+                                                 ),
+                                             ],
+                                           ),
+                                         );
+                                       })
                                     ],
                                   ),
                                 ),

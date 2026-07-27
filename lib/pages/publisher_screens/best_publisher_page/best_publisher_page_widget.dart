@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:a_i_ebook_app/pages/home_pages/about_publisher_page/about_publisher_page_widget.dart';
 
 import '/backend/api_requests/api_calls.dart';
@@ -30,6 +31,9 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebouncer;
+  String _searchQuery = '';
   List<dynamic> _publishers = [];
   bool _isLoading = false;
   bool _hasMore = true;
@@ -54,7 +58,7 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
 
   Future<void> _loadMorePublishers({bool isFirstLoad = false}) async {
     if (_isLoading || (!_hasMore && !isFirstLoad)) return;
-    debugPrint('Publishers Load: isFirstLoad=$isFirstLoad, offset=$_offset, limit=$_limit, hasMore=$_hasMore');
+    debugPrint('Publishers Load: isFirstLoad=$isFirstLoad, offset=$_offset, limit=$_limit, hasMore=$_hasMore, search=$_searchQuery');
     setState(() {
       _isLoading = true;
     });
@@ -64,6 +68,7 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
         token: FFAppState().token,
         limit: _limit,
         offset: _offset,
+        search: _searchQuery,
       );
       final newPublishers =
           EbookGroup.getpublishersApiCall.publisherDetailsList(res.jsonBody) ??
@@ -111,6 +116,8 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
 
   @override
   void dispose() {
+    _searchDebouncer?.cancel();
+    _searchController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _model.dispose();
@@ -140,9 +147,60 @@ class _BestPublisherPageWidgetState extends State<BestPublisherPageWidget> {
                 model: _model.singleAppbarModel,
                 updateCallback: () => safeSetState(() {}),
                 child: SingleAppbarWidget(
-                  title: FFLocalizations.of(context).getVariableText(enText: 'Best publisher', bnText: 'সেরা প্রকাশক'),
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Best publisher', bnText: 'সেরা প্রকাশনী'),
                 ),
               ),
+              /*
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                    _searchDebouncer?.cancel();
+                    _searchDebouncer = Timer(const Duration(milliseconds: 400), () {
+                      setState(() {
+                        _searchQuery = val.trim();
+                        _offset = 0;
+                        _hasMore = true;
+                      });
+                      _loadMorePublishers(isFirstLoad: true);
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: FFLocalizations.of(context).getVariableText(enText: 'Search publisher...', bnText: 'প্রকাশনী খুঁজুন...'),
+                    hintStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'Inter',
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: FlutterFlowTheme.of(context).secondaryText),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                                _offset = 0;
+                                _hasMore = true;
+                              });
+                              _loadMorePublishers(isFirstLoad: true);
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              */
               Expanded(
                 child: Builder(
                   builder: (context) {

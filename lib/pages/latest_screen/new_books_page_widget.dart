@@ -1,3 +1,4 @@
+import 'dart:async';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -19,10 +20,12 @@ class NewBooksPageWidget extends StatefulWidget {
     super.key,
     this.type,
     this.title,
+    this.tag,
   });
 
   final String? type;
   final String? title;
+  final String? tag;
 
   static String routeName = 'NewBooksPage';
   static String routePath = '/newBooksPage';
@@ -39,6 +42,10 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
   String get _cacheKey => 'new_${widget.type ?? 'all'}';
 
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebouncer;
+  String _searchQuery = '';
+  String _selectedFormat = 'all';
   List<dynamic> _books = [];
   bool _isLoading = false;
   bool _hasMore = true;
@@ -55,6 +62,12 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => NewBooksPageModel());
+    if (widget.type != null && widget.type!.trim().isNotEmpty) {
+      final t = widget.type!.trim().toLowerCase();
+      if (t == 'audiobook' || t == 'ebook' || t == 'hardcopy' || t == 'hardcover') {
+        _selectedFormat = t == 'hardcover' ? 'hardcopy' : t;
+      }
+    }
     _scrollController.addListener(_onScroll);
     _loadMoreBooks(isFirstLoad: true);
 
@@ -80,10 +93,13 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
     });
 
     try {
+      final activeType = _selectedFormat == 'all' ? widget.type : _selectedFormat;
       final res = await EbookGroup.getNewBooksApiCall.call(
-        type: widget.type,
+        type: activeType,
+        search: _searchQuery,
         limit: _limit,
         offset: _offset,
+        tag: widget.tag,
       );
       final newBooks =
           EbookGroup.getNewBooksApiCall.bookDetailsList(res.jsonBody) ??
@@ -141,8 +157,63 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
     }
   }
 
+  Widget _buildFormatFilterChips() {
+    final formats = [
+      {'label': 'সব', 'value': 'all'},
+      {'label': 'ই-বুক', 'value': 'ebook'},
+      {'label': 'অডিওবুক', 'value': 'audiobook'},
+      {'label': 'হার্ডকপি', 'value': 'hardcopy'},
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
+      child: Row(
+        children: formats.map((item) {
+          final isSelected = _selectedFormat == item['value'];
+          return Padding(
+            padding: const EdgeInsets.only(right: 6.0),
+            child: ChoiceChip(
+              label: Text(
+                item['label']!,
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : FlutterFlowTheme.of(context).primaryText,
+                  fontSize: 12.0,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+              selected: isSelected,
+              selectedColor: FlutterFlowTheme.of(context).primary,
+              backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 2.0),
+              labelPadding: EdgeInsets.zero,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              side: BorderSide.none,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    _selectedFormat = item['value']!;
+                    _offset = 0;
+                    _hasMore = true;
+                  });
+                  _loadMoreBooks(isFirstLoad: true);
+                }
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _searchDebouncer?.cancel();
+    _searchController.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _model.dispose();
 
@@ -173,8 +244,7 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                   color: FlutterFlowTheme.of(context).primaryBackground,
                 ),
                 child: Padding(
-                  padding:
-                      EdgeInsetsDirectional.fromSTEB(16.0, 21.0, 16.0, 18.0),
+                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 12.0),
                   child: Row(
                     mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -268,6 +338,56 @@ class _NewBooksPageWidgetState extends State<NewBooksPageWidget> {
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 4.0),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                    _searchDebouncer?.cancel();
+                    _searchDebouncer = Timer(const Duration(milliseconds: 400), () {
+                      setState(() {
+                        _searchQuery = val.trim();
+                        _offset = 0;
+                        _hasMore = true;
+                      });
+                      _loadMoreBooks(isFirstLoad: true);
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: FFLocalizations.of(context).getVariableText(enText: 'Search books...', bnText: 'বই খুঁজুন...'),
+                    hintStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'Inter',
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: FlutterFlowTheme.of(context).secondaryText),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                                _offset = 0;
+                                _hasMore = true;
+                              });
+                              _loadMoreBooks(isFirstLoad: true);
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              _buildFormatFilterChips(),
               Expanded(
                 child: Builder(
                   builder: (context) {

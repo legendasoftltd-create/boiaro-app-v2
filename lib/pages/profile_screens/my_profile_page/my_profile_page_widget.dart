@@ -4,6 +4,7 @@ import '/flutter_flow/internationalization.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -400,6 +401,70 @@ class _MyProfilePageWidgetState extends State<MyProfilePageWidget> {
                                   ),
                         ),
                       ),
+                    // ── DEBUG ONLY ───────────────────────────────────────
+                    if (kDebugMode)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                            16.0, 24.0, 16.0, 0.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.bug_report,
+                                    size: 14, color: Colors.orange),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Debug Tools',
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .override(
+                                        fontFamily: 'SF Pro Display',
+                                        color: Colors.orange,
+                                        fontSize: 12.0,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.0,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  FFAppState().corruptTokenForTesting();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                        '⚠️ Token corrupted! Next API call should return 401.',
+                                      ),
+                                      backgroundColor: Colors.orange.shade800,
+                                      duration: const Duration(seconds: 3),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.token,
+                                    size: 18, color: Colors.orange),
+                                label: const Text(
+                                  'Corrupt Token (Test 401)',
+                                  style: TextStyle(color: Colors.orange),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                      color: Colors.orange, width: 1.5),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    // ─────────────────────────────────────────────────────
                   ],
                 ),
               ),

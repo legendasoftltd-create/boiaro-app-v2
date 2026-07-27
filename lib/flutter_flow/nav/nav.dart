@@ -536,6 +536,10 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               'id',
               ParamType.String,
             ),
+            type: params.getParam(
+              'type',
+              ParamType.String,
+            ),
           ),
         ),
         FFRoute(
@@ -652,6 +656,10 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             ),
             title: params.getParam(
               'title',
+              ParamType.String,
+            ),
+            tag: params.getParam(
+              'tag',
               ParamType.String,
             ),
           ),

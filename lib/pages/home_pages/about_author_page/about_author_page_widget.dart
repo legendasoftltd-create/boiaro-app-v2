@@ -49,12 +49,68 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
   int? _followersCount;
 
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebouncer;
+  String _searchQuery = '';
+  String _selectedFormat = 'all';
   List<dynamic> _books = [];
   bool _isLoading = false;
   bool _hasMore = true;
   int _offset = 0;
   final int _limit = 20;
   String? _nextCursor;
+
+  Widget _buildFormatFilterChips() {
+    final formats = [
+      {'label': 'সব', 'value': 'all'},
+      {'label': 'ই-বুক', 'value': 'ebook'},
+      {'label': 'অডিওবুক', 'value': 'audiobook'},
+      {'label': 'হার্ডকপি', 'value': 'hardcopy'},
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
+      child: Row(
+        children: formats.map((item) {
+          final isSelected = _selectedFormat == item['value'];
+          return Padding(
+            padding: const EdgeInsets.only(right: 6.0),
+            child: ChoiceChip(
+              label: Text(
+                item['label']!,
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : FlutterFlowTheme.of(context).primaryText,
+                  fontSize: 12.0,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+              selected: isSelected,
+              selectedColor: FlutterFlowTheme.of(context).primary,
+              backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 2.0),
+              labelPadding: EdgeInsets.zero,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              side: BorderSide.none,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    _selectedFormat = item['value']!;
+                    _offset = 0;
+                    _hasMore = true;
+                  });
+                  _loadMoreBooks(isFirstLoad: true);
+                }
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -89,6 +145,8 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
     try {
       final res = await EbookGroup.getbookbyauthorApiCall.call(
         authorId: widget.authorId,
+        format: _selectedFormat == 'all' ? '' : _selectedFormat,
+        search: _searchQuery,
         limit: _limit,
         cursor: isFirstLoad ? null : _nextCursor,
       );
@@ -933,8 +991,58 @@ class _AboutAuthorPageWidgetState extends State<AboutAuthorPageWidget> {
                                                         crossAxisAlignment:
                                                             CrossAxisAlignment
                                                                 .start,
-                                                        children: [
-                                                          if (_books.isNotEmpty)
+                                                         children: [
+                                                           Padding(
+                                                             padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 4.0),
+                                                             child: TextField(
+                                                               controller: _searchController,
+                                                               onChanged: (val) {
+                                                                 _searchDebouncer?.cancel();
+                                                                 _searchDebouncer = Timer(const Duration(milliseconds: 400), () {
+                                                                   setState(() {
+                                                                     _searchQuery = val.trim();
+                                                                     _offset = 0;
+                                                                     _hasMore = true;
+                                                                   });
+                                                                   _loadMoreBooks(isFirstLoad: true);
+                                                                 });
+                                                               },
+                                                               decoration: InputDecoration(
+                                                                 hintText: FFLocalizations.of(context).getVariableText(enText: 'Search author books...', bnText: 'লেখকের বই খুঁজুন...'),
+                                                                 hintStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                   fontFamily: 'Inter',
+                                                                   color: FlutterFlowTheme.of(context).secondaryText,
+                                                                 ),
+                                                                 prefixIcon: Icon(
+                                                                   Icons.search,
+                                                                   color: FlutterFlowTheme.of(context).secondaryText,
+                                                                 ),
+                                                                 suffixIcon: _searchController.text.isNotEmpty
+                                                                     ? IconButton(
+                                                                         icon: Icon(Icons.clear, color: FlutterFlowTheme.of(context).secondaryText),
+                                                                         onPressed: () {
+                                                                           _searchController.clear();
+                                                                           setState(() {
+                                                                             _searchQuery = '';
+                                                                             _offset = 0;
+                                                                             _hasMore = true;
+                                                                           });
+                                                                           _loadMoreBooks(isFirstLoad: true);
+                                                                         },
+                                                                       )
+                                                                     : null,
+                                                                 filled: true,
+                                                                 fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                 contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                                                                 border: OutlineInputBorder(
+                                                                   borderRadius: BorderRadius.circular(12.0),
+                                                                   borderSide: BorderSide.none,
+                                                                 ),
+                                                               ),
+                                                             ),
+                                                           ),
+                                                           _buildFormatFilterChips(),
+                                                           if (_books.isNotEmpty)
                                                             Padding(
                                                               padding:
                                                                   EdgeInsetsDirectional

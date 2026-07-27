@@ -517,7 +517,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
   }
 
   List<dynamic> _pickHomeSectionBooks(List<dynamic> books) {
-    return _filterBooks(books);
+    return books;
   }
 
   bool _matchesFilter(dynamic book) {
@@ -712,6 +712,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
           safeSetState(() {
             _selectedFilter = filter;
             FFAppState().clearGetHomepageCacheCacheKey(_homepageCacheKey);
+            FFAppState().clearGetCategorySectionsCacheCacheKey(
+              'category_sections_${_selectedApiType().isEmpty ? 'all' : _selectedApiType()}',
+            );
             _model.apiRequestCompleted2 = false;
           });
         }
@@ -1085,6 +1088,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      FFAppState().fetchUnreadNotificationCount();
       safeSetState(() {});
     });
   }
@@ -1244,41 +1248,77 @@ class _HomePageWidgetState extends State<HomePageWidget>
                           hoverColor: Colors.transparent,
                           highlightColor: Colors.transparent,
                           onTap: () async {
-                            context
+                            await context
                                 .pushNamed(NotificationsPageWidget.routeName);
+                            FFAppState().fetchUnreadNotificationCount();
                           },
-                          child: Container(
-                            width: 36.0,
-                            height: 36.0,
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
-                              boxShadow: [
-                                BoxShadow(
-                                  blurRadius: 16.0,
-                                  color:
-                                      FlutterFlowTheme.of(context).shadowColor,
-                                  offset: Offset(
-                                    0.0,
-                                    4.0,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 36.0,
+                                height: 36.0,
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 16.0,
+                                      color:
+                                          FlutterFlowTheme.of(context).shadowColor,
+                                      offset: Offset(
+                                        0.0,
+                                        4.0,
+                                      ),
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                alignment: AlignmentDirectional(0.0, 0.0),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(0.0),
+                                  child: SvgPicture.asset(
+                                    'assets/images/notifications_FILL0_wght400_GRAD0_opsz24.svg',
+                                    width: 22.0,
+                                    height: 22.0,
+                                    fit: BoxFit.cover,
+                                    colorFilter: ColorFilter.mode(
+                                        FlutterFlowTheme.of(context).primaryText,
+                                        BlendMode.srcIn),
                                   ),
-                                )
-                              ],
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            alignment: AlignmentDirectional(0.0, 0.0),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(0.0),
-                              child: SvgPicture.asset(
-                                'assets/images/notifications_FILL0_wght400_GRAD0_opsz24.svg',
-                                width: 22.0,
-                                height: 22.0,
-                                fit: BoxFit.cover,
-                                colorFilter: ColorFilter.mode(
-                                    FlutterFlowTheme.of(context).primaryText,
-                                    BlendMode.srcIn),
+                                ),
                               ),
-                            ),
+                              if (FFAppState().unreadNotificationCount > 0)
+                                Positioned(
+                                  top: -3.0,
+                                  right: -3.0,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4.0, vertical: 2.0),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16.0,
+                                      minHeight: 16.0,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: FlutterFlowTheme.of(context).error,
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      FFAppState().unreadNotificationCount > 99
+                                          ? '99+'
+                                          : '${FFAppState().unreadNotificationCount}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10.0,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.0,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         SizedBox(
@@ -1397,6 +1437,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
                             requestFn: () => EbookGroup.getHomepageApiCall.call(
                               token: FFAppState().token,
                               type: _selectedApiType(),
+                              limit: 10,
                             ),
                           )
                               .then((result) {
@@ -1490,13 +1531,16 @@ class _HomePageWidgetState extends State<HomePageWidget>
                                                         future: FFAppState()
                                                             .getCategorySectionsCache(
                                                           uniqueQueryKey:
-                                                              'category_sections',
+                                                              'category_sections_${_selectedApiType().isEmpty ? 'all' : _selectedApiType()}',
                                                           requestFn: () =>
                                                               EbookGroup
                                                                   .getCategorySectionsApiCall
                                                                   .call(
                                                             token: FFAppState()
                                                                 .token,
+                                                            booksLimit: 20,
+                                                            format:
+                                                                _selectedApiType(),
                                                           ),
                                                         ),
                                                         initialData:
@@ -1931,6 +1975,10 @@ class _HomePageWidgetState extends State<HomePageWidget>
                             getJsonField(item, r'''$.name''').toString(),
                             ParamType.String,
                           ),
+                          'type': serializeParam(
+                            _selectedApiType(),
+                            ParamType.String,
+                          ),
                         }.withoutNulls,
                       );
                     },
@@ -2092,7 +2140,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
     required List<dynamic> books,
     required dynamic favouriteJson,
   }) {
-    final items = _filterBooks(books);
+    final items = books;
     if (items.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -2563,6 +2611,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
         'id': serializeParam(categoryId, ParamType.String),
         'name':
             serializeParam(_categorySectionTitle(section), ParamType.String),
+        'type': serializeParam(_selectedApiType(), ParamType.String),
       }.withoutNulls,
     );
   }

@@ -8,6 +8,7 @@ import '/pages/empty_components/no_notification_yet/no_notification_yet_widget.d
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
@@ -32,6 +33,7 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   final animationsMap = <String, AnimationInfo>{};
+  List<String> _unreadIds = [];
 
   @override
   void initState() {
@@ -90,6 +92,39 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
                   backIcon: false,
                   addIcon: false,
                   onTapAdd: () async {},
+                  customAction: _unreadIds.isNotEmpty
+                      ? InkWell(
+                          splashColor: Colors.transparent,
+                          focusColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          onTap: () async {
+                            await EbookGroup.readNotificationsApiCall.call(
+                              ids: _unreadIds,
+                              token: FFAppState().token,
+                            );
+                            FFAppState().unreadNotificationCount = 0;
+                            safeSetState(() {
+                              _unreadIds = [];
+                              _model.apiRequestCompleter = null;
+                            });
+                          },
+                          child: Container(
+                            width: 40.0,
+                            height: 40.0,
+                            decoration: BoxDecoration(
+                              color: FlutterFlowTheme.of(context).lightGrey,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: AlignmentDirectional(0.0, 0.0),
+                            child: Icon(
+                              Icons.done_all,
+                              color: FlutterFlowTheme.of(context).primary,
+                              size: 20.0,
+                            ),
+                          ),
+                        )
+                      : null,
                 ),
               ),
               Expanded(
@@ -157,8 +192,9 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
                                       ),
                                     ),
                                   );
-                                } else {
-                                  return Builder(
+                                }
+
+                                return Builder(
                                     builder: (context) {
                                        final notificationList =
                                            EbookGroup.getnotificationApiCall
@@ -168,21 +204,31 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
                                                    )
                                                    ?.toList() ??
                                                [];
-                                       if (notificationList.isNotEmpty) {
-                                         final List<String> notificationIds = notificationList
-                                             .where((e) => e is Map && e['id'] != null)
-                                             .map((e) => (e as Map)['id'].toString())
-                                             .where((id) => id.isNotEmpty)
-                                             .toList();
-                                         if (notificationIds.isNotEmpty) {
-                                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                                             EbookGroup.readNotificationsApiCall.call(
-                                               ids: notificationIds,
-                                               token: FFAppState().token,
-                                             );
-                                           });
-                                         }
+                                       
+                                       final List<String> currentUnreadIds = notificationList
+                                           .where((e) => e is Map && e['id'] != null && e['is_read'] == false)
+                                           .map((e) => (e as Map)['id'].toString())
+                                           .where((id) => id.isNotEmpty)
+                                           .toList();
+
+                                       if (!listEquals(_unreadIds, currentUnreadIds)) {
+                                         WidgetsBinding.instance.addPostFrameCallback((_) {
+                                           if (mounted) {
+                                             setState(() {
+                                               _unreadIds = currentUnreadIds;
+                                             });
+                                           }
+                                         });
                                        }
+
+                                       final int apiUnreadCount = EbookGroup.getnotificationApiCall
+                                           .unreadCount(containerGetnotificationApiResponse.jsonBody);
+                                       if (FFAppState().unreadNotificationCount != apiUnreadCount) {
+                                         WidgetsBinding.instance.addPostFrameCallback((_) {
+                                           FFAppState().unreadNotificationCount = apiUnreadCount;
+                                         });
+                                       }
+
                                        if (notificationList.isEmpty) {
                                         return Center(
                                           child: NoNotificationYetWidget(),
@@ -215,183 +261,314 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
                                             final notificationListItem =
                                                 notificationList[
                                                     notificationListIndex];
+                                            final isRead = getJsonField(
+                                                  notificationListItem,
+                                                  r'''$.is_read''',
+                                                ) ==
+                                                true;
                                             return Padding(
                                               padding: EdgeInsetsDirectional
                                                   .fromSTEB(
                                                       16.0, 0.0, 16.0, 0.0),
-                                              child: Container(
-                                                width: double.infinity,
-                                                decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .primaryBackground,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      blurRadius: 16.0,
-                                                      color:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .shadowColor,
-                                                      offset: Offset(
-                                                        0.0,
-                                                        4.0,
-                                                      ),
-                                                    )
-                                                  ],
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          12.0),
-                                                ),
-                                                child: Padding(
-                                                  padding: EdgeInsetsDirectional
-                                                      .fromSTEB(16.0, 16.0,
-                                                          14.0, 19.0),
-                                                  child: Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.max,
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Container(
-                                                        width: 40.0,
-                                                        height: 40.0,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: FlutterFlowTheme
-                                                                  .of(context)
-                                                              .primaryBackground,
-                                                          boxShadow: [
-                                                            BoxShadow(
-                                                              blurRadius: 16.0,
-                                                              color: FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .shadowColor,
-                                                              offset: Offset(
-                                                                0.0,
-                                                                4.0,
+                                              child: InkWell(
+                                                splashColor: Colors.transparent,
+                                                focusColor: Colors.transparent,
+                                                hoverColor: Colors.transparent,
+                                                highlightColor: Colors.transparent,
+                                                onTap: () async {
+                                                  final titleText = getJsonField(
+                                                    notificationListItem,
+                                                    r'''$.title''',
+                                                  ).toString();
+                                                  final descriptionText = getJsonField(
+                                                    notificationListItem,
+                                                    r'''$.description''',
+                                                  ).toString();
+                                                  final dateText = getJsonField(
+                                                    notificationListItem,
+                                                    r'''$.date''',
+                                                  ).toString();
+
+                                                  if (!isRead) {
+                                                    final String notificationId = getJsonField(
+                                                      notificationListItem,
+                                                      r'''$.id''',
+                                                    ).toString();
+                                                    if (notificationId.isNotEmpty) {
+                                                      EbookGroup.readNotificationsApiCall.call(
+                                                        ids: [notificationId],
+                                                        token: FFAppState().token,
+                                                      );
+                                                      if (FFAppState().unreadNotificationCount > 0) {
+                                                        FFAppState().unreadNotificationCount =
+                                                            FFAppState().unreadNotificationCount - 1;
+                                                      }
+                                                      safeSetState(() {
+                                                        _model.apiRequestCompleter = null;
+                                                      });
+                                                    }
+                                                  }
+
+                                                  await showDialog(
+                                                    context: context,
+                                                    builder: (BuildContext context) {
+                                                      return AlertDialog(
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius: BorderRadius.circular(16.0),
+                                                        ),
+                                                        backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+                                                        title: Text(
+                                                          titleText,
+                                                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                fontFamily: 'SF Pro Display',
+                                                                fontSize: 20.0,
+                                                                fontWeight: FontWeight.bold,
                                                               ),
-                                                            )
-                                                          ],
-                                                          shape:
-                                                              BoxShape.circle,
                                                         ),
-                                                        alignment:
-                                                            AlignmentDirectional(
-                                                                0.0, 0.0),
-                                                        child: ClipRRect(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      0.0),
-                                                          child:
-                                                              SvgPicture.asset(
-                                                            'assets/images/notification.svg',
-                                                            width: 24.0,
-                                                            height: 24.0,
-                                                            fit: BoxFit.cover,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      Expanded(
-                                                        child: Padding(
-                                                          padding:
-                                                              EdgeInsetsDirectional
-                                                                  .fromSTEB(
-                                                                      16.0,
-                                                                      0.0,
-                                                                      0.0,
-                                                                      0.0),
-                                                          child: Column(
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .max,
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
+                                                        content: SingleChildScrollView(
+                                                          child: ListBody(
                                                             children: [
                                                               Text(
-                                                                getJsonField(
-                                                                  notificationListItem,
-                                                                  r'''$.title''',
-                                                                ).toString(),
-                                                                maxLines: 1,
-                                                                style: FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodyMedium
-                                                                    .override(
-                                                                      fontFamily:
-                                                                          'SF Pro Display',
-                                                                      fontSize:
-                                                                          18.0,
-                                                                      letterSpacing:
-                                                                          0.0,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                      lineHeight:
-                                                                          1.5,
+                                                                descriptionText,
+                                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                      fontFamily: 'SF Pro Display',
+                                                                      color: FlutterFlowTheme.of(context).primaryText,
+                                                                      fontSize: 16.0,
+                                                                      lineHeight: 1.5,
                                                                     ),
                                                               ),
-                                                              Padding(
-                                                                padding:
-                                                                    EdgeInsetsDirectional
-                                                                        .fromSTEB(
-                                                                            0.0,
-                                                                            8.0,
-                                                                            0.0,
-                                                                            14.0),
-                                                                child: Text(
+                                                              const SizedBox(height: 16.0),
+                                                              Text(
+                                                                dateText,
+                                                                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                      fontFamily: 'SF Pro Display',
+                                                                      color: FlutterFlowTheme.of(context).secondaryText,
+                                                                      fontSize: 13.0,
+                                                                    ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () => Navigator.of(context).pop(),
+                                                            child: Text(
+                                                              FFLocalizations.of(context).getVariableText(
+                                                                enText: 'Close',
+                                                                bnText: 'বন্ধ করুন',
+                                                              ),
+                                                              style: TextStyle(
+                                                                color: FlutterFlowTheme.of(context).primary,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      );
+                                                    },
+                                                  );
+                                                },
+                                                child: Container(
+                                                  width: double.infinity,
+                                                  decoration: BoxDecoration(
+                                                    color: isRead
+                                                        ? FlutterFlowTheme.of(
+                                                                context)
+                                                            .primaryBackground
+                                                        : FlutterFlowTheme.of(
+                                                                context)
+                                                            .primary
+                                                            .withOpacity(0.08),
+                                                    border: isRead
+                                                        ? null
+                                                        : Border.all(
+                                                            color: FlutterFlowTheme.of(context)
+                                                                .primary
+                                                                .withOpacity(0.3),
+                                                            width: 1.0,
+                                                          ),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        blurRadius: 16.0,
+                                                        color:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .shadowColor,
+                                                        offset: Offset(
+                                                          0.0,
+                                                          4.0,
+                                                        ),
+                                                      )
+                                                    ],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12.0),
+                                                  ),
+                                                  child: Padding(
+                                                    padding: EdgeInsetsDirectional
+                                                        .fromSTEB(16.0, 16.0,
+                                                            14.0, 19.0),
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.max,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Container(
+                                                          width: 40.0,
+                                                          height: 40.0,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .primaryBackground,
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                blurRadius: 16.0,
+                                                                color: FlutterFlowTheme
+                                                                        .of(context)
+                                                                    .shadowColor,
+                                                                offset: Offset(
+                                                                  0.0,
+                                                                  4.0,
+                                                                ),
+                                                              )
+                                                            ],
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
+                                                          alignment:
+                                                              AlignmentDirectional(
+                                                                  0.0, 0.0),
+                                                          child: ClipRRect(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        0.0),
+                                                            child:
+                                                                SvgPicture.asset(
+                                                              'assets/images/notification.svg',
+                                                              width: 24.0,
+                                                              height: 24.0,
+                                                              fit: BoxFit.cover,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Expanded(
+                                                          child: Padding(
+                                                            padding:
+                                                                EdgeInsetsDirectional
+                                                                    .fromSTEB(
+                                                                        16.0,
+                                                                        0.0,
+                                                                        0.0,
+                                                                        0.0),
+                                                            child: Column(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .max,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Text(
                                                                   getJsonField(
                                                                     notificationListItem,
-                                                                    r'''$.description''',
+                                                                    r'''$.title''',
                                                                   ).toString(),
-                                                                  maxLines: 2,
+                                                                  maxLines: 1,
+                                                                  overflow: TextOverflow.ellipsis,
                                                                   style: FlutterFlowTheme.of(
                                                                           context)
                                                                       .bodyMedium
                                                                       .override(
                                                                         fontFamily:
                                                                             'SF Pro Display',
-                                                                        color: FlutterFlowTheme.of(context)
-                                                                            .secondaryText,
                                                                         fontSize:
-                                                                            17.0,
+                                                                            18.0,
                                                                         letterSpacing:
                                                                             0.0,
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .bold,
                                                                         lineHeight:
                                                                             1.5,
                                                                       ),
                                                                 ),
-                                                              ),
-                                                              Text(
-                                                                getJsonField(
-                                                                  notificationListItem,
-                                                                  r'''$.date''',
-                                                                ).toString(),
-                                                                maxLines: 1,
-                                                                style: FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodyMedium
-                                                                    .override(
-                                                                      fontFamily:
-                                                                          'SF Pro Display',
-                                                                      fontSize:
-                                                                          15.0,
-                                                                      letterSpacing:
-                                                                          0.0,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .normal,
-                                                                      lineHeight:
-                                                                          1.5,
-                                                                    ),
-                                                              ),
-                                                            ],
+                                                                Padding(
+                                                                  padding:
+                                                                      EdgeInsetsDirectional
+                                                                          .fromSTEB(
+                                                                              0.0,
+                                                                              8.0,
+                                                                              0.0,
+                                                                              14.0),
+                                                                  child: Text(
+                                                                    getJsonField(
+                                                                      notificationListItem,
+                                                                      r'''$.description''',
+                                                                    ).toString(),
+                                                                    maxLines: 2,
+                                                                    overflow: TextOverflow.ellipsis,
+                                                                    style: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodyMedium
+                                                                        .override(
+                                                                          fontFamily:
+                                                                              'SF Pro Display',
+                                                                          color: FlutterFlowTheme.of(context)
+                                                                              .secondaryText,
+                                                                          fontSize:
+                                                                              17.0,
+                                                                          letterSpacing:
+                                                                              0.0,
+                                                                          lineHeight:
+                                                                              1.5,
+                                                                        ),
+                                                                  ),
+                                                                ),
+                                                                Text(
+                                                                  getJsonField(
+                                                                    notificationListItem,
+                                                                    r'''$.date''',
+                                                                  ).toString(),
+                                                                  maxLines: 1,
+                                                                  style: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodyMedium
+                                                                      .override(
+                                                                        fontFamily:
+                                                                            'SF Pro Display',
+                                                                        fontSize:
+                                                                            15.0,
+                                                                        letterSpacing:
+                                                                            0.0,
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .normal,
+                                                                        lineHeight:
+                                                                            1.5,
+                                                                      ),
+                                                                ),
+                                                              ],
+                                                            ),
                                                           ),
                                                         ),
-                                                      ),
-                                                    ],
+                                                        if (!isRead)
+                                                          Padding(
+                                                            padding: EdgeInsetsDirectional.fromSTEB(8.0, 8.0, 0.0, 0.0),
+                                                            child: Container(
+                                                              width: 8.0,
+                                                              height: 8.0,
+                                                              decoration: BoxDecoration(
+                                                                color: FlutterFlowTheme.of(context).primary,
+                                                                shape: BoxShape.circle,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -402,7 +579,6 @@ class _NotificationsPageWidgetState extends State<NotificationsPageWidget>
                                           'listViewOnPageLoadAnimation']!);
                                     },
                                   );
-                                }
                               },
                             ),
                           );

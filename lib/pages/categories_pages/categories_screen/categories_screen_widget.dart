@@ -1,3 +1,4 @@
+import 'dart:async';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -29,6 +30,9 @@ class _CategoriesScreenWidgetState extends State<CategoriesScreenWidget>
   late CategoriesScreenModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebouncer;
+  String _searchQuery = '';
 
   final animationsMap = <String, AnimationInfo>{};
 
@@ -57,6 +61,8 @@ class _CategoriesScreenWidgetState extends State<CategoriesScreenWidget>
 
   @override
   void dispose() {
+    _searchDebouncer?.cancel();
+    _searchController.dispose();
     _model.dispose();
 
     super.dispose();
@@ -87,15 +93,56 @@ class _CategoriesScreenWidgetState extends State<CategoriesScreenWidget>
                   title: FFLocalizations.of(context).getVariableText(enText: 'Categories', bnText: 'ক্যাটাগরি'),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                    _searchDebouncer?.cancel();
+                    _searchDebouncer = Timer(const Duration(milliseconds: 400), () {
+                      setState(() {
+                        _searchQuery = val.trim();
+                      });
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: FFLocalizations.of(context).getVariableText(enText: 'Search category...', bnText: 'ক্যাটাগরি খুঁজুন...'),
+                    hintStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'Inter',
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: FlutterFlowTheme.of(context).secondaryText),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
               Expanded(
                 child: Builder(
                   builder: (context) {
                     if (FFAppState().connected) {
                       return FutureBuilder<ApiCallResponse>(
-                        future: FFAppState()
-                            .getCategoriesCache(
-                          requestFn: () =>
-                              EbookGroup.getcategoriesApiCall.call(),
+                        future: EbookGroup.getcategoriesApiCall.call(
+                          search: _searchQuery,
                         )
                             .then((result) {
                           _model.apiRequestCompleted = true;

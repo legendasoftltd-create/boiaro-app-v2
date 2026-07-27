@@ -13,6 +13,8 @@ class ReadingReportService {
   String? _bookId;
   int _lastPercentageSent = -1;
   DateTime? _lastProgressAt;
+  DateTime? _sessionStart;
+  int? _sessionStartPage;
   bool _sessionActive = false;
   void Function(String message)? _debugListener;
 
@@ -23,7 +25,7 @@ class ReadingReportService {
   bool get hasActiveSession =>
       _sessionActive && (_sessionId?.isNotEmpty ?? false);
 
-  Future<void> startSession({required String bookId}) async {
+  Future<void> startSession({required String bookId, int? startPage}) async {
     final normalizedBookId = bookId.trim();
     _notifyDebug(
       'READING START TRY: bookId=$normalizedBookId',
@@ -47,6 +49,8 @@ class ReadingReportService {
     _sessionActive = true;
     _sessionId = sessionId;
     _bookId = normalizedBookId;
+    _sessionStart = DateTime.now();
+    _sessionStartPage = startPage;
     _lastPercentageSent = -1;
     _lastProgressAt = null;
     _notifyDebug(
@@ -56,6 +60,21 @@ class ReadingReportService {
       bookId: normalizedBookId,
       currentPage: 'Page 1',
     );
+  }
+
+  int getSessionSeconds({required String bookId}) {
+    if (_sessionActive && _bookId == bookId && _sessionStart != null) {
+      return DateTime.now().difference(_sessionStart!).inSeconds;
+    }
+    return 0;
+  }
+
+  int getSessionPagesRead({required String bookId, required int currentPage}) {
+    if (_sessionActive && _bookId == bookId) {
+      _sessionStartPage ??= currentPage;
+      return (currentPage - _sessionStartPage!).abs();
+    }
+    return 0;
   }
 
   Future<void> updateProgress({
@@ -115,6 +134,8 @@ class ReadingReportService {
     _sessionActive = false;
     _sessionId = null;
     _bookId = null;
+    _sessionStart = null;
+    _sessionStartPage = null;
     _lastPercentageSent = -1;
     _lastProgressAt = null;
     PresenceTrackingService.instance.updateActivity(

@@ -226,6 +226,8 @@ class BoiaroLegacyAdapter {
       'subscriber_access': b['subscriber_access'] ?? false,
       'total_listens': b['total_listens'],
       'total_reads': b['total_reads'],
+      'total_views': b['total_views'],
+      'tags': b['tags'],
     };
   }
 
@@ -361,11 +363,18 @@ class BoiaroLegacyAdapter {
   }
 
   static Map<String, dynamic> legacyNotificationFromV2(Map<String, dynamic> n) {
+    final isRead = n['is_read'] == true ||
+        n['read'] == true ||
+        n['is_seen'] == true ||
+        n['seen'] == true ||
+        n['read_at'] != null ||
+        n['status'] == 'read';
     return {
       'id': (n['id'] ?? n['_id'] ?? '').toString(),
       'title': n['title'] ?? '',
       'description': n['message'] ?? '',
       'date': (n['created_at'] ?? '').toString().split('T').first,
+      'is_read': isRead,
     };
   }
 

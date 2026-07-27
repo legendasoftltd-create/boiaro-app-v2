@@ -1,3 +1,4 @@
+import 'dart:async';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -27,6 +28,9 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebouncer;
+  String _searchQuery = '';
   List<dynamic> _narrators = [];
   bool _isLoading = false;
   bool _hasMore = true;
@@ -51,7 +55,7 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
 
   Future<void> _loadMoreNarrators({bool isFirstLoad = false}) async {
     if (_isLoading || (!_hasMore && !isFirstLoad)) return;
-    debugPrint('Narrators Load: isFirstLoad=$isFirstLoad, offset=$_offset, limit=$_limit, hasMore=$_hasMore');
+    debugPrint('Narrators Load: isFirstLoad=$isFirstLoad, offset=$_offset, limit=$_limit, hasMore=$_hasMore, search=$_searchQuery');
     setState(() {
       _isLoading = true;
     });
@@ -61,6 +65,7 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
         token: FFAppState().token,
         limit: _limit,
         offset: _offset,
+        search: _searchQuery,
       );
       final newNarrators =
           EbookGroup.getnarratorsApiCall.narratorDetailsList(res.jsonBody) ??
@@ -108,6 +113,8 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
 
   @override
   void dispose() {
+    _searchDebouncer?.cancel();
+    _searchController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _model.dispose();
@@ -138,6 +145,55 @@ class _BestNarratorPageWidgetState extends State<BestNarratorPageWidget> {
                 updateCallback: () => safeSetState(() {}),
                 child: SingleAppbarWidget(
                   title: FFLocalizations.of(context).getVariableText(enText: 'Best narrator', bnText: 'সেরা ভয়েস আর্টিস্ট'),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                    _searchDebouncer?.cancel();
+                    _searchDebouncer = Timer(const Duration(milliseconds: 400), () {
+                      setState(() {
+                        _searchQuery = val.trim();
+                        _offset = 0;
+                        _hasMore = true;
+                      });
+                      _loadMoreNarrators(isFirstLoad: true);
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: FFLocalizations.of(context).getVariableText(enText: 'Search narrator...', bnText: 'ভয়েস আর্টিস্ট খুঁজুন...'),
+                    hintStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+                      fontFamily: 'Inter',
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: FlutterFlowTheme.of(context).secondaryText),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                                _offset = 0;
+                                _hasMore = true;
+                              });
+                              _loadMoreNarrators(isFirstLoad: true);
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
               ),
               Expanded(

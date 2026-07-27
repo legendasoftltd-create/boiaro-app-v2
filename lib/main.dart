@@ -52,6 +52,7 @@ void main() async {
   // End initial custom actions code
 
   await appState.initializePersistedState();
+  await appState.checkAndRefreshTokenOnAppOpen();
   AppUpdateUtils.checkForUpdate();
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
     appState.fetchSslcommerzIosConfig();

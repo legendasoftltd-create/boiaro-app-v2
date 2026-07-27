@@ -2,6 +2,7 @@ import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/pages/components/custom_center_appbar/custom_center_appbar_widget.dart';
 import '/pages/components/list_main_container_component/list_main_container_component_widget.dart';
+import '/pages/components/main_book_component/main_book_component_widget.dart';
 import '/pages/empty_components/no_categories_yet/no_categories_yet_widget.dart';
 import '/index.dart';
 import 'dart:async';
@@ -26,6 +27,7 @@ class GetBookByCategoryPageModel
   // Models for ListMainContainerComponent dynamic component.
   late FlutterFlowDynamicModels<ListMainContainerComponentModel>
       listMainContainerComponentModels;
+  late FlutterFlowDynamicModels<MainBookComponentModel> mainBookComponentModels;
   // Stores action output result for [Backend Call - API (RemoveFavouritebook)] action in ListMainContainerComponent widget.
   ApiCallResponse? getPopularDetete;
   bool apiRequestCompleted1 = false;
@@ -41,6 +43,8 @@ class GetBookByCategoryPageModel
         createModel(context, () => CustomCenterAppbarModel());
     listMainContainerComponentModels =
         FlutterFlowDynamicModels(() => ListMainContainerComponentModel());
+    mainBookComponentModels =
+        FlutterFlowDynamicModels(() => MainBookComponentModel());
     noCategoriesYetModel = createModel(context, () => NoCategoriesYetModel());
   }
 
@@ -48,6 +52,7 @@ class GetBookByCategoryPageModel
   void dispose() {
     customCenterAppbarModel.dispose();
     listMainContainerComponentModels.dispose();
+    mainBookComponentModels.dispose();
     noCategoriesYetModel.dispose();
   }
 

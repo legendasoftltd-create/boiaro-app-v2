@@ -147,7 +147,7 @@ class _LogOutDialogWidgetState extends State<LogOutDialogWidget>
                           onPressed: () async {
                             await widget.onTapLogout?.call();
                           },
-                          text: FFLocalizations.of(context).getVariableText(enText: 'Log out', bnText: 'লগআউট করুন'),
+                          text: FFLocalizations.of(context).getVariableText(enText: 'Log out', bnText: 'লগ আউট'),
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 56.0,

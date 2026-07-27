@@ -6,6 +6,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:a_i_ebook_app/app_state.dart';
 import 'package:collection/collection.dart';
 import 'package:http/http.dart' as http;
 import 'package:equatable/equatable.dart';
@@ -555,6 +556,23 @@ class ApiManager {
     }
   }
 
+  static bool _isJwtExpired(String? token) {
+    if (token == null || token.trim().isEmpty) return true;
+    final parts = token.split('.');
+    if (parts.length != 3) return false;
+    try {
+      final normalized = base64Url.normalize(parts[1]);
+      final payloadStr = utf8.decode(base64Url.decode(normalized));
+      final payload = jsonDecode(payloadStr);
+      if (payload is Map && payload['exp'] is num) {
+        final expSec = (payload['exp'] as num).toInt();
+        final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        return nowSec >= (expSec - 30);
+      }
+    } catch (_) {}
+    return false;
+  }
+
   static Future<bool> _refreshSession(http.Client? client) async {
     final refreshToken = _refreshToken?.trim() ?? '';
     if (refreshToken.isEmpty) {
@@ -566,7 +584,10 @@ class ApiManager {
         '${FFAppConstants.mobileApiBaseUrl}/auth/refresh',
         <String, dynamic>{'Content-Type': 'application/json'},
         const {},
-        json.encode({'refreshToken': refreshToken}),
+        json.encode({
+          'refresh_token': refreshToken,
+          'refreshToken': refreshToken,
+        }),
         BodyType.JSON,
         true,
         false,
@@ -579,8 +600,8 @@ class ApiManager {
       if (response.statusCode < 200 || response.statusCode >= 300 || body is! Map) {
         return false;
       }
-      final newAccess = body['accessToken']?.toString().trim() ?? '';
-      final newRefreshRaw = body['refreshToken']?.toString().trim() ?? '';
+      final newAccess = (body['access_token'] ?? body['accessToken'])?.toString().trim() ?? '';
+      final newRefreshRaw = (body['refresh_token'] ?? body['refreshToken'])?.toString().trim() ?? '';
       final newRefresh = newRefreshRaw.isNotEmpty ? newRefreshRaw : refreshToken;
       if (newAccess.isEmpty) {
         return false;
@@ -590,6 +611,8 @@ class ApiManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('ff_token', newAccess);
       await prefs.setString('ff_refreshToken', newRefresh);
+      FFAppState().token = newAccess;
+      FFAppState().refreshToken = newRefresh;
       return true;
     } catch (_) {
       return false;
@@ -651,7 +674,7 @@ class ApiManager {
           cache: cache,
           isStreamingApi: isStreamingApi,
         );
-    // Modify for your specific needs if this differs from your API.
+
     if (_accessToken != null) {
       headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
     }

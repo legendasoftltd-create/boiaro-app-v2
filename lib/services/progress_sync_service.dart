@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 
 import '/flutter_flow/flutter_flow_util.dart';
+import '/services/reading_report_service.dart';
 
 class RemoteReadingProgress {
   const RemoteReadingProgress({
@@ -109,11 +110,21 @@ class ProgressSyncService {
     required String bookId,
     required int currentPage,
     required int totalPages,
+    int? sessionSeconds,
+    int? sessionPagesRead,
   }) async {
     final normalizedBookId = bookId.trim();
     if (!_canSync || normalizedBookId.isEmpty) {
       return false;
     }
+    final sec = sessionSeconds ??
+        ReadingReportService.instance
+            .getSessionSeconds(bookId: normalizedBookId);
+    final pagesRead = sessionPagesRead ??
+        ReadingReportService.instance.getSessionPagesRead(
+          bookId: normalizedBookId,
+          currentPage: currentPage,
+        );
     try {
       final res = await http.put(
         _uri('progress/reading'),
@@ -122,6 +133,8 @@ class ProgressSyncService {
           'book_id': normalizedBookId,
           'current_page': currentPage < 0 ? 0 : currentPage,
           'total_pages': totalPages < 0 ? 0 : totalPages,
+          'session_seconds': sec < 0 ? 0 : sec,
+          'session_pages_read': pagesRead < 0 ? 0 : pagesRead,
         }),
       );
       return res.statusCode == 200;
