@@ -163,9 +163,7 @@ class _MyAppState extends State<MyApp> {
         try {
           final data = json.decode(payload);
           final String? link = data['link'];
-          if (link != null && link.isNotEmpty) {
-            _handleLinkNavigation(link);
-          }
+          _handleLinkNavigation(link ?? '', data is Map<String, dynamic> ? data : null);
         } catch (e) {
           debugPrint('Error parsing notification payload: $e');
         }
@@ -174,22 +172,41 @@ class _MyAppState extends State<MyApp> {
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       final String? link = message.data['link'];
-      if (link != null && link.isNotEmpty) {
-        _handleLinkNavigation(link);
-      }
+      _handleLinkNavigation(link ?? '', message.data);
     });
 
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         final String? link = message.data['link'];
-        if (link != null && link.isNotEmpty) {
-          _handleLinkNavigation(link);
-        }
+        _handleLinkNavigation(link ?? '', message.data);
       }
     });
   }
 
-  void _handleLinkNavigation(String link) {
+  void _handleLinkNavigation(String link, [Map<String, dynamic>? data]) {
+    final type = data != null ? data['type']?.toString() : null;
+
+    if (type == 'weekly_summary' || link == '/weeklyReportPage' || link == '/weekly-report') {
+      _router.push('/weeklyReportPage');
+      return;
+    }
+    if (type == 'competition_won' || link == '/walletPage' || link == '/wallet') {
+      _router.push('/walletPage');
+      return;
+    }
+    if (type == 'streak_alert') {
+      _router.pushNamed('HomePage');
+      return;
+    }
+    if (type == 'inactivity_alert') {
+      if (link.isNotEmpty) {
+        _handleLinkNavigation(link);
+      } else {
+        _router.pushNamed('HomePage');
+      }
+      return;
+    }
+
     if (link.isEmpty) return;
     if (link.startsWith('/support/tickets/')) {
       final ticketId = link.replaceAll('/support/tickets/', '').trim();

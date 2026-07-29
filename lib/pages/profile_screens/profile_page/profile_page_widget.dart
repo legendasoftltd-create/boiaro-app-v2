@@ -11,6 +11,11 @@ import '/pages/dialogs/log_out_dialog/log_out_dialog_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/index.dart';
 import '/pages/profile_screens/wallet_page/wallet_page_widget.dart';
+import '/pages/components/daily_reward_dialog.dart';
+import '/pages/components/spin_wheel_dialog.dart';
+import '/pages/gamification/weekly_report_page.dart';
+import '/pages/gamification/quiz_list_page.dart';
+import '/pages/gamification/competitions_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -963,6 +968,78 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                                 ),
                               ],
                             ).animateOnPageLoad(animationsMap['containerOnPageLoadAnimation4']!),
+
+                          // 4b. Gamification & Rewards Card
+                          _buildGroupCard(
+                            context,
+                            title: FFLocalizations.of(context).getVariableText(enText: 'GAMIFICATION & REWARDS', bnText: 'গেমিফিকেশন ও পুরস্কার'),
+                            children: [
+                              _buildRowItem(
+                                context,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Daily Check-in (7-Day Strip)', bnText: '📅 দৈনিক লগইন পুরস্কার (৭ দিন)'),
+                                icon: Icon(
+                                  Icons.calendar_today_rounded,
+                                  color: FlutterFlowTheme.of(context).primary,
+                                  size: 20,
+                                ),
+                                onTap: () => DailyRewardDialog.show(context),
+                                showDivider: true,
+                              ),
+                              _buildRowItem(
+                                context,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Spin & Win Wheel', bnText: '🎡 স্পিন হুইল'),
+                                icon: const Icon(
+                                  Icons.published_with_changes_rounded,
+                                  color: Colors.purple,
+                                  size: 20,
+                                ),
+                                onTap: () => SpinWheelDialog.show(context),
+                                showDivider: true,
+                              ),
+                              _buildRowItem(
+                                context,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Quizzes & Trivia', bnText: '🧠 কুইজ এবং ট্রাইভিয়া'),
+                                icon: const Icon(
+                                  Icons.quiz_rounded,
+                                  color: Colors.indigo,
+                                  size: 20,
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const QuizListPageWidget()),
+                                ),
+                                showDivider: true,
+                              ),
+                              _buildRowItem(
+                                context,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Mega Competitions', bnText: '🏆 মেগা প্রতিযোগিতা'),
+                                icon: Icon(
+                                  Icons.emoji_events_rounded,
+                                  color: Colors.amber.shade800,
+                                  size: 20,
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const CompetitionsPageWidget()),
+                                ),
+                                showDivider: true,
+                              ),
+                              _buildRowItem(
+                                context,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Weekly Reading Report', bnText: '📊 সাপ্তাহিক রিপোর্ট'),
+                                icon: const Icon(
+                                  Icons.bar_chart_rounded,
+                                  color: Colors.teal,
+                                  size: 20,
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const WeeklyReportPageWidget()),
+                                ),
+                                showDivider: false,
+                              ),
+                            ],
+                          ).animateOnPageLoad(animationsMap['containerOnPageLoadAnimation5']!),
 
                           // 5. Explore Creators Card
                           _buildGroupCard(

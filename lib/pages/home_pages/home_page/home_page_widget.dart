@@ -29,6 +29,8 @@ import '/providers/cart_provider.dart';
 import '/custom_code/ad_manager.dart';
 import '/custom_code/widgets/ad_reward_dialog.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
+import '/pages/components/daily_reward_dialog.dart';
+import '/pages/components/home_leaderboard_widget.dart';
 
 enum HomeBookFilter { all, ebook, audiobook, hardcopy }
 
@@ -1089,6 +1091,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       FFAppState().fetchUnreadNotificationCount();
+      if (FFAppState().isLogin) {
+        DailyRewardDialog.checkAndShowOnAppOpen(context);
+      }
       safeSetState(() {});
     });
   }
@@ -2395,29 +2400,28 @@ class _HomePageWidgetState extends State<HomePageWidget>
                 ),
               ),
             ),
-          if (_selectedFilter == HomeBookFilter.all ||
-              _selectedFilter == HomeBookFilter.hardcopy)
-            SliverToBoxAdapter(
-              child: RepaintBoundary(
-                child: _buildBookStripSection(
-                  title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
-                  sectionKey: 'hard_copies',
-                  books: popularHardCopies,
-                  favouriteJson: favouriteJson,
-                  onViewAll: () async {
-                    await _openHomepageSectionViewAll(
-                      sectionKey: 'popularHardCopies',
-                      title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
-                      type: 'hardcopy',
-                    );
-                  },
-                ),
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: _buildBookStripSection(
+                title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
+                sectionKey: 'hard_copies',
+                books: popularHardCopies,
+                favouriteJson: favouriteJson,
+                onViewAll: () async {
+                  await _openHomepageSectionViewAll(
+                    sectionKey: 'popularHardCopies',
+                    title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
+                    type: 'hardcopy',
+                  );
+                },
               ),
             ),
+          ),
           ..._buildDynamicCategorySections(
             sections: categorySections,
             favouriteJson: favouriteJson,
           ),
+          SliverToBoxAdapter(child: RepaintBoundary(child: const HomeLeaderboardWidget())),
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),

@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/custom_code/ad_manager.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
+import '/pages/components/daily_reward_dialog.dart';
+import '/services/share_helper.dart';
 
 class WalletPageWidget extends StatefulWidget {
   const WalletPageWidget({super.key});
@@ -30,7 +32,6 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
   List<dynamic> _earnedBadges = [];
   List<dynamic> _goalsData = [];
   List<dynamic> _pointsHistory = [];
-  bool _dailyClaimedToday = false;
 
   @override
   void initState() {
@@ -179,50 +180,13 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
       if (res.statusCode == 200 && res.jsonBody != null) {
         final list = getJsonField(res.jsonBody, r'''$.history''') ?? getJsonField(res.jsonBody, r'''$.data.history''');
         if (list is List) {
-          final today = DateTime.now().toIso8601String().split('T').first;
-          final claimedToday = list.any((item) {
-            final eventType = getJsonField(item, r'''$.event_type''')?.toString();
-            final createdAt = getJsonField(item, r'''$.created_at''')?.toString() ?? '';
-            return eventType == 'daily_login' && createdAt.startsWith(today);
-          });
           setState(() {
             _pointsHistory = list;
-            _dailyClaimedToday = claimedToday;
           });
         }
       }
     } catch (_) {}
     setState(() => _loadingPoints = false);
-  }
-
-  Future<void> _claimGamificationDailyReward() async {
-    if (!FFAppState().isLogin) return;
-    try {
-      final res = await EbookGroup.claimDailyRewardCall.call(token: FFAppState().token);
-      if (res.statusCode == 200) {
-        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Daily reward claimed successfully!', bnText: 'দৈনিক পুরস্কার সফলভাবে দাবি করা হয়েছে!'));
-        setState(() {
-          _dailyClaimedToday = true;
-        });
-        _fetchPointsHistory();
-        if (mounted) safeSetState(() {});
-      } else if (res.statusCode == 400) {
-        final reason = getJsonField(res.jsonBody, r'''$.reason''');
-        if (reason == 'already_claimed') {
-          await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Already claimed today!', bnText: 'আজ ইতিমধ্যে দাবি করা হয়েছে!'));
-          setState(() {
-            _dailyClaimedToday = true;
-          });
-        } else {
-          await actions.showCustomToastBottom(
-              getJsonField(res.jsonBody, r'''$.message''') ?? 'Could not claim daily reward');
-        }
-      } else {
-        await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to claim daily reward', bnText: 'দৈনিক পুরস্কার দাবি করতে ব্যর্থ'));
-      }
-    } catch (e) {
-      await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Error: ', bnText: 'ত্রুটি: ') + '$e');
-    }
   }
 
   Future<void> _showAddGoalDialog() async {
@@ -481,74 +445,93 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
   }
 
   Widget _buildDailyCheckInCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: FlutterFlowTheme.of(context).secondaryBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: FlutterFlowTheme.of(context).alternate.withOpacity(0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
+    return Column(
+      children: [
+        InkWell(
+          onTap: () async {
+            await DailyRewardDialog.show(context, onClaimed: () {
+              _fetchPointsHistory();
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
-              shape: BoxShape.circle,
+              color: FlutterFlowTheme.of(context).secondaryBackground,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: FlutterFlowTheme.of(context).primary.withOpacity(0.3),
+              ),
             ),
-            child: Icon(
-              Icons.calendar_today_rounded,
-              color: FlutterFlowTheme.of(context).primary,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+            child: Row(
               children: [
-                Text(FFLocalizations.of(context).getVariableText(enText: 'Daily Login Reward', bnText: 'দৈনিক লগইন পুরস্কার'),
-                  style: FlutterFlowTheme.of(context).bodyMedium.override(
-                        fontFamily: 'SF Pro Display',
-                        fontWeight: FontWeight.bold,
-                      ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: FlutterFlowTheme.of(context).primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.calendar_today_rounded,
+                    color: FlutterFlowTheme.of(context).primary,
+                    size: 22,
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(FFLocalizations.of(context).getVariableText(enText: 'Claim points and coins for logging in today!', bnText: 'আজকের লগইনের জন্য পয়েন্ট এবং কয়েন সংগ্রহ করুন!'),
-                  style: FlutterFlowTheme.of(context).bodySmall.override(
-                        fontFamily: 'SF Pro Display',
-                        color: FlutterFlowTheme.of(context).secondaryText,
-                        fontSize: 11,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        FFLocalizations.of(context).getVariableText(
+                            enText: 'Daily Login Reward (7-Day Strip)',
+                            bnText: 'দৈনিক লগইন পুরস্কার (৭-দিনের স্ট্রিপ)'),
+                        style: FlutterFlowTheme.of(context).bodyMedium.override(
+                              fontFamily: 'SF Pro Display',
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        FFLocalizations.of(context).getVariableText(
+                            enText: 'Tap to view 7-day schedule & claim rewards!',
+                            bnText: '৭-দিনের রিওয়ার্ড দেখতে ও দাবি করতে ট্যাপ করুন!'),
+                        style: FlutterFlowTheme.of(context).bodySmall.override(
+                              fontFamily: 'SF Pro Display',
+                              color: FlutterFlowTheme.of(context).secondaryText,
+                              fontSize: 11,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: FlutterFlowTheme.of(context).primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    await DailyRewardDialog.show(context, onClaimed: () {
+                      _fetchPointsHistory();
+                    });
+                  },
+                  child: const Text(
+                    '🎁 View 7-Day',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _dailyClaimedToday
-                  ? FlutterFlowTheme.of(context).alternate
-                  : FlutterFlowTheme.of(context).primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              elevation: 0,
-            ),
-            onPressed: _dailyClaimedToday ? null : _claimGamificationDailyReward,
-            child: Text(
-              _dailyClaimedToday ? 'Claimed' : 'Claim',
-              style: TextStyle(
-                color: _dailyClaimedToday ? FlutterFlowTheme.of(context).secondaryText : Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -834,6 +817,39 @@ class _WalletPageWidgetState extends State<WalletPageWidget> {
                       style: TextStyle(
                         color: FlutterFlowTheme.of(context).secondaryText,
                         fontSize: 9,
+                      ),
+                    ),
+                  ],
+                  if (isEarned) ...[
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () async {
+                        final userBadgeId = getJsonField(earnedItem, r'''$.id''')?.toString() ?? '';
+                        if (userBadgeId.isNotEmpty) {
+                          await ShareHelper.shareBadgeCard(userBadgeId);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: FlutterFlowTheme.of(context).primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.share, color: Colors.white, size: 10),
+                            SizedBox(width: 4),
+                            Text(
+                              'Share',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

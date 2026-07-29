@@ -118,4 +118,12 @@ export '/pages/profile_screens/support_tickets/create_ticket_page.dart'
     show CreateTicketPageWidget;
 export '/pages/profile_screens/support_tickets/ticket_detail_page.dart'
     show TicketDetailPageWidget;
+export '/pages/gamification/weekly_report_page.dart'
+    show WeeklyReportPageWidget;
+export '/pages/gamification/quiz_list_page.dart'
+    show QuizListPageWidget;
+export '/pages/gamification/quiz_play_page.dart'
+    show QuizPlayPageWidget;
+export '/pages/gamification/competitions_page.dart'
+    show CompetitionsPageWidget;
 
