@@ -494,6 +494,12 @@ class _SubscriptionPaymentWebViewState
                           _handleCallback(url);
                         }
                       },
+                      onRenderProcessGone: (controller, detail) async {
+                        debugPrint("WebView render process gone. didCrash: ${detail.didCrash}");
+                        try {
+                          await controller.reload();
+                        } catch (_) {}
+                      },
                     ),
                     if (_progress < 1.0)
                       LinearProgressIndicator(

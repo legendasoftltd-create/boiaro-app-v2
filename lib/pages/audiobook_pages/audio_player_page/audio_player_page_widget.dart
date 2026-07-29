@@ -14,6 +14,7 @@ import '/services/tts_service.dart';
 import '/services/local_download_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:video_player/video_player.dart';
@@ -29,6 +30,7 @@ import '/pages/cart_pages/make_payment.dart';
 import '/pages/login_pages/sign_in_page/sign_in_page_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/flutter_flow/internationalization.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 
 class AudioPlayerPageWidget extends StatefulWidget {
@@ -67,8 +69,16 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<MediaItem?>? _mediaItemSub;
   StreamSubscription<PlaybackState>? _playbackStateSub;
+
+  // ValueNotifiers for position/duration — only the progress bar widget rebuilds
+  // instead of the entire 3299-line widget tree on every 250ms tick
+  final _positionNotifier = ValueNotifier<Duration>(Duration.zero);
+  final _durationNotifier = ValueNotifier<Duration>(Duration.zero);
+
+  // Internal backing fields (no setState — used by logic only)
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+
   List<Map<String, dynamic>> _chapters = [];
   int _currentIndex = 0;
   Map<String, dynamic>? _currentChapter;
@@ -84,14 +94,13 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
   bool _isFavorite = false;
   double? _downloadProgress; // null = not downloading, 0-1 = downloading, 1 = done
 
-
   final animationsMap = {
     'imageOnPageLoadAnimation': AnimationInfo(
       trigger: AnimationTrigger.onPageLoad,
       effectsBuilder: () => [
         FadeEffect(
           curve: Curves.easeInOut,
-          delay: 0.ms,
+          delay: 0.ms, 
           duration: 600.ms,
           begin: 0.0,
           end: 1.0,
@@ -106,6 +115,9 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       ],
     ),
   };
+
+
+
 
   @override
   void initState() {
@@ -227,19 +239,22 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       if (_isPreviewMode) {
         _onPlaybackState(state);
       }
-      _isPlaying = state.playing && state.processingState != AudioProcessingState.completed;
-      final bId = _bookId();
-      if (bId.isNotEmpty) {
-        if (_isPlaying) {
-          PresenceTrackingService.instance.updateActivity(
-            PresenceActivity.listening,
-            bookId: bId,
-            currentPage: _formatDurationPresence(_position),
-          );
-        } else {
-          PresenceTrackingService.instance.updateActivity(
-            PresenceActivity.browsing,
-          );
+      final newlyPlaying = state.playing && state.processingState != AudioProcessingState.completed;
+      if (_isPlaying != newlyPlaying) {
+        _isPlaying = newlyPlaying;
+        final bId = _bookId();
+        if (bId.isNotEmpty) {
+          if (_isPlaying) {
+            PresenceTrackingService.instance.updateActivity(
+              PresenceActivity.listening,
+              bookId: bId,
+              currentPage: _formatDurationPresence(_position),
+            );
+          } else {
+            PresenceTrackingService.instance.updateActivity(
+              PresenceActivity.browsing,
+            );
+          }
         }
       }
       if (state.processingState == AudioProcessingState.completed) {
@@ -264,7 +279,9 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       if (cappedPosition != pos) {
         _handler?.seek(cappedPosition);
       }
-      setState(() => _position = cappedPosition);
+      // Update backing field + ValueNotifier only — no full widget rebuild
+      _position = cappedPosition;
+      _positionNotifier.value = cappedPosition;
       _persistAudiobookProgress(cappedPosition);
       _maybeHandlePreviewBoundary(cappedPosition);
     });
@@ -272,7 +289,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       if (!mounted || _videoMode) {
         return;
       }
-      setState(() => _duration = item?.duration ?? Duration.zero);
+      final newDuration = item?.duration ?? Duration.zero;
+      // Update backing field + ValueNotifier only — no full widget rebuild
+      _duration = newDuration;
+      _durationNotifier.value = newDuration;
       _persistAudiobookProgress(_position);
     });
     await _startPlayback();
@@ -389,6 +409,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     _model.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
+    _positionNotifier.dispose();
+    _durationNotifier.dispose();
 
     PresenceTrackingService.instance.updateActivity(PresenceActivity.browsing);
     super.dispose();
@@ -550,13 +572,17 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     if (_isPreviewMode && index != _currentIndex) {
       return;
     }
-    setState(() {
-      _currentIndex = index;
-      _currentChapter = _chapters[index];
-      _position = Duration.zero;
-      _duration = Duration.zero;
-      _previewLimitShown = false;
-    });
+    _position = Duration.zero;
+    _duration = Duration.zero;
+    _positionNotifier.value = Duration.zero;
+    _durationNotifier.value = Duration.zero;
+    if (mounted) {
+      setState(() {
+        _currentIndex = index;
+        _currentChapter = _chapters[index];
+        _previewLimitShown = false;
+      });
+    }
     _persistAudiobookMeta();
     await _startPlayback();
   }
@@ -620,9 +646,8 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
 
   Future<void> _seekTo(Duration position) async {
     final target = _capPreviewPosition(position);
-    if (mounted) {
-      setState(() => _position = target);
-    }
+    _position = target;
+    _positionNotifier.value = target;
     if (_videoMode) {
       await _videoController?.seekTo(target);
     } else {
@@ -651,8 +676,9 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     if (_videoController != null && _videoController!.value.isPlaying) {
       _videoController!.pause();
     }
-    if (mounted && _position != limit) {
-      setState(() => _position = limit);
+    if (_position != limit) {
+      _position = limit;
+      _positionNotifier.value = limit;
     }
     _clearPersistedAudiobookProgress();
     if (!mounted) {
@@ -825,9 +851,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     try {
       await controller.initialize();
       if (!mounted) return;
+      _duration = controller.value.duration;
+      _durationNotifier.value = controller.value.duration;
       setState(() {
         _videoLoading = false;
-        _duration = controller.value.duration;
       });
       controller.addListener(_videoListener);
       if (_isPlaying) {
@@ -843,16 +870,32 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
     }
   }
 
+  // Throttle for video listener to avoid rebuilding every video frame
+  int _lastVideoUpdateMs = 0;
+
   void _videoListener() {
     if (!mounted || !_videoMode || _videoController == null) return;
     final val = _videoController!.value;
     final position = val.position;
     final duration = val.duration;
-    setState(() {
-      _position = position;
-      _duration = duration;
-      _isPlaying = val.isPlaying;
-    });
+
+    // Update ValueNotifiers (no setState) for position/duration
+    _position = position;
+    _duration = duration;
+    _positionNotifier.value = position;
+    _durationNotifier.value = duration;
+
+    // Only rebuild the widget tree when play state changes (not on every frame)
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (val.isPlaying != _isPlaying || nowMs - _lastVideoUpdateMs > 500) {
+      _lastVideoUpdateMs = nowMs;
+      if (mounted) {
+        setState(() {
+          _isPlaying = val.isPlaying;
+        });
+      }
+    }
+
     if (val.isInitialized &&
         duration > Duration.zero &&
         position >= duration &&
@@ -1130,12 +1173,12 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                                       color: FlutterFlowTheme.of(context)
                                           .secondaryText),
                                 )
-                              : Image.network(
-                                  coverUrl,
+                              : CachedNetworkImage(
+                                  imageUrl: coverUrl,
                                   width: 44,
                                   height: 58,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
+                                  errorWidget: (_, __, ___) => Container(
                                     width: 44,
                                     height: 58,
                                     color:
@@ -2389,7 +2432,6 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
       fallback: '',
     );
     final coverImage = _resolveBookImage(widget.audiobook['image']?.toString());
-    final effectiveDuration = _effectiveDuration();
 
     return PopScope(
       canPop: false,
@@ -2625,10 +2667,10 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
                                             ),
                                           ),
                                         ))
-                                  : Image.network(
-                                      coverImage,
+                                  : CachedNetworkImage(
+                                      imageUrl: coverImage,
                                       fit: BoxFit.fill,
-                                      errorBuilder: (context, error, stackTrace) =>
+                                      errorWidget: (context, error, stackTrace) =>
                                           Container(
                                         color: FlutterFlowTheme.of(context)
                                             .secondaryBackground,
@@ -2727,71 +2769,80 @@ class _AudioPlayerPageWidgetState extends State<AudioPlayerPageWidget>
 
                 SizedBox(height: 6),
 
-                // Progress Bar
-                Column(
-                  children: [
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 5,
-                        thumbShape:
-                            RoundSliderThumbShape(enabledThumbRadius: 7),
-                        overlayShape:
-                            RoundSliderOverlayShape(overlayRadius: 16),
-                        activeTrackColor: FlutterFlowTheme.of(context).primary,
-                        inactiveTrackColor:
-                            FlutterFlowTheme.of(context).gray200,
-                        thumbColor: FlutterFlowTheme.of(context).primary,
-                        overlayColor: FlutterFlowTheme.of(context)
-                            .primary
-                            .withValues(alpha: 0.12),
-                      ),
-                      child: Slider(
-                        value: (effectiveDuration.inMilliseconds > 0)
-                            ? _position.inMilliseconds
-                                .toDouble()
-                                .clamp(0,
-                                    effectiveDuration.inMilliseconds.toDouble())
-                                .toDouble()
-                            : 0.0,
-                        min: 0,
-                        max: effectiveDuration.inMilliseconds > 0
-                            ? effectiveDuration.inMilliseconds.toDouble()
-                            : 1.0,
-                        onChanged: (val) {
-                          setState(() {
-                            _position = _capPreviewPosition(
-                              Duration(milliseconds: val.toInt()),
-                            );
-                          });
-                        },
-                        onChangeEnd: (val) {
-                          _seekTo(Duration(milliseconds: val.toInt()));
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _formatDuration(_position),
-                            style: TextStyle(
-                                color:
-                                    FlutterFlowTheme.of(context).secondaryText,
-                                fontSize: 12),
+                // Progress Bar — uses ValueListenableBuilder so only this
+                // small widget rebuilds on each position tick (not entire page)
+                ValueListenableBuilder2<Duration, Duration>(
+                  first: _positionNotifier,
+                  second: _durationNotifier,
+                  builder: (context, position, duration, _) {
+                    final previewLimit = _currentPreviewLimit();
+                    final effectiveDur = previewLimit ?? duration;
+                    return Column(
+                      children: [
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 5,
+                            thumbShape:
+                                RoundSliderThumbShape(enabledThumbRadius: 7),
+                            overlayShape:
+                                RoundSliderOverlayShape(overlayRadius: 16),
+                            activeTrackColor: FlutterFlowTheme.of(context).primary,
+                            inactiveTrackColor:
+                                FlutterFlowTheme.of(context).gray200,
+                            thumbColor: FlutterFlowTheme.of(context).primary,
+                            overlayColor: FlutterFlowTheme.of(context)
+                                .primary
+                                .withValues(alpha: 0.12),
                           ),
-                          Text(
-                            _formatDuration(effectiveDuration),
-                            style: TextStyle(
-                                color:
-                                    FlutterFlowTheme.of(context).secondaryText,
-                                fontSize: 12),
+                          child: Slider(
+                            value: (effectiveDur.inMilliseconds > 0)
+                                ? position.inMilliseconds
+                                    .toDouble()
+                                    .clamp(0,
+                                        effectiveDur.inMilliseconds.toDouble())
+                                    .toDouble()
+                                : 0.0,
+                            min: 0,
+                            max: effectiveDur.inMilliseconds > 0
+                                ? effectiveDur.inMilliseconds.toDouble()
+                                : 1.0,
+                            onChanged: (val) {
+                              final capped = _capPreviewPosition(
+                                Duration(milliseconds: val.toInt()),
+                              );
+                              _position = capped;
+                              _positionNotifier.value = capped;
+                            },
+                            onChangeEnd: (val) {
+                              _seekTo(Duration(milliseconds: val.toInt()));
+                            },
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatDuration(position),
+                                style: TextStyle(
+                                    color:
+                                        FlutterFlowTheme.of(context).secondaryText,
+                                    fontSize: 12),
+                              ),
+                              Text(
+                                _formatDuration(effectiveDur),
+                                style: TextStyle(
+                                    color:
+                                        FlutterFlowTheme.of(context).secondaryText,
+                                    fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
 
                 SizedBox(height: 14),
@@ -3115,8 +3166,27 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage> {
     _startControlsTimer();
   }
 
+  // Timestamp guard — only rebuild when something visually relevant changes,
+  // capped at 4 updates per second. Without this, the video player listener
+  // fires on every rendered frame (~60/sec) causing constant full-page rebuilds.
+  int _lastVideoUpdateMs = 0;
+  bool _lastIsPlaying = false;
+
   void _videoListener() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final isPlaying = widget.controller.value.isPlaying;
+    // Always rebuild on play/pause state change.
+    if (isPlaying != _lastIsPlaying) {
+      _lastIsPlaying = isPlaying;
+      _lastVideoUpdateMs = nowMs;
+      setState(() {});
+      return;
+    }
+    // Throttle position/buffering updates to max ~4 fps.
+    if (nowMs - _lastVideoUpdateMs < 250) return;
+    _lastVideoUpdateMs = nowMs;
+    setState(() {});
   }
 
   void _startControlsTimer() {
@@ -3296,3 +3366,32 @@ class _FullscreenVideoPageState extends State<FullscreenVideoPage> {
   }
 }
 
+/// Helper widget to listen to two [ValueListenable]s simultaneously
+/// without nesting two [ValueListenableBuilder]s.
+class ValueListenableBuilder2<A, B> extends StatelessWidget {
+  const ValueListenableBuilder2({
+    super.key,
+    required this.first,
+    required this.second,
+    required this.builder,
+    this.child,
+  });
+
+  final ValueListenable<A> first;
+  final ValueListenable<B> second;
+  final Widget Function(BuildContext context, A a, B b, Widget? child) builder;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<A>(
+      valueListenable: first,
+      builder: (context, a, _) {
+        return ValueListenableBuilder<B>(
+          valueListenable: second,
+          builder: (context, b, __) => builder(context, a, b, child),
+        );
+      },
+    );
+  }
+}

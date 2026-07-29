@@ -58,6 +58,9 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
   late MainBookComponentModel _model;
   bool _isFavBusy = false;
 
+  // Cached format icons — computed once and on widget update, not on every build.
+  List<IconData> _cachedFormatIcons = [];
+
   String _normalizeFormat(String raw) {
     final t = raw.toLowerCase().trim();
     if (t.contains('audio')) return 'audiobook';
@@ -91,12 +94,33 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
     _model.onUpdate();
   }
 
+  void _recomputeFormatIcons() {
+    final formats = _extractFormats(widget.bookType);
+    _cachedFormatIcons = [
+      if (formats.contains('ebook')) Icons.menu_book_rounded,
+      if (formats.contains('audiobook')) Icons.headphones_rounded,
+      if (formats.contains('hardcopy')) Icons.local_library_rounded,
+    ];
+    if (_cachedFormatIcons.isEmpty && (widget.bookType ?? '').trim().isNotEmpty) {
+      _cachedFormatIcons = [Icons.menu_book_rounded];
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => MainBookComponentModel());
+    _recomputeFormatIcons();
+    // No addPostFrameCallback here — it caused a redundant rebuild on every
+    // card mount (FlutterFlow boilerplate) which cascades during fast scrolling.
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+  @override
+  void didUpdateWidget(covariant MainBookComponentWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bookType != widget.bookType) {
+      _recomputeFormatIcons();
+    }
   }
 
   Future<void> _toggleWishlist() async {
@@ -139,24 +163,17 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
 
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
-    final formats = _extractFormats(widget.bookType);
-    final formatIcons = <IconData>[
-      if (formats.contains('ebook')) Icons.menu_book_rounded,
-      if (formats.contains('audiobook')) Icons.headphones_rounded,
-      if (formats.contains('hardcopy')) Icons.local_library_rounded,
-    ];
-    if (formatIcons.isEmpty && (widget.bookType ?? '').trim().isNotEmpty) {
-      formatIcons.add(Icons.menu_book_rounded);
-    }
-
-    final mediaQueryData = MediaQuery.of(context);
-    final clampedScale = mediaQueryData.textScaleFactor.clamp(0.8, 1.12);
+    // Cache MediaQuery values once per build — avoid repeated lookups.
+    final mq = MediaQuery.of(context);
+    final clampedScale = mq.textScaleFactor.clamp(0.8, 1.12);
+    final screenWidth = mq.size.width;
+    final screenHeight = mq.size.height;
+    final formatIcons = _cachedFormatIcons;
 
     return MediaQuery(
-      data: mediaQueryData.copyWith(textScaleFactor: clampedScale),
+      data: mq.copyWith(textScaleFactor: clampedScale),
       child: InkWell(
         splashColor: Colors.transparent,
         focusColor: Colors.transparent,
@@ -168,20 +185,18 @@ class _MainBookComponentWidgetState extends State<MainBookComponentWidget> {
         child: Container(
         margin: EdgeInsets.all(2.0),
         width: () {
-          if (MediaQuery.sizeOf(context).width < 810.0) {
-            return ((MediaQuery.sizeOf(context).width - 40) / 3);
-          } else if ((MediaQuery.sizeOf(context).width >= 810.0) &&
-              (MediaQuery.sizeOf(context).width < 1280.0)) {
-            return ((MediaQuery.sizeOf(context).width - 96) / 4);
-          } else if (MediaQuery.sizeOf(context).width >= 1280.0) {
-            return ((MediaQuery.sizeOf(context).width - 128) / 6);
+          if (screenWidth < 810.0) {
+            return ((screenWidth - 40) / 3);
+          } else if ((screenWidth >= 810.0) &&
+              (screenWidth < 1280.0)) {
+            return ((screenWidth - 96) / 4);
+          } else if (screenWidth >= 1280.0) {
+            return ((screenWidth - 128) / 6);
           } else {
-            return ((MediaQuery.sizeOf(context).width - 160) / 8);
+            return ((screenWidth - 160) / 8);
           }
         }(),
         height: () {
-          double screenHeight = MediaQuery.sizeOf(context).height;
-          double screenWidth = MediaQuery.sizeOf(context).width;
           if (screenHeight / screenWidth < 1.78) {
             return 239.0;
           }

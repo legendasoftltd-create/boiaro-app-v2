@@ -188,6 +188,12 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                     progress = progressValue / 100;
                   });
                 },
+                onRenderProcessGone: (controller, detail) async {
+                  debugPrint("WebView render process gone. didCrash: ${detail.didCrash}");
+                  try {
+                    await controller.reload();
+                  } catch (_) {}
+                },
               ),
                   
               // 🔄 Progress bar

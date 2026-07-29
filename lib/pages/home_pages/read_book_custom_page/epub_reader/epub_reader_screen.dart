@@ -92,6 +92,10 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
   // Guard to prevent TTS text extraction before new page DOM is ready
   bool _ttsPageSettling = false;
 
+  // Throttling fields for network progress sync
+  int _lastSyncedPercent = -1;
+  int _lastSyncTimeMs = 0;
+
   @override
   void initState() {
     super.initState();
@@ -212,15 +216,29 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
               (function(item, idx) {
                 promises.push(
                   item.load(rendition.book.load.bind(rendition.book)).then(function(doc) {
-                    if (!doc) { chapterPages[idx] = 1; return 1; }
+                    if (!doc) {
+                      if (item.unload) { try { item.unload(); } catch (_) {} }
+                      chapterPages[idx] = 1;
+                      return 1;
+                    }
                     var text = (doc.body ? doc.body.textContent : doc.textContent) || '';
                     var len = text.replace(/\\s+/g, ' ').trim().length;
-                    if (len === 0) { chapterPages[idx] = 1; return 1; }
+                    if (len === 0) {
+                      if (item.unload) { try { item.unload(); } catch (_) {} }
+                      chapterPages[idx] = 1;
+                      return 1;
+                    }
                     
                     var pages = Math.max(1, Math.ceil(len / charsPerPage));
+                    if (item.unload) {
+                      try { item.unload(); } catch (_) {}
+                    }
                     chapterPages[idx] = pages;
                     return pages;
                   }).catch(function() {
+                    if (item.unload) {
+                      try { item.unload(); } catch (_) {}
+                    }
                     chapterPages[idx] = 1;
                     return 1;
                   })
@@ -1393,9 +1411,13 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                 },
                 onRelocated: (value) async {
                   final percent = (value.progress * 100).toInt().clamp(0, 100);
+                  final nowMs = DateTime.now().millisecondsSinceEpoch;
 
-                  // Sync reading progress (non-blocking)
-                  if (percent > 0) {
+                  // Sync reading progress (throttled — sync only on percent change or every 5s)
+                  if (percent > 0 &&
+                      (percent != _lastSyncedPercent || nowMs - _lastSyncTimeMs > 5000)) {
+                    _lastSyncedPercent = percent;
+                    _lastSyncTimeMs = nowMs;
                     unawaited(ProgressSyncService.saveReadingProgress(
                       bookId: widget.bookId,
                       currentPage: percent,

@@ -67,7 +67,18 @@ class AudioPlaybackService {
 }
 
 class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player = AudioPlayer(
+    audioLoadConfiguration: const AudioLoadConfiguration(
+      androidLoadControl: AndroidLoadControl(
+        minBufferDuration: Duration(seconds: 30),
+        maxBufferDuration: Duration(minutes: 3),
+        bufferForPlaybackDuration: Duration(seconds: 5),
+        bufferForPlaybackAfterRebufferDuration: Duration(seconds: 8),
+        targetBufferBytes: -1,
+        prioritizeTimeOverSizeThresholds: true,
+      ),
+    ),
+  );
   bool _sessionConfigured = false;
   bool _isPreviewSession = false;
   double _previewFraction = 1.0;

@@ -1102,13 +1102,16 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
   @override
   Widget build(BuildContext context) {
-    context.watch<FFAppState>();
+    // Use context.select() instead of context.watch() so the HomePage
+    // only rebuilds when the `connected` field actually changes, not on
+    // every unrelated FFAppState change (e.g. audio position ticks).
+    final isConnected = context.select<FFAppState, bool>((s) => s.connected == true);
 
     final homeBody = SafeArea(
       top: true,
       child: Builder(
         builder: (context) {
-          if (FFAppState().connected == true) {
+          if (isConnected) {
             return Column(
               mainAxisSize: MainAxisSize.max,
               children: [
@@ -1414,175 +1417,83 @@ class _HomePageWidgetState extends State<HomePageWidget>
                   ),
                 Expanded(
                   child: FutureBuilder<ApiCallResponse>(
-                    future:
-                        Future.value(_emptyFavouriteResponse()).then((result) {
+                    future: FFAppState()
+                        .getHomepageCache(
+                      uniqueQueryKey: _homepageCacheKey,
+                      requestFn: () => EbookGroup.getHomepageApiCall.call(
+                        token: FFAppState().token,
+                        type: _selectedApiType(),
+                        limit: 10,
+                      ),
+                    )
+                        .then((result) {
                       _model.apiRequestCompleted1 = true;
+                      _model.apiRequestCompleted2 = true;
                       return result;
                     }),
                     builder: (context, snapshot) {
-                      // Customize what your widget looks like when it's loading.
                       if (!snapshot.hasData) {
                         return HomeShimmerWidget();
                       }
-                      final containerGetFavouriteBookResponse = snapshot.data!;
+                      final containerHomepageResponse = snapshot.data!;
+                      // _emptyFavouriteResponse() is synchronous — no FutureBuilder needed.
+                      final favouriteJson = _emptyFavouriteResponse().jsonBody;
 
-                      return Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        decoration: BoxDecoration(),
-                        child: FutureBuilder<ApiCallResponse>(
-                          future: FFAppState()
-                              .getHomepageCache(
-                            uniqueQueryKey: _homepageCacheKey,
-                            requestFn: () => EbookGroup.getHomepageApiCall.call(
-                              token: FFAppState().token,
-                              type: _selectedApiType(),
-                              limit: 10,
-                            ),
-                          )
-                              .then((result) {
-                            _model.apiRequestCompleted2 = true;
-                            return result;
-                          }),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) {
-                              return HomeShimmerWidget();
-                            }
-                            final containerHomepageResponse = snapshot.data!;
-
-                            return Container(
-                              width: double.infinity,
-                              height: double.infinity,
-                              decoration: BoxDecoration(),
-                              child: Builder(
-                                builder: (context) {
-                                  return Container(
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    decoration: BoxDecoration(),
-                                    child: Builder(
-                                      builder: (context) {
-                                        return Container(
-                                          width: double.infinity,
-                                          height: double.infinity,
-                                          decoration: BoxDecoration(),
-                                          child: Builder(
-                                            builder: (context) {
-                                              return Container(
-                                                width: double.infinity,
-                                                height: double.infinity,
-                                                decoration: BoxDecoration(),
-                                                child: Builder(
-                                                  builder: (context) {
-                                                    if (EbookGroup
-                                                            .getHomepageApiCall
-                                                            .success(
-                                                          containerHomepageResponse
-                                                              .jsonBody,
-                                                        ) ==
-                                                        2) {
-                                                      return Align(
-                                                        alignment:
-                                                            AlignmentDirectional(
-                                                                0.0, 0.0),
-                                                        child: Padding(
-                                                          padding:
-                                                              EdgeInsetsDirectional
-                                                                  .fromSTEB(
-                                                                      16.0,
-                                                                      0.0,
-                                                                      16.0,
-                                                                      0.0),
-                                                          child: Text(
-                                                            valueOrDefault<
-                                                                String>(
-                                                              EbookGroup
-                                                                  .getHomepageApiCall
-                                                                  .message(
-                                                                containerHomepageResponse
-                                                                    .jsonBody,
-                                                              ),
-                                                              'Message',
-                                                            ),
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            style: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .bodyMedium
-                                                                .override(
-                                                                  fontFamily:
-                                                                      'SF Pro Display',
-                                                                  fontSize:
-                                                                      18.0,
-                                                                  letterSpacing:
-                                                                      0.0,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                  lineHeight:
-                                                                      1.5,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                      );
-                                                    } else {
-                                                      return FutureBuilder<
-                                                          ApiCallResponse>(
-                                                        future: FFAppState()
-                                                            .getCategorySectionsCache(
-                                                          uniqueQueryKey:
-                                                              'category_sections_${_selectedApiType().isEmpty ? 'all' : _selectedApiType()}',
-                                                          requestFn: () =>
-                                                              EbookGroup
-                                                                  .getCategorySectionsApiCall
-                                                                  .call(
-                                                            token: FFAppState()
-                                                                .token,
-                                                            booksLimit: 20,
-                                                            format:
-                                                                _selectedApiType(),
-                                                          ),
-                                                        ),
-                                                        initialData:
-                                                            _emptyCategorySectionsResponse(),
-                                                        builder: (context,
-                                                            categorySnapshot) {
-                                                          final categorySections = EbookGroup
-                                                                  .getCategorySectionsApiCall
-                                                                  .categorySectionsList(
-                                                                    categorySnapshot
-                                                                        .data
-                                                                        ?.jsonBody,
-                                                                  )
-                                                                  ?.toList() ??
-                                                              [];
-                                                          return _buildHomepageContent(
-                                                            homepageJson:
-                                                                containerHomepageResponse
-                                                                    .jsonBody,
-                                                            favouriteJson:
-                                                                containerGetFavouriteBookResponse
-                                                                    .jsonBody,
-                                                            categorySections:
-                                                                categorySections,
-                                                          );
-                                                        },
-                                                      );
-                                                    }
-                                                  },
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
+                      if (EbookGroup.getHomepageApiCall
+                              .success(containerHomepageResponse.jsonBody) ==
+                          2) {
+                        return Align(
+                          alignment: AlignmentDirectional(0.0, 0.0),
+                          child: Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                16.0, 0.0, 16.0, 0.0),
+                            child: Text(
+                              valueOrDefault<String>(
+                                EbookGroup.getHomepageApiCall.message(
+                                  containerHomepageResponse.jsonBody,
+                                ),
+                                'Message',
                               ),
-                            );
-                          },
+                              textAlign: TextAlign.center,
+                              style: FlutterFlowTheme.of(context)
+                                  .bodyMedium
+                                  .override(
+                                    fontFamily: 'SF Pro Display',
+                                    fontSize: 18.0,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.w600,
+                                    lineHeight: 1.5,
+                                  ),
+                            ),
+                          ),
+                        );
+                      }
+                      return FutureBuilder<ApiCallResponse>(
+                        future: FFAppState().getCategorySectionsCache(
+                          uniqueQueryKey:
+                              'category_sections_${_selectedApiType().isEmpty ? 'all' : _selectedApiType()}',
+                          requestFn: () =>
+                              EbookGroup.getCategorySectionsApiCall.call(
+                            token: FFAppState().token,
+                            booksLimit: 20,
+                            format: _selectedApiType(),
+                          ),
                         ),
+                        initialData: _emptyCategorySectionsResponse(),
+                        builder: (context, categorySnapshot) {
+                          final categorySections = EbookGroup
+                                  .getCategorySectionsApiCall
+                                  .categorySectionsList(
+                                    categorySnapshot.data?.jsonBody,
+                                  )
+                                  ?.toList() ??
+                              [];
+                          return _buildHomepageContent(
+                            homepageJson: containerHomepageResponse.jsonBody,
+                            favouriteJson: favouriteJson,
+                            categorySections: categorySections,
+                          );
+                        },
                       );
                     },
                   ),
@@ -2322,157 +2233,200 @@ class _HomePageWidgetState extends State<HomePageWidget>
           _model.waitForApiRequestCompleted2(),
         ]);
       },
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          _buildSliderSection(homepageJson),
-          _buildCategoriesSection(homepageJson),
+      child: CustomScrollView(
+        slivers: [
+          // Each section is a SliverToBoxAdapter so Flutter can skip
+          // building off-screen sections (unlike a plain ListView which
+          // builds every child eagerly). RepaintBoundary isolates repaints.
+          SliverToBoxAdapter(child: RepaintBoundary(child: _buildSliderSection(homepageJson))),
+          SliverToBoxAdapter(child: RepaintBoundary(child: _buildCategoriesSection(homepageJson))),
           if ((_selectedFilter == HomeBookFilter.all ||
                   _selectedFilter == HomeBookFilter.ebook) &&
               !widget.embeddedAudiobookMode)
-            _buildContinueReadingRow(continueReading),
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildContinueReadingRow(continueReading))),
           if ((_selectedFilter == HomeBookFilter.all ||
                   _selectedFilter == HomeBookFilter.audiobook) ||
               widget.embeddedAudiobookMode)
-            _buildContinueListeningRow(continueListening),
-          _buildBookStripSection(
-            title: FFLocalizations.of(context).getText('new_books_title'),
-            sectionKey: 'new_books',
-            books: newBooks,
-            favouriteJson: favouriteJson,
-            onViewAll: () async {
-              context.pushNamed(
-                NewBooksPageWidget.routeName,
-                queryParameters: {
-                  'type': serializeParam(_selectedApiType(), ParamType.String),
-                  'title':
-                      serializeParam(_selectedNewTitle(), ParamType.String),
-                }.withoutNulls,
-              );
-            },
-          ),
-          _buildBookStripSection(
-            title: FFLocalizations.of(context).getText('trending_books_title'),
-            sectionKey: 'trending_books',
-            books: trendingBooks,
-            favouriteJson: favouriteJson,
-            onViewAll: () async {
-              context.pushNamed(
-                TrendingBooksPageWidget.routeName,
-                queryParameters: {
-                  'type': serializeParam(_selectedApiType(), ParamType.String),
-                  'title': serializeParam(
-                      _selectedTrendingTitle(), ParamType.String),
-                }.withoutNulls,
-              );
-            },
-          ),
-          _buildAuthorsSection(homepageJson),
-          _buildNarratorsSection(homepageJson),
-          _buildHomeLibraryPromo(),
-          _buildPopularSection(
-            books: _popularSectionSource(
-              popularBooks: popularBooks,
-              popularEbooks: popularEbooks,
-              popularAudiobooks: popularAudiobooks,
-              popularHardCopies: popularHardCopies,
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildContinueListeningRow(continueListening))),
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: _buildBookStripSection(
+                title: FFLocalizations.of(context).getText('new_books_title'),
+                sectionKey: 'new_books',
+                books: newBooks,
+                favouriteJson: favouriteJson,
+                onViewAll: () async {
+                  context.pushNamed(
+                    NewBooksPageWidget.routeName,
+                    queryParameters: {
+                      'type': serializeParam(_selectedApiType(), ParamType.String),
+                      'title':
+                          serializeParam(_selectedNewTitle(), ParamType.String),
+                    }.withoutNulls,
+                  );
+                },
+              ),
             ),
-            favouriteJson: favouriteJson,
           ),
-          _buildBookStripSection(
-            title: FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
-            sectionKey: 'top_10_most_read',
-            books: topTen,
-            favouriteJson: favouriteJson,
-            onViewAll: () async {
-              await _openHomepageSectionViewAll(
-                sectionKey: 'topMostRead',
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: _buildBookStripSection(
+                title: FFLocalizations.of(context).getText('trending_books_title'),
+                sectionKey: 'trending_books',
+                books: trendingBooks,
+                favouriteJson: favouriteJson,
+                onViewAll: () async {
+                  context.pushNamed(
+                    TrendingBooksPageWidget.routeName,
+                    queryParameters: {
+                      'type': serializeParam(_selectedApiType(), ParamType.String),
+                      'title': serializeParam(
+                          _selectedTrendingTitle(), ParamType.String),
+                    }.withoutNulls,
+                  );
+                },
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(child: RepaintBoundary(child: _buildAuthorsSection(homepageJson))),
+          SliverToBoxAdapter(child: RepaintBoundary(child: _buildNarratorsSection(homepageJson))),
+          SliverToBoxAdapter(child: RepaintBoundary(child: _buildHomeLibraryPromo())),
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: _buildPopularSection(
+                books: _popularSectionSource(
+                  popularBooks: popularBooks,
+                  popularEbooks: popularEbooks,
+                  popularAudiobooks: popularAudiobooks,
+                  popularHardCopies: popularHardCopies,
+                ),
+                favouriteJson: favouriteJson,
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: _buildBookStripSection(
                 title: FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
-              );
-            },
-          ),
-          _buildBookStripSection(
-            title: FFLocalizations.of(context).getVariableText(enText: 'Free Books', bnText: 'ফ্রি বই'),
-            sectionKey: 'free_books',
-            books: freeBooks,
-            favouriteJson: favouriteJson,
-            onViewAll: () async {
-              await _openHomepageSectionViewAll(
-                sectionKey: 'freeBooks',
-                title: FFLocalizations.of(context).getVariableText(enText: 'Free Books', bnText: 'ফ্রি বই'),
-              );
-            },
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: custom_widgets.AdBannerWidget(
-              placementKey: 'homepage_banner',
+                sectionKey: 'top_10_most_read',
+                books: topTen,
+                favouriteJson: favouriteJson,
+                onViewAll: () async {
+                  await _openHomepageSectionViewAll(
+                    sectionKey: 'topMostRead',
+                    title: FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
+                  );
+                },
+              ),
             ),
           ),
-          _buildBookStripSection(
-            title: FFLocalizations.of(context).getVariableText(enText: 'Editor\'s Pick', bnText: 'সম্পাদকের পছন্দ'),
-            sectionKey: 'editors_pick',
-            books: editorsPick,
-            favouriteJson: favouriteJson,
-            onViewAll: () async {
-              await _openHomepageSectionViewAll(
-                sectionKey: 'editorsPick',
-                title: FFLocalizations.of(context).getVariableText(enText: 'Editor\'s Pick', bnText: 'সম্পাদকের পছন্দ'),
-              );
-            },
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: _buildBookStripSection(
+                title: FFLocalizations.of(context).getVariableText(enText: 'Free Books', bnText: 'ফ্রি বই'),
+                sectionKey: 'free_books',
+                books: freeBooks,
+                favouriteJson: favouriteJson,
+                onViewAll: () async {
+                  await _openHomepageSectionViewAll(
+                    sectionKey: 'freeBooks',
+                    title: FFLocalizations.of(context).getVariableText(enText: 'Free Books', bnText: 'ফ্রি বই'),
+                  );
+                },
+              ),
+            ),
           ),
-          _buildBookStripSection(
-            title: FFLocalizations.of(context).getVariableText(enText: 'Because You Read', bnText: 'আপনার পছন্দের সাথে মিল রেখে'),
-            sectionKey: 'because_you_read',
-            books: becauseYouRead,
-            favouriteJson: favouriteJson,
-            onViewAll: () async {
-              await _openHomepageSectionViewAll(
-                sectionKey: 'becauseYouRead',
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: custom_widgets.AdBannerWidget(
+                placementKey: 'homepage_banner',
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: _buildBookStripSection(
+                title: FFLocalizations.of(context).getVariableText(enText: 'Editor\'s Pick', bnText: 'সম্পাদকের পছন্দ'),
+                sectionKey: 'editors_pick',
+                books: editorsPick,
+                favouriteJson: favouriteJson,
+                onViewAll: () async {
+                  await _openHomepageSectionViewAll(
+                    sectionKey: 'editorsPick',
+                    title: FFLocalizations.of(context).getVariableText(enText: 'Editor\'s Pick', bnText: 'সম্পাদকের পছন্দ'),
+                  );
+                },
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: _buildBookStripSection(
                 title: FFLocalizations.of(context).getVariableText(enText: 'Because You Read', bnText: 'আপনার পছন্দের সাথে মিল রেখে'),
-              );
-            },
+                sectionKey: 'because_you_read',
+                books: becauseYouRead,
+                favouriteJson: favouriteJson,
+                onViewAll: () async {
+                  await _openHomepageSectionViewAll(
+                    sectionKey: 'becauseYouRead',
+                    title: FFLocalizations.of(context).getVariableText(enText: 'Because You Read', bnText: 'আপনার পছন্দের সাথে মিল রেখে'),
+                  );
+                },
+              ),
+            ),
           ),
           if (_selectedFilter == HomeBookFilter.all ||
               _selectedFilter == HomeBookFilter.audiobook)
-            _buildBookStripSection(
-              title: FFLocalizations.of(context).getVariableText(enText: 'Popular Audiobooks', bnText: 'জনপ্রিয় অডিওবুক'),
-              sectionKey: 'popular_audiobooks',
-              books: popularAudiobooks,
-              favouriteJson: favouriteJson,
-              onViewAll: () async {
-                await _openHomepageSectionViewAll(
-                  sectionKey: 'popularAudiobooks',
-                  title: FFLocalizations.of(context).getVariableText(enText: 'Popular Audiobooks', bnText: 'জনপ্রিয় অডিওবুক'),
-                  type: 'audiobook',
-                );
-              },
+            SliverToBoxAdapter(
+              child: RepaintBoundary(
+                child: _buildBookStripSection(
+                  title: FFLocalizations.of(context).getVariableText(enText: 'Popular Audiobooks', bnText: 'জনপ্রিয় অডিওবুক'),
+                  sectionKey: 'popular_audiobooks',
+                  books: popularAudiobooks,
+                  favouriteJson: favouriteJson,
+                  onViewAll: () async {
+                    await _openHomepageSectionViewAll(
+                      sectionKey: 'popularAudiobooks',
+                      title: FFLocalizations.of(context).getVariableText(enText: 'Popular Audiobooks', bnText: 'জনপ্রিয় অডিওবুক'),
+                      type: 'audiobook',
+                    );
+                  },
+                ),
+              ),
             ),
           if (_selectedFilter == HomeBookFilter.all ||
               _selectedFilter == HomeBookFilter.hardcopy)
-            _buildBookStripSection(
-              title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
-              sectionKey: 'hard_copies',
-              books: popularHardCopies,
-              favouriteJson: favouriteJson,
-              onViewAll: () async {
-                await _openHomepageSectionViewAll(
-                  sectionKey: 'popularHardCopies',
+            SliverToBoxAdapter(
+              child: RepaintBoundary(
+                child: _buildBookStripSection(
                   title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
-                  type: 'hardcopy',
-                );
-              },
+                  sectionKey: 'hard_copies',
+                  books: popularHardCopies,
+                  favouriteJson: favouriteJson,
+                  onViewAll: () async {
+                    await _openHomepageSectionViewAll(
+                      sectionKey: 'popularHardCopies',
+                      title: FFLocalizations.of(context).getVariableText(enText: 'Hard Copies', bnText: 'প্রিন্ট কপি'),
+                      type: 'hardcopy',
+                    );
+                  },
+                ),
+              ),
             ),
-          _buildDynamicCategorySections(
+          ..._buildDynamicCategorySections(
             sections: categorySections,
             favouriteJson: favouriteJson,
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: custom_widgets.AdBannerWidget(
-              placementKey: 'dashboard',
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: custom_widgets.AdBannerWidget(
+                placementKey: 'dashboard',
+              ),
             ),
           ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
     );
@@ -2497,13 +2451,21 @@ class _HomePageWidgetState extends State<HomePageWidget>
           title,
           onViewAll: onViewAll,
         ),
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(0, 0.0, 0, 0.0),
-          child: SingleChildScrollView(
+        // Lazy horizontal list — builds only visible book cards.
+        // itemExtent matches the fixed card width so Flutter skips layout measurement.
+        SizedBox(
+          height: 242,
+          child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              spacing: 10.0,
-              children: List.generate(picked.length, (idx) {
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
+            itemCount: picked.length,
+            itemExtent: () {
+              final w = MediaQuery.sizeOf(context).width;
+              if (w < 810.0) return ((w - 40) / 3) + 4;
+              if (w < 1280.0) return ((w - 96) / 4) + 4;
+              return ((w - 128) / 6) + 4;
+            }(),
+            itemBuilder: (context, idx) {
                 final item = picked[idx];
                 final id = _bookId(item);
                 return wrapWithModel(
@@ -2511,7 +2473,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     '${sectionKey}_$id',
                     idx + (sectionKey.hashCode & 0x3fffffff),
                   ),
-                  updateCallback: () => safeSetState(() {}),
+                  // updateCallback is a no-op: this section is inside a
+                  // RepaintBoundary; isFavAction calls safeSetState directly.
+                  updateCallback: () {},
                   child: MainBookComponentWidget(
                     key: Key('${sectionKey}_$id'),
                     image:
@@ -2581,10 +2545,9 @@ class _HomePageWidgetState extends State<HomePageWidget>
                     },
                   ),
                 );
-              }).addToStart(const SizedBox(width: 8)),
+              },
             ),
           ),
-        ),
       ],
     );
   }
@@ -2616,11 +2579,11 @@ class _HomePageWidgetState extends State<HomePageWidget>
     );
   }
 
-  Widget _buildDynamicCategorySections({
+  List<Widget> _buildDynamicCategorySections({
     required List<dynamic> sections,
     required dynamic favouriteJson,
   }) {
-    final widgets = <Widget>[];
+    final slivers = <Widget>[];
     for (final section in sections) {
       final title = _categorySectionTitle(section);
       final books =
@@ -2636,23 +2599,24 @@ class _HomePageWidgetState extends State<HomePageWidget>
       final sectionId = getJsonField(section, r'''$.id''')?.toString().trim();
       final fallbackCategoryId =
           getJsonField(section, r'''$.category_id''')?.toString().trim() ?? '';
-      widgets.add(
-        _buildBookStripSection(
-          title: title,
-          sectionKey:
-              'category_section_${sectionId?.isNotEmpty == true ? sectionId : fallbackCategoryId}',
-          books: books,
-          favouriteJson: favouriteJson,
-          onViewAll: fallbackCategoryId.isEmpty
-              ? null
-              : () => _openCategorySection(section),
+      slivers.add(
+        SliverToBoxAdapter(
+          child: RepaintBoundary(
+            child: _buildBookStripSection(
+              title: title,
+              sectionKey:
+                  'category_section_${sectionId?.isNotEmpty == true ? sectionId : fallbackCategoryId}',
+              books: books,
+              favouriteJson: favouriteJson,
+              onViewAll: fallbackCategoryId.isEmpty
+                  ? null
+                  : () => _openCategorySection(section),
+            ),
+          ),
         ),
       );
     }
-    if (widgets.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Column(children: widgets);
+    return slivers;
   }
 
   Widget _buildHomeLibraryPromo() {

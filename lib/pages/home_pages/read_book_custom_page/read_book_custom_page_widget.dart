@@ -69,11 +69,16 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   bool _previewLimitShown = false;
   int _initialPdfPage = 1;
   int _entryTimeMs = 0;
+  Timer? _progressDebounceTimer;
+  int? _pendingPercent;
+  int? _pendingPage;
+  int? _pendingTotalPages;
+  bool _hasPendingSave = false;
 
   bool get _isEpub => (widget.pdf ?? '').toLowerCase().trim().contains('.epub');
 
   void _showDebugSnack(String message) {
-    print('EPUB_DEBUG: $message');
+    if (kDebugMode) print('EPUB_DEBUG: $message');
   }
 
   @override
@@ -86,8 +91,10 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   void initState() {
     super.initState();
     _entryTimeMs = DateTime.now().millisecondsSinceEpoch;
-    print('DEBUG_INIT: widget.pdf = ${widget.pdf}');
-    print('DEBUG_INIT: _isEpub = $_isEpub');
+    if (kDebugMode) {
+      print('DEBUG_INIT: widget.pdf = ${widget.pdf}');
+      print('DEBUG_INIT: _isEpub = $_isEpub');
+    }
     WidgetsBinding.instance.addObserver(this);
     _model = createModel(context, () => ReadBookCustomPageModel());
 
@@ -108,9 +115,14 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
         double? initialProgress;
         final bookId = (widget.id ?? '').trim();
         if (bookId.isNotEmpty) {
-          final remote = await ProgressSyncService.fetchReadingProgress(bookId);
-          if (remote.hasProgress && remote.currentPage > 0) {
-            initialProgress = remote.currentPage.toDouble();
+          try {
+            final remote = await ProgressSyncService.fetchReadingProgress(bookId)
+                .timeout(const Duration(milliseconds: 300));
+            if (remote.hasProgress && remote.currentPage > 0) {
+              initialProgress = remote.currentPage.toDouble();
+            }
+          } catch (_) {
+            // Fast-path timeout or offline: native Readium automatically restores position from local DB
           }
         }
         if (defaultTargetPlatform == TargetPlatform.iOS) {
@@ -156,19 +168,21 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     if (state == AppLifecycleState.resumed && _nativeEpubWentBackground) {
       _nativeEpubLaunchInProgress = false;
       _nativeEpubWentBackground = false;
+      // Immediately pop this intermediate launcher route when returning from native reader
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
       unawaited(_handleNativeEpubReturn());
     }
   }
 
   Future<void> _handleNativeEpubReturn() async {
+    await _savePendingProgress();
     await _nativeEpubPageSub?.cancel();
     _nativeEpubPageSub = null;
-    await _syncNativeEpubProgress();
-    await ReadingReportService.instance.endSession();
+    unawaited(_syncNativeEpubProgress());
+    unawaited(ReadingReportService.instance.endSession());
     _showDebugSnack('READING NATIVE EPUB END (on resume)');
-    if (mounted) {
-      await _handleBackPress();
-    }
   }
 
   String _resolveEpubSource(String path) {
@@ -217,6 +231,90 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     }
   }
 
+  Future<void> _savePendingProgress() async {
+    if (!_hasPendingSave) return;
+    final percent = _pendingPercent;
+    final page = _pendingPage;
+    final total = _pendingTotalPages;
+
+    _progressDebounceTimer?.cancel();
+    _progressDebounceTimer = null;
+    _hasPendingSave = false;
+    _pendingPercent = null;
+    _pendingPage = null;
+    _pendingTotalPages = null;
+
+    if (percent != null) {
+      await _applyNativeEpubProgress(percent, force: true);
+    } else if (page != null && total != null) {
+      await _applyPdfProgress(page, total, force: true);
+    }
+  }
+
+  void _onPdfPageChangedDebounced(int page, int totalPages) {
+    _progressDebounceTimer?.cancel();
+    _pendingPercent = null;
+    _pendingPage = page;
+    _pendingTotalPages = totalPages;
+    _hasPendingSave = true;
+
+    _progressDebounceTimer = Timer(const Duration(seconds: 3), () {
+      unawaited(_savePendingProgress());
+    });
+  }
+
+  void _onNativeEpubProgressChangedDebounced(int percent) {
+    _progressDebounceTimer?.cancel();
+    _pendingPercent = percent;
+    _pendingPage = null;
+    _pendingTotalPages = null;
+    _hasPendingSave = true;
+
+    _progressDebounceTimer = Timer(const Duration(seconds: 3), () {
+      unawaited(_savePendingProgress());
+    });
+  }
+
+  Future<void> _applyPdfProgress(int page, int totalPages, {bool force = false}) async {
+    final bookId = (widget.id ?? '').trim();
+    if (bookId.isEmpty) return;
+    final percentage = (page / totalPages * 100).toInt().clamp(0, 100);
+
+    unawaited(Future.wait([
+      ReadingProgressService.upsertProgress(
+        bookId: bookId,
+        percent: percentage.toDouble(),
+        name: widget.name ?? '',
+        imageUrl: widget.image ?? '',
+        author: widget.author ?? '',
+        contentType: 'ebook',
+      ),
+      ProgressSyncService.saveReadingProgress(
+        bookId: bookId,
+        currentPage: page,
+        totalPages: totalPages,
+      ),
+      ReadingReportService.instance.updateProgress(
+        percentage: percentage,
+        force: force,
+      ),
+    ]));
+
+    if (!widget.isPreviewMode) {
+      FFAppState().homePageCurrentPdfIndex = page;
+      FFAppState().homePageTotalPdfPageIndex = totalPages;
+      FFAppState().update(() {});
+    }
+
+    if (widget.isPreviewMode && !_previewLimitShown && percentage >= widget.previewPercent) {
+      _previewLimitShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showPreviewLimitDialog();
+      });
+    }
+    _showDebugSnack('READING PDF PROGRESS: Page $page of $totalPages ($percentage%)');
+  }
+
   Future<void> _applyNativeEpubProgress(int percent,
       {bool force = false}) async {
     final bookId = (widget.id ?? '').trim();
@@ -225,37 +323,43 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     if (bounded <= 0) {
       return;
     }
-    await ReadingProgressService.upsertProgress(
-      bookId: bookId,
-      percent: bounded.toDouble(),
-      name: widget.name ?? '',
-      imageUrl: widget.image ?? '',
-      author: widget.author ?? '',
-      contentType: 'ebook',
-    );
+    unawaited(Future.wait([
+      ReadingProgressService.upsertProgress(
+        bookId: bookId,
+        percent: bounded.toDouble(),
+        name: widget.name ?? '',
+        imageUrl: widget.image ?? '',
+        author: widget.author ?? '',
+        contentType: 'ebook',
+      ),
+      ProgressSyncService.saveReadingProgress(
+        bookId: bookId,
+        currentPage: bounded,
+        totalPages: 100,
+      ),
+      ReadingReportService.instance.updateProgress(
+        percentage: bounded,
+        force: force,
+      ),
+    ]));
     if (!widget.isPreviewMode) {
       FFAppState().homePageCurrentPdfIndex = bounded;
       FFAppState().homePageTotalPdfPageIndex = 100;
       FFAppState().update(() {});
     }
-    await ProgressSyncService.saveReadingProgress(
-      bookId: bookId,
-      currentPage: bounded,
-      totalPages: 100,
-    );
-    await ReadingReportService.instance.updateProgress(
-      percentage: bounded,
-      force: force,
-    );
   }
 
   Future<String> _prepareNativeEpubPath(String sourcePath) async {
-    print('EPUB_DEBUG: _prepareNativeEpubPath started with sourcePath=$sourcePath');
+    if (kDebugMode) {
+      print('EPUB_DEBUG: _prepareNativeEpubPath started with sourcePath=$sourcePath');
+    }
     final isRemote = sourcePath.startsWith('http://') ||
         sourcePath.startsWith('https://');
     if (!isRemote) {
       _openedEpubSource = _resolveEpubSource(sourcePath);
-      print('EPUB_DEBUG: Returning local path: $_openedEpubSource');
+      if (kDebugMode) {
+        print('EPUB_DEBUG: Returning local path: $_openedEpubSource');
+      }
       return sourcePath;
     }
 
@@ -283,17 +387,21 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
     // and keeps the path (and therefore sourceKey) stable, allowing
     // the native reader to load the last reading position from the database.
     if (cachedFile.existsSync() && cachedFile.lengthSync() > 0) {
+      // Quick magic-byte check only (4 bytes) — avoids loading the entire
+      // EPUB into memory just to validate the cache. Every valid EPUB/ZIP
+      // starts with the PK signature 0x50 0x4B.
       try {
-        final bytes = await cachedFile.readAsBytes();
-        final book = await epubx.EpubReader.readBook(bytes);
-        final hasContent = (book.Chapters?.isNotEmpty == true) ||
-            (book.Content?.Html?.isNotEmpty == true);
-        if (hasContent) {
+        final headerChunks = await cachedFile.openRead(0, 4).toList();
+        final header = headerChunks.expand((e) => e).toList();
+        final isPk = header.length >= 2 &&
+            header[0] == 0x50 && // 'P'
+            header[1] == 0x4B; // 'K'
+        if (isPk) {
           _openedEpubSource = 'local:${cachedFile.path}';
           return cachedFile.path;
         }
       } catch (e) {
-        debugPrint('Cached EPUB validation failed, re-downloading: $e');
+        debugPrint('Cached EPUB magic-byte check failed, re-downloading: $e');
         try {
           await cachedFile.delete();
         } catch (_) {}
@@ -440,6 +548,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   }
 
   Future<void> _handleBackPress() async {
+    await _savePendingProgress();
     final prefs = await SharedPreferences.getInstance();
     final int lastSubmittedMs = prefs.getInt('boiaro_last_rate_submitted_time_ms') ?? 0;
     final int lastDismissedMs = prefs.getInt('boiaro_last_rate_dismissed_time_ms') ?? 0;
@@ -468,7 +577,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   }
 
   Future<void> _openIosEpub({double? initialProgress}) async {
-    print('EPUB_DEBUG: _openIosEpub started');
+    if (kDebugMode) print('EPUB_DEBUG: _openIosEpub started');
     final sourcePath = _resolveBookPath(widget.pdf ?? '');
     if (sourcePath.isEmpty || !mounted) {
       return;
@@ -487,7 +596,9 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       }
       
       final path = await _prepareNativeEpubPath(sourcePath);
-      print('EPUB_DEBUG: Launching IosEpubReaderScreen with path=$path');
+      if (kDebugMode) {
+        print('EPUB_DEBUG: Launching IosEpubReaderScreen with path=$path');
+      }
       
       await Navigator.push(
         context,
@@ -506,7 +617,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
         await _handleBackPress();
       }
     } catch (e) {
-      print('EPUB_DEBUG: Error opening iOS EPUB: $e');
+      if (kDebugMode) print('EPUB_DEBUG: Error opening iOS EPUB: $e');
       if (mounted) {
         setState(() {
           _epubError = 'Failed to load EPUB: $e';
@@ -517,13 +628,17 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
   }
 
   Future<void> _openEpubWithPlugin({double? initialProgress}) async {
-    print('EPUB_DEBUG: _openEpubWithPlugin started');
+    if (kDebugMode) print('EPUB_DEBUG: _openEpubWithPlugin started');
     final sourcePath = _resolveBookPath(widget.pdf ?? '');
-    print('EPUB_DEBUG: resolved sourcePath=$sourcePath');
+    if (kDebugMode) print('EPUB_DEBUG: resolved sourcePath=$sourcePath');
     if (sourcePath.isEmpty || !mounted) {
-      print('EPUB_DEBUG: sourcePath is empty or not mounted');
+      if (kDebugMode) print('EPUB_DEBUG: sourcePath is empty or not mounted');
       return;
     }
+
+    // Set launch flags IMMEDIATELY at top of method — before any async HTTP calls
+    _nativeEpubLaunchInProgress = true;
+    _nativeEpubWentBackground = false;
 
     setState(() {
       _isPreparingReader = false;
@@ -533,10 +648,10 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
 
     try {
       final bookId = (widget.id ?? '').trim();
-      print('EPUB_DEBUG: bookId=$bookId');
+      if (kDebugMode) print('EPUB_DEBUG: bookId=$bookId');
       if (bookId.isNotEmpty) {
-        await ReadingReportService.instance.startSession(bookId: bookId);
-        print('EPUB_DEBUG: startSession finished');
+        // Start reading session in background (non-blocking HTTP call)
+        unawaited(ReadingReportService.instance.startSession(bookId: bookId));
 
         // Pre-load TTS context into native layer (Android only)
         unawaited(EpubReaderService.ttsSetContext(
@@ -549,7 +664,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
         _nativeEpubPageSub = EpubReaderService.onPageChanged.listen((percent) {
           if (percent == _lastNativeProgressSent) return;
           _lastNativeProgressSent = percent;
-          unawaited(_applyNativeEpubProgress(percent, force: true));
+          _onNativeEpubProgressChangedDebounced(percent);
           _showDebugSnack('READING NATIVE EPUB PROGRESS: $percent%');
           if (widget.isPreviewMode && !_previewLimitShown && percent >= widget.previewPercent) {
             _previewLimitShown = true;
@@ -558,10 +673,6 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
             });
           }
         });
-        
-        _nativeEpubLaunchInProgress = true;
-        _nativeEpubWentBackground = false;
-        _showDebugSnack('READING NATIVE EPUB START: bookId=$bookId');
       }
       final path = await _prepareNativeEpubPath(sourcePath);
       
@@ -584,49 +695,27 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
       setState(() => _epubError = e.toString());
       _showDebugSnack('READING NATIVE EPUB ERROR: $e');
     } finally {
-      if (!mounted) return;
-      setState(() => _isOpeningEpub = false);
+      if (mounted) {
+        setState(() => _isOpeningEpub = false);
+      }
     }
   }
 
   Future<void> _onPdfPageChanged(int page, int totalPages) async {
-    final bookId = (widget.id ?? '').trim();
-    if (bookId.isEmpty) return;
-    final percentage = (page / totalPages * 100).toInt().clamp(0, 100);
-
-    await ReadingProgressService.upsertProgress(
-      bookId: bookId,
-      percent: percentage.toDouble(),
-      name: widget.name ?? '',
-      imageUrl: widget.image ?? '',
-      author: widget.author ?? '',
-      contentType: 'ebook',
-    );
-    if (!widget.isPreviewMode) {
-      FFAppState().homePageCurrentPdfIndex = page;
-      FFAppState().homePageTotalPdfPageIndex = totalPages;
-      FFAppState().update(() {});
-    }
-    await ProgressSyncService.saveReadingProgress(
-      bookId: bookId,
-      currentPage: page,
-      totalPages: totalPages,
-    );
-    await ReadingReportService.instance.updateProgress(
-      percentage: percentage,
-      force: false,
-    );
-    if (widget.isPreviewMode && !_previewLimitShown && percentage >= widget.previewPercent) {
-      _previewLimitShown = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _showPreviewLimitDialog();
-      });
-    }
-    _showDebugSnack('READING PDF PROGRESS: Page $page of $totalPages ($percentage%)');
+    _onPdfPageChangedDebounced(page, totalPages);
   }
 
   @override
   void dispose() {
+    _progressDebounceTimer?.cancel();
+    if (_hasPendingSave) {
+      if (_pendingPercent != null) {
+        unawaited(_applyNativeEpubProgress(_pendingPercent!, force: true));
+      } else if (_pendingPage != null && _pendingTotalPages != null) {
+        unawaited(_applyPdfProgress(_pendingPage!, _pendingTotalPages!, force: true));
+      }
+      _hasPendingSave = false;
+    }
     _nativeEpubPageSub?.cancel();
     _nativeEpubPageSub = null;
 
@@ -658,7 +747,6 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
 
   @override
   Widget build(BuildContext context) {
-    context.watch<FFAppState>();
 
     return PopScope(
       canPop: false,
@@ -715,9 +803,7 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
                 Container(
                   width: double.infinity,
                   height: double.infinity,
-                  color: FlutterFlowTheme.of(context)
-                      .primaryBackground
-                      .withValues(alpha: 0.96),
+                  color: Colors.black.withValues(alpha: 0.3),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -726,7 +812,11 @@ class _ReadBookCustomPageWidgetState extends State<ReadBookCustomPageWidget>
                       ),
                       const SizedBox(height: 14),
                       Text(FFLocalizations.of(context).getVariableText(enText: 'Opening reader...', bnText: 'রিডার খোলা হচ্ছে...'),
-                        style: FlutterFlowTheme.of(context).bodyMedium,
+                        style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          fontFamily: 'SF Pro Display',
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
