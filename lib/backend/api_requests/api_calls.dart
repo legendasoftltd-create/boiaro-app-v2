@@ -2277,8 +2277,6 @@ class GetcategoriesApiCall {
     final baseUrl = EbookGroup.getBaseUrl();
     final params = <String, String>{
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
-      if (limit != null) 'limit': '$limit',
-      if (offset != null) 'offset': '$offset',
     };
     final res = await ApiManager.instance.makeApiCall(
       callName: 'GetcategoriesApi',
@@ -2311,6 +2309,15 @@ class GetcategoriesApiCall {
         .map((e) => BoiaroLegacyAdapter.legacyCategoryFromV2(
             Map<String, dynamic>.from(e)))
         .toList();
+    leg.sort((a, b) {
+      final pA = (a['priority'] is num)
+          ? (a['priority'] as num).toInt()
+          : (int.tryParse(a['priority']?.toString() ?? '') ?? 0);
+      final pB = (b['priority'] is num)
+          ? (b['priority'] as num).toInt()
+          : (int.tryParse(b['priority']?.toString() ?? '') ?? 0);
+      return pB.compareTo(pA);
+    });
     return ApiCallResponse(
       BoiaroLegacyAdapter.legacyDataEnvelope(extra: {'categoryDetails': leg}),
       res.headers,
@@ -6225,15 +6232,18 @@ class GetFeaturedBooksByCategoryApiCall {
       return _v2Error(catBody, catRes.statusCode);
     }
     final cats = catBody['categories'];
-    if (cats is! List) {
-      return _v2Error(catBody, catRes.statusCode);
-    }
+    final catsList = cats.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    catsList.sort((a, b) {
+      final pA = (a['priority'] is num)
+          ? (a['priority'] as num).toInt()
+          : (int.tryParse(a['priority']?.toString() ?? '') ?? 0);
+      final pB = (b['priority'] is num)
+          ? (b['priority'] as num).toInt()
+          : (int.tryParse(b['priority']?.toString() ?? '') ?? 0);
+      return pB.compareTo(pA);
+    });
     final out = <Map<String, dynamic>>[];
-    for (final c in cats.take(12)) {
-      if (c is! Map) {
-        continue;
-      }
-      final cm = Map<String, dynamic>.from(c);
+    for (final cm in catsList.take(12)) {
       final cid = cm['id']?.toString();
       if (cid == null || cid.isEmpty) {
         continue;

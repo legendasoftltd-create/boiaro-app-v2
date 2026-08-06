@@ -55,16 +55,28 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
       return;
     }
 
-    context.pushNamed(
-      ReadBookCustomPageWidget.routeName,
-      queryParameters: {
-        'pdf': serializeParam(item.localPath, ParamType.String),
-        'id': serializeParam(item.bookId, ParamType.String),
-        'name': serializeParam(item.name, ParamType.String),
-        'author': serializeParam(item.author, ParamType.String),
-        'image': serializeParam(item.image, ParamType.String),
-      }.withoutNulls,
-    );
+    if (item.formatType == 'audiobook') {
+      context.pushNamed(
+        BookDetailspageWidget.routeName,
+        queryParameters: {
+          'id': serializeParam(item.bookId, ParamType.String),
+          'name': serializeParam(item.name, ParamType.String),
+          'image': serializeParam(item.image, ParamType.String),
+          'initialTab': serializeParam('audiobook', ParamType.String),
+        }.withoutNulls,
+      );
+    } else {
+      context.pushNamed(
+        ReadBookCustomPageWidget.routeName,
+        queryParameters: {
+          'pdf': serializeParam(item.localPath, ParamType.String),
+          'id': serializeParam(item.bookId, ParamType.String),
+          'name': serializeParam(item.name, ParamType.String),
+          'author': serializeParam(item.author, ParamType.String),
+          'image': serializeParam(item.image, ParamType.String),
+        }.withoutNulls,
+      );
+    }
   }
 
   Future<void> _deleteDownloadedBook(LocalDownloadedBook item) async {
@@ -99,22 +111,18 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
     });
 
     try {
-      await LocalDownloadService.deleteDownloadByBookId(item.bookId);
+      await LocalDownloadService.deleteDownloadByBookId(item.bookId, formatType: item.formatType);
       await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Download deleted', bnText: 'ডাউনলোড মুছে ফেলা হয়েছে'));
       await _loadDownloads();
     } catch (_) {
       await actions.showCustomToastBottom(FFLocalizations.of(context).getVariableText(enText: 'Failed to delete download', bnText: 'ডাউনলোড মুছতে ব্যর্থ হয়েছে'));
-      if (!mounted) return;
-      safeSetState(() {
-        _deletingBookIds.remove(item.bookId);
-      });
-      return;
+    } finally {
+      if (mounted) {
+        safeSetState(() {
+          _deletingBookIds.remove(item.bookId);
+        });
+      }
     }
-
-    if (!mounted) return;
-    safeSetState(() {
-      _deletingBookIds.remove(item.bookId);
-    });
   }
 
   @override
@@ -261,29 +269,50 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                               const SizedBox(height: 10),
                                               Row(
                                                 children: [
-                                                  Icon(
-                                                    Icons.download_done_rounded,
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .primary,
-                                                    size: 16,
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    FFLocalizations.of(context).getVariableText(enText: 'Downloaded', bnText: 'ডাউনলোড হয়েছে'),
-                                                    style: FlutterFlowTheme.of(
-                                                            context)
-                                                        .bodyMedium
-                                                        .override(
-                                                          fontFamily:
-                                                              'SF Pro Display',
-                                                          color: FlutterFlowTheme
-                                                                  .of(context)
-                                                              .primary,
-                                                          fontSize: 12,
-                                                          fontWeight:
-                                                              FontWeight.w600,
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: item.formatType == 'audiobook'
+                                                          ? Colors.purple.withValues(alpha: 0.12)
+                                                          : FlutterFlowTheme.of(context).primary.withValues(alpha: 0.12),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                          item.formatType == 'audiobook'
+                                                              ? Icons.headphones_rounded
+                                                              : Icons.menu_book_rounded,
+                                                          color: item.formatType == 'audiobook'
+                                                              ? Colors.purple
+                                                              : FlutterFlowTheme.of(context).primary,
+                                                          size: 13,
                                                         ),
+                                                        const SizedBox(width: 4),
+                                                        Text(
+                                                          item.formatType == 'audiobook'
+                                                              ? (FFLocalizations.of(context).locale.languageCode == 'bn' ? 'অডিওবুক' : 'Audiobook')
+                                                              : (FFLocalizations.of(context).locale.languageCode == 'bn' ? 'ই-বুক' : 'Ebook'),
+                                                          style: TextStyle(
+                                                            color: item.formatType == 'audiobook'
+                                                                ? Colors.purple
+                                                                : FlutterFlowTheme.of(context).primary,
+                                                            fontSize: 11,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    item.formattedFileSize,
+                                                    style: TextStyle(
+                                                      color: FlutterFlowTheme.of(context).secondaryText,
+                                                      fontSize: 11.5,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -325,12 +354,16 @@ class _DownloadPageWidgetState extends State<DownloadPageWidget> {
                                                     value: 'delete',
                                                     child: Row(
                                                       children: [
-                                                        Icon(
+                                                        const Icon(
                                                           Icons.delete_outline,
+                                                          color: Colors.red,
                                                           size: 18,
                                                         ),
-                                                        SizedBox(width: 8),
-                                                        Text(FFLocalizations.of(context).getVariableText(enText: 'Delete', bnText: 'মুছুন')),
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          FFLocalizations.of(context).getVariableText(enText: 'Delete', bnText: 'মুছুন'),
+                                                          style: const TextStyle(color: Colors.red),
+                                                        ),
                                                       ],
                                                     ),
                                                   ),

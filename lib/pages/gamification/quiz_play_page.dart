@@ -181,9 +181,16 @@ class _QuizPlayPageWidgetState extends State<QuizPlayPageWidget> {
                           ),
                           if (_submitResult!['reward'] != null && (_submitResult!['reward'] as num) > 0) ...[
                             const SizedBox(height: 6),
-                            Text(
-                              '🪙 +${_submitResult!['reward']} কয়েন যোগ করা হয়েছে!',
-                              style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '+${_submitResult!['reward']} কয়েন যোগ করা হয়েছে!',
+                                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                              ],
                             ),
                           ]
                         ],

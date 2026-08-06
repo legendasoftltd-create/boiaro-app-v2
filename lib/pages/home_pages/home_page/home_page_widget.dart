@@ -2312,14 +2312,18 @@ class _HomePageWidgetState extends State<HomePageWidget>
           SliverToBoxAdapter(
             child: RepaintBoundary(
               child: _buildBookStripSection(
-                title: FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
+                title: widget.embeddedAudiobookMode || _selectedFilter == HomeBookFilter.audiobook
+                    ? FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Listened', bnText: 'সেরা ১০ শোনা বই')
+                    : FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
                 sectionKey: 'top_10_most_read',
                 books: topTen,
                 favouriteJson: favouriteJson,
                 onViewAll: () async {
                   await _openHomepageSectionViewAll(
                     sectionKey: 'topMostRead',
-                    title: FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
+                    title: widget.embeddedAudiobookMode || _selectedFilter == HomeBookFilter.audiobook
+                        ? FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Listened', bnText: 'সেরা ১০ শোনা বই')
+                        : FFLocalizations.of(context).getVariableText(enText: 'Top 10 Most Read', bnText: 'সেরা ১০ পঠিত বই'),
                   );
                 },
               ),

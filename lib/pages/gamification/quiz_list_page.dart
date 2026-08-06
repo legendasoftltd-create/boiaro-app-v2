@@ -126,7 +126,8 @@ class _QuizListPageWidgetState extends State<QuizListPageWidget> {
                                     ),
                                     child: Row(
                                       children: [
-                                        const Text('🪙 ', style: TextStyle(fontSize: 12)),
+                                        const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 14),
+                                        const SizedBox(width: 4),
                                         Text(
                                           '+$reward Coins',
                                           style: const TextStyle(

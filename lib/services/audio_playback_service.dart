@@ -203,8 +203,65 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
     await _player.play();
   }
 
+  bool isRadioMode = false;
+  VoidCallback? onRadioPlay;
+  VoidCallback? onRadioPause;
+  VoidCallback? onRadioStop;
+
+  void setRadioMode({
+    required MediaItem item,
+    required VoidCallback onPlay,
+    required VoidCallback onPause,
+    required VoidCallback onStop,
+  }) {
+    isRadioMode = true;
+    onRadioPlay = onPlay;
+    onRadioPause = onPause;
+    onRadioStop = onStop;
+    if (_player.playing) {
+      _player.pause();
+    }
+    mediaItem.add(item);
+    updateRadioPlaybackState(playing: true, loading: false);
+  }
+
+  void updateRadioPlaybackState({required bool playing, bool loading = false}) {
+    if (!isRadioMode) return;
+    playbackState.add(PlaybackState(
+      controls: [
+        playing ? MediaControl.pause : MediaControl.play,
+        MediaControl.stop,
+      ],
+      systemActions: const {
+        MediaAction.play,
+        MediaAction.pause,
+        MediaAction.stop,
+      },
+      androidCompactActionIndices: const [0, 1],
+      processingState: loading ? AudioProcessingState.buffering : AudioProcessingState.ready,
+      playing: playing,
+    ));
+  }
+
+  void stopRadioMode() {
+    if (!isRadioMode) return;
+    isRadioMode = false;
+    onRadioPlay = null;
+    onRadioPause = null;
+    onRadioStop = null;
+    playbackState.add(PlaybackState(
+      controls: [],
+      playing: false,
+      processingState: AudioProcessingState.idle,
+    ));
+  }
+
   @override
   Future<void> play() async {
+    if (isRadioMode) {
+      onRadioPlay?.call();
+      return;
+    }
     if (_previewEnded && _isPreviewSession) {
       return;
     }
@@ -215,7 +272,13 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() async {
+    if (isRadioMode) {
+      onRadioPause?.call();
+      return;
+    }
+    return _player.pause();
+  }
 
   @override
   Future<void> seek(Duration position) async {
@@ -235,6 +298,11 @@ class AudiobookAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> stop() async {
+    if (isRadioMode) {
+      onRadioStop?.call();
+      stopRadioMode();
+      return;
+    }
     await _player.stop();
     await _ambientPlayer.stop();
     return super.stop();

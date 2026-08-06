@@ -1041,6 +1041,56 @@ class _ProfilePageWidgetState extends State<ProfilePageWidget>
                             ],
                           ).animateOnPageLoad(animationsMap['containerOnPageLoadAnimation5']!),
 
+                          // 4c. BoiAro On-Air & Radio Card
+                          _buildGroupCard(
+                            context,
+                            title: FFLocalizations.of(context).getVariableText(enText: 'BOIARO ON-AIR & RADIO', bnText: 'বইআড়ো অন-এয়ার ও রেডিও'),
+                            children: [
+                              _buildRowItem(
+                                context,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'BoiAro On-Air (Live Radio)', bnText: '📻 বইআড়ো অন-এয়ার (লাইভ রেডিও)'),
+                                icon: const Icon(
+                                  Icons.radio_rounded,
+                                  color: Color(0xFFFF4757),
+                                  size: 20,
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const BoiAroOnAirMainPage()),
+                                ),
+                                showDivider: true,
+                              ),
+                              _buildRowItem(
+                                context,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'Catchup Podcasts & Recordings', bnText: '🎙️ ক্যাচআপ পডকাস্ট ও মিসড শো'),
+                                icon: const Icon(
+                                  Icons.podcasts_rounded,
+                                  color: Colors.deepPurpleAccent,
+                                  size: 20,
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const CatchupPodcastsPage()),
+                                ),
+                                showDivider: true,
+                              ),
+                              _buildRowItem(
+                                context,
+                                label: FFLocalizations.of(context).getVariableText(enText: 'RJ Host Control Dashboard', bnText: '🎧 RJ হোস্ট কন্ট্রোল ড্যাশবোর্ড'),
+                                icon: const Icon(
+                                  Icons.dashboard_customize_rounded,
+                                  color: Colors.orangeAccent,
+                                  size: 20,
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const RJDashboardPage()),
+                                ),
+                                showDivider: false,
+                              ),
+                            ],
+                          ).animateOnPageLoad(animationsMap['containerOnPageLoadAnimation5']!),
+
                           // 5. Explore Creators Card
                           _buildGroupCard(
                             context,

@@ -8,11 +8,10 @@ class RevenueCatService {
   static const String _iosApiKey = 'appl_MCimSCMpnugptRSjinNTsOvcdWc';
 
   // Replace this with your actual Android public API key from the RevenueCat Dashboard.
-  // TODO: Replace with your actual Android API Key from RevenueCat
-  static const String _androidApiKey = 'goog_YOUR_ANDROID_API_KEY_HERE';
+  static const String _androidApiKey = 'goog_VFqEoipCdhmVkPzgtLitoisIDcW';
 
   // Entitlement ID defined in the RevenueCat dashboard.
-  static const String premiumEntitlementId = 'premium';
+  static const String premiumEntitlementId = 'Boiaro Pro';
 
   static bool _initialized = false;
 
@@ -169,7 +168,8 @@ class RevenueCatService {
       // Find the package that matches the product ID
       Package? packageToPurchase;
       for (var package in offerings.current!.availablePackages) {
-        if (package.storeProduct.identifier == productIdentifier) {
+        final id = package.storeProduct.identifier;
+        if (id == productIdentifier || id.startsWith('$productIdentifier:')) {
           packageToPurchase = package;
           break;
         }
@@ -179,7 +179,8 @@ class RevenueCatService {
       if (packageToPurchase == null) {
         for (var offering in offerings.all.values) {
           for (var package in offering.availablePackages) {
-            if (package.storeProduct.identifier == productIdentifier) {
+            final id = package.storeProduct.identifier;
+            if (id == productIdentifier || id.startsWith('$productIdentifier:')) {
               packageToPurchase = package;
               break;
             }

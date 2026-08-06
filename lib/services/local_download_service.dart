@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:a_i_ebook_app/app_constants.dart';
+import '/app_constants.dart';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -16,6 +16,7 @@ class LocalDownloadedBook {
     required this.remoteUrl,
     required this.localPath,
     required this.downloadedAtMillis,
+    this.formatType = 'ebook',
   });
 
   final String bookId;
@@ -25,8 +26,27 @@ class LocalDownloadedBook {
   final String remoteUrl;
   final String localPath;
   final int downloadedAtMillis;
+  final String formatType;
 
   bool get existsOnDisk => File(localPath).existsSync();
+
+  int get fileSizeInBytes {
+    try {
+      final file = File(localPath);
+      return file.existsSync() ? file.lengthSync() : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  String get formattedFileSize {
+    final bytes = fileSizeInBytes;
+    if (bytes <= 0) return '0 B';
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -37,6 +57,7 @@ class LocalDownloadedBook {
       'remoteUrl': remoteUrl,
       'localPath': localPath,
       'downloadedAtMillis': downloadedAtMillis,
+      'formatType': formatType,
     };
   }
 
@@ -50,6 +71,7 @@ class LocalDownloadedBook {
       localPath: (map['localPath'] ?? '').toString(),
       downloadedAtMillis:
           int.tryParse((map['downloadedAtMillis'] ?? '0').toString()) ?? 0,
+      formatType: (map['formatType'] ?? 'ebook').toString(),
     );
   }
 }
@@ -117,10 +139,10 @@ class LocalDownloadService {
   static String _extensionFromUrl(String url) {
     final uri = Uri.tryParse(url);
     final ext = p.extension(uri?.path ?? '').toLowerCase();
-    if (ext == '.epub' || ext == '.pdf') {
+    if (ext == '.epub' || ext == '.pdf' || ext == '.mp3' || ext == '.m4a' || ext == '.aac' || ext == '.wav') {
       return ext;
     }
-    return '.pdf';
+    return '.mp3';
   }
 
   static Future<LocalDownloadedBook> downloadBook({
@@ -129,6 +151,7 @@ class LocalDownloadService {
     required String image,
     required String author,
     required String remoteUrl,
+    String formatType = 'ebook',
     void Function(int received, int total)? onProgress,
   }) async {
     final resolvedRemoteUrl = _resolveRemoteUrl(remoteUrl);
@@ -137,11 +160,9 @@ class LocalDownloadService {
     }
     final downloadDir = await _downloadsDirectory();
     final extension = _extensionFromUrl(resolvedRemoteUrl);
-    final savePath = p.join(downloadDir.path, '${bookId}_book$extension');
+    final savePath = p.join(downloadDir.path, '${bookId}_${formatType}$extension');
     final file = File(savePath);
 
-    // Delete any stale cached file before downloading so backend updates
-    // are always reflected (prevents old epub/pdf from being served).
     if (file.existsSync()) {
       await file.delete();
     }
@@ -166,13 +187,12 @@ class LocalDownloadService {
       remoteUrl: resolvedRemoteUrl,
       localPath: savePath,
       downloadedAtMillis: now,
+      formatType: formatType,
     );
     await _upsertDownload(item);
     return item;
   }
 
-  /// Returns true if the book is already downloaded BUT the backend URL has
-  /// changed — meaning the cached file is stale and needs a re-download.
   static Future<bool> isRemoteUrlChanged({
     required String bookId,
     required String newRemoteUrl,
@@ -190,7 +210,7 @@ class LocalDownloadService {
     final updated = <LocalDownloadedBook>[];
     var replaced = false;
     for (final entry in all) {
-      if (entry.bookId == item.bookId) {
+      if (entry.bookId == item.bookId && entry.formatType == item.formatType) {
         updated.add(item);
         replaced = true;
       } else {
@@ -205,7 +225,7 @@ class LocalDownloadService {
     await prefs.setString(_downloadsKey, encoded);
   }
 
-  static Future<void> deleteDownloadByBookId(String bookId) async {
+  static Future<void> deleteDownloadByBookId(String bookId, {String? formatType}) async {
     final normalizedBookId = bookId.trim();
     if (normalizedBookId.isEmpty) return;
 
@@ -214,7 +234,7 @@ class LocalDownloadService {
 
     final remaining = <LocalDownloadedBook>[];
     for (final item in all) {
-      if (item.bookId == normalizedBookId) {
+      if (item.bookId == normalizedBookId && (formatType == null || item.formatType == formatType)) {
         final file = File(item.localPath);
         if (file.existsSync()) {
           await file.delete();

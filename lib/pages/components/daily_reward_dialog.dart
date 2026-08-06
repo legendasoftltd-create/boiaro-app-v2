@@ -336,13 +336,24 @@ class _DailyRewardDialogState extends State<DailyRewardDialog> {
                             if (isPast)
                               const Icon(Icons.check_circle_rounded, size: 22, color: Colors.green)
                             else ...[
-                              Text(
-                                '🪙 +$amount',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isCurrent ? Colors.white : Colors.amber.shade700,
-                                ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.monetization_on_rounded,
+                                    size: 14,
+                                    color: isCurrent ? Colors.white : Colors.amber.shade700,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '+$amount',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: isCurrent ? Colors.white : Colors.amber.shade700,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ],
@@ -405,15 +416,22 @@ class _DailyRewardDialogState extends State<DailyRewardDialog> {
                           children: [
                             Row(
                               children: [
-                                const Text('🎁', style: TextStyle(fontSize: 28)),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Text('👑', style: TextStyle(fontSize: 22)),
+                                ),
                                 const SizedBox(width: 12),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      isBn ? 'দিন ৭: মেগা রিওয়ার্ড' : 'Day 7: Mega Reward',
+                                      isBn ? 'দিন ৭' : 'Day 7',
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                         color: (isCurrent || isPast) ? Colors.white : theme.primaryText,
                                       ),
@@ -440,13 +458,24 @@ class _DailyRewardDialogState extends State<DailyRewardDialog> {
                                   color: Colors.black.withValues(alpha: 0.25),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Text(
-                                  '🪙 +$amount',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.amberAccent,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.monetization_on_rounded,
+                                      size: 16,
+                                      color: Colors.amberAccent,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '+$amount',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.amberAccent,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                           ],

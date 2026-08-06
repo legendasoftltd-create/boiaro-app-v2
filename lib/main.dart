@@ -314,7 +314,7 @@ class _NavBarPageState extends State<NavBarPage> {
   Widget build(BuildContext context) {
     final tabs = {
       'HomePage': HomePageWidget(),
-      'CategoriesScreen': CategoriesScreenWidget(),
+      'RadioListPage': RadioListPageWidget(),
       'AudiobookPage': AudiobookPageWidget(),
       'LibraryPage': PurchaseHistoryPageWidget(),
       'ProfilePage': ProfilePageWidget(),
@@ -371,14 +371,14 @@ class _NavBarPageState extends State<NavBarPage> {
             ),
             BottomNavigationBarItem(
               icon: Icon(
-                FFIcons.kgroup260861433,
+                Icons.radio_outlined,
                 size: 24.0,
               ),
               activeIcon: Icon(
-                FFIcons.kicon5,
+                Icons.radio,
                 size: 24.0,
               ),
-              label: FFLocalizations.of(context).getVariableText(enText: 'Categories', bnText: 'ক্যাটাগরি'),
+              label: FFLocalizations.of(context).getVariableText(enText: 'Book On Air', bnText: 'বুক অন এয়ার'),
               tooltip: '',
             ),
             BottomNavigationBarItem(

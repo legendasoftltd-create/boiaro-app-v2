@@ -17,6 +17,9 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
   List<dynamic> _leaderboard = [];
   bool _isHidden = false;
 
+  String _selectedPeriod = 'weekly';
+  String _selectedMetric = 'reading';
+
   @override
   void initState() {
     super.initState();
@@ -27,10 +30,9 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
     if (!mounted) return;
     setState(() => _loading = true);
     try {
-      // By default fetch weekly reading leaderboard for Home page
       final res = await EbookGroup.getHomeLeaderboardCall.call(
-        period: 'weekly',
-        metric: 'reading',
+        period: _selectedPeriod,
+        metric: _selectedMetric,
       );
       if (res.statusCode == 200 && res.jsonBody != null) {
         final data = getJsonField(res.jsonBody, r'''$.leaderboard''') ??
@@ -47,8 +49,11 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
     if (mounted) setState(() => _loading = false);
   }
 
-  String _formatMetricValue(dynamic value, bool isBn) {
+  String _formatMetricValue(dynamic value, String metric, bool isBn) {
     if (value == null) return '0';
+    if (metric == 'coins') {
+      return isBn ? '$value কয়েন' : '$value Coins';
+    }
     final totalSecs = (value is num) ? value.toInt() : int.tryParse(value.toString()) ?? 0;
     final mins = (totalSecs / 60).round();
     if (mins < 60) {
@@ -68,26 +73,35 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section Header Row: Title & View All (Matches Home Page _buildSectionHeader exactly)
+          // Section Header Row: Title with Trophy & View All
           Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 3),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  isBn ? 'সাপ্তাহিক লিডারবোর্ড' : 'Weekly Leaderboard',
-                  maxLines: 1,
-                  style: theme.bodyMedium.override(
-                    fontFamily: 'SF Pro Display',
-                    fontSize: 17.0,
-                    fontWeight: FontWeight.bold,
-                    lineHeight: 1.5,
-                  ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.emoji_events_rounded,
+                      color: Colors.amber,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isBn ? 'লিডারবোর্ড' : 'Leaderboard',
+                      style: theme.bodyMedium.override(
+                        fontFamily: 'SF Pro Display',
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.bold,
+                        lineHeight: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
                 InkWell(
                   splashColor: Colors.transparent,
@@ -97,25 +111,25 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const FullLeaderboardPageWidget(
-                        initialPeriod: 'weekly',
-                        initialMetric: 'reading',
+                      builder: (_) => FullLeaderboardPageWidget(
+                        initialPeriod: _selectedPeriod,
+                        initialMetric: _selectedMetric,
                       ),
                     ),
                   ),
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(10, 0.0, 10, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
                       color: theme.primary,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       FFLocalizations.of(context).getText('view_all'),
                       style: theme.bodyMedium.override(
                         fontFamily: 'SF Pro Display',
-                        fontSize: 14.0,
+                        fontSize: 12.0,
                         color: Colors.white,
-                        lineHeight: 1.5,
+                        lineHeight: 1.3,
                       ),
                     ),
                   ),
@@ -123,20 +137,118 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
-          // Horizontal Top-10 Leaderboard Cards (Author/Narrator horizontal scroll style)
-          if (_leaderboard.isEmpty && !_loading)
+          // Single Horizontal Compact Filters Strip (Minimal Space)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                // Metric Chips
+                _buildCompactChip(
+                  icon: Icons.menu_book_rounded,
+                  label: isBn ? 'পাঠ' : 'Reading',
+                  isSelected: _selectedMetric == 'reading',
+                  onTap: () {
+                    if (_selectedMetric != 'reading') {
+                      setState(() => _selectedMetric = 'reading');
+                      _fetchHomeLeaderboard();
+                    }
+                  },
+                ),
+                const SizedBox(width: 4),
+                _buildCompactChip(
+                  icon: Icons.headphones_rounded,
+                  label: isBn ? 'শ্রবণ' : 'Listening',
+                  isSelected: _selectedMetric == 'listening',
+                  onTap: () {
+                    if (_selectedMetric != 'listening') {
+                      setState(() => _selectedMetric = 'listening');
+                      _fetchHomeLeaderboard();
+                    }
+                  },
+                ),
+                const SizedBox(width: 4),
+                _buildCompactChip(
+                  icon: Icons.monetization_on_rounded,
+                  iconColor: Colors.amber,
+                  label: isBn ? 'কয়েন' : 'Coins',
+                  isSelected: _selectedMetric == 'coins',
+                  onTap: () {
+                    if (_selectedMetric != 'coins') {
+                      setState(() => _selectedMetric = 'coins');
+                      _fetchHomeLeaderboard();
+                    }
+                  },
+                ),
+
+                // Separator Divider
+                Container(
+                  height: 14,
+                  width: 1,
+                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  color: theme.alternate.withValues(alpha: 0.6),
+                ),
+
+                // Period Chips
+                _buildCompactChip(
+                  label: isBn ? 'আজ' : 'Daily',
+                  isSelected: _selectedPeriod == 'daily',
+                  onTap: () {
+                    if (_selectedPeriod != 'daily') {
+                      setState(() => _selectedPeriod = 'daily');
+                      _fetchHomeLeaderboard();
+                    }
+                  },
+                ),
+                const SizedBox(width: 4),
+                _buildCompactChip(
+                  label: isBn ? 'সপ্তাহ' : 'Weekly',
+                  isSelected: _selectedPeriod == 'weekly',
+                  onTap: () {
+                    if (_selectedPeriod != 'weekly') {
+                      setState(() => _selectedPeriod = 'weekly');
+                      _fetchHomeLeaderboard();
+                    }
+                  },
+                ),
+                const SizedBox(width: 4),
+                _buildCompactChip(
+                  label: isBn ? 'মাস' : 'Monthly',
+                  isSelected: _selectedPeriod == 'monthly',
+                  onTap: () {
+                    if (_selectedPeriod != 'monthly') {
+                      setState(() => _selectedPeriod = 'monthly');
+                      _fetchHomeLeaderboard();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Horizontal Top-10 Leaderboard Cards
+          if (_loading)
+            const SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_leaderboard.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Text(
-                isBn ? 'কোনো ডাটা পাওয়া যায়নি' : 'No leaderboard data available',
-                style: TextStyle(color: theme.secondaryText, fontSize: 13),
+              child: Center(
+                child: Text(
+                  isBn ? 'কোনো ডাটা পাওয়া যায়নি' : 'No leaderboard data available',
+                  style: TextStyle(color: theme.secondaryText, fontSize: 12),
+                ),
               ),
             )
           else
             SizedBox(
-              height: 124,
+              height: 122,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -149,19 +261,19 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
                   final avatarUrl = item['avatar_url'];
 
                   return Container(
-                    width: 98,
+                    width: 96,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                     decoration: BoxDecoration(
                       color: theme.secondaryBackground,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: rank == 1
-                            ? Colors.amber.withValues(alpha: 0.6)
+                            ? Colors.amber.withValues(alpha: 0.7)
                             : rank == 2
-                                ? Colors.grey.withValues(alpha: 0.5)
+                                ? Colors.grey.withValues(alpha: 0.6)
                                 : rank == 3
-                                    ? Colors.brown.withValues(alpha: 0.4)
+                                    ? Colors.brown.withValues(alpha: 0.5)
                                     : theme.alternate.withValues(alpha: 0.3),
                         width: rank <= 3 ? 1.5 : 1,
                       ),
@@ -174,7 +286,7 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
                           clipBehavior: Clip.none,
                           children: [
                             CircleAvatar(
-                              radius: 22,
+                              radius: 20,
                               backgroundColor: theme.primary.withValues(alpha: 0.15),
                               backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
                                   ? NetworkImage(avatarUrl)
@@ -185,7 +297,7 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
                                       style: TextStyle(
                                         color: theme.primary,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 14,
+                                        fontSize: 13,
                                       ),
                                     )
                                   : null,
@@ -208,7 +320,7 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
                                               ? '🥉'
                                               : '#$rank',
                                   style: TextStyle(
-                                    fontSize: rank <= 3 ? 13 : 9,
+                                    fontSize: rank <= 3 ? 12 : 9,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -216,7 +328,7 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 5),
 
                         // Display Name
                         Text(
@@ -230,21 +342,21 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
                             fontSize: 11,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
 
                         // Score Pill
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                           decoration: BoxDecoration(
                             color: theme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            _formatMetricValue(total, isBn),
+                            _formatMetricValue(total, _selectedMetric, isBn),
                             style: TextStyle(
                               color: theme.primary,
                               fontWeight: FontWeight.bold,
-                              fontSize: 10,
+                              fontSize: 9.5,
                             ),
                           ),
                         ),
@@ -255,6 +367,52 @@ class _HomeLeaderboardWidgetState extends State<HomeLeaderboardWidget> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCompactChip({
+    IconData? icon,
+    Color? iconColor,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final theme = FlutterFlowTheme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.primary : theme.secondaryBackground,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? theme.primary : theme.alternate.withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 11,
+                color: isSelected ? Colors.white : (iconColor ?? theme.secondaryText),
+              ),
+              const SizedBox(width: 3),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : theme.secondaryText,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

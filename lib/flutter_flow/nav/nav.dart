@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:a_i_ebook_app/models/radio/radio_station.dart';
 import 'package:a_i_ebook_app/pages/home_pages/about_publisher_page/about_publisher_page_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -79,9 +80,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: CategoriesScreenWidget.routeName,
           path: CategoriesScreenWidget.routePath,
-          builder: (context, params) => params.isEmpty
-              ? NavBarPage(initialPage: 'CategoriesScreen')
-              : CategoriesScreenWidget(),
+          builder: (context, params) => const CategoriesScreenWidget(),
         ),
         FFRoute(
           name: AudiobookPageWidget.routeName,
@@ -702,6 +701,39 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               ParamType.JSON,
             )!,
           ),
+        ),
+        FFRoute(
+          name: BoiAroOnAirMainPage.routeName,
+          path: BoiAroOnAirMainPage.routePath,
+          builder: (context, params) => const BoiAroOnAirMainPage(),
+        ),
+        FFRoute(
+          name: CatchupPodcastsPage.routeName,
+          path: CatchupPodcastsPage.routePath,
+          builder: (context, params) => const CatchupPodcastsPage(),
+        ),
+        FFRoute(
+          name: RJDashboardPage.routeName,
+          path: RJDashboardPage.routePath,
+          builder: (context, params) => const RJDashboardPage(),
+        ),
+        FFRoute(
+          name: RadioListPageWidget.routeName,
+          path: RadioListPageWidget.routePath,
+          builder: (context, params) => params.isEmpty
+              ? NavBarPage(initialPage: 'RadioListPage')
+              : const RadioListPageWidget(),
+        ),
+        FFRoute(
+          name: StationPlayerPageWidget.routeName,
+          path: StationPlayerPageWidget.routePath,
+          builder: (context, params) {
+            final station = params.state.extraMap['station'];
+            if (station is RadioStation) {
+              return StationPlayerPageWidget(station: station);
+            }
+            return const Scaffold(body: Center(child: Text('Invalid station')));
+          },
         ),
         // FFRoute(
         //   name: BookDetailspageCopyWidget.routeName,

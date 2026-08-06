@@ -192,9 +192,9 @@ class _CompetitionsPageWidgetState extends State<CompetitionsPageWidget> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                                   children: [
-                                    _buildPrizeBadge('🥇 ১ম', '$prize1 🪙'),
-                                    _buildPrizeBadge('🥈 ২য়', '$prize2 🪙'),
-                                    _buildPrizeBadge('🥉 ৩য়', '$prize3 🪙'),
+                                    _buildPrizeBadge('🥇 ১ম', '$prize1'),
+                                    _buildPrizeBadge('🥈 ২য়', '$prize2'),
+                                    _buildPrizeBadge('🥉 ৩য়', '$prize3'),
                                   ],
                                 ),
                               ),
@@ -226,14 +226,21 @@ class _CompetitionsPageWidgetState extends State<CompetitionsPageWidget> {
     );
   }
 
-  Widget _buildPrizeBadge(String place, String prize) {
+  Widget _buildPrizeBadge(String place, String amount) {
     return Column(
       children: [
         Text(place, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 2),
-        Text(
-          prize,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amber),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 14),
+            const SizedBox(width: 3),
+            Text(
+              amount,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amber),
+            ),
+          ],
         ),
       ],
     );

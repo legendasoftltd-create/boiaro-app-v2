@@ -2369,6 +2369,248 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
     );
   }
 
+  Widget _buildHardcopyDetailsSection(Map<String, dynamic> hardcopyFormat) {
+    final theme = FlutterFlowTheme.of(context);
+    final isBn = FFLocalizations.of(context).locale.languageCode == 'bn';
+
+    final inStock = hardcopyFormat['in_stock'] == true ||
+        (hardcopyFormat['in_stock'] != false &&
+            ((hardcopyFormat['stock_count'] as num?)?.toInt() ?? 0) > 0);
+    final stockCount = (hardcopyFormat['stock_count'] as num?)?.toInt() ?? 0;
+    final deliveryDays = hardcopyFormat['delivery_days'] ?? 3;
+    final pages = hardcopyFormat['pages'];
+    final binding = hardcopyFormat['binding']?.toString() ?? 'N/A';
+    final weight = hardcopyFormat['weight']?.toString() ??
+        (hardcopyFormat['weight_kg_per_copy'] != null
+            ? '${hardcopyFormat['weight_kg_per_copy']} kg'
+            : 'N/A');
+    final dimensions = hardcopyFormat['dimensions']?.toString() ?? 'N/A';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: theme.secondaryBackground,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: theme.alternate.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Stock Status & Copies
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: inStock
+                      ? Colors.green.withValues(alpha: 0.12)
+                      : Colors.red.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      inStock ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                      color: inStock ? Colors.green : Colors.red,
+                      size: 15,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      inStock
+                          ? (isBn ? 'স্টকে আছে' : 'In Stock')
+                          : (isBn ? 'স্টক শেষ' : 'Out of Stock'),
+                      style: TextStyle(
+                        color: inStock ? Colors.green.shade700 : Colors.red.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (inStock && stockCount > 0) ...[
+                const SizedBox(width: 8),
+                Text(
+                  isBn
+                      ? '($stockCount টি পাওয়া যাচ্ছে)'
+                      : '($stockCount copies available)',
+                  style: theme.bodySmall.override(
+                    fontFamily: 'SF Pro Display',
+                    color: theme.secondaryText,
+                    fontSize: 12.0,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Estimated Delivery Info Card
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.primaryBackground,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.local_shipping_outlined, color: theme.primary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      isBn ? 'আনুমানিক ডেলিভারি সময়' : 'Estimated Delivery',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: theme.primaryText,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.only(left: 26.0),
+                  child: Text(
+                    isBn
+                        ? '$deliveryDays কর্মদিবসের মধ্যে • ফ্রি ডেলিভারি'
+                        : 'Within $deliveryDays business days • Free delivery',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.secondaryText,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 26.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.payments_outlined, size: 14, color: Colors.green),
+                      const SizedBox(width: 4),
+                      Text(
+                        isBn ? 'ক্যাশ অন ডেলিভারি সুবিধা আছে' : 'Cash on delivery available',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Book Specifications Grid
+          Text(
+            isBn ? 'বইয়ের স্পেসিফিকেশন' : 'Specifications',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: theme.primaryText,
+            ),
+          ),
+          const SizedBox(height: 10),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            childAspectRatio: 2.5,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            children: [
+              _buildSpecTile(
+                icon: Icons.auto_stories_outlined,
+                label: isBn ? 'পৃষ্ঠা সংখ্যা' : 'Pages',
+                value: pages != null ? '$pages' : 'N/A',
+              ),
+              _buildSpecTile(
+                icon: Icons.book_outlined,
+                label: isBn ? 'বাঁধাই' : 'Binding',
+                value: binding.toLowerCase() == 'paperback'
+                    ? (isBn ? 'পেপারব্যাক' : 'Paperback')
+                    : binding.toLowerCase() == 'hardcover'
+                        ? (isBn ? 'হার্ডকভার' : 'Hardcover')
+                        : binding,
+              ),
+              _buildSpecTile(
+                icon: Icons.scale_outlined,
+                label: isBn ? 'ওজন' : 'Weight',
+                value: weight,
+              ),
+              _buildSpecTile(
+                icon: Icons.straighten_outlined,
+                label: isBn ? 'সাইজ/ডাইমেনশন' : 'Dimensions',
+                value: dimensions,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpecTile({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    final theme = FlutterFlowTheme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.primaryBackground.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: theme.alternate.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: theme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.secondaryText,
+                  ),
+                ),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEpisodesInAudioTab({
     required String bookId,
     required List<Map<String, dynamic>> formats,
@@ -4810,6 +5052,10 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                       hasAudiobookAccess: hasAudiobookAccess,
                                     ),
                                   ),
+                                if (activeTab ==
+                                        BookMasterFormatTab.hardcopy &&
+                                    hardcopyFormat != null)
+                                  _buildHardcopyDetailsSection(hardcopyFormat),
                                 // Book details placement banner
                                 const Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -4956,7 +5202,7 @@ class _BookDetailspageWidgetState extends State<BookDetailspageWidget> {
                                                          ),
                                                        ),
                                                        child: Text(
-                                                         '# $tag',
+                                                         tag.toString().replaceFirst(RegExp(r'^#\s*'), '').trim(),
                                                          style: FlutterFlowTheme.of(context)
                                                              .bodyMedium
                                                              .override(
